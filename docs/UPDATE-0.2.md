@@ -29,7 +29,7 @@ Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release ha
 - [x] #12 Version-specific creator galleries with thumbnail selection, previous/next controls, larger view, failure retry and empty states. Up to 24 unique image previews are retained per version, regardless of rating.
 - [x] #14 Stop/restart an idle managed engine around model changes. Busy queues/downloads request a retry after work finishes; no active job is interrupted or silently cancelled. Live engine verification remains a release check.
 - [x] #16/16B Optional per-LoRA trigger choices insert literal text into new visible-mode prompts. Owned spans support removal, shared words and user edits. Older recipes retain their original resolver until explicitly converted.
-- [x] #20 Five optional, editable starter wildcard packs (106 choices), with source references, bundled alias/duplicate cleanup and collision-safe staging.
+- [x] #20 Thirteen optional, editable starter wildcard packs (817 choices), with source references, bundled alias/duplicate cleanup and collision-safe staging.
 - [x] #23 Enhance saved generations through a reviewed Create draft and one latent diffusion refinement pass, saving a linked result and preserving the original. GPU quality remains a release check.
 - [x] #25 Optional automatic face refinement after generation/hires, with separate cancellable follow-up jobs, restart recovery and preserved originals. Real stylized/furry-face quality remains a hardware release check.
 
@@ -96,3 +96,11 @@ Wildcards now offers five previewable starter lists: species, locations, backgro
 Adding a pack stages an editable copy and collapses its catalog to reveal the editor. Save remains explicit; unsaved additions use the existing close/discard protection. Occupied names receive a suffix. Re-adding an unchanged copy selects it, while edited copies, manually weighted lists and frozen generation recipes remain intact. The update does not automatically add lists, alter prompts or enable variations. Runtime use is fully offline.
 
 Validation: five focused tests cover catalog validity and actual prompt expansion, normalization, collisions, repeat imports, snapshot independence and the real editor's save/discard boundary. Type checking, development compilation and the 288-file public-source check passed. A headless renderer fixture exercised category preview, adding/selecting a pack, automatic catalog collapse and explicit save without overflow or page errors; the final screenshot was inspected. No GPU generation or installer build was needed for this batch.
+
+## Expanded wildcard catalog
+
+Expanded the five original categories and added lighting, time/sky, expressions, gestures, hair colors, headwear, accessories and framing: 817 choices in 13 packs. Category/choice search and bounded scrolling previews keep the larger catalog usable. Public e621 species and Danbooru group references were fetched to verify the selected vocabulary; source links and counts are updated in WILDCARD-PACKS.md.
+
+Existing and edited starter copies are preserved when adding expanded versions. All packs fit within the unchanged 1,024-choice dictionary limit; staging now rejects additions that would exceed it, showing an error without changing the editor's lists.
+
+Validation: seven focused wildcard tests passed, including full-catalog expansion/validation, budget overflow, old-copy preservation and explicit editor saving. Type checking and development compilation passed. A headless renderer check covered searching by a species name, no-match recovery, restoring all 13 categories, preview scrolling, adding and saving; no page errors or horizontal overflow occurred, and the screenshot was inspected. No GPU run or installer was needed.

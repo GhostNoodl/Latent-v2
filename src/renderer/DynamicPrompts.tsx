@@ -82,8 +82,10 @@ export function DynamicPrompts({ draft, wildcards, previewSeed, onChange, onRero
   }
   function addPack(id: string) {
     if (cannotEdit()) return;
+    try {
     const next=stageWildcardPack(currentEntries(),id);
     setEntries(next.entries);setSelectedTag(next.name);setEntryText(next.entries[next.name].join('\n'));setEditorError('');setCloseWarning(false);
+    } catch (error) { setEditorError(errorText(error)); }
   }
   function deleteTag() {
     if (cannotEdit()) return;

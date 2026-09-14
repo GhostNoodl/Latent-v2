@@ -423,13 +423,13 @@
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
-      "bytes": 2494,
-      "sha256": "073f7e3a353c5c78b885eb2dba20c7777b59f43d1195868c97e3ed3a4ec357e7"
+      "bytes": 2596,
+      "sha256": "6edc0b54479a696b74f2a318adbfc3e3ecaa7cf48daf5ee03be67a50c6ce0b7d"
     },
     {
       "path": "src/renderer/DynamicPrompts.tsx",
-      "bytes": 13445,
-      "sha256": "9566f8be2b285b059b768e4e782976418a1f3f482bb27a9283a2665be55bba62"
+      "bytes": 13515,
+      "sha256": "d78e6335b0e34cd50ddb1e74670acd90ebd3399581271644db71ee5a761d5679"
     },
     {
       "path": "src/renderer/face-detailer.css",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 15103,
-      "sha256": "ae600758c868007fb5482af5c454ae3415943c5de971eaa0db14d7e923e8cda7"
+      "bytes": 16276,
+      "sha256": "6d7c4ef83256691064ab81ede786c1750a06495013fb6127e240b4cb8fe8b9ea"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1418,18 +1418,18 @@
     },
     {
       "path": "src/shared/wildcard-packs.ts",
-      "bytes": 3810,
-      "sha256": "8317cd87e6f5b46f7f8ca04952c8b9442c31656d14f1bca8bd2c81b033005dd3"
+      "bytes": 13206,
+      "sha256": "7f1cf800b07671c00ac4c7ebb421fffde2fca2854e0e8486a79706b699930851"
     },
     {
       "path": "src/renderer/WildcardPacks.tsx",
-      "bytes": 1015,
-      "sha256": "5733ea356bd4ec8a1efa951599208301c9cca564d132479d4ede1c49f384ca15"
+      "bytes": 1643,
+      "sha256": "4feefba02efc8ded5445152d34e0f42a44ed68254ce8857f1bc64a73552d0763"
     },
     {
       "path": "tests/wildcard-packs.test.ts",
-      "bytes": 2503,
-      "sha256": "ed6a1fb4e7af16dfffe38c8cc2a411d64c00b9e226bb4586a69b0270d21f0f63"
+      "bytes": 3417,
+      "sha256": "14758288e23ecb27cea575a8d0caa6ab7d65c21bda652650e4848f137d01c288"
     },
     {
       "path": "tests/wildcard-packs-ui.test.tsx",
@@ -1438,8 +1438,8 @@
     },
     {
       "path": "docs/WILDCARD-PACKS.md",
-      "bytes": 2408,
-      "sha256": "a52d32164a35fcc701fc1d1ed10db080eba434979aed1739526c816a253298f0"
+      "bytes": 4174,
+      "sha256": "02cbe21fae2e6b82093da4c140cc898bb3569d1587928a96e882fc628ef641e7"
     }
   ],
   "privateHistoryIncluded": false
