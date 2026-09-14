@@ -113,8 +113,8 @@
     },
     {
       "path": "src/main/main.ts",
-      "bytes": 51937,
-      "sha256": "c0b48157bccff4b5e58e1e0377f4d4cf9791c2ad29faf20dddb72b38a2425c1f"
+      "bytes": 56322,
+      "sha256": "fb0126a787d36d0dd5d47e46ed48edb32019f450e6af79d5f077645b9da8f992"
     },
     {
       "path": "src/main/managed-backend.ts",
@@ -358,8 +358,8 @@
     },
     {
       "path": "src/preload/preload.ts",
-      "bytes": 8426,
-      "sha256": "fe10d66a259b9d88ba20134e2dcfa6823ba69c7503594b736c112006c85acd11"
+      "bytes": 8713,
+      "sha256": "99f3a8bbc273e0f1c8d92a28a649981063981e51e8c2120f36ccd23348ad5552"
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
@@ -588,8 +588,8 @@
     },
     {
       "path": "src/renderer/Settings.tsx",
-      "bytes": 13026,
-      "sha256": "b4beff6715db2cc92fc1cdf757aed8f83f08f3f158e4a231aed76c943d639b73"
+      "bytes": 13568,
+      "sha256": "3643938a6457a520d5e7c195d5ec467f482b01f8849b47ab9e8d34b9a9fdcbde"
     },
     {
       "path": "src/renderer/SharedBackendActivity.tsx",
@@ -628,8 +628,8 @@
     },
     {
       "path": "src/renderer/styles.css",
-      "bytes": 34014,
-      "sha256": "2cf3c163bf33410ee11dd73e7b3fc55d625b8d3298295f5407a4364327aa94a5"
+      "bytes": 34106,
+      "sha256": "3e78587f9c3acc47b1f7af5c53e9a5c7f04f9c932b36ba074cce71611ece238e"
     },
     {
       "path": "src/renderer/ui.tsx",
@@ -913,8 +913,8 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 18118,
-      "sha256": "9f5b150414ed57de4dd3973f0cc9944fabb50057ccbec94dc60fb65f14074b9a"
+      "bytes": 18460,
+      "sha256": "918865207fe5e49dee1a65dfc61a145e8f599620e9f0451280350af9d18ff36a"
     },
     {
       "path": "src/shared/validation.ts",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 16276,
-      "sha256": "6d7c4ef83256691064ab81ede786c1750a06495013fb6127e240b4cb8fe8b9ea"
+      "bytes": 17719,
+      "sha256": "c84a6e9de6756595696ab366a9d9fc0f13b2a3cf0600f6db541d0e4b28d58193"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1440,6 +1440,36 @@
       "path": "docs/WILDCARD-PACKS.md",
       "bytes": 4174,
       "sha256": "02cbe21fae2e6b82093da4c140cc898bb3569d1587928a96e882fc628ef641e7"
+    },
+    {
+      "path": "src/shared/app-update-types.ts",
+      "bytes": 2544,
+      "sha256": "8de1c7308126befba01c37abebd47c3c6de5f878173caf467e87e704706c3965"
+    },
+    {
+      "path": "src/main/app-updates.ts",
+      "bytes": 9122,
+      "sha256": "130ae56f91113c9d932a23f7898f2d5644a8bdb054a662bc5305ba7e456e116b"
+    },
+    {
+      "path": "src/renderer/AppUpdates.tsx",
+      "bytes": 2042,
+      "sha256": "53b000a24f1f2e37e060d80d920cd5c2b6b49e74d320d67a330f03e357ba6ed8"
+    },
+    {
+      "path": "tests/app-updates.test.ts",
+      "bytes": 6468,
+      "sha256": "08465c08b2521c3cc51d972d97a458f9b27775516f83123239c034a12f9a8c88"
+    },
+    {
+      "path": "tests/app-updates-ui.test.tsx",
+      "bytes": 1412,
+      "sha256": "7b92e686c89bff958f6102e790af7bd03b9a128f25c217a4cfe3581649ebc9ee"
+    },
+    {
+      "path": "docs/APP-UPDATES.md",
+      "bytes": 4528,
+      "sha256": "7b9c95ed3b8441ff483fd3e96fb8b583ba84ae5fa159bc6a509f27059b91f47c"
     }
   ],
   "privateHistoryIncluded": false

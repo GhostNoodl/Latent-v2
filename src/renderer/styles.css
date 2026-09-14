@@ -345,3 +345,5 @@ strong { font-weight: 500; }
 .lora-trigger-options { max-height:210px; overflow:auto; display:flex; flex-direction:column; gap:8px; padding:6px 0; }
 .lora-trigger-options .toggle { align-items:flex-start; }
 .lora-trigger-options .toggle span { overflow-wrap:anywhere; min-width:0; }
+
+.app-update-options { display: grid; gap: 10px; border: 0; padding: 10px 0; margin: 0; }

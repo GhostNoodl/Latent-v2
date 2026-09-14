@@ -1166,6 +1166,30 @@
     {
       "from": "docs/WILDCARD-PACKS.md",
       "to": "docs/WILDCARD-PACKS.md"
+    },
+    {
+      "from": "src/shared/app-update-types.ts",
+      "to": "src/shared/app-update-types.ts"
+    },
+    {
+      "from": "src/main/app-updates.ts",
+      "to": "src/main/app-updates.ts"
+    },
+    {
+      "from": "src/renderer/AppUpdates.tsx",
+      "to": "src/renderer/AppUpdates.tsx"
+    },
+    {
+      "from": "tests/app-updates.test.ts",
+      "to": "tests/app-updates.test.ts"
+    },
+    {
+      "from": "tests/app-updates-ui.test.tsx",
+      "to": "tests/app-updates-ui.test.tsx"
+    },
+    {
+      "from": "docs/APP-UPDATES.md",
+      "to": "docs/APP-UPDATES.md"
     }
   ]
 }

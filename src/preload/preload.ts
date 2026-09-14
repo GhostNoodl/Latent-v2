@@ -8,6 +8,7 @@ ipcRenderer.on('latent:flush-draft', async (_event: Electron.IpcRendererEvent, n
   await ipcRenderer.invoke('latent:flush-complete', nonce, failed?.status === 'rejected' ? (failed.reason instanceof Error ? failed.reason.message : String(failed.reason)) : undefined);
 });
 const api: LatentAPI = {
+  saveAppUpdateSettings: settings => invoke('saveAppUpdateSettings', settings), checkAppUpdates: () => invoke('checkAppUpdates'), downloadAppUpdate: () => invoke('downloadAppUpdate'), installAppUpdate: () => invoke('installAppUpdate'), cancelAppUpdate: () => invoke('cancelAppUpdate'),
   getSetupPreflight: capability => invoke('getSetupPreflight', capability), runGuidedSetup: capability => invoke('runGuidedSetup', capability),
   queueVideo: draft => invoke('queueVideo', draft), retryVideoSave: id => invoke('retryVideoSave', id),
   getModelTransferRecovery: () => invoke('getModelTransferRecovery'), retryModelTransfer: request => invoke('retryModelTransfer', request), cancelModelTransfer: id => invoke('cancelModelTransfer', id),

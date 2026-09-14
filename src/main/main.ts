@@ -1,3 +1,4 @@
+import { AppUpdateService } from './app-updates';
 import { withPausedModelEngine } from './model-maintenance';
 import { setupStorageBlockers, setupHardwareBlockers, type SetupCapability, type SetupPreflight } from '../shared/setup';
 import { inspectHardware as inspectSetupHardware } from './hardware-profile-probe';
@@ -8,7 +9,7 @@ import { copyStudioText } from './clipboard';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -132,7 +133,7 @@ function videoStatus(): AppSnapshot['video'] {
   return localVideoAvailability(videoDrafts.status(), videoAssets.status(), backend.status().state, backend.getRuntimeIdentity());
 }
 function snapshot(): AppSnapshot {
-  return { dismissedActivity: store.getState('activity.dismissed', { queue: [], notifications: [] }), notifications: store.getState('notifications', []), video: videoStatus(), backendActivity: backendActivity.status(), hardwareProfiles: hardwareProfiles.status(), faceDetailer: faceDetailer.status(), runtimeUpdates: runtimeUpdateSnapshot(), ipAdapter: ipAdapter.status(), qwenEdit: qwenEdit.status(), modelLocations: modelLocations.snapshot(), collections: collections.snapshot(), controlNet: controlNet.status(), upscaler: upscaler.status(), wildcards: wildcards.snapshot(), backend: backend.status(), assistant: assistant.status(), segmentation: segmentation.status(), sourceImages: sources.list(), models: models.assets, history: store.records(), previewSelectedRecordId: store.previewSelectionId(), jobs: jobs.jobs(), settings: store.settings(), draft, presets: store.presets(), paths, hardware, downloads: models.downloads };
+  return { dismissedActivity: store.getState('activity.dismissed', { queue: [], notifications: [] }), notifications: store.getState('notifications', []), video: videoStatus(), backendActivity: backendActivity.status(), hardwareProfiles: hardwareProfiles.status(), faceDetailer: faceDetailer.status(), appUpdates: appUpdates?.status(), runtimeUpdates: runtimeUpdateSnapshot(), ipAdapter: ipAdapter.status(), qwenEdit: qwenEdit.status(), modelLocations: modelLocations.snapshot(), collections: collections.snapshot(), controlNet: controlNet.status(), upscaler: upscaler.status(), wildcards: wildcards.snapshot(), backend: backend.status(), assistant: assistant.status(), segmentation: segmentation.status(), sourceImages: sources.list(), models: models.assets, history: store.records(), previewSelectedRecordId: store.previewSelectionId(), jobs: jobs.jobs(), settings: store.settings(), draft, presets: store.presets(), paths, hardware, downloads: models.downloads };
 }
 function runtimeUpdateSnapshot() {
   const status = runtimeUpdates.status(); const problem = runtimeCoordinator.recoveryProblem();
@@ -152,6 +153,24 @@ async function automaticRuntimeCheck() {
 function scheduleRuntimeIdleCheck() {
   if (!runtimeUpdateTimer || runtimeIdleTimer || closing || closed) return;
   runtimeIdleTimer = setTimeout(() => { runtimeIdleTimer = undefined; void automaticRuntimeCheck().catch(() => undefined); }, 1000);
+}
+let appUpdates: AppUpdateService | undefined;
+let appUpdateTimer: NodeJS.Timeout | undefined;
+let appUpdateTickRunning=false, appInstallClosing=false;
+let installerToLaunch:string|undefined;
+function appUpdateBusyReason():string|undefined {
+  if(storageChanging||storageRestartPending||pendingOperations.size||modelChangeInProgress)return 'Waiting for studio operations to finish.';
+  if([assistant.status(),segmentation.status(),faceDetailer.status(),qwenEdit.status(),upscaler.status(),controlNet.status(),ipAdapter.status()].some(value=>['installing','starting','thinking','segmenting','detecting','activating'].includes(value.state)))return 'Waiting for studio tools to finish.';
+  if(modelChangeBlockedReason()||jobs.isProcessing())return 'Waiting for the image engine and queue.';
+  if(jobs.jobs().some(job => isVideoJob(job) ? job.finalization==='pending' : job.status==='completed'&&job.draft.autoFace&&!job.autoFaceFinished))return 'Waiting for saved media and face refinement.';
+  const state=backendActivity.status();if(backend.status().state==='ready'&&(state.state!=='ready'||state.totalRunning||state.totalPending))return 'Waiting for the shared image engine.';
+  return undefined;
+}
+async function tickAppUpdates(){
+  if(!appUpdates||appUpdateTickRunning||closing||closed||quitting)return;appUpdateTickRunning=true;
+  try {await track(appUpdates.automatic());if(appUpdates.status().installRequested&&!appUpdateBusyReason()){await backendActivity.assertIdle('install an app update');if(appUpdateBusyReason())return;appInstallClosing=true;app.quit();}}
+  catch { /* The service reports network errors. Busy installation stays deferred. */ }
+  finally {appUpdateTickRunning=false;}
 }
 let modelChangeInProgress = false;
 function modelChangeBlockedReason(): string | undefined {
@@ -179,6 +198,7 @@ function locationChangeBlockedReason(): string | undefined {
   return undefined;
 }
 function assertModelLocationsReady(allowModelChange = false) {
+  if(appInstallClosing)throw new Error('The studio is closing to install an update.');
   if (modelChangeInProgress && !allowModelChange) throw new Error('Wait for the model change to finish.');
   const runtimeProblem = runtimeCoordinator?.blockedReason(); if (runtimeProblem) throw new Error(runtimeProblem);
   if (ipAdapter?.status().state === 'activating') throw new Error('Wait for reference-tool activation to finish before starting or queuing generation.');
@@ -239,7 +259,7 @@ async function initialize() {
   backendActivity = new BackendActivityService({ waitForStartup: () => backend.waitForStartup(), getBackend: () => ({ state: backend.status().state, url: backend.getUrl(), hasOwnedProcess: backend.hasOwnedProcess() }), getOwnedPrompts: () => jobs?.jobs().filter(job => job.promptId).map(job => ({ jobId: job.id, promptId: job.promptId! })) ?? [] }, broadcast);
   const videoPreflight = new VideoPreflightService(paths, videoAssets, sources, backend, { blockedReason: () => runtimeCoordinator?.blockedReason() ?? (!runtimeCoordinator ? 'Checking interrupted runtime maintenance.' : undefined) });
   const videoQueue = new VideoQueueService(paths, videoPreflight, videoHistory);
-  jobs = new JobService(paths, store, models, backend, broadcast, job => { notifications.jobFinished(job); }, app.getVersion(), upscaler, controlNet, qwenEdit, ipAdapter, () => runtimeCoordinator?.blockedReason() ?? (!runtimeCoordinator ? 'Checking for interrupted runtime maintenance before generation.' : undefined), faceDetailer, backendActivity, videoQueue);
+  jobs = new JobService(paths, store, models, backend, broadcast, job => { notifications.jobFinished(job); }, app.getVersion(), upscaler, controlNet, qwenEdit, ipAdapter, () => appInstallClosing ? 'The studio is closing to install an update.' : runtimeCoordinator?.blockedReason() ?? (!runtimeCoordinator ? 'Checking for interrupted runtime maintenance before generation.' : undefined), faceDetailer, backendActivity, videoQueue);
   runtimeCoordinator = new RuntimeUpdateCoordinator(models.library, backend, jobs, () => runtimeUpdates.status());
   runtimeUpdates = new RuntimeUpdateService(paths, store, broadcast, runtimeCoordinator.hooks);
   modelLocations = new ModelLocationService(paths, store, models, { assertChangesAllowed: () => { const reason = locationChangeBlockedReason(); if (reason) throw new Error(reason); }, changeBlockedReason: modelChangeBlockedReason }, broadcast);
@@ -251,6 +271,9 @@ async function initialize() {
     getRuntimeIdentity: () => backend.getRuntimeIdentity(), getBackendUrl: () => backend.getUrl(), getSettings: () => store.settings(), getModels: () => models.assets,
     getSource: async sourceId => (await sources.resolve(sourceId)).source, getMask: async maskId => (await sources.resolveMask(maskId)).mask, isUpscalerReady: () => upscaler.status().state === 'ready',
   });
+  const installed = app.isPackaged && process.platform === 'win32' && process.arch === 'x64' && !process.env.PORTABLE_EXECUTABLE_FILE && await fs.access(path.join(path.dirname(process.execPath), 'Uninstall Latent v2.exe')).then(() => true, () => false);
+  appUpdates = new AppUpdateService(paths.root, store, app.getVersion(), Boolean(installed), broadcast);
+  appUpdateTimer = setInterval(() => void tickAppUpdates(), 30000);
   const id = z.string().min(1).max(1000);
   let guidedSetupRunning = false;
   const preflightSetup = async (raw: SetupCapability): Promise<SetupPreflight> => {
@@ -310,6 +333,10 @@ async function initialize() {
     applyHardwareBackendRecommendation: async reportId => { const priorMode = store.settings().deviceMode; const result = await hardwareProfiles.applyBackendRecommendation(z.uuid().parse(reportId)); if (store.settings().deviceMode !== priorMode) throw new Error('The backend preference changed while it was being checked. Recommend again.'); store.saveSettings(result.settings); hardwareProfiles.settingsChanged(); broadcast(); return snapshot(); },
     getJobMemoryAdvice: async jobId => { const job = jobs.jobs().find(value => value.id === id.parse(jobId)); if (!job || job.status !== 'failed') throw new Error('Choose an existing failed generation to inspect its recovery advice.'); if (isVideoJob(job)) throw new Error('Video recovery details are shown in its queue row. Image memory recommendations do not apply to video.'); return hardwareProfiles.oomAdvice(job.error ?? '', job.draft); },
     setupFaceDetailer: async repair => faceDetailer.setup(z.boolean().optional().parse(repair) ?? false), cancelFaceDetailerSetup: async () => faceDetailer.cancelSetup(), detectFaces: async request => faceDetailer.detect(request), cancelFaceDetection: async () => faceDetailer.cancelDetection(), getFaceDetection: async id => faceDetailer.getDetection(id),
+    saveAppUpdateSettings: async value => { appUpdates!.settings(value); },
+    checkAppUpdates: async () => appUpdates!.check(), downloadAppUpdate: async () => appUpdates!.download(),
+    installAppUpdate: async () => { appUpdates!.requestInstall(); setTimeout(() => void tickAppUpdates(), 0); },
+    cancelAppUpdate: async () => { await appUpdates!.cancel(); },
     getRuntimeUpdateStatus: async () => runtimeUpdateSnapshot(),
     saveRuntimeUpdateSettings: async value => { await runtimeUpdates.saveSettings(runtimeUpdateSettingsSchema.partial().parse(value)); automaticRuntimeRetryAfter = 0; scheduleRuntimeIdleCheck(); },
     checkRuntimeUpdates: async () => { await runtimeUpdates.check(); automaticRuntimeRetryAfter = 0; },
@@ -417,6 +444,7 @@ async function initialize() {
   for (const [method, handler] of Object.entries(methods)) ipcMain.handle(`latent:${method}`, (event, ...args: unknown[]) => {
     if (!window || event.sender !== window.webContents || event.senderFrame !== event.sender.mainFrame || !trusted(event.senderFrame.url)) throw new Error('This request did not come from the studio window.');
     if (closing) throw new Error('The studio is closing.');
+    if (appInstallClosing && !/^(get|save)/.test(method)) throw new Error('The studio is saving and closing to install an update.');
     if ((storageChanging || storageRestartPending) && !/^(get|cancel|stop)/.test(method) && !['saveDraft','saveVideoConversation','saveQwenConversation','saveAssistantConversation','savePreviewSelection','copyText'].includes(method)) throw new Error(storageRestartPending ? 'Storage was copied. Restart the studio before changing models or generating again.' : 'Storage is being changed. Wait for copying and restart to finish.');
     return track(Promise.resolve().then(() => (handler as (...values: unknown[]) => unknown)(...args)));
   });
@@ -483,21 +511,24 @@ else {
             window!.webContents.send('latent:flush-draft', pendingFlush.nonce);
           });
         } catch (error) {
+          if(appInstallClosing){appUpdates?.cancelInstall('Save your open edits before installing. The update is still downloaded.');appInstallClosing=false;installerToLaunch=undefined;quitting=false;window.webContents.send('latent:close-cancelled');return;}
           const choice = await dialog.showMessageBox(window, { type: 'warning', title: 'Your latest draft has not been saved', message: errorMessage(error), buttons: ['Keep studio open', 'Close without latest draft'], defaultId: 0, cancelId: 0 });
           if (choice.response === 0) { quitting = false; window.webContents.send('latent:close-cancelled'); return; }
         }
       }
+      if(appInstallClosing){try{if(appUpdateBusyReason())throw new Error('Studio work is still finishing. Request installation again when ready.');await backendActivity.assertIdle('install an app update');installerToLaunch=await appUpdates!.installer();}catch(error){appUpdates?.cancelInstall(errorMessage(error));appInstallClosing=false;installerToLaunch=undefined;quitting=false;window?.webContents.send('latent:close-cancelled');return;}}
       try { await backendActivity?.assertNoForeignWork('close the studio'); }
       catch (error) {
         try { if (window && !window.isDestroyed()) { window.webContents.send('latent:close-cancelled'); window.show(); window.focus(); await dialog.showMessageBox(window, { type: 'info', title: 'Shared image engine is still in use', message: errorMessage(error), buttons: ['Keep studio open'], defaultId: 0 }); } }
-        finally { quitting = false; }
+        finally { quitting = false; if(appInstallClosing){appUpdates?.cancelInstall();appInstallClosing=false;installerToLaunch=undefined;} }
         return;
       }
-      closing = true; backendActivity?.dispose(); if (broadcastTimer) clearTimeout(broadcastTimer); if (runtimeUpdateTimer) clearInterval(runtimeUpdateTimer); if (runtimeIdleTimer) clearTimeout(runtimeIdleTimer);
+      closing = true; if(appUpdateTimer)clearInterval(appUpdateTimer); backendActivity?.dispose(); if (broadcastTimer) clearTimeout(broadcastTimer); if (runtimeUpdateTimer) clearInterval(runtimeUpdateTimer); if (runtimeIdleTimer) clearTimeout(runtimeIdleTimer);
       models?.dispose();
       modelTransferActions?.dispose();
       civitai?.cancel();
-      try { await runtimeUpdates?.dispose(); await jobs?.dispose(); await Promise.allSettled([backend?.dispose(), assistant?.dispose(), segmentation?.dispose(), upscaler?.dispose(), controlNet?.dispose(), qwenEdit?.dispose(), ipAdapter?.dispose(), faceDetailer?.dispose(), videoInspector?.dispose(), videoAssets?.dispose()]); await Promise.allSettled([...pendingOperations]); store?.close(); } finally { closed = true; app.quit(); }
+      let updateShutdownComplete=false;
+      try { await appUpdates?.dispose(); await runtimeUpdates?.dispose(); await jobs?.dispose(); const stoppedServices=await Promise.allSettled([backend?.dispose(), assistant?.dispose(), segmentation?.dispose(), upscaler?.dispose(), controlNet?.dispose(), qwenEdit?.dispose(), ipAdapter?.dispose(), faceDetailer?.dispose(), videoInspector?.dispose(), videoAssets?.dispose()]); const finishedWrites=await Promise.allSettled([...pendingOperations]); store?.close(); updateShutdownComplete=[...stoppedServices,...finishedWrites].every(result=>result.status==='fulfilled'); } finally { closed = true; if(appInstallClosing && installerToLaunch && updateShutdownComplete){try{await new Promise<void>((resolve,reject)=>{const child=spawn(installerToLaunch!,[],{detached:true,windowsHide:true,stdio:'ignore',cwd:path.dirname(installerToLaunch!)});child.once('error',reject);child.once('spawn',()=>{child.unref();resolve();});});}catch(error){dialog.showErrorBox('Update installer could not start',errorMessage(error));}} app.quit(); }
     })();
   });
 }

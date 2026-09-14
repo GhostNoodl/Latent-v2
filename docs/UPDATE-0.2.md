@@ -23,7 +23,7 @@ Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release ha
 - [ ] #3 A new application icon, reviewed at small sizes and applied to Windows packaging.
 - [x] #4 Confirmed Recycle Bin removal for studio-owned models, with in-use checks, refreshed selectors and hidden deliberately removed entries. External folders stay read-only.
 - [ ] #6 Smaller Qwen editing model route, including GGUF feasibility and real 16 GB GPU memory/speed/quality testing.
-- [ ] #7 Optional app updates: check/download/install preferences, defer while busy, and test upgrades.
+- [~] #7 Optional app-update controls, verified downloads and deferred installation implemented. A live published installer and real Windows upgrade/data-preservation test remain required.
 - [x] #9 Expanded base-model discovery choices (including an exact custom label), workflow compatibility badges, and an explicitly loaded-results compatibility filter. Searching does not broaden download/generation support.
 - [x] #10 Clean display names, new Civitai download/import filenames and existing files through Details / manage file. Saved references survive renames; occupied names cannot be overwritten. Civitai collisions get a short checksum suffix.
 - [x] #12 Version-specific creator galleries with thumbnail selection, previous/next controls, larger view, failure retry and empty states. Up to 24 unique image previews are retained per version, regardless of rating.
@@ -104,3 +104,11 @@ Expanded the five original categories and added lighting, time/sky, expressions,
 Existing and edited starter copies are preserved when adding expanded versions. All packs fit within the unchanged 1,024-choice dictionary limit; staging now rejects additions that would exceed it, showing an error without changing the editor's lists.
 
 Validation: seven focused wildcard tests passed, including full-catalog expansion/validation, budget overflow, old-copy preservation and explicit editor saving. Type checking and development compilation passed. A headless renderer check covered searching by a species name, no-match recovery, restoring all 13 categories, preview scrolling, adding and saving; no page errors or horizontal overflow occurred, and the screenshot was inspected. No GPU run or installer was needed.
+
+## Eighth batch: optional desktop updates
+
+Settings now separates desktop app updates from generation-runtime updates. Manual check/download/install actions are available, with opt-in automatic checks, downloads and installation after work finishes. Published stable releases must match the expected Windows installer identity and GitHub SHA-256 digest. Cancellation, progress, cache reuse, corruption recovery and missing/rate-limited feeds have explicit outcomes.
+
+Installation is restricted to the installed Windows edition, waits for studio/shared-engine work, uses the existing editor flush, and starts only after successful shutdown. Flush failures preserve open edits and postpone installation. Development and portable executables are protected. No actual installer was downloaded or executed during implementation.
+
+Validation: all 283 tests across 34 files passed, plus both public-boundary tests and development compilation. The 11 focused update tests and type checking passed again after the final exclusive-copy storage adjustment. Headless controls exercised opt-in preferences, installation request and postponement with no page errors; the screenshot was inspected. The anonymous release endpoint returned 404, so live release availability and the real 0.1.1 upgrade remain unverified. See APP-UPDATES.md for the final VM acceptance steps.

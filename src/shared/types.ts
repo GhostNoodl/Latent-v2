@@ -1,3 +1,4 @@
+import type { AppUpdateSettings, AppUpdateStatus } from './app-update-types';
 import type { AssistantConversation, AssistantStatus, AssistantSuggestion, AssistantSuggestionRequest } from './assistant-types';
 import type { SourceImageAsset, SourceImageInventory, SourceMaskAsset, SourceMaskSaveOptions } from './source-types';
 import type { CivitaiDownloadRequest, CivitaiModel, CivitaiPermissions, CivitaiReadResult, CivitaiSearchPage, CivitaiSearchRequest, CivitaiSettings } from './civitai-types';
@@ -197,6 +198,7 @@ export interface DownloadStatus {
 }
 export interface ModelDownloadRequest { url: string; filename: string; kind: ModelKind; family: ModelFamily; sha256?: string; triggers?: string[]; sourceUrl?: string; licenseUrl?: string; provenance?: ModelProvenance; civitai?: CivitaiProvenance; }
 export interface AppSnapshot {
+  appUpdates?: AppUpdateStatus;
   dismissedActivity?: { queue: string[]; notifications: string[] };
   notifications?: Array<{ id: string; title: string; body: string; at: string; preference: 'notifyGeneration' | 'notifyError' | 'notifyDownload' }>;
   video: VideoAvailability;
@@ -229,6 +231,11 @@ export interface AppSnapshot {
 export type ComfyInput = string | number | boolean | [string, number];
 export type ComfyWorkflow = Record<string, { class_type: string; inputs: Record<string, ComfyInput>; _meta?: { title: string } }>;
 export interface LatentAPI {
+  saveAppUpdateSettings(settings: Partial<AppUpdateSettings>): Promise<void>;
+  checkAppUpdates(): Promise<void>;
+  downloadAppUpdate(): Promise<void>;
+  installAppUpdate(): Promise<void>;
+  cancelAppUpdate(): Promise<void>;
   getSetupPreflight(capability: import('./setup').SetupCapability): Promise<import('./setup').SetupPreflight>;
   runGuidedSetup(capability: import('./setup').SetupCapability): Promise<void>;
   getModelTransferRecovery(): Promise<ModelTransferRecovery>;
