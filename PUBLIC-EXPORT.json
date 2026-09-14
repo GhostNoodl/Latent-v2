@@ -1183,8 +1183,8 @@
     },
     {
       "path": ".github/workflows/public-source.yml",
-      "bytes": 800,
-      "sha256": "d8239656b7f7e511db8eec643795e0754fa87e42e393b4aa0f31a85d18347475"
+      "bytes": 903,
+      "sha256": "eaf6a2a2a9f4d6d827e5be13f4728d3baf45a6e062d667fd3c38f048f020100e"
     },
     {
       "path": "scripts/check-public-boundary.mjs",
