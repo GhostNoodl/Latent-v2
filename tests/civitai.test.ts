@@ -22,6 +22,20 @@ afterEach(async () => {
 });
 const client = (extra: object = {}) => new CivitaiClient({ cache }, { fetch: fetchMock as typeof fetch, ...extra });
 
+it('passes exact discovery bases without widening generation families', async () => {
+  fetchMock.mockResolvedValue(json({items:[{...rawModel(), modelVersions:[{...rawModel().modelVersions[0],baseModel:'Pony'}]}],metadata:{}}));
+  const result=await client().search({baseModel:'Pony',family:'sdxl',cursor:'next'});
+  const url=new URL(fetchMock.mock.calls[0][0]);expect(url.searchParams.get('baseModels')).toBe('Pony');expect(url.searchParams.get('cursor')).toBe('next');
+  expect(result.data.items[0].versions[0].family).toBe('unknown');
+  await expect(client().search({baseModel:'x'.repeat(101)})).rejects.toThrow();
+});
+it('retains up to 24 unique previews regardless of rating and preserves them through cache validation',async()=>{
+  const raw=rawModel();raw.modelVersions[0].images=Array.from({length:30},(_,i)=>({url:`https://image.civitai.com/example/${i}.jpeg`,nsfwLevel:32,width:512,height:512}));
+  fetchMock.mockResolvedValue(json(raw));const first=await client().detail(raw.id);
+  expect(first.data.versions[0].previews).toHaveLength(24);
+  const cached=await client().detail(raw.id);expect(cached.data.versions[0].previews).toHaveLength(24);
+});
+
 describe('Civitai metadata normalization', () => {
   it.each([0, 1, 2, 4, 8, 16, 32, undefined])('retains API image previews regardless of rating %s', rating => {
     const raw = rawModel();

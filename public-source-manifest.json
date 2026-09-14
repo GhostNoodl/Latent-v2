@@ -1086,6 +1086,18 @@
     {
       "from": "tests/model-maintenance.test.ts",
       "to": "tests/model-maintenance.test.ts"
+    },
+    {
+      "from": "src/shared/civitai-discovery.ts",
+      "to": "src/shared/civitai-discovery.ts"
+    },
+    {
+      "from": "src/renderer/CivitaiGallery.tsx",
+      "to": "src/renderer/CivitaiGallery.tsx"
+    },
+    {
+      "from": "tests/civitai-gallery.test.tsx",
+      "to": "tests/civitai-gallery.test.tsx"
     }
   ]
 }

@@ -24,9 +24,9 @@ Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release ha
 - [x] #4 Confirmed Recycle Bin removal for studio-owned models, with in-use checks, refreshed selectors and hidden deliberately removed entries. External folders stay read-only.
 - [ ] #6 Smaller Qwen editing model route, including GGUF feasibility and real 16 GB GPU memory/speed/quality testing.
 - [ ] #7 Optional app updates: check/download/install preferences, defer while busy, and test upgrades.
-- [ ] #9 More Discover search/filter choices and clearly marked generation compatibility.
+- [x] #9 Expanded base-model discovery choices (including an exact custom label), workflow compatibility badges, and an explicitly loaded-results compatibility filter. Searching does not broaden download/generation support.
 - [x] #10 Clean display names, new Civitai download/import filenames and existing files through Details / manage file. Saved references survive renames; occupied names cannot be overwritten. Civitai collisions get a short checksum suffix.
-- [ ] #12 Model-detail image galleries in Discover.
+- [x] #12 Version-specific creator galleries with thumbnail selection, previous/next controls, larger view, failure retry and empty states. Up to 24 unique image previews are retained per version, regardless of rating.
 - [x] #14 Stop/restart an idle managed engine around model changes. Busy queues/downloads request a retry after work finishes; no active job is interrupted or silently cancelled. Live engine verification remains a release check.
 - [ ] #16/16B Select LoRA triggers and insert them into the visible prompt, tracking ownership so removing a LoRA preserves manual edits and shared triggers. Maintain old history/recipe reproduction.
 - [ ] #20 Curated, editable booru wildcard packs with provenance and alias/duplicate cleanup.
@@ -52,3 +52,13 @@ Setup now shows the active component, an overall progress bar and known download
 The Models page and model context dialog offer filename cleanup and confirmed Recycle Bin removal. Stable model IDs, original aliases and historical recipes remain intact. Deliberately deleted entries disappear; files restored from the Recycle Bin become visible again. Failed recycle operations restore the registry. External model roots remain read-only.
 
 Validation: 227 automated tests passed across 23 files, plus both public-source boundary tests. TypeScript and the development build passed; the public source allowlist/privacy check passed. Tests used tiny isolated safetensors fixtures, including rename identity, collisions, modified files, recycling failures/restoration, confirmation UI, unknown progress, and engine lifecycle sequencing. No user model files or actual Recycle Bin contents were touched. Real Windows recycling, a live engine restart and a fresh dependency installation remain end-of-update checks. No installer was assembled or release published.
+
+## Third batch: Discover
+
+Discover supports additional exact base-model searches, with suggestions for Pony, NoobAI, SD variants and Flux, and custom labels. Existing resource, creator, tag, period and sort options remain. Search cards distinguish supported, mixed-version and unsupported workflows; the optional compatibility filter clearly applies to loaded results and preserves Load more. Selecting a result prefers the version matching the searched base. Discovery never changes acquisition or generation compatibility.
+
+Model details show the selected version's creator images, with thumbnails, keyboard/previous/next navigation, a larger-view dialog, and recoverable failed-image states. New version/fetch identities reset the gallery. Image ratings are not filtered. Existing URL validation and response/cache bounds remain in effect; up to 24 unique image previews are retained per version. Galleries use images returned by model metadata, not an unbounded fetch of every community post.
+
+Headless verification used the real renderer components with synthetic metadata/images at 1440 and 900 pixels: gallery navigation, larger view, version reset, base query wiring, compatibility filtering and horizontal overflow checks passed with no page errors. Screenshots were visually inspected. Anonymous live API requests for Pony, NoobAI and Flux.1 D returned HTTP 200 and matching bases. No accounts, model downloads or GPU generation were needed. Public-source checks and the development compilation remain separate from final packaged-app validation.
+
+Validation: all 233 automated tests passed across 24 files, along with both public-boundary tests, TypeScript/development compilation and the 271-file public-source check. No installer was assembled or release published.

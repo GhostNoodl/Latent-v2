@@ -11,7 +11,7 @@ const ORIGIN = 'https://civitai.com';
 const MAX_BODY = 4 * 1024 * 1024;
 const MAX_CACHE_AGE = 30 * 24 * 60 * 60 * 1000;
 const PREVIEW_HOSTS = new Set(['image.civitai.com', 'imagecache.civitai.com']);
-const searchSchema = z.object({ includeMature: z.boolean().default(true), username: z.string().trim().max(100).optional(), tag: z.string().trim().max(100).optional(), period: z.enum(['AllTime', 'Year', 'Month', 'Week', 'Day']).optional(), query: z.string().trim().max(200).optional(), kind: z.enum(['checkpoint', 'lora']).optional(), family: z.enum(['sdxl', 'illustrious']).optional(), cursor: z.string().min(1).max(512).regex(/^[^\x00-\x1f\x7f]+$/).optional(), limit: z.number().int().min(1).max(20).default(12), sort: z.enum(['Most Downloaded', 'Highest Rated', 'Newest']).default('Most Downloaded') }).strict();
+const searchSchema = z.object({ baseModel: z.string().trim().min(1).max(100).regex(/^[^\x00-\x1f\x7f]+$/).optional(), includeMature: z.boolean().default(true), username: z.string().trim().max(100).optional(), tag: z.string().trim().max(100).optional(), period: z.enum(['AllTime', 'Year', 'Month', 'Week', 'Day']).optional(), query: z.string().trim().max(200).optional(), kind: z.enum(['checkpoint', 'lora']).optional(), family: z.enum(['sdxl', 'illustrious']).optional(), cursor: z.string().min(1).max(512).regex(/^[^\x00-\x1f\x7f]+$/).optional(), limit: z.number().int().min(1).max(20).default(12), sort: z.enum(['Most Downloaded', 'Highest Rated', 'Newest']).default('Most Downloaded') }).strict();
 function object(value: unknown): Record<string, unknown> { return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 function array(value: unknown, maximum: number) { return Array.isArray(value) ? value.slice(0, maximum) : []; }
 function id(value: unknown) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : null; }
@@ -58,10 +58,10 @@ function normalizeFile(value: unknown, versionId: number): CivitaiFile | null {
 function normalizeVersion(value: unknown, modelId: number, blocked: boolean): CivitaiVersion | null {
   const raw = object(value); const versionId = id(raw.id); if (!versionId || (raw.modelId !== undefined && raw.modelId !== modelId)) return null;
   const baseModel = plain(raw.baseModel, 100); const availability = plain(raw.availability, 100);
-  const previews = array(raw.images, 12).flatMap(value => {
+  const previews = array(raw.images, 100).flatMap(value => {
     const image = object(value); const url = safeUrl(image.url, 'preview');
     return !blocked && url && image.type !== 'video' ? [{ url, width: id(image.width), height: id(image.height) }] : [];
-  }).slice(0, 6);
+  }).filter((preview, index, all) => all.findIndex(item => item.url === preview.url) === index).slice(0, 24);
   const earlyAccessEndsAt = typeof raw.earlyAccessEndsAt === 'string' && Number.isFinite(Date.parse(raw.earlyAccessEndsAt)) ? new Date(raw.earlyAccessEndsAt).toISOString() : null;
   return { id: versionId, modelId, name: plain(raw.name, 200), description: plain(raw.description, 8000), baseModel, family: civitaiFamily(baseModel), baseModelType: plain(raw.baseModelType, 80), trainedWords: texts(raw.trainedWords, 50, 200), availability, status: plain(raw.status, 60), earlyAccessEndsAt, publiclyListed: !blocked && availability === 'Public' && !earlyAccessEndsAt && !raw.earlyAccessConfig, files: blocked ? [] : array(raw.files, 30).map(value => normalizeFile(value, versionId)).filter((file): file is CivitaiFile => !!file), previews, sourceUrl: `${ORIGIN}/models/${modelId}?modelVersionId=${versionId}` };
 }
@@ -77,7 +77,7 @@ export function normalizeCivitaiModel(value: unknown): CivitaiModel | null {
 
 const source = z.string().refine(value => safeUrl(value, 'source') === value);
 const fileSchema = z.object({ id: z.number().int().positive(), name: z.string().max(240), type: z.string().max(80), format: z.string().max(40), fp: z.string().max(40), sizeKB: z.number().positive().nullable(), estimatedBytes: z.number().int().positive().nullable(), sha256: z.string().regex(/^[a-f0-9]{64}$/).nullable(), downloadUrl: z.string().refine(value => safeUrl(value, 'download') === value).nullable(), primary: z.boolean(), safeTensor: z.boolean() });
-const versionSchema = z.object({ id: z.number().int().positive(), modelId: z.number().int().positive(), name: z.string().max(200), description: z.string().max(8000), baseModel: z.string().max(100), family: z.enum(['sdxl', 'illustrious', 'unknown']), baseModelType: z.string().max(80), trainedWords: z.array(z.string().max(200)).max(50), availability: z.string().max(100), status: z.string().max(60), earlyAccessEndsAt: z.iso.datetime().nullable(), publiclyListed: z.boolean(), files: z.array(fileSchema).max(30), previews: z.array(z.object({ url: z.string().refine(value => safeUrl(value, 'preview') === value), width: z.number().int().positive().nullable(), height: z.number().int().positive().nullable() })).max(6), sourceUrl: source });
+const versionSchema = z.object({ id: z.number().int().positive(), modelId: z.number().int().positive(), name: z.string().max(200), description: z.string().max(8000), baseModel: z.string().max(100), family: z.enum(['sdxl', 'illustrious', 'unknown']), baseModelType: z.string().max(80), trainedWords: z.array(z.string().max(200)).max(50), availability: z.string().max(100), status: z.string().max(60), earlyAccessEndsAt: z.iso.datetime().nullable(), publiclyListed: z.boolean(), files: z.array(fileSchema).max(30), previews: z.array(z.object({ url: z.string().refine(value => safeUrl(value, 'preview') === value), width: z.number().int().positive().nullable(), height: z.number().int().positive().nullable() })).max(24), sourceUrl: source });
 const modelSchema: z.ZodType<CivitaiModel> = z.object({ id: z.number().int().positive(), name: z.string().max(200), description: z.string().max(8000), kind: z.enum(['checkpoint', 'lora']), creator: z.string().max(150), tags: z.array(z.string().max(80)).max(50), sourceUrl: source, availability: z.string().max(100), mode: z.string().max(60).nullable(), permissions: z.object({ allowNoCredit: z.boolean().nullable(), allowDerivatives: z.boolean().nullable(), allowDifferentLicense: z.boolean().nullable(), allowCommercialUse: z.array(z.string().max(80)).max(20).nullable() }), versions: z.array(versionSchema).max(50) });
 const pageSchema: z.ZodType<CivitaiSearchPage> = z.object({ items: z.array(modelSchema).max(20), nextCursor: z.string().max(512).regex(/^[^\x00-\x1f\x7f]+$/).nullable() });
 export class CivitaiError extends Error {
@@ -103,7 +103,8 @@ export class CivitaiClient {
     if (request.cursor) url.searchParams.set('cursor', request.cursor);
     if (request.kind) url.searchParams.set('types', request.kind === 'checkpoint' ? 'Checkpoint' : 'LORA');
     else { url.searchParams.append('types', 'Checkpoint'); url.searchParams.append('types', 'LORA'); }
-    if (request.family) url.searchParams.set('baseModels', request.family === 'illustrious' ? 'Illustrious' : 'SDXL 1.0');
+    if (request.baseModel) url.searchParams.set('baseModels', request.baseModel);
+    else if (request.family) url.searchParams.set('baseModels', request.family === 'illustrious' ? 'Illustrious' : 'SDXL 1.0');
     return this.read(url, pageSchema, raw => {
       if (!Array.isArray(object(raw).items)) throw new CivitaiError('Civitai returned an invalid search response.', 'response');
       const next = object(object(raw).metadata).nextCursor;

@@ -33,8 +33,8 @@
     },
     {
       "path": "src/main/civitai.ts",
-      "bytes": 21448,
-      "sha256": "44fff7a99564f3b61fe9d4d7dbd8364b4ae7de901a7d1e006ffa8afdf2d7fe25"
+      "bytes": 21716,
+      "sha256": "1f9ad1289be7c7e64da522e3ea52601275b21a2141043af4d717923bf4b4d68e"
     },
     {
       "path": "src/main/clipboard.ts",
@@ -383,13 +383,13 @@
     },
     {
       "path": "src/renderer/civitai.css",
-      "bytes": 3582,
-      "sha256": "230910a0b410cd6db4b3ea9733664f2ab60d3ff86c71f1b0e1743cadcc22164e"
+      "bytes": 5022,
+      "sha256": "e11cc392ddab5724e898741cbd3f7e6a5d0516c31e66a62aad83e02e695638b2"
     },
     {
       "path": "src/renderer/CivitaiBrowser.tsx",
-      "bytes": 24815,
-      "sha256": "d87febc0c2496f18be8f00e6abe453a64dfd00d8231adc3a502e9dd11ab13802"
+      "bytes": 25634,
+      "sha256": "3552afea415b616fa080e47169a9fce2c5a644361c0ef70e774d6c0a3a0a0994"
     },
     {
       "path": "src/renderer/collections.css",
@@ -713,8 +713,8 @@
     },
     {
       "path": "src/shared/civitai-types.ts",
-      "bytes": 2379,
-      "sha256": "a942bcfbe93f0545f709b8596d99eb1faeae0e286e3c1e4fafdb027bbd2c7765"
+      "bytes": 2470,
+      "sha256": "357ce61ddcf2a70228e8c07dec559957f15be8525551708c36dfe0787535d9ff"
     },
     {
       "path": "src/shared/collections-types.ts",
@@ -1118,8 +1118,8 @@
     },
     {
       "path": "tests/civitai.test.ts",
-      "bytes": 17666,
-      "sha256": "fc0e76e1cfb0ee8f70e19d7ea300f6704516ee8f04c220774ab1471b298adb4f"
+      "bytes": 18841,
+      "sha256": "7e65d71872eff31e82ef4d020f4800adfffc5ff21e2a84bdb75982cb57a7d759"
     },
     {
       "path": "tests/civitai-transfer.test.ts",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 6318,
-      "sha256": "a1355420ab4745ee34eb933ff0b62d786d1aa80d2331cb008f548f083dbe09cd"
+      "bytes": 8399,
+      "sha256": "cb2bdcdea075b92c34d5e141bd5de602cc56e9d31ff560af92b8fc558b92bc55"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1340,6 +1340,21 @@
       "path": "tests/model-maintenance.test.ts",
       "bytes": 1646,
       "sha256": "2b3f850e2ae0894f342ba75549e8240d1a6f9d6ef2e4d117c64ba8846ee69b12"
+    },
+    {
+      "path": "src/shared/civitai-discovery.ts",
+      "bytes": 1509,
+      "sha256": "9fe79ecb7361e867f0a60b06e5e7529deb659db457c21fbed0e8f340f6b083a0"
+    },
+    {
+      "path": "src/renderer/CivitaiGallery.tsx",
+      "bytes": 2676,
+      "sha256": "5d36654bdb9d37aa54752b954c9b04e01314b460764191f2bad33fca33fe9de0"
+    },
+    {
+      "path": "tests/civitai-gallery.test.tsx",
+      "bytes": 3290,
+      "sha256": "77de822344cfda0cffd1d38d8a80571c1f37742efbfa03b958e45f2f7f65c995"
     }
   ],
   "privateHistoryIncluded": false
