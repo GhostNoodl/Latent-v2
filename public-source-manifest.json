@@ -1114,6 +1114,22 @@
     {
       "from": "tests/lora-trigger-choices.test.tsx",
       "to": "tests/lora-trigger-choices.test.tsx"
+    },
+    {
+      "from": "src/shared/enhancement.ts",
+      "to": "src/shared/enhancement.ts"
+    },
+    {
+      "from": "src/renderer/EnhanceDialog.tsx",
+      "to": "src/renderer/EnhanceDialog.tsx"
+    },
+    {
+      "from": "tests/enhancement.test.ts",
+      "to": "tests/enhancement.test.ts"
+    },
+    {
+      "from": "tests/enhance-dialog.test.tsx",
+      "to": "tests/enhance-dialog.test.tsx"
     }
   ]
 }

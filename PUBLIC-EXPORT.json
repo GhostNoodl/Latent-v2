@@ -108,8 +108,8 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 95008,
-      "sha256": "c39b9de03ef3c17f88c58fdd3cbf622b6987718e4944fa1eb154392feeb01c34"
+      "bytes": 95487,
+      "sha256": "ce1f707289988aaf41de91a83501a6eb27a22963dd128c123c8da14dc4f4d6aa"
     },
     {
       "path": "src/main/main.ts",
@@ -368,8 +368,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 68014,
-      "sha256": "da535ca081cb946a1f8d5167040fad9eb38c9c7066934cad467cec00a4d33062"
+      "bytes": 69698,
+      "sha256": "c8714160a9f2f597f4698a7fbfbbebf0f999c10f2b3a0ed8522c46cf7366c501"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -458,8 +458,8 @@
     },
     {
       "path": "src/renderer/History.tsx",
-      "bytes": 18056,
-      "sha256": "139528c01545d23ceeb53161f5d8fee6ab730a16f0d12e25cd83df7201d39977"
+      "bytes": 18152,
+      "sha256": "a78435cfb0c2c631c19890e8cb7a8edb7b1da2a7ef99d24925e3263ada5c4fe6"
     },
     {
       "path": "src/renderer/image-preview-recovery.ts",
@@ -913,13 +913,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 17830,
-      "sha256": "0fbe4d4ec8682b245a3ad871a5899b57a8853f59ae830147c5d8584064bfa085"
+      "bytes": 17871,
+      "sha256": "e8ee569f92e90a28b9023aaae766069e4c436099c38ba68e1bb34ebd22a77fe3"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 7420,
-      "sha256": "55e38e5785936c087711af63d53ba33b6cd85011fcc1ff93687af1aa8bcbc7a7"
+      "bytes": 7515,
+      "sha256": "8cef2ba09c416d8c7645806504a4c456ca7d8de464f23c4eb9d2749ca7f57643"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1293,8 +1293,8 @@
     },
     {
       "path": "src/renderer/PreviewMenu.tsx",
-      "bytes": 2543,
-      "sha256": "9a8c1d537422762daa4a3d02370dfc3b47a2e6ef9b1fa105503b681f05a1bc7d"
+      "bytes": 2686,
+      "sha256": "73cf3f135d88f76531883ff7ab596d228a930cd287e2b5a39f66fbae111e7c6f"
     },
     {
       "path": "src/renderer/useDismissiblePanel.ts",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 10338,
-      "sha256": "62547f7c66811d7e5bb3ef3c76399635579515febc95eec756ae03a71981783f"
+      "bytes": 11877,
+      "sha256": "8e295bb62f5b217430d71d37f825e8da3d71cabae370fe58b1813c9f280ab882"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1375,6 +1375,26 @@
       "path": "tests/lora-trigger-choices.test.tsx",
       "bytes": 1879,
       "sha256": "5b337a1a208b5d9efb8853dec7bb45494ee25ad3ee80656a2c267e2e6ed16c9b"
+    },
+    {
+      "path": "src/shared/enhancement.ts",
+      "bytes": 4566,
+      "sha256": "c65606fdd8c874752779b30f4a6a7941f25cd7b6ae0a6126eb320e7b43c1420f"
+    },
+    {
+      "path": "src/renderer/EnhanceDialog.tsx",
+      "bytes": 1973,
+      "sha256": "4e770819eb51621cfbebb297cd65a5b5957778457b2addd73243f649fd21831a"
+    },
+    {
+      "path": "tests/enhancement.test.ts",
+      "bytes": 4132,
+      "sha256": "68cb50b09c014251a1049fbd5f123ccec81eeb8ba337bc1796ce37e0cddc58ad"
+    },
+    {
+      "path": "tests/enhance-dialog.test.tsx",
+      "bytes": 1152,
+      "sha256": "19a33eb88da2995c4ab8b1c373437ed54a6ff6949085ab70b1d71f22bb2c0866"
     }
   ],
   "privateHistoryIncluded": false

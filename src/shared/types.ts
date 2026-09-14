@@ -45,6 +45,7 @@ export interface ModelAsset {
 }
 export interface LoraSelection { modelId: string; weight: number; clipWeight: number; }
 export interface GenerationDraft {
+  enhance?: { parentRecordId: string };
   faceDetailer?: { request: FaceRefinementRequest; frozen?: FaceRefinementPlan };
   ipAdapter?: { settings: IPAdapterSettings; frozen?: IPAdapterPlan };
   regionalPrompts?: { settings: RegionalPromptSettings; frozen?: RegionalPromptPlan };

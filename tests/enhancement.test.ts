@@ -1,0 +1,28 @@
+import { expect, it } from 'vitest';
+import { DEFAULT_DRAFT } from '../src/shared/defaults';
+import { buildWorkflow } from '../src/shared/workflow';
+import { buildEnhancementWorkflow, enhancementIssue, enhancementSize, prepareEnhancement, validateEnhancementSource } from '../src/shared/enhancement';
+import type { GenerationRecord, ModelAsset } from '../src/shared/types';
+import type { SourceImageAsset } from '../src/shared/source-types';
+const checkpoint:ModelAsset={id:'checkpoint:example.safetensors',name:'Example',filename:'example.safetensors',kind:'checkpoint',family:'illustrious',bytes:100,sha256:'b'.repeat(64),triggers:[],status:'ready'};
+const parent={id:'a'.repeat(32),width:1024,height:1024,checkpoint,loras:[],resolvedPrompt:'watercolor, a garden',draft:{...DEFAULT_DRAFT,checkpointId:checkpoint.id,prompt:'__subject__',negativePrompt:'low quality',dynamicPrompts:{enabled:true}},actualSeed:'4',jobId:'original',createdAt:'2026-09-14T00:00:00Z',filename:'original.png',imageUrl:'latent-asset://output/'+ 'a'.repeat(32),workflow:{},workflowVersion:'sdxl-txt2img@1',backendVersion:'test',appVersion:'test',durationMs:1} as GenerationRecord;
+const source={id:'src_00000000-0000-0000-0000-000000000001',originGenerationId:parent.id,normalized:{sha256:'c'.repeat(64),width:1024,height:1024}} as SourceImageAsset;
+const prepared=()=>prepareEnhancement(parent,source,DEFAULT_DRAFT,1.5,.3);
+it('prepares a linked, editable recipe without mutating the original or rerolling its prompt',()=>{
+ const before=JSON.stringify(parent),draft=prepared();expect(draft).toMatchObject({width:1536,height:1536,prompt:'watercolor, a garden',variationOfRecordId:parent.id,enhance:{parentRecordId:parent.id},autoTriggers:false,batchSize:1});expect(draft.dynamicPrompts).toBeUndefined();expect(draft.assetHashes?.[checkpoint.id]).toBe(checkpoint.sha256);expect(JSON.stringify(parent)).toBe(before);
+});
+it('encodes original pixels before latent upscale with one sampler and one save',()=>{
+ const draft=prepared(),base=buildWorkflow(draft,[checkpoint],'42','enhance-test');const original=JSON.stringify(base);const graph=buildEnhancementWorkflow(base,draft,'sources/example.png');
+ expect(JSON.stringify(base)).toBe(original);expect(Object.values(graph).filter(n=>n.class_type==='SaveImage')).toHaveLength(1);expect(Object.values(graph).filter(n=>n.class_type==='KSampler')).toHaveLength(1);expect(Object.values(graph).some(n=>n.class_type==='ImageScale')).toBe(false);
+ const pixels=graph['4'].inputs.pixels as [string,number];expect(graph[pixels[0]].class_type).toBe('LoadImage');const latent=graph['5'].inputs.latent_image as [string,number];expect(graph[latent[0]]).toMatchObject({class_type:'LatentUpscale',inputs:{samples:['4',0],width:1536,height:1536}});expect(graph['5'].inputs.denoise).toBe(.3);
+});
+it('refuses mismatched parents, source bytes and conflicting workflows',()=>{
+ const d=prepared();expect(()=>validateEnhancementSource(d,{...source,originGenerationId:'d'.repeat(32)},[parent])).toThrow('parent');expect(()=>validateEnhancementSource(d,{...source,normalized:{...source.normalized,sha256:'f'.repeat(64)}},[parent])).toThrow('parent');expect(enhancementIssue({...d,batchSize:2})).toContain('one image');expect(enhancementIssue({...d,imageInput:{...d.imageInput!,denoise:0}})).toContain('above zero');expect(()=>buildEnhancementWorkflow(buildWorkflow(d,[checkpoint],'42','test'),d,'../outside.png')).toThrow('safe relative');
+});
+it('caps output sizes, permits same-size refinement, and rejects unsupported source dimensions',()=>{
+ expect(enhancementSize(1024,1024,1)).toEqual({width:1024,height:1024});expect(enhancementSize(1024,1792,2)).toEqual({width:1216,height:2048});expect(()=>enhancementSize(4096,4096,1)).toThrow('2048');
+});
+it('uses current model choices explicitly when the saved image has no checkpoint',()=>{
+ const current={...DEFAULT_DRAFT,checkpointId:checkpoint.id,assetHashes:{[checkpoint.id]:checkpoint.sha256!}};
+ const d=prepareEnhancement({...parent,checkpoint:undefined},source,current,1,.2);expect(d.checkpointId).toBe(checkpoint.id);expect(d.assetHashes).toEqual(current.assetHashes);
+});

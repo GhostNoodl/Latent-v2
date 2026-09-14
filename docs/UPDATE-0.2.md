@@ -30,7 +30,7 @@ Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release ha
 - [x] #14 Stop/restart an idle managed engine around model changes. Busy queues/downloads request a retry after work finishes; no active job is interrupted or silently cancelled. Live engine verification remains a release check.
 - [x] #16/16B Optional per-LoRA trigger choices insert literal text into new visible-mode prompts. Owned spans support removal, shared words and user edits. Older recipes retain their original resolver until explicitly converted.
 - [ ] #20 Curated, editable booru wildcard packs with provenance and alias/duplicate cleanup.
-- [ ] #23 Enhance saved generations through diffusion refinement, saving a linked result and preserving the original.
+- [x] #23 Enhance saved generations through a reviewed Create draft and one latent diffusion refinement pass, saving a linked result and preserving the original. GPU quality remains a release check.
 - [ ] #25 Automatic face refinement after generation/hires, retaining the result when no face is detected; test stylized and furry faces.
 
 ## Qwen integration findings
@@ -72,3 +72,11 @@ Inserted text has bounded, persisted ownership spans. Removing a LoRA or deselec
 Unversioned and punctuation-version historical recipes preserve their original generation behavior. Adding the first LoRA to a previously empty selection adopts visible choices; existing legacy LoRA recipes offer an explicit conversion button. Conversion preserves existing additions as user-owned prompt text and leaves a previous-draft undo available.
 
 Validation: 249 automated tests across 26 files (including selection/removal UI, shared ownership, user edits, variation escaping, capacity, persistence and legacy replay), TypeScript/development compilation, and public-source boundary checks. A headless renderer fixture at 1000 pixels exercised the actual trigger controls and ownership helper; selection visibly updated the prompt, edited text survived removal, and no page errors occurred. Its screenshot was inspected. This does not claim a packaged-app or GPU generation test. No installer was built or release published.
+
+## Fifth batch: Enhance saved images
+
+The Create preview toolbar and right-click menu offer Enhance image. A compact dialog selects size and refinement strength, then prepares an editable Create draft before generation. Saved checkpoint and LoRA identities are retained when available; outputs without a saved checkpoint use the current Create selection, as disclosed in the dialog. The resolved original prompt stays literal rather than rerolling variations or adding hidden triggers. Undo restores the previous draft.
+
+Enhance encodes the saved source pixels, scales the latent representation and performs one sampling pass into one new output. The original is preserved, the new history entry is labeled Enhanced, and its details link back to the original. Immutable source identity is checked before queueing. Conflicting modifiers are rejected rather than silently producing multiple passes. Current source and target dimensions are limited to 2048 pixels per side; same-size refinement is available.
+
+Validation: 255 automated tests passed across 28 files, including graph structure, source identity, linked draft preparation, dimensions and recoverable dialog failures. Type checking, development compilation, the 279-file public-source check and both boundary tests passed. This does not establish GPU output quality or packaged-app behavior. No installer was assembled or release published. Automatic face refinement is a separate remaining batch.

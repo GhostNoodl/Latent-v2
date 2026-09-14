@@ -1,3 +1,4 @@
+import { enhancementIssue, validateEnhancementSource, buildEnhancementWorkflow } from '../shared/enhancement';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
@@ -169,6 +170,7 @@ export class JobService {
     if (this.disposed) throw new Error('The generation queue is stopped.');
     const draft = draftSchema.parse(input);
     if (this.ipAdapterService?.status().state === 'activating') throw new Error('Wait for reference-tool activation to finish before queueing generation.');
+    const enhanceError = enhancementIssue(draft); if (enhanceError) throw new Error(enhanceError);
     if (draft.faceDetailer && (draft.qwenEdit || draft.imageInput || draft.controlNet || draft.hiresFix || draft.upscale || draft.ipAdapter || draft.regionalPrompts?.settings.enabled || draft.batchSize !== 1 || draft.width !== 512 || draft.height !== 512)) throw new Error('Face refinement requires baseline SDXL/Illustrious, 512 square working crops, batch 1, and no other image workflow.');
     if (draft.faceDetailer && draft.faceDetailer.request.seed !== draft.seed) throw new Error('Use the same base seed in the face request and its generation recipe.');
     if (draft.ipAdapter && (draft.qwenEdit || draft.imageInput || draft.controlNet || draft.hiresFix || draft.upscale || draft.regionalPrompts?.settings.enabled || draft.batchSize !== 1)) throw new Error('IP Adapter requires one baseline SDXL or Illustrious text-to-image pass without other image workflows.');
@@ -244,6 +246,9 @@ export class JobService {
         const asset = draft.upscale.mode === 'learned' ? await this.upscaler!.verify() : undefined;
         context.advancedImage = buildUpscaleWorkflow({ sourceFilename, sourceWidth: source.source.normalized.width, sourceHeight: source.source.normalized.height, jobId: id, settings: draft.upscale }, asset);
         context.workflow = context.advancedImage.workflow; context.workflowVersion = context.advancedImage.workflowVersion;
+      } else if (draft.enhance) {
+        validateEnhancementSource(draft, source.source, this.store.records());
+        context.workflow = buildEnhancementWorkflow(context.workflow, draft, sourceFilename); context.workflowVersion = 'sdxl-saved-latent-enhance@1';
       } else if (input.mode === 'inpaint' && input.crop) {
         const computed = await createCropInpaintPlan({ source: source.source, mask: mask!.mask, maskRed: redMaskFromRgba(decodedMask!.data, decodedMask!.width, decodedMask!.height), working: { width: draft.width, height: draft.height }, settings: input.crop, denoise: input.denoise });
         const frozen = input.cropPlan ? cropInpaintPlanSchema.parse(input.cropPlan) : computed.plan;
