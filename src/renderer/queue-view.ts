@@ -10,10 +10,12 @@ export function queueJobPresentation(job: StudioJob, foreignJobs = 0) {
     : job.status === 'running' ? job.queueState === 'running' ? 'Running' : job.queueState === 'pending' ? 'Waiting' : job.queueState === 'submitting' ? 'Starting' : 'Preparing'
     : job.status === 'queued' && foreignJobs ? 'Waiting for the engine' : job.status;
   const dimensions = video ? `${job.video.width} × ${job.video.height}` : `${job.draft.upscale?.width ?? job.draft.hiresFix?.width ?? job.draft.width} × ${job.draft.upscale?.height ?? job.draft.hiresFix?.height ?? job.draft.height}`;
+  const faceResults = !video ? Object.values(job.autoFaceResults ?? {}) : [];
+  const faceSummary = !video && job.status === 'completed' && job.draft.autoFace ? faceResults.some(r => r.state === 'failed') ? 'Face refinement needs attention; original kept' : faceResults.length ? faceResults.every(r => r.state === 'skipped') ? 'No face found; original kept' : 'Face follow-ups queued separately' : job.autoFaceFinished ? 'No saved output to refine' : 'Waiting for automatic face refinement' : '';
   return {
-    title: video ? `Video: ${job.video.prompt || 'Untitled video'}` : job.draft.upscale ? job.draft.upscale.mode === 'learned' ? 'Enhance source image' : 'Resize source image' : job.draft.prompt || 'Untitled image',
-    state, summary: `${state}${video ? ' · Video' : ' · Image'}`,
-    phase: finalization === 'pending' ? 'Inference finished. Saving and validating the video output.' : finalization === 'failed' ? 'Inference finished. Retry saving to preserve the existing output.' : job.phase,
+    title: !video && job.draft.autoFaceParentRecordId ? 'Automatic face refinement' : video ? `Video: ${job.video.prompt || 'Untitled video'}` : job.draft.upscale ? job.draft.upscale.mode === 'learned' ? 'Enhance source image' : 'Resize source image' : job.draft.prompt || 'Untitled image',
+    state, summary: `${state}${video ? ' · Video' : ' · Image'}${faceSummary ? ` · ${faceSummary}` : ''}`,
+    phase: faceResults.filter(r => r.state === 'failed').map(r => r.message).join(' ') || (finalization === 'pending' ? 'Inference finished. Saving and validating the video output.' : finalization === 'failed' ? 'Inference finished. Retry saving to preserve the existing output.' : job.phase),
     showProgress: job.status === 'running' && job.queueState === 'running' && !finalization,
     saving: finalization === 'pending', canCancel: ['queued', 'running'].includes(job.status) && !finalization,
     canRetrySaving: finalization === 'failed', canRetryGeneration: ['failed', 'cancelled'].includes(job.status) && !finalization,

@@ -9,6 +9,8 @@ import { ipAdapterPlanSchema, ipAdapterSettingsSchema } from './ipadapter-types'
 import { faceRefinementRequestSchema, faceRefinementPlanSchema } from './face-detailer-types';
 const advancedDimension = z.number().int().min(1).max(4096);
 export const draftSchema = z.object({
+  autoFace: z.object({profile:z.enum(['anime','photographic']),strength:z.number().finite().min(.05).max(.8)}).strict().optional(),
+  autoFaceParentRecordId: z.string().regex(/^[a-f0-9]{32}$/).optional(),
   enhance: z.object({parentRecordId:z.string().regex(/^[a-f0-9]{32}$/)}).strict().optional(),
   faceDetailer: z.object({ request: faceRefinementRequestSchema, frozen: faceRefinementPlanSchema.optional() }).strict().optional(),
   ipAdapter: z.object({ settings: ipAdapterSettingsSchema, frozen: ipAdapterPlanSchema.optional() }).strict().optional(),

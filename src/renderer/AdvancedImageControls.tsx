@@ -1,3 +1,4 @@
+import { AutomaticFaceControls } from './AutomaticFaceControls';
 import { PackageSetupStorage } from './PackageSetupStorage';
 import type { AppSnapshot, GenerationDraft } from '../shared/types';
 import type { HiresFixSettings } from '../shared/advanced-image-types';
@@ -41,5 +42,5 @@ export function AdvancedImageControls({ draft, snapshot, onChange, run }: { draf
         <p className="muted small">Refined size must enlarge the base and stay within 4 megapixels. Keep the base image’s proportions to avoid stretching.</p>
       </div>}
     </>}
-  </details></section>;
+  </details><AutomaticFaceControls draft={draft} status={snapshot.faceDetailer} onChange={onChange}/></section>;
 }

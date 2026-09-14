@@ -45,6 +45,8 @@ export interface ModelAsset {
 }
 export interface LoraSelection { modelId: string; weight: number; clipWeight: number; }
 export interface GenerationDraft {
+  autoFace?: { profile: 'anime' | 'photographic'; strength: number };
+  autoFaceParentRecordId?: string;
   enhance?: { parentRecordId: string };
   faceDetailer?: { request: FaceRefinementRequest; frozen?: FaceRefinementPlan };
   ipAdapter?: { settings: IPAdapterSettings; frozen?: IPAdapterPlan };
@@ -139,7 +141,7 @@ export interface QueueJobBase {
   outputIds: string[];
   previewUrl?: string;
 }
-export interface GenerationJob extends QueueJobBase { kind?: 'image'; draft: GenerationDraft; }
+export interface GenerationJob extends QueueJobBase { kind?: 'image'; draft: GenerationDraft; autoFaceFinished?: boolean; autoFaceResults?: Record<string, { state: 'queued' | 'skipped' | 'failed'; jobId?: string; message?: string }>; }
 export interface VideoJob extends QueueJobBase {
   kind: 'video'; video: VideoDraft; frames: number; durationSeconds: number;
   finalization?: 'pending' | 'failed';

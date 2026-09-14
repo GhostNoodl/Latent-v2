@@ -108,8 +108,8 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 95487,
-      "sha256": "ce1f707289988aaf41de91a83501a6eb27a22963dd128c123c8da14dc4f4d6aa"
+      "bytes": 97454,
+      "sha256": "625212698a3ce048ccc2e3a54790f6f160eabb7d89a293680e2c972d900e47a4"
     },
     {
       "path": "src/main/main.ts",
@@ -363,13 +363,13 @@
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
-      "bytes": 9232,
-      "sha256": "380eac3af396422c98d7872ea67d58eb6dc95814edfe9af3e419b698f79b7884"
+      "bytes": 9387,
+      "sha256": "fb163aee01eb800ee42e245f6eeb4479aaba5e50606aa1efb1d4e3196b45f09b"
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 69698,
-      "sha256": "c8714160a9f2f597f4698a7fbfbbebf0f999c10f2b3a0ed8522c46cf7366c501"
+      "bytes": 69824,
+      "sha256": "e24200efb0fe278a0cfad6011acea50738ae41d22e61f73f8b0ef21225f3cfdb"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -553,8 +553,8 @@
     },
     {
       "path": "src/renderer/queue-view.ts",
-      "bytes": 3637,
-      "sha256": "4639e99d4eae7a7502fd4557c3024773aedc7f0dfb4fa1e6c4785883003daa2b"
+      "bytes": 4334,
+      "sha256": "8193f4ab3abfa9371aa4cf43424f3b6361f6aa98578187ffabcbcf3a854ef30e"
     },
     {
       "path": "src/renderer/qwen-editor.css",
@@ -763,8 +763,8 @@
     },
     {
       "path": "src/shared/face-detailer-recipe.ts",
-      "bytes": 2280,
-      "sha256": "667551af99f65553ff3bb8e2f2fbe45b8d27c1e41de8ce4998e967be20bda19e"
+      "bytes": 2336,
+      "sha256": "be35f7f726a5ec0ef441af9ad5789a3a0fa7ead519006358bd351788582346e6"
     },
     {
       "path": "src/shared/face-detailer-types.ts",
@@ -913,13 +913,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 17871,
-      "sha256": "e8ee569f92e90a28b9023aaae766069e4c436099c38ba68e1bb34ebd22a77fe3"
+      "bytes": 18118,
+      "sha256": "9f5b150414ed57de4dd3973f0cc9944fabb50057ccbec94dc60fb65f14074b9a"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 7515,
-      "sha256": "8cef2ba09c416d8c7645806504a4c456ca7d8de464f23c4eb9d2749ca7f57643"
+      "bytes": 7722,
+      "sha256": "b189d1e78ac8ed90f051942a5d61f713224ca52dab00277e886c2cc401d4d3f8"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 11877,
-      "sha256": "8e295bb62f5b217430d71d37f825e8da3d71cabae370fe58b1813c9f280ab882"
+      "bytes": 13616,
+      "sha256": "dfe53459f62ee59ba3d6f10fdd0af9f7dc65157280247674953e58f917819ad1"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1395,6 +1395,26 @@
       "path": "tests/enhance-dialog.test.tsx",
       "bytes": 1152,
       "sha256": "19a33eb88da2995c4ab8b1c373437ed54a6ff6949085ab70b1d71f22bb2c0866"
+    },
+    {
+      "path": "src/main/automatic-faces.ts",
+      "bytes": 4135,
+      "sha256": "3dc65486043641ecf945c9142d1ce4a5d1b521ce97e8deb974115ada99d45689"
+    },
+    {
+      "path": "src/renderer/AutomaticFaceControls.tsx",
+      "bytes": 1671,
+      "sha256": "d1d594b307150b23681a498639d33f330e18141714ed2f5262eca468641e76cd"
+    },
+    {
+      "path": "tests/automatic-faces.test.ts",
+      "bytes": 6796,
+      "sha256": "2ef1ab03b90bc86b54dab42ccfef1169ba12d0df7fbe99b545889cce5227b78d"
+    },
+    {
+      "path": "tests/automatic-face-controls.test.tsx",
+      "bytes": 1462,
+      "sha256": "a6b54b68a3e97d0c607f2c23576545632aebf6f2b66e464e959306a95268a446"
     }
   ],
   "privateHistoryIncluded": false

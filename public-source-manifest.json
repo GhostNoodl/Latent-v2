@@ -1130,6 +1130,22 @@
     {
       "from": "tests/enhance-dialog.test.tsx",
       "to": "tests/enhance-dialog.test.tsx"
+    },
+    {
+      "from": "src/main/automatic-faces.ts",
+      "to": "src/main/automatic-faces.ts"
+    },
+    {
+      "from": "src/renderer/AutomaticFaceControls.tsx",
+      "to": "src/renderer/AutomaticFaceControls.tsx"
+    },
+    {
+      "from": "tests/automatic-faces.test.ts",
+      "to": "tests/automatic-faces.test.ts"
+    },
+    {
+      "from": "tests/automatic-face-controls.test.tsx",
+      "to": "tests/automatic-face-controls.test.tsx"
     }
   ]
 }

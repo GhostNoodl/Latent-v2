@@ -31,7 +31,7 @@ Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release ha
 - [x] #16/16B Optional per-LoRA trigger choices insert literal text into new visible-mode prompts. Owned spans support removal, shared words and user edits. Older recipes retain their original resolver until explicitly converted.
 - [ ] #20 Curated, editable booru wildcard packs with provenance and alias/duplicate cleanup.
 - [x] #23 Enhance saved generations through a reviewed Create draft and one latent diffusion refinement pass, saving a linked result and preserving the original. GPU quality remains a release check.
-- [ ] #25 Automatic face refinement after generation/hires, retaining the result when no face is detected; test stylized and furry faces.
+- [x] #25 Optional automatic face refinement after generation/hires, with separate cancellable follow-up jobs, restart recovery and preserved originals. Real stylized/furry-face quality remains a hardware release check.
 
 ## Qwen integration findings
 
@@ -80,3 +80,11 @@ The Create preview toolbar and right-click menu offer Enhance image. A compact d
 Enhance encodes the saved source pixels, scales the latent representation and performs one sampling pass into one new output. The original is preserved, the new history entry is labeled Enhanced, and its details link back to the original. Immutable source identity is checked before queueing. Conflicting modifiers are rejected rather than silently producing multiple passes. Current source and target dimensions are limited to 2048 pixels per side; same-size refinement is available.
 
 Validation: 255 automated tests passed across 28 files, including graph structure, source identity, linked draft preparation, dimensions and recoverable dialog failures. Type checking, development compilation, the 279-file public-source check and both boundary tests passed. This does not establish GPU output quality or packaged-app behavior. No installer was assembled or release published. Automatic face refinement is a separate remaining batch.
+
+## Sixth batch: automatic face refinement
+
+Create now has an opt-in Automatically refine faces control, with illustration/photographic profiles and adjustable strength. The detector must be installed through Settings. Completed generations receive separate face-refinement jobs, after final hires output is retained; batch images are handled individually. The child uses the saved resolved prompt, model identities and seed, without rerolling prompt variations, repeating hires or recursively refining itself.
+
+No detections and preparation failures retain the original and show a concise queue outcome. Child jobs use normal cancel/retry controls. Parent receipts and durable child lineage prevent duplicate automatic queueing after restart, including cancelled children. Busy detection waits; shutdown cancels the owned detection and leaves unfinished preparation recoverable. Finished parent bookkeeping avoids rescanning its records on every queue tick. Removed output records are not recreated.
+
+Validation: the full 264-test suite, development build, public-source check and both boundary tests passed. A subsequent removed-output regression brings the suite to 265 tests; all 10 targeted automatic-face tests and type checking passed after final refinements. A headless renderer fixture exercised opt-in, profile selection, strength changes and overflow checks, with no page errors; its screenshot was inspected. These are automated orchestration and UI results, not live detector accuracy, GPU quality or packaged-app proof. Real stylized/furry-face validation remains outstanding. No model downloads, installer build or publication was performed.

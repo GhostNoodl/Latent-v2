@@ -1,3 +1,4 @@
+import { processAutomaticFace } from './automatic-faces';
 import { enhancementIssue, validateEnhancementSource, buildEnhancementWorkflow } from '../shared/enhancement';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -75,7 +76,7 @@ export class JobService {
   private drainWaiters: Array<() => void> = [];
   private sources: SourceImageService;
   private regionalMasks: RegionalMaskService;
-  constructor(private paths: AppPaths, private store: StudioStore, private models: ModelService, private backend: Backend, private changed: () => void, private completed: (job: StudioJob) => void, private appVersion: string, private upscaler?: UpscalerService, private controlNetService?: ControlNetService, private qwenEditAssets?: QwenEditAssetsService, private ipAdapterService?: Pick<IPAdapterService, 'verify' | 'status'>, private runtimeBlockedReason?: () => string | undefined, private faceDetailerService?: Pick<FaceDetailerService, 'getDetection' | 'createRefinementPlan'>, private activity?: Pick<BackendActivityService, 'refresh' | 'status'>, private videoQueue?: VideoQueueService) {
+  constructor(private paths: AppPaths, private store: StudioStore, private models: ModelService, private backend: Backend, private changed: () => void, private completed: (job: StudioJob) => void, private appVersion: string, private upscaler?: UpscalerService, private controlNetService?: ControlNetService, private qwenEditAssets?: QwenEditAssetsService, private ipAdapterService?: Pick<IPAdapterService, 'verify' | 'status'>, private runtimeBlockedReason?: () => string | undefined, private faceDetailerService?: Pick<FaceDetailerService, 'getDetection' | 'createRefinementPlan' | 'detect' | 'status' | 'cancelDetection'>, private activity?: Pick<BackendActivityService, 'refresh' | 'status'>, private videoQueue?: VideoQueueService) {
     this.items = store.jobs();
     this.sources = new SourceImageService(paths, store);
     this.regionalMasks = new RegionalMaskService(paths);
@@ -170,6 +171,9 @@ export class JobService {
     if (this.disposed) throw new Error('The generation queue is stopped.');
     const draft = draftSchema.parse(input);
     if (this.ipAdapterService?.status().state === 'activating') throw new Error('Wait for reference-tool activation to finish before queueing generation.');
+    if (draft.autoFace && (draft.faceDetailer || draft.autoFaceParentRecordId || draft.qwenEdit || draft.upscale)) throw new Error('Automatic face refinement requires an image generation, without another face pass or standalone resize.');
+    if (draft.autoFace && !['ready', 'detecting'].includes(this.faceDetailerService?.status().state ?? '')) throw new Error('Set up face refinement in Settings before enabling automatic faces.');
+    if (draft.autoFaceParentRecordId && !draft.faceDetailer) throw new Error('Automatic face lineage requires a face refinement recipe.');
     const enhanceError = enhancementIssue(draft); if (enhanceError) throw new Error(enhanceError);
     if (draft.faceDetailer && (draft.qwenEdit || draft.imageInput || draft.controlNet || draft.hiresFix || draft.upscale || draft.ipAdapter || draft.regionalPrompts?.settings.enabled || draft.batchSize !== 1 || draft.width !== 512 || draft.height !== 512)) throw new Error('Face refinement requires baseline SDXL/Illustrious, 512 square working crops, batch 1, and no other image workflow.');
     if (draft.faceDetailer && draft.faceDetailer.request.seed !== draft.seed) throw new Error('Use the same base seed in the face request and its generation recipe.');
@@ -207,6 +211,7 @@ export class JobService {
         const frozen = authoring.frozen ? faceRefinementPlanSchema.parse(authoring.frozen) : current;
         if (JSON.stringify(current) !== JSON.stringify(frozen)) throw new Error('The frozen face recipe no longer matches its source, selected masks, seeds or geometry. Restore the original recipe.');
         const detection = await this.faceDetailerService.getDetection(authoring.request.detectionId);
+        if (draft.autoFaceParentRecordId && detection.source.originGenerationId !== draft.autoFaceParentRecordId) throw new Error('The automatic face source differs from its parent image.');
         const source = await this.sources.resolve(frozen.source.id);
         const masks: Record<string, string> = {};
         for (const pass of frozen.passes) { const mask = await this.sources.resolveMask(pass.crop.mask.id); masks[mask.mask.id] = path.relative(this.paths.inputs, mask.path).replaceAll('\\', '/'); }
@@ -497,6 +502,12 @@ export class JobService {
         if (isVideoJob(active)) await this.reconcileVideo(active); else await this.reconcile(active); return;
       }
       if (activity && (activity.state !== 'ready' || activity.foreignRunning || activity.foreignPending)) return;
+      if (this.faceDetailerService) await processAutomaticFace({
+        jobs: () => this.items, records: () => this.store.records(), save: job => this.save(job),
+        ready: () => !['detecting', 'installing'].includes(this.faceDetailerService!.status().state), stopped: () => this.disposed || this.maintenance || Boolean(this.runtimeBlockedReason?.()),
+        source: async record => { const file=containedPath(this.paths.outputs,record.filename); const real=await fs.realpath(file); if(!inside(await fs.realpath(this.paths.outputs),real)||(await fs.lstat(file)).isSymbolicLink()||!file.endsWith('.png'))throw Error('The source image is outside this studio.'); return this.sources.importFile(file,record.id); },
+        detect: async request => { const task=this.faceDetailerService!.detect(request); const abort=()=>{ void this.faceDetailerService!.cancelDetection(); }; this.shutdown.signal.addEventListener('abort',abort,{once:true}); try { return await task; } finally { this.shutdown.signal.removeEventListener('abort',abort); } }, enqueue: draft => this.enqueue(draft),
+      });
       const next = this.jobs().find(job => job.status === 'queued'); if (!next) return;
       const job = this.items.find(item => item.id === next.id)!;
       let context: ExecutionContext | VideoQueueContext;
