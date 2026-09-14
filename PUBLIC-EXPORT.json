@@ -23,8 +23,8 @@
     },
     {
       "path": "src/main/civitai-catalog.ts",
-      "bytes": 12009,
-      "sha256": "192874e4c0b32b3a2e8662d662d3be4f37aa50b90e10fdafbe1f7e78c7f2c706"
+      "bytes": 12091,
+      "sha256": "7516e7c9b5fd049dad4c9e7a31666bf155ca6e49df4394fa6070960ba5c9fe31"
     },
     {
       "path": "src/main/civitai-transfer.ts",
@@ -113,13 +113,13 @@
     },
     {
       "path": "src/main/main.ts",
-      "bytes": 50046,
-      "sha256": "dcf135e5966bc836c9a772d15173acba5bcfa11722a06295de6c81f05a4108d2"
+      "bytes": 51937,
+      "sha256": "c0b48157bccff4b5e58e1e0377f4d4cf9791c2ad29faf20dddb72b38a2425c1f"
     },
     {
       "path": "src/main/managed-backend.ts",
-      "bytes": 31758,
-      "sha256": "bb587459f3376b4da41d92fed58e24ff98226dd4c1f3fb30e2d95a100862ad71"
+      "bytes": 32229,
+      "sha256": "5f52bfb46208968a68a8277a699c3c36ef3c01e90164782b014197383419721f"
     },
     {
       "path": "src/main/model-library-lease.ts",
@@ -128,8 +128,8 @@
     },
     {
       "path": "src/main/model-locations.ts",
-      "bytes": 22646,
-      "sha256": "3efd0bd6d174b5780e8112d5770a2d278b3b7595871baac26f11568b1be0a4b9"
+      "bytes": 25663,
+      "sha256": "0b3ec1ca331475f088c529d6d55390d62a4f139458c5f287111b563d73a76419"
     },
     {
       "path": "src/main/model-transfer-actions.ts",
@@ -148,8 +148,8 @@
     },
     {
       "path": "src/main/models.ts",
-      "bytes": 38428,
-      "sha256": "c5e74be5e8ac3f09cbac3e83b7dc8dd6b7cd78ada28291f8fdca8885962e24fa"
+      "bytes": 38592,
+      "sha256": "02d08a2677495fbb31f6b8d2e651d1eecf220731e366338aa3e9e00bc52d9036"
     },
     {
       "path": "src/main/paths.ts",
@@ -358,8 +358,8 @@
     },
     {
       "path": "src/preload/preload.ts",
-      "bytes": 8367,
-      "sha256": "62f2f4269bf3060ae776829f83e13d02ff01f3e6ada87dda642f12d97a4ac80b"
+      "bytes": 8426,
+      "sha256": "fe10d66a259b9d88ba20134e2dcfa6823ba69c7503594b736c112006c85acd11"
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
@@ -388,8 +388,8 @@
     },
     {
       "path": "src/renderer/CivitaiBrowser.tsx",
-      "bytes": 24851,
-      "sha256": "c05f349355e8b8ba8bc205642c128ccef9941b01d8f7d7d60b2dc125ca46f6f4"
+      "bytes": 24815,
+      "sha256": "d87febc0c2496f18be8f00e6abe453a64dfd00d8231adc3a502e9dd11ab13802"
     },
     {
       "path": "src/renderer/collections.css",
@@ -483,8 +483,8 @@
     },
     {
       "path": "src/renderer/LocalModelMetadata.tsx",
-      "bytes": 1730,
-      "sha256": "e6822cceb782365b49d822ffd85ea5fbaef67c58ac4b7e009fa7295e75a44c0c"
+      "bytes": 3527,
+      "sha256": "fdd1e5187b789aca2d321687e0f9bf589cf6443eb7bb24a5c3b9137a7e73b2fe"
     },
     {
       "path": "src/renderer/main.tsx",
@@ -518,13 +518,13 @@
     },
     {
       "path": "src/renderer/ModelPicker.tsx",
-      "bytes": 4496,
-      "sha256": "fb51292044efcacff2573832091eb2be4812386c348fbd282bf44ac6bba2b3bd"
+      "bytes": 4574,
+      "sha256": "455321f6a839470b1a95843acc4d6f8f646b0c38a053d8e693ad79054223c026"
     },
     {
       "path": "src/renderer/Models.tsx",
-      "bytes": 10138,
-      "sha256": "30a5c546ba2c83b9c09b23642dd2359883148911ca91b6c9402b99df1fdadd56"
+      "bytes": 10144,
+      "sha256": "f482e89b4b82fd20145dc482383bac64489cc071c02e91df799caa9b07d52def"
     },
     {
       "path": "src/renderer/ModelTransfers.tsx",
@@ -828,8 +828,8 @@
     },
     {
       "path": "src/shared/model-locations.ts",
-      "bytes": 2275,
-      "sha256": "d32b5dfbc4ada1662cd153c7ea4b45e6afbbb5c109603cd50c4c473056984f5e"
+      "bytes": 2316,
+      "sha256": "c3b2cd2c82332065cf45f5108efc9b43520ecabad4f50c15c9353936fe937056"
     },
     {
       "path": "src/shared/model-transfer-types.ts",
@@ -913,8 +913,8 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 17529,
-      "sha256": "8ed250e9a31ff795639838d477c8c585abbee54c6c5155534a538577f783b284"
+      "bytes": 17742,
+      "sha256": "ba982933e51cef2785e0402b2303e5f6acfcc8849cabfb28ebf0729b1296419a"
     },
     {
       "path": "src/shared/validation.ts",
@@ -1128,8 +1128,8 @@
     },
     {
       "path": "tests/civitai-catalog.test.ts",
-      "bytes": 16131,
-      "sha256": "69a2c45c6bc8581609aa82e11c689d6b1adf3ce6b88855da8a294940ca1ac521"
+      "bytes": 16080,
+      "sha256": "3739d088c5fcfb4b660fbee010893c6ef02dcfbdc816f5bbe7d394bfea342e1c"
     },
     {
       "path": "tests/storage-locations.test.ts",
@@ -1203,8 +1203,8 @@
     },
     {
       "path": "src/renderer/SetupHub.tsx",
-      "bytes": 5388,
-      "sha256": "dce27badce503c7ec226fee743807a88fc1078c395486751bfa62c1ce7483d3f"
+      "bytes": 5265,
+      "sha256": "d9cb32938dc26f9e41b4a15ab58efcb4d3d1cc755d56dbde9a462e7a046104da"
     },
     {
       "path": "src/renderer/setup.css",
@@ -1308,8 +1308,38 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 4670,
-      "sha256": "25340dfc6f339d75b25619c08b8b83ddc9f37b2dd39986de96b983d23b959bd7"
+      "bytes": 6318,
+      "sha256": "a1355420ab4745ee34eb933ff0b62d786d1aa80d2331cb008f548f083dbe09cd"
+    },
+    {
+      "path": "src/shared/model-names.ts",
+      "bytes": 1277,
+      "sha256": "c305c1aa638ea61393f6315dd438c0d81d0b51381f490aa87412bdc1e31e56f1"
+    },
+    {
+      "path": "src/main/model-maintenance.ts",
+      "bytes": 566,
+      "sha256": "1b6adc5ad1b0e7b7f6ebb2f0bae2400bf21f7a332c38792885e3815ac895af86"
+    },
+    {
+      "path": "src/renderer/SetupProgress.tsx",
+      "bytes": 2175,
+      "sha256": "45c8159f90b4b20506a807b11fd83f503b7c5c9c74eec72e21afec21ac7c6e92"
+    },
+    {
+      "path": "tests/model-file-management.test.ts",
+      "bytes": 3973,
+      "sha256": "55619f9e1432b8882de055431b09954bc982b45540533ae8fcf2ca5c8c4bd266"
+    },
+    {
+      "path": "tests/model-management-ui.test.tsx",
+      "bytes": 2673,
+      "sha256": "9a96ec45c3eee783b378cd5060fa732d3242b9f5d03f9cc2a8b5ef73bf36ab6e"
+    },
+    {
+      "path": "tests/model-maintenance.test.ts",
+      "bytes": 1646,
+      "sha256": "2b3f850e2ae0894f342ba75549e8240d1a6f9d6ef2e4d117c64ba8846ee69b12"
     }
   ],
   "privateHistoryIncluded": false

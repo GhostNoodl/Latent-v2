@@ -9,6 +9,7 @@ import { actionErrorMessage } from '../shared/action-error';
 import { Modal, Notice, bytes } from './ui';
 
 import './setup.css';
+import { SetupProgress } from './SetupProgress';
 
 export function SetupHub({ snapshot, receive, onClose, onModels, onSettings, onCreate, onEdit, onVideo }: { snapshot: AppSnapshot; receive(s:AppSnapshot):void; onClose():void; onModels():void; onSettings():void; onCreate():void; onEdit():void; onVideo():void }) {
 
@@ -53,7 +54,7 @@ export function SetupHub({ snapshot, receive, onClose, onModels, onSettings, onC
 
     {review&&<section ref={reviewRegion} tabIndex={0} className="setup-review" aria-label="Setup review"><h3>Review before downloading</h3>{review.gpu&&<p>{review.gpu}</p>}<p>{review.capability==='engine'?'Engine download size depends on resolved packages.':`At least ${bytes(review.storage.package.minimumDownloadBytes)} left to download.`}</p>{review.storage.destinations.map(d=><p key={d.id} className="inline-path">{d.path}</p>)}{review.storage.volumes.map(v=><p key={v.id}>{v.path} · {v.availableBytes===undefined?'Space unknown':bytes(v.availableBytes)+' free'}</p>)}{review.warnings.map(w=><p key={w} className="small">{w}</p>)}{review.blockers.map(b=><Notice error key={b}>{b}</Notice>)}{review.blockers.some(b=>b.includes('driver'))&&<p>Install a current driver from NVIDIA, then return and check again.</p>}<button disabled={!!busy||review.blockers.length>0} onClick={()=>void install()}>{busy?'Setting up…':'Install missing components'}</button><button disabled={!!busy} onClick={()=>void check(review.capability)}>Check again</button></section>}
 
-    {busy&&<div role="status"><p>{busy==='engine'?snapshot.backend.message:busy==='edit'?snapshot.qwenEdit.message:busy==='video'?snapshot.video.assets?.message:snapshot.downloads.find(d=>d.name==='Illustrious-XL-v1.1.safetensors')?.state}</p><button onClick={()=>void cancel()}>Cancel setup</button></div>}
+    {busy&&<div><SetupProgress snapshot={snapshot} capability={busy}/><button onClick={()=>void cancel()}>Cancel setup</button></div>}
 
     <p className="small">No account is required for the local engine. Optional services may ask for a key in their settings. You can return here at any time.</p>
 

@@ -21,6 +21,7 @@ const api: LatentAPI = {
   setupQwenEdit: (profile, repair) => invoke('setupQwenEdit', profile, repair), cancelQwenEditSetup: () => invoke('cancelQwenEditSetup'), enqueueQwenEdit: request => invoke('enqueueQwenEdit', request),
   setupVideoAssets: profile => invoke('setupVideoAssets', profile), verifyVideoAssets: profile => invoke('verifyVideoAssets', profile), cancelVideoAssetSetup: () => invoke('cancelVideoAssetSetup'),
   chooseExternalModelRoot: kind => invoke('chooseExternalModelRoot', kind), unregisterExternalModelRoot: id => invoke('unregisterExternalModelRoot', id),
+  deleteModel: request => invoke('deleteModel', request),
   createModelFolder: request => invoke('createModelFolder', request), moveModel: request => invoke('moveModel', request), recoverModelLocations: () => invoke('recoverModelLocations'),
   createCollection: (kind, name) => invoke('createCollection', kind, name), renameCollection: (id, name) => invoke('renameCollection', id, name), removeCollection: id => invoke('removeCollection', id), addCollectionMembers: (id, ids) => invoke('addCollectionMembers', id, ids), removeCollectionMembers: (id, ids) => invoke('removeCollectionMembers', id, ids),
   setupControlNet: repair => invoke('setupControlNet', repair), cancelControlNet: () => invoke('cancelControlNet'),

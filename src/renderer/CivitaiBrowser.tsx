@@ -89,7 +89,7 @@ export function CivitaiBrowser({ snapshot, receive, onUse, onBack }: { snapshot:
   }, []);
   useEffect(() => { void search(); }, []);
   const selectedVersion = detail?.data.versions.find(version => version.id === versionId);
-  const activeDownloads = snapshot.downloads.filter(item => ['downloading', 'verifying'].includes(item.state) && item.name.startsWith('civitai_'));
+  const activeDownloads = snapshot.downloads.filter(item => ['downloading', 'verifying'].includes(item.state));
   async function search(more = false, creator?: string) {
     if (!active() || workingRef.current || cancellingRef.current || more && !results?.data.nextCursor) return;
     const request: CivitaiSearchRequest = more && lastRequest ? { ...lastRequest, cursor: results?.data.nextCursor ?? undefined } : { query: creator ? '' : query, username: creator ?? (username || undefined), tag: creator ? undefined : tag || undefined, period, includeMature, kind: kind === 'all' ? undefined : kind, family: family === 'all' ? undefined : family, limit: 20, sort };

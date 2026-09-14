@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { cleanModelFilename } from '../shared/model-names';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
@@ -221,6 +222,7 @@ export class ModelService {
       finally { this.destinations.delete(key); }
     };
   }
+  locationBindings() { return this.locations?.scanBindings() ?? []; }
   async refresh(afterCurrent = false): Promise<ModelAsset[]> {
     if (this.refreshPromise) { if (!afterCurrent) return this.refreshPromise; await this.refreshPromise; }
     this.refreshPromise = this.library.withShared('refreshing models', () => this.scan()).finally(() => { this.refreshPromise = undefined; }); return this.refreshPromise;
@@ -275,7 +277,7 @@ export class ModelService {
       };
       await visit(base);
     }
-    for (const binding of bindings) if (!result.some(asset => asset.id === binding.modelId)) {
+    for (const binding of bindings) if (!binding.deletedAt && !result.some(asset => asset.id === binding.modelId)) {
       const metadata = this.store.modelMetadata<Metadata>(binding.modelId);
       result.push({ id: binding.modelId, kind: binding.kind, filename: binding.relativePath, name: path.basename(binding.relativePath, path.extname(binding.relativePath)), family: metadata?.family ?? 'unknown', triggers: metadata?.triggers ?? [], bytes: metadata?.size ?? 0, sha256: binding.sha256, sourceUrl: metadata?.sourceUrl, licenseUrl: metadata?.licenseUrl, provenance: metadata?.provenance, civitai: metadata?.civitai, status: 'missing' });
     }
@@ -305,9 +307,9 @@ export class ModelService {
     for (const source of files) {
       if (!source.toLowerCase().endsWith('.safetensors')) throw new Error('Only safetensors models can be imported.');
       const stat = await fileStat(source); if (!stat) throw new Error('The source model no longer exists.');
-      const destination = containedPath(folder, path.basename(source));
+      const destination = containedPath(folder, cleanModelFilename(source));
       if (inside(this.paths.models, await fsp.realpath(source))) continue;
-      await this.locations?.assertDestinationAvailable(kind, path.basename(source));
+      await this.locations?.assertDestinationAvailable(kind, cleanModelFilename(source));
       const release = await this.reserve(destination); const staging = `${destination}.${randomUUID()}.part`;
       try {
         if (await fileStat(destination)) throw new Error(`A model named ${path.basename(source)} already exists. The original was preserved.`);

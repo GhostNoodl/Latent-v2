@@ -19,15 +19,15 @@ Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release ha
 
 ## Remaining batches
 
-- [ ] #1 Unified setup download progress with the current component and installation/verification stages.
+- [x] #1 Unified setup progress with the current component, known byte counts and installation/verification messages. Dependency installation uses clearly labeled stage estimates.
 - [ ] #3 A new application icon, reviewed at small sizes and applied to Windows packaging.
-- [ ] #4 Delete installed models with clear ownership and in-use checks, and refresh selectors/metadata immediately.
+- [x] #4 Confirmed Recycle Bin removal for studio-owned models, with in-use checks, refreshed selectors and hidden deliberately removed entries. External folders stay read-only.
 - [ ] #6 Smaller Qwen editing model route, including GGUF feasibility and real 16 GB GPU memory/speed/quality testing.
 - [ ] #7 Optional app updates: check/download/install preferences, defer while busy, and test upgrades.
 - [ ] #9 More Discover search/filter choices and clearly marked generation compatibility.
-- [ ] #10 Clean displayed names AND actual filenames. Retain recognizable model name, version/quant when needed, and source IDs in metadata. Preserve saved model references during rename and handle collisions.
+- [x] #10 Clean display names, new Civitai download/import filenames and existing files through Details / manage file. Saved references survive renames; occupied names cannot be overwritten. Civitai collisions get a short checksum suffix.
 - [ ] #12 Model-detail image galleries in Discover.
-- [ ] #14 Automatically stop/restart the managed engine around model-folder changes when idle; wait rather than silently interrupt active jobs.
+- [x] #14 Stop/restart an idle managed engine around model changes. Busy queues/downloads request a retry after work finishes; no active job is interrupted or silently cancelled. Live engine verification remains a release check.
 - [ ] #16/16B Select LoRA triggers and insert them into the visible prompt, tracking ownership so removing a LoRA preserves manual edits and shared triggers. Maintain old history/recipe reproduction.
 - [ ] #20 Curated, editable booru wildcard packs with provenance and alias/duplicate cleanup.
 - [ ] #23 Enhance saved generations through diffusion refinement, saving a linked result and preserving the original.
@@ -44,3 +44,11 @@ The current image editor uses a pinned native INT8-convrot workflow and is still
 Preview actions were tested against a saved development fixture through the actual IPC and native PNG encoding. The final clipboard writer was intercepted to preserve the user's clipboard; this does not claim a native clipboard paste test. These checks did not generate a new GPU image or create/install a release package.
 
 Before release: finish remaining features, run targeted hardware checks, validate a real 0.1.1-to-0.2.0 upgrade and user-data preservation, then assemble the final installer and matching public/native sources.
+
+## Second batch: setup and model files
+
+Setup now shows the active component, an overall progress bar and known download byte counts. Engine installation percentages are explicitly estimates; unknown download totals remain indeterminate. Runtime archive transfers expose their filenames and verification phase. Dependency-manager package downloads still use stage messages rather than fabricated per-package byte counts.
+
+The Models page and model context dialog offer filename cleanup and confirmed Recycle Bin removal. Stable model IDs, original aliases and historical recipes remain intact. Deliberately deleted entries disappear; files restored from the Recycle Bin become visible again. Failed recycle operations restore the registry. External model roots remain read-only.
+
+Validation: 227 automated tests passed across 23 files, plus both public-source boundary tests. TypeScript and the development build passed; the public source allowlist/privacy check passed. Tests used tiny isolated safetensors fixtures, including rename identity, collisions, modified files, recycling failures/restoration, confirmation UI, unknown progress, and engine lifecycle sequencing. No user model files or actual Recycle Bin contents were touched. Real Windows recycling, a live engine restart and a fresh dependency installation remain end-of-update checks. No installer was assembled or release published.

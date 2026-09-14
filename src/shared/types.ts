@@ -117,6 +117,7 @@ export interface BackendStatus {
   url?: string;
   version?: string;
   installProgress?: number;
+  setupDownload?: { filename: string; receivedBytes: number; totalBytes?: number; phase: 'downloading' | 'verifying' };
   logTail: string[];
 }
 export type JobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
@@ -323,6 +324,7 @@ export interface LatentAPI {
   openComfyUI(): Promise<void>;
   refreshModels(): Promise<AppSnapshot>;
   importModels(kind: ModelKind): Promise<AppSnapshot>;
+  deleteModel(request: { modelId: string; expectedSha256: string }): Promise<AppSnapshot>;
   updateModel(id: string, changes: { family?: ModelFamily | 'unknown'; triggers?: string[] }): Promise<AppSnapshot>;
   downloadModel(request: ModelDownloadRequest): Promise<void>;
   cancelDownload(id: string): Promise<void>;

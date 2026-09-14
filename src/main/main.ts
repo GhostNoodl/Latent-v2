@@ -1,3 +1,4 @@
+import { withPausedModelEngine } from './model-maintenance';
 import { setupStorageBlockers, setupHardwareBlockers, type SetupCapability, type SetupPreflight } from '../shared/setup';
 import { inspectHardware as inspectSetupHardware } from './hardware-profile-probe';
 import { storageBoundary, copyStorageLocation } from './storage-locations';
@@ -152,18 +153,39 @@ function scheduleRuntimeIdleCheck() {
   if (!runtimeUpdateTimer || runtimeIdleTimer || closing || closed) return;
   runtimeIdleTimer = setTimeout(() => { runtimeIdleTimer = undefined; void automaticRuntimeCheck().catch(() => undefined); }, 1000);
 }
+let modelChangeInProgress = false;
+function modelChangeBlockedReason(): string | undefined {
+  if (modelChangeInProgress) return 'Wait for the current model change to finish.';
+  const runtimeProblem = runtimeCoordinator?.blockedReason(); if (runtimeProblem) return runtimeProblem;
+  if (!backend || !['ready', 'stopped', 'not-installed'].includes(backend.status().state)) return 'Wait for the image engine to finish its current operation.';
+  if (jobs?.jobs().some(job => ['queued', 'running'].includes(job.status))) return 'Finish or cancel queued and running jobs before changing models.';
+  if (models?.downloads.some(item => ['downloading', 'verifying'].includes(item.state))) return 'Wait for model downloads to finish before changing files.';
+  return undefined;
+}
+async function changeModelFiles<T>(operation: () => Promise<T>): Promise<T> {
+  const blocked = modelChangeBlockedReason(); if (blocked) throw new Error(blocked);
+  modelChangeInProgress = true; broadcast();
+  try {
+    return await jobs.withRuntimeMaintenance(async () => {
+      await backendActivity.assertIdle('change model files');
+      return withPausedModelEngine(backend, operation, () => models.refresh(), () => startEngine(true),
+        error => notify('notifyError', 'Image engine needs attention', `Start the engine when ready. ${errorMessage(error)}`));
+    }, { allowRetainedJobs: false });
+  } finally { modelChangeInProgress = false; broadcast(); }
+}
 function locationChangeBlockedReason(): string | undefined {
   if (!backend || !['stopped', 'not-installed'].includes(backend.status().state)) return 'Stop the image engine before changing model folders.';
   if (jobs?.jobs().some(job => ['queued', 'running'].includes(job.status))) return 'Finish or cancel queued and running jobs before changing model folders.';
   return undefined;
 }
-function assertModelLocationsReady() {
+function assertModelLocationsReady(allowModelChange = false) {
+  if (modelChangeInProgress && !allowModelChange) throw new Error('Wait for the model change to finish.');
   const runtimeProblem = runtimeCoordinator?.blockedReason(); if (runtimeProblem) throw new Error(runtimeProblem);
   if (ipAdapter?.status().state === 'activating') throw new Error('Wait for reference-tool activation to finish before starting or queuing generation.');
   const state = modelLocations.snapshot();
   if (state.recoveryRequired || state.error) throw new Error(state.error || 'Recover the interrupted model move in Models before starting generation.');
 }
-function startEngine() { return models.library.withShared('starting the image engine', async () => { assertModelLocationsReady(); await backend.start(); }); }
+function startEngine(allowModelChange = false) { return models.library.withShared('starting the image engine', async () => { assertModelLocationsReady(allowModelChange); await backend.start(); }); }
 function broadcast() {
   scheduleRuntimeIdleCheck();
   if (closed || closing || broadcastTimer) return;
@@ -220,7 +242,7 @@ async function initialize() {
   jobs = new JobService(paths, store, models, backend, broadcast, job => { notifications.jobFinished(job); }, app.getVersion(), upscaler, controlNet, qwenEdit, ipAdapter, () => runtimeCoordinator?.blockedReason() ?? (!runtimeCoordinator ? 'Checking for interrupted runtime maintenance before generation.' : undefined), faceDetailer, backendActivity, videoQueue);
   runtimeCoordinator = new RuntimeUpdateCoordinator(models.library, backend, jobs, () => runtimeUpdates.status());
   runtimeUpdates = new RuntimeUpdateService(paths, store, broadcast, runtimeCoordinator.hooks);
-  modelLocations = new ModelLocationService(paths, store, models, { assertChangesAllowed: () => { const reason = locationChangeBlockedReason(); if (reason) throw new Error(reason); }, changeBlockedReason: locationChangeBlockedReason }, broadcast);
+  modelLocations = new ModelLocationService(paths, store, models, { assertChangesAllowed: () => { const reason = locationChangeBlockedReason(); if (reason) throw new Error(reason); }, changeBlockedReason: modelChangeBlockedReason }, broadcast);
   storageOverview = new StorageOverviewService(paths, {
     catalog: () => builtInStorageCatalog(paths, { video: videoStatus(), backend: backend.status(), assistant: assistant.status(), qwenEdit: qwenEdit.status(), ipAdapter: ipAdapter.status(), controlNet: controlNet.status(), segmentation: segmentation.status(), upscaler: upscaler.status(), faceDetailer: faceDetailer.status() }),
     transfers: () => models.downloads,
@@ -316,16 +338,17 @@ async function initialize() {
     enqueueQwenEdit: async request => models.library.withShared('queuing an image edit', async () => { assertModelLocationsReady(); return jobs.enqueueQwenEdit(request); }),
     chooseExternalModelRoot: async input => {
       const kind = z.enum(['checkpoint', 'lora']).parse(input);
-      const blocked = locationChangeBlockedReason(); if (blocked) throw new Error(blocked);
+      const blocked = modelChangeBlockedReason(); if (blocked) throw new Error(blocked);
       const result = await dialog.showOpenDialog(window!, { title: `Use an existing ${kind === 'lora' ? 'LoRA' : 'checkpoint'} folder read-only`, properties: ['openDirectory'] });
       if (result.canceled || !result.filePaths[0]) return null;
-      await modelLocations.registerExternalRoot(kind, result.filePaths[0]); await models.refresh(); void civitai.autoMetadata(); broadcast();
+      await changeModelFiles(() => modelLocations.registerExternalRoot(kind, result.filePaths[0])); void civitai.autoMetadata(); broadcast();
       return modelLocations.snapshot();
     },
-    unregisterExternalModelRoot: async rootId => { await modelLocations.unregisterExternalRoot(id.parse(rootId)); await models.refresh(); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
-    createModelFolder: async request => { await modelLocations.createFolder(request); await models.refresh(); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
-    moveModel: async request => { await modelLocations.moveModel(request); await models.refresh(); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
-    recoverModelLocations: async () => { await modelLocations.recover(); await models.refresh(); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
+    unregisterExternalModelRoot: async rootId => { await changeModelFiles(() => modelLocations.unregisterExternalRoot(id.parse(rootId))); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
+    createModelFolder: async request => { await changeModelFiles(() => modelLocations.createFolder(request)); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
+    deleteModel: async request => { await changeModelFiles(() => modelLocations.deleteModel(request, filename => shell.trashItem(filename))); broadcast(); return snapshot(); },
+    moveModel: async request => { await changeModelFiles(() => modelLocations.moveModel(request)); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
+    recoverModelLocations: async () => { await changeModelFiles(() => modelLocations.recover()); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
     createCollection: async (kind, name) => collections.create(kind, name), renameCollection: async (collectionId, name) => collections.rename(collectionId, name), removeCollection: async collectionId => collections.remove(collectionId), addCollectionMembers: async (collectionId, memberIds) => collections.addMembers(collectionId, memberIds), removeCollectionMembers: async (collectionId, memberIds) => collections.removeMembers(collectionId, memberIds),
     setupControlNet: async repair => { const requested = z.boolean().optional().parse(repair) ?? false; if (requested) await jobs.withRuntimeMaintenance(async () => { await backendActivity.assertIdle('repair Canny ControlNet'); await controlNet.setup(true); }, { allowRetainedJobs: false }); else await controlNet.setup(); }, cancelControlNet: async () => controlNet.cancel(),
     saveWildcards: entries => wildcards.save(entries), setupUpscaler: async repair => { const requested = z.boolean().optional().parse(repair) ?? false; if (requested) await jobs.withRuntimeMaintenance(async () => { await backendActivity.assertIdle('repair the illustration upscaler'); await upscaler.setup(true); }, { allowRetainedJobs: false }); else await upscaler.setup(); }, cancelUpscaler: async () => upscaler.cancel(),
@@ -371,7 +394,7 @@ async function initialize() {
     importModels: async input => {
       const kind = z.enum(['checkpoint', 'lora']).parse(input);
       const choice = await dialog.showOpenDialog(window!, { title: `Copy ${kind === 'lora' ? 'LoRAs' : 'checkpoints'} into Latent`, properties: ['openFile', 'multiSelections'], filters: [{ name: 'SafeTensor models', extensions: ['safetensors'] }] });
-      if (!choice.canceled) { await models.importFiles(choice.filePaths, kind); void civitai.autoMetadata(); } return snapshot();
+      if (!choice.canceled) { await changeModelFiles(() => models.importFiles(choice.filePaths, kind)); void civitai.autoMetadata(); } return snapshot();
     },
     updateModel: async (modelId, changes) => { await models.update(id.parse(modelId), changes); return snapshot(); },
     downloadModel: async request => {

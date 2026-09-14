@@ -1062,6 +1062,30 @@
     {
       "from": "docs/UPDATE-0.2.md",
       "to": "docs/UPDATE-0.2.md"
+    },
+    {
+      "from": "src/shared/model-names.ts",
+      "to": "src/shared/model-names.ts"
+    },
+    {
+      "from": "src/main/model-maintenance.ts",
+      "to": "src/main/model-maintenance.ts"
+    },
+    {
+      "from": "src/renderer/SetupProgress.tsx",
+      "to": "src/renderer/SetupProgress.tsx"
+    },
+    {
+      "from": "tests/model-file-management.test.ts",
+      "to": "tests/model-file-management.test.ts"
+    },
+    {
+      "from": "tests/model-management-ui.test.tsx",
+      "to": "tests/model-management-ui.test.tsx"
+    },
+    {
+      "from": "tests/model-maintenance.test.ts",
+      "to": "tests/model-maintenance.test.ts"
     }
   ]
 }

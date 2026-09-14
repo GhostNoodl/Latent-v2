@@ -86,7 +86,7 @@ describe('exact compatible Civitai acquisition', () => {
   it('re-fetches detail then downloads and persists precise version/file provenance', async () => {
     fetchMock.mockResolvedValueOnce(json(rawModel())).mockResolvedValueOnce(weights());
     const installed = await catalog().download(selected);
-    expect(installed).toMatchObject({ filename: 'civitai_1_11_111_pixel.safetensors', family: 'sdxl', sha256, triggers: ['pixel art'], civitai: { ...selected, versionName: 'Version one', baseModel: 'SDXL 1.0', permissions: { allowNoCredit: false, allowCommercialUse: ['Image'] } } });
+    expect(installed).toMatchObject({ filename: 'pixel.safetensors', family: 'sdxl', sha256, triggers: ['pixel art'], civitai: { ...selected, versionName: 'Version one', baseModel: 'SDXL 1.0', permissions: { allowNoCredit: false, allowCommercialUse: ['Image'] } } });
     expect(await fsp.readFile(path.join(paths.models, 'loras', installed.filename))).toEqual(payload);
     expect(fetchMock.mock.calls.map(call => call[0])).toEqual(['https://civitai.com/api/v1/models/1', 'https://civitai.com/api/download/models/11']);
     expect(fetchMock.mock.calls.every(call => !call[1].headers.Authorization)).toBe(true);
@@ -129,11 +129,11 @@ describe('exact compatible Civitai acquisition', () => {
     fetchMock.mockResolvedValueOnce(json(rawModel())).mockResolvedValueOnce(response);
     const service = catalog(); const pending = service.download(selected); const rejected = expect(pending).rejects.toThrow(ModelTransferCancelledError);
     await vi.waitFor(() => expect(models.downloads).toHaveLength(1));
-    await vi.waitFor(() => expect(fs.existsSync(path.join(paths.models, 'loras', 'civitai_1_11_111_pixel.safetensors.part.json'))).toBe(true));
+    await vi.waitFor(() => expect(fs.existsSync(path.join(paths.models, 'loras', 'pixel.safetensors.part.json'))).toBe(true));
     controller.enqueue(new Uint8Array(payload.subarray(0, 24))); await vi.waitFor(() => expect(models.downloads[0].receivedBytes).toBe(24));
     service.cancel(); await rejected;
     expect(models.downloads[0].state).toBe('cancelled'); expect(models.assets).toEqual([]);
-    expect(await fsp.readFile(path.join(paths.models, 'loras', 'civitai_1_11_111_pixel.safetensors.part'))).toEqual(payload.subarray(0, 24));
+    expect(await fsp.readFile(path.join(paths.models, 'loras', 'pixel.safetensors.part'))).toEqual(payload.subarray(0, 24));
   });
 });
 
