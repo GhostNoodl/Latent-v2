@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-electron/
+release/
+.runtime/
+.data/
+.artifacts/
+docs/verification/
+*.log
+*.tsbuildinfo
+.env
+.env.*
+Latent-v2-studio.json
+*.sqlite*

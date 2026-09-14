@@ -1,0 +1,12 @@
+import { createServer } from 'vite';
+import { spawn } from 'node:child_process';
+import electron from 'electron';
+await import('./build-main.mjs');
+const vite = await createServer();
+await vite.listen();
+const env = { ...process.env, LATENT_DEV_URL: 'http://127.0.0.1:5174' };
+delete env.ELECTRON_RUN_AS_NODE;
+const child = spawn(electron, ['.'], { env, stdio: 'inherit', windowsHide: false });
+const close = async () => { await vite.close(); };
+child.on('exit', async code => { await close(); process.exit(code ?? 0); });
+process.on('SIGINT', () => child.kill());

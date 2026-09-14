@@ -1,0 +1,52 @@
+.model-locations-open { gap: 7px; }
+.model-locations-open > span { color: var(--accent); font-size: 10px; }
+.model-locations { display: grid; gap: 13px; min-width: 0; }
+.model-locations p { margin: 0; }
+.model-locations-explanation, .model-locations small, .model-locations-move p, .model-locations-recovery p { color: var(--muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.model-locations-browser { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 12px; }
+.model-locations label { min-width: 0; }
+.model-locations-browser label, .model-locations-create label, .model-locations-move > label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; }
+.model-locations select, .model-locations input:not([type=radio]) { width: 100%; min-width: 0; }
+.model-locations-create { display: flex; align-items: flex-end; gap: 9px; }
+.model-locations-create label { flex: 1; }
+.model-locations-list { display: grid; max-height: 230px; overflow-y: auto; border: 1px solid var(--border); border-radius: 9px; }
+.model-locations-item { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.model-locations-item:last-child { border-bottom: 0; }
+.model-locations-item > span { display: grid; flex: 1; min-width: 0; gap: 3px; }
+.model-locations-item strong { font-size: 12px; overflow-wrap: anywhere; }
+.model-locations-item > small { flex: 0 0 auto; max-width: 100px; text-align: right; }
+.model-locations-item.selected { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.model-locations input[type=radio] { width: 16px; min-width: 16px; height: 16px; padding: 0; flex: 0 0 16px; accent-color: var(--accent); }
+.model-locations-empty { padding: 20px; color: var(--muted); font-size: 12px; }
+.model-locations-pages { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
+.model-locations-pages > span { flex: 1; }
+.model-locations-move, .model-locations-recovery { display: grid; gap: 9px; padding: 13px; border: 1px solid var(--border); border-radius: 9px; }
+.model-locations-move > strong, .model-locations-recovery > strong { font-size: 13px; overflow-wrap: anywhere; }
+.model-locations-move > button, .model-locations-recovery > button { justify-self: start; }
+.model-locations-route { display: flex; gap: 9px; align-items: center; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.model-locations-route > span { flex: 1; min-width: 0; }
+.model-locations-route > svg { flex: 0 0 auto; }
+.model-locations-pending { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; font-size: 12px; }
+.model-locations-pending small { flex-basis: 100%; }
+.model-locations-success { font-size: 12px; color: var(--accent); line-height: 1.6; }
+.model-locations-footer { display: flex; align-items: center; gap: 12px; padding-top: 3px; }
+.model-locations-footer small { flex: 1; }
+.model-locations-external { display: grid; gap: 11px; padding: 13px; border: 1px solid var(--border); border-radius: 9px; }
+.model-locations-external strong, .model-locations-private-heading { font-size: 13px; }
+.model-locations-external p { font-size: 12px; color: var(--muted); line-height: 1.6; margin-top: 6px; }
+.model-locations-external > .button-row { flex-wrap: wrap; }
+.model-locations-external-root { display: flex; align-items: flex-start; gap: 10px; padding-top: 11px; border-top: 1px solid var(--border); }
+.model-locations-external-root > div { min-width: 0; flex: 1; display: grid; gap: 5px; }
+.model-locations-external-root strong { overflow-wrap: anywhere; }
+.model-locations-external-root strong span { color: var(--accent); font-size: 10px; font-weight: 500; margin-left: 5px; }
+.model-locations-external-root code { font-size: 11px; color: var(--muted); white-space: normal; overflow-wrap: anywhere; }
+.model-locations-external-root .model-locations-root-error { color: var(--danger); margin: 0; }
+@media (max-width: 600px) {
+  .model-locations-browser { grid-template-columns: minmax(0, 1fr); }
+  .model-locations-create { align-items: stretch; flex-direction: column; }
+  .model-locations-create button { align-self: flex-start; }
+  .model-locations-route { flex-direction: column; align-items: flex-start; }
+  .model-locations-route > svg { transform: rotate(90deg); }
+  .model-locations-footer { align-items: flex-end; }
+  .model-locations-external-root { flex-direction: column; }
+}

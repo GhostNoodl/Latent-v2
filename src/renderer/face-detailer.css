@@ -1,0 +1,25 @@
+.face-detailer { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.face-detailer .section-heading { flex-wrap: wrap; gap: 8px; }
+.face-detailer h3 { display: flex; align-items: center; gap: 8px; }
+.face-detailer h4 { margin: 0; }
+.face-detailer fieldset { display: flex; flex-direction: column; gap: 12px; min-width: 0; margin: 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; }
+.face-detailer legend { padding: 0 5px; color: var(--muted); font-size: 12px; }
+.face-help { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 0; overflow-wrap: anywhere; }
+.face-source { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; margin: 0; }
+.face-source strong { overflow-wrap: anywhere; }
+.face-source span { color: var(--muted); }
+.face-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.face-actions:empty { display: none; }
+.face-fields-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.face-fields-pair input, .face-fields-pair select { width: 100%; min-width: 0; }
+.face-runtime { display: flex; flex-direction: column; gap: 7px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.face-runtime progress { width: 100%; height: 5px; accent-color: var(--accent); }
+.face-review { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.face-review > .section-heading > span { font-size: 11px; color: var(--muted); }
+.face-overlay { display: block; width: 100%; max-height: min(420px, 45dvh); background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
+.face-box { fill: transparent; stroke: #b2b6be; stroke-width: 2; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; cursor: pointer; }
+.face-box.selected { stroke: var(--accent); stroke-dasharray: none; }
+.face-box:focus-visible { outline: none; stroke: white; stroke-width: 4; }
+.face-choices { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; }
+.face-choices .checkbox-label { min-height: 32px; }
+@media (max-width: 520px) { .face-fields-pair { grid-template-columns: 1fr; } .face-actions > button { flex: 1 1 auto; } }

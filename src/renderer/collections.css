@@ -1,0 +1,40 @@
+.collection-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin: 12px 0 18px; }
+.collection-toolbar > label { color: var(--muted); font-size: 11px; }
+.collection-toolbar > select { flex: 1; min-width: 140px; max-width: 310px; width: auto; min-height: 35px; font-size: 11px; }
+.collection-toolbar > button { min-height: 35px; font-size: 11px; }
+.collection-manager { display: flex; min-width: 0; flex: 0 0 auto; flex-direction: column; gap: 14px; }
+.collection-explanation, .collection-empty { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.collection-create { display: flex; flex-direction: column; gap: 7px; }
+.collection-create > label { font-size: 11px; }
+.collection-create > div, .collection-rename { display: flex; align-items: center; gap: 7px; }
+.collection-create input, .collection-rename input { min-width: 0; flex: 1; width: 100%; font-size: 12px; }
+.collection-create button { flex: 0 0 auto; font-size: 11px; }
+.collection-list { display: flex; flex-direction: column; gap: 7px; max-height: 300px; overflow: auto; padding: 2px; }
+.collection-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--inset); }
+.collection-description { min-width: 0; }
+.collection-description strong, .collection-member strong { display: block; font-size: 12px; overflow-wrap: anywhere; }
+.collection-description small, .collection-member small { display: block; color: var(--muted); font-size: 10px; line-height: 1.6; margin-top: 4px; }
+.collection-row .button-row { flex-shrink: 0; gap: 2px; }
+.collection-row button { min-height: 31px; padding: 5px 7px; font-size: 10px; }
+.collection-rename { width: 100%; }
+.collection-pending { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--accent); }
+.collection-members { border: 1px solid var(--border); border-radius: 8px; padding: 11px; min-width: 0; }
+.collection-members-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.collection-members-heading strong { font-size: 12px; overflow-wrap: anywhere; flex: 1; min-width: 100px; }
+.collection-members-heading > span { color: var(--muted); font-size: 10px; margin-left: auto; }
+.collection-member-list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow: auto; margin-top: 9px; }
+.collection-member { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 8px; border-top: 1px solid var(--border); padding-top: 9px; }
+.collection-member > div:first-child { flex: 1; min-width: min(190px, 100%); }
+.collection-member button { min-height: 31px; font-size: 10px; padding: 5px 7px; }
+.collection-item-label { overflow-wrap: anywhere; font-size: 13px; font-weight: 600; line-height: 1.6; }
+.collection-membership-list { display: flex; flex-direction: column; gap: 7px; max-height: 360px; overflow: auto; padding: 2px; }
+.collection-membership-list > label { display: flex; align-items: center; gap: 10px; padding: 11px; background: var(--inset); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.collection-membership-list > label:has(input:disabled) { opacity: .65; cursor: wait; }
+.collection-membership-list input { accent-color: var(--accent); }
+.collection-membership-list span { font-size: 12px; overflow-wrap: anywhere; }
+.collection-membership-list small { display: block; color: var(--muted); font-size: 10px; margin-top: 4px; }
+.collection-membership-button > span { font-size: 10px; border-radius: 999px; padding: 2px 6px; background: var(--inset); }
+.collection-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.collection-footer small { color: var(--muted); font-size: 10px; line-height: 1.6; }
+@media(max-width: 530px) { .collection-row { flex-wrap: wrap; } .collection-row > .button-row { margin-left: auto; } .collection-toolbar > select { max-width: none; } }
+@media(pointer: coarse) { .collection-toolbar > button, .collection-row button, .collection-member button, .collection-membership-button { min-height: 44px; } }

@@ -1,0 +1,16 @@
+.hardware-recommendations { min-width: 0; }
+.hardware-recommendations > .section-heading { flex-wrap: wrap; }
+.hardware-recommendations > .section-heading > div { flex: 1 1 270px; }
+.hardware-recommendations .metadata dd { overflow-wrap: anywhere; }
+.hardware-profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; margin-top: 18px; }
+.hardware-profile-card { min-width: 0; padding: 18px; border: 1px solid var(--border); border-radius: 14px; }
+.hardware-profile-card h3 { font-size: 14px; }
+.hardware-profile-card p, .hardware-profile-card li { font-size: 12px; line-height: 1.7; margin-top: 8px; overflow-wrap: anywhere; }
+.hardware-profile-card ul { padding-left: 18px; }
+.hardware-profile-card button { margin-top: 12px; }
+.hardware-profile-card details { margin-top: 14px; font-size: 12px; }
+.queue-recovery { margin-top: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; }
+.queue-recovery ol { margin: 8px 0; padding-left: 20px; }
+.queue-recovery li { font-size: 12px; line-height: 1.65; margin-top: 6px; overflow-wrap: anywhere; }
+.queue-job-info .queue-recovery strong { white-space: normal; }
+@media (max-width: 680px) { .hardware-recommendations .setting-line { align-items: stretch; flex-direction: column; gap: 12px; } }

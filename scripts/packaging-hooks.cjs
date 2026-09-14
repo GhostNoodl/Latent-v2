@@ -1,0 +1,3 @@
+const path = require('node:path');
+module.exports.beforePack = async context => { const { inspectBuiltResources } = await import('./packaging-resources.mjs'); await inspectBuiltResources(context.packager.projectDir); };
+module.exports.afterPack = async context => { const fs = require('node:fs/promises'); const { inspectPackagedResources } = await import('./packaging-resources.mjs'); const report = await inspectPackagedResources(context.appOutDir); const { inspectDistributionFiles, publicPackageReport } = await import('./windows-distribution.mjs'); report.distributionFiles = await inspectDistributionFiles(context.packager.projectDir, context.appOutDir); await fs.writeFile(path.join(context.appOutDir, 'Latent-package-resources.json'), publicPackageReport(report)); };

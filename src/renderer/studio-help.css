@@ -1,0 +1,4 @@
+.studio-help { display: grid; gap: 12px; }
+.studio-help details { border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.studio-help summary { min-height: 44px; padding: 12px 0; color: var(--text); font-size: 13px; line-height: 1.6; }
+.studio-help details p { font-size: 12px; line-height: 1.8; color: var(--muted); margin: 6px 0 12px; overflow-wrap: anywhere; }

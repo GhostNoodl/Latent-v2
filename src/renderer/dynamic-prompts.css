@@ -1,0 +1,25 @@
+.dynamic-prompts { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--border); background: var(--inset); border-radius: 9px; margin: 14px 0; }
+.dynamic-prompts.enabled { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.dynamic-heading, .dynamic-actions { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.dynamic-heading .text-button { display: inline-flex; gap: 6px; align-items: center; }
+.dynamic-prompts code { font-family: 'Cascadia Code', Consolas, monospace; font-size: 11px; }
+.dynamic-prompts .notice { padding: 10px; }
+.dynamic-frozen { display: flex; gap: 9px; align-items: flex-start; }
+.dynamic-frozen > svg { flex-shrink: 0; margin-top: 3px; }
+.dynamic-frozen p { margin-top: 4px; font-size: 11px; line-height: 1.7; }
+.dynamic-frozen .text-button { margin-top: 5px; color: var(--accent); }
+.dynamic-loading { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.dynamic-preview { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.dynamic-preview h4 { margin: 0 0 6px; font-size: 11px; font-weight: 500; color: var(--muted); }
+.dynamic-preview pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 12px; line-height: 1.7; padding: 10px; border-radius: 6px; background: var(--panel); border: 1px solid var(--border); max-height: 170px; overflow: auto; }
+.dynamic-preview details { max-height: 320px; overflow: auto; }
+.dynamic-preview ol { margin: 8px 0 14px; padding-left: 24px; font-size: 11px; }
+.dynamic-preview li { margin-bottom: 9px; line-height: 1.6; }
+.dynamic-preview li code { display: block; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
+.dynamic-preview li small { color: var(--muted); }
+.dynamic-preview > .small { display: flex; align-items: center; gap: 5px; }
+.wildcard-editor { display: flex; flex-direction: column; gap: 15px; }
+.wildcard-add { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 10px; }
+.wildcard-add > button { min-height: 40px; }
+.wildcard-editor > .text-button { align-self: flex-start; }
+.wildcard-editor textarea { font-family: 'Cascadia Code', Consolas, monospace; font-size: 12px; }

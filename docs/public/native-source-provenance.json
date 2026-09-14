@@ -1,0 +1,92 @@
+{
+  "release": "https://github.com/libvips/build-win64-mxe/releases/tag/v8.18.6",
+  "buildCommit": "09cfccf20b91b441fbe97fa7a7ed8a597e55e830",
+  "archiveSha256": "42ceea0c2f53d1244f3cb54c059881487b37452ee46c1c98c0d4b47480b20588",
+  "versionsMatch": true,
+  "versions": {
+    "aom": "3.14.1",
+    "archive": "3.8.9",
+    "cairo": "1.18.4",
+    "cgif": "0.5.3",
+    "exif": "0.6.26",
+    "expat": "2.8.3",
+    "ffi": "3.8.0",
+    "fontconfig": "2.18.3",
+    "freetype": "2.14.3",
+    "fribidi": "1.0.16",
+    "glib": "2.89.4",
+    "harfbuzz": "14.3.1",
+    "heif": "1.23.2",
+    "highway": "1.4.0",
+    "imagequant": "2.4.1",
+    "lcms": "2.19.1",
+    "mozjpeg": "0826579",
+    "pango": "1.58.2",
+    "pixman": "0.46.4",
+    "png": "1.6.58",
+    "proxy-libintl": "0.5",
+    "rsvg": "2.62.91",
+    "tiff": "4.7.2",
+    "uhdr": "2.0.2",
+    "vips": "8.18.6",
+    "webp": "1.6.0",
+    "xml2": "2.15.3",
+    "zlib-ng": "2.3.3"
+  },
+  "dlls": [
+    {
+      "upstream": "libvips-42.dll",
+      "shipped": "libvips-42.dll",
+      "upstreamSha256": "e6cc51bbc763e7deda536c6f56ce96b4c51ea769690ce4f4ed07607527b81dae",
+      "shippedSha256": "e6cc51bbc763e7deda536c6f56ce96b4c51ea769690ce4f4ed07607527b81dae",
+      "identical": true
+    },
+    {
+      "upstream": "libvips-cpp-42.dll",
+      "shipped": "libvips-cpp-8.18.6.dll",
+      "upstreamSha256": "0dbce86b29f48a1dd708744bcea32d0bb7ab19bcb68feac4c8768ff380fdb440",
+      "shippedSha256": "4f458afdb7b8a4290dbda3f287d7db037b239b8a9d21f0b87333f92192cdee76",
+      "identical": false
+    }
+  ],
+  "sharp": {
+    "version": "0.35.4",
+    "commit": "7f1a0a22cc285fe180766f4935d50b55af6e8432",
+    "tagObject": "4f02be9e5a9d5ce1a05cdfd8a1b2fc306dea938f",
+    "sourceUrl": "https://github.com/lovell/sharp/tree/7f1a0a22cc285fe180766f4935d50b55af6e8432",
+    "wrapperRecipe": "src/binding.gyp"
+  },
+  "archives": [
+    {
+      "file": "upstream.zip",
+      "bytes": 9322134,
+      "sha256": "42ceea0c2f53d1244f3cb54c059881487b37452ee46c1c98c0d4b47480b20588"
+    },
+    {
+      "file": "build-recipes.zip",
+      "bytes": 106169,
+      "sha256": "20a0ecf847cb659a6d64776dc0b6be6773d98ad58d829a5a52028f61d196591e"
+    },
+    {
+      "file": "sharp-source.zip",
+      "bytes": 42057601,
+      "sha256": "ec9fee0467fd86a322d4361c9c6afab1996ca3a0680dfd0678c69867f5e22c23"
+    }
+  ],
+  "sourceDeliveryComplete": true,
+  "limits": [
+    "Main libvips DLL matches upstream exactly; the C++ wrapper is separately built by Sharp.",
+    "Historical MXE branch checkout and original compiler environment are not independently proven. The pinned candidate recipes are supplied explicitly; bit-for-bit reproducibility has not been tested.",
+    "The archive is a source delivery artifact, not evidence of successfully rebuilding the native binaries."
+  ],
+  "sourceDeliveryScope": "All 28 matched library versions, 350 locked librsvg registry crates, gvdb, runtime sources, build patches, and the separately compiled Sharp wrapper inputs are present in the companion inventory.",
+  "sourceBundle": {
+    "file": "Latent-native-sources-sharp-0.35.4-libvips-8.18.6.zip",
+    "manifest": "native-source-inputs.json",
+    "archiveCount": 387
+  },
+  "mxe": {
+    "candidateCommit": "d973945bb92c7783d5afa41bb2b8d2e1a04eaba3",
+    "historicalCommitProven": false
+  }
+}

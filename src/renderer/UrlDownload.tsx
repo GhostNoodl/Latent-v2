@@ -1,0 +1,13 @@
+import { useRef, useState } from 'react';
+import type { ModelDownloadRequest } from '../shared/types';
+import { DownloadStorage } from './DownloadStorage';
+import { Field, Notice } from './ui';
+const refreshDownloadStorage = () => window.latent.getModelDownloadStorage();
+export function UrlDownload() {
+  const [request,setRequest]=useState<ModelDownloadRequest>({url:'',filename:'',kind:'checkpoint',family:'illustrious',triggers:[]});
+  const [triggers,setTriggers]=useState('');
+  const [busy,setBusy]=useState(false), [message,setMessage]=useState('');const active=useRef(false);
+  return <details className="settings-card download-form"><summary>Download from a direct URL</summary><DownloadStorage kind={request.kind} refresh={refreshDownloadStorage}/><form onSubmit={async event=>{event.preventDefault();if(active.current)return;active.current=true;setBusy(true);setMessage('Downloading. Progress and cancellation are in Notifications.');try{await window.latent.downloadModel({...request,url:request.url.trim(),filename:request.filename.trim(),sha256:request.sha256?.trim() || undefined,triggers:triggers.split(',').map(x=>x.trim()).filter(Boolean)});setMessage('Download finished. Your model is available in Models.');}catch(error){setMessage(error instanceof Error?error.message:String(error));}finally{active.current=false;setBusy(false);}}}>
+    <fieldset disabled={busy}><Field label="Direct download URL"><input type="url" required value={request.url} onChange={e=>setRequest({...request,url:e.target.value})}/></Field><div className="settings-grid"><Field label="Filename"><input required pattern="[^\\/]+\.safetensors" value={request.filename} placeholder="model.safetensors" onChange={e=>setRequest({...request,filename:e.target.value})}/></Field><Field label="Type"><select value={request.kind} onChange={e=>setRequest({...request,kind:e.target.value as ModelDownloadRequest['kind']})}><option value="checkpoint">Checkpoint</option><option value="lora">LoRA</option></select></Field><Field label="Model family"><select value={request.family} onChange={e=>setRequest({...request,family:e.target.value as ModelDownloadRequest['family']})}><option value="illustrious">Illustrious</option><option value="sdxl">SDXL</option></select></Field><Field label="SHA-256 (optional)"><input pattern="[a-fA-F0-9]{64}" value={request.sha256 ?? ''} onChange={e=>setRequest({...request,sha256:e.target.value})}/></Field></div>{request.kind === 'lora' && <Field label="Trigger words"><input value={triggers} onChange={e=>setTriggers(e.target.value)}/></Field>}<button type="submit">Start download</button></fieldset>{message&&<Notice>{message}</Notice>}
+  </form></details>;
+}

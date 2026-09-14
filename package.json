@@ -1,0 +1,142 @@
+{
+  "name": "latent-v2",
+  "version": "0.1.1",
+  "private": true,
+  "description": "A local desktop image studio with a separately managed ComfyUI backend",
+  "type": "module",
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/build-main.mjs",
+    "build:main": "node scripts/build-main.mjs",
+    "start": "node scripts/start.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --maxWorkers=2",
+    "package": "node scripts/package-windows.mjs",
+    "package:check": "node scripts/check-package-resources.mjs --source",
+    "package:check-built": "node scripts/check-package-resources.mjs --built",
+    "public:check": "node scripts/public-source.mjs check",
+    "public:export": "node scripts/public-source.mjs export",
+    "public:release-check": "node scripts/public-source.mjs release",
+    "public:test": "node --test scripts/check-public-boundary.mjs",
+    "package:installer": "node scripts/package-windows.mjs --installer",
+    "notices": "node scripts/third-party-notices.mjs",
+    "notices:check": "node scripts/third-party-notices.mjs --check"
+  },
+  "dependencies": {
+    "adm-zip": "0.6.1",
+    "lucide-react": "1.41.0",
+    "pngjs": "^7.0.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "sharp": "^0.35.4",
+    "ws": "^8.18.0",
+    "zod": "^4.3.0"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/node": "^24.0.0",
+    "@types/pngjs": "^6.0.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/ws": "^8.5.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "electron": "44.2.0",
+    "electron-builder": "26.15.3",
+    "esbuild": "^0.28.1",
+    "jsdom": "30.0.1",
+    "typescript": "7.0.2",
+    "vite": "8.2.2",
+    "vitest": "5.0.0"
+  },
+  "engines": {
+    "node": "^24.15.0 || >=26.0.0"
+  },
+  "build": {
+    "appId": "studio.latent.v2",
+    "productName": "Latent v2",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json",
+      "!**/*.map",
+      "!**/.env*",
+      "!**/*.sqlite*",
+      "!**/*.safetensors",
+      "!**/*.gguf",
+      "!**/*.ckpt",
+      "!**/*.pth",
+      "!**/*.onnx",
+      "!**/*.part",
+      "LICENSE",
+      "THIRD-PARTY-NOTICES.txt"
+    ],
+    "asar": true,
+    "forceCodeSigning": false,
+    "npmRebuild": false,
+    "beforePack": "./scripts/packaging-hooks.cjs",
+    "afterPack": "./scripts/packaging-hooks.cjs",
+    "asarUnpack": [
+      "dist-electron/resources/**/*",
+      "node_modules/sharp/**/*",
+      "node_modules/@img/**/*"
+    ],
+    "win": {
+      "icon": "resources/latent-icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker",
+      "signAndEditExecutable": true,
+      "signExecutable": false
+    },
+    "portable": {
+      "artifactName": "Latent-v2-${version}-Windows-x64-unsigned.exe",
+      "requestExecutionLevel": "user",
+      "unpackDirName": false
+    },
+    "nsis": {
+      "artifactName": "Latent-v2-${version}-Setup-x64-unsigned.exe",
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Latent v2",
+      "runAfterFinish": true,
+      "packElevateHelper": false,
+      "uninstallDisplayName": "Latent v2"
+    },
+    "extraFiles": [
+      {
+        "from": "LICENSE",
+        "to": "LICENSE"
+      },
+      {
+        "from": "THIRD-PARTY-NOTICES.txt",
+        "to": "THIRD-PARTY-NOTICES.txt"
+      },
+      {
+        "from": "README-WINDOWS.txt",
+        "to": "README-WINDOWS.txt"
+      }
+    ]
+  },
+  "license": "MIT",
+  "author": "Latent v2 contributors"
+}

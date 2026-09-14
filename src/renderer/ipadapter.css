@@ -1,0 +1,11 @@
+.ipadapter-reference { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+.ipadapter-reference-image { width: 150px; height: 150px; flex-shrink: 0; border-radius: 7px; overflow: hidden; background: #171920; }
+.ipadapter-reference-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ipadapter-reference-image.stretch img { object-fit: fill; }
+.ipadapter-reference > div:last-child { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; }
+.ipadapter-controls .two-columns:has(select) { grid-template-columns: minmax(0, 1fr); }
+.ipadapter-setup { display: flex; align-items: center; gap: 10px; }
+.ipadapter-setup progress { flex: 1; min-width: 40px; }
+.ipadapter-provenance { font-size: 12px; }
+.ipadapter-provenance a { display: block; margin-top: 8px; }
+@media (max-width: 620px) { .ipadapter-reference-image { width: 110px; height: 110px; } }

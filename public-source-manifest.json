@@ -1,0 +1,1047 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "from": "src/main/assistant-config.ts",
+      "to": "src/main/assistant-config.ts"
+    },
+    {
+      "from": "src/main/assistant-download.ts",
+      "to": "src/main/assistant-download.ts"
+    },
+    {
+      "from": "src/main/assistant-files.ts",
+      "to": "src/main/assistant-files.ts"
+    },
+    {
+      "from": "src/main/backend-activity.ts",
+      "to": "src/main/backend-activity.ts"
+    },
+    {
+      "from": "src/main/civitai-catalog.ts",
+      "to": "src/main/civitai-catalog.ts"
+    },
+    {
+      "from": "src/main/civitai-transfer.ts",
+      "to": "src/main/civitai-transfer.ts"
+    },
+    {
+      "from": "src/main/civitai.ts",
+      "to": "src/main/civitai.ts"
+    },
+    {
+      "from": "src/main/clipboard.ts",
+      "to": "src/main/clipboard.ts"
+    },
+    {
+      "from": "src/main/collections.ts",
+      "to": "src/main/collections.ts"
+    },
+    {
+      "from": "src/main/controlnet.ts",
+      "to": "src/main/controlnet.ts"
+    },
+    {
+      "from": "src/main/crop-output.ts",
+      "to": "src/main/crop-output.ts"
+    },
+    {
+      "from": "src/main/desktop-notifications.ts",
+      "to": "src/main/desktop-notifications.ts"
+    },
+    {
+      "from": "src/main/external-model-locations.ts",
+      "to": "src/main/external-model-locations.ts"
+    },
+    {
+      "from": "src/main/face-detailer-geometry.ts",
+      "to": "src/main/face-detailer-geometry.ts"
+    },
+    {
+      "from": "src/main/face-detailer-release.ts",
+      "to": "src/main/face-detailer-release.ts"
+    },
+    {
+      "from": "src/main/face-detailer.ts",
+      "to": "src/main/face-detailer.ts"
+    },
+    {
+      "from": "src/main/hardware-profile-evidence.ts",
+      "to": "src/main/hardware-profile-evidence.ts"
+    },
+    {
+      "from": "src/main/hardware-profile-probe.ts",
+      "to": "src/main/hardware-profile-probe.ts"
+    },
+    {
+      "from": "src/main/hardware-profiles.ts",
+      "to": "src/main/hardware-profiles.ts"
+    },
+    {
+      "from": "src/main/ipadapter-lifecycle.ts",
+      "to": "src/main/ipadapter-lifecycle.ts"
+    },
+    {
+      "from": "src/main/ipadapter.ts",
+      "to": "src/main/ipadapter.ts"
+    },
+    {
+      "from": "src/main/jobs.ts",
+      "to": "src/main/jobs.ts"
+    },
+    {
+      "from": "src/main/main.ts",
+      "to": "src/main/main.ts"
+    },
+    {
+      "from": "src/main/managed-backend.ts",
+      "to": "src/main/managed-backend.ts"
+    },
+    {
+      "from": "src/main/model-library-lease.ts",
+      "to": "src/main/model-library-lease.ts"
+    },
+    {
+      "from": "src/main/model-locations.ts",
+      "to": "src/main/model-locations.ts"
+    },
+    {
+      "from": "src/main/model-transfer-actions.ts",
+      "to": "src/main/model-transfer-actions.ts"
+    },
+    {
+      "from": "src/main/model-transfer-notifications.ts",
+      "to": "src/main/model-transfer-notifications.ts"
+    },
+    {
+      "from": "src/main/model-transfers.ts",
+      "to": "src/main/model-transfers.ts"
+    },
+    {
+      "from": "src/main/models.ts",
+      "to": "src/main/models.ts"
+    },
+    {
+      "from": "src/main/paths.ts",
+      "to": "src/main/paths.ts"
+    },
+    {
+      "from": "src/main/portable-studio.ts",
+      "to": "src/main/portable-studio.ts"
+    },
+    {
+      "from": "src/main/prompt-assistant.ts",
+      "to": "src/main/prompt-assistant.ts"
+    },
+    {
+      "from": "src/main/python-home.ts",
+      "to": "src/main/python-home.ts"
+    },
+    {
+      "from": "src/main/qwen-edit-assets.ts",
+      "to": "src/main/qwen-edit-assets.ts"
+    },
+    {
+      "from": "src/main/regional-masks.ts",
+      "to": "src/main/regional-masks.ts"
+    },
+    {
+      "from": "src/main/reviewed-asset-lock.ts",
+      "to": "src/main/reviewed-asset-lock.ts"
+    },
+    {
+      "from": "src/main/reviewed-asset-repair.ts",
+      "to": "src/main/reviewed-asset-repair.ts"
+    },
+    {
+      "from": "src/main/reviewed-runtime-channel.ts",
+      "to": "src/main/reviewed-runtime-channel.ts"
+    },
+    {
+      "from": "src/main/runtime-archive.ts",
+      "to": "src/main/runtime-archive.ts"
+    },
+    {
+      "from": "src/main/runtime-command-error.ts",
+      "to": "src/main/runtime-command-error.ts"
+    },
+    {
+      "from": "src/main/runtime-config.ts",
+      "to": "src/main/runtime-config.ts"
+    },
+    {
+      "from": "src/main/runtime-environment-command.ts",
+      "to": "src/main/runtime-environment-command.ts"
+    },
+    {
+      "from": "src/main/runtime-environments.ts",
+      "to": "src/main/runtime-environments.ts"
+    },
+    {
+      "from": "src/main/runtime-identity.ts",
+      "to": "src/main/runtime-identity.ts"
+    },
+    {
+      "from": "src/main/runtime-origin-033-packages.ts",
+      "to": "src/main/runtime-origin-033-packages.ts"
+    },
+    {
+      "from": "src/main/runtime-update-coordinator.ts",
+      "to": "src/main/runtime-update-coordinator.ts"
+    },
+    {
+      "from": "src/main/runtime-update-packages.ts",
+      "to": "src/main/runtime-update-packages.ts"
+    },
+    {
+      "from": "src/main/runtime-update-probe.ts",
+      "to": "src/main/runtime-update-probe.ts"
+    },
+    {
+      "from": "src/main/runtime-update-storage.ts",
+      "to": "src/main/runtime-update-storage.ts"
+    },
+    {
+      "from": "src/main/runtime-updates.ts",
+      "to": "src/main/runtime-updates.ts"
+    },
+    {
+      "from": "src/main/segmentation.ts",
+      "to": "src/main/segmentation.ts"
+    },
+    {
+      "from": "src/main/session-file-verifier.ts",
+      "to": "src/main/session-file-verifier.ts"
+    },
+    {
+      "from": "src/main/shared-backend-preview.ts",
+      "to": "src/main/shared-backend-preview.ts"
+    },
+    {
+      "from": "src/main/shell-path.ts",
+      "to": "src/main/shell-path.ts"
+    },
+    {
+      "from": "src/main/source-images.ts",
+      "to": "src/main/source-images.ts"
+    },
+    {
+      "from": "src/main/storage-catalog.ts",
+      "to": "src/main/storage-catalog.ts"
+    },
+    {
+      "from": "src/main/storage-locations.ts",
+      "to": "src/main/storage-locations.ts"
+    },
+    {
+      "from": "src/main/storage-overview.ts",
+      "to": "src/main/storage-overview.ts"
+    },
+    {
+      "from": "src/main/store.ts",
+      "to": "src/main/store.ts"
+    },
+    {
+      "from": "src/main/upscaler.ts",
+      "to": "src/main/upscaler.ts"
+    },
+    {
+      "from": "src/main/video-assets.ts",
+      "to": "src/main/video-assets.ts"
+    },
+    {
+      "from": "src/main/video-availability.ts",
+      "to": "src/main/video-availability.ts"
+    },
+    {
+      "from": "src/main/video-conversations.ts",
+      "to": "src/main/video-conversations.ts"
+    },
+    {
+      "from": "src/main/video-drafts.ts",
+      "to": "src/main/video-drafts.ts"
+    },
+    {
+      "from": "src/main/video-history.ts",
+      "to": "src/main/video-history.ts"
+    },
+    {
+      "from": "src/main/video-media.ts",
+      "to": "src/main/video-media.ts"
+    },
+    {
+      "from": "src/main/video-playback-fixture.ts",
+      "to": "src/main/video-playback-fixture.ts"
+    },
+    {
+      "from": "src/main/video-preflight.ts",
+      "to": "src/main/video-preflight.ts"
+    },
+    {
+      "from": "src/main/video-queue.ts",
+      "to": "src/main/video-queue.ts"
+    },
+    {
+      "from": "src/main/wildcards.ts",
+      "to": "src/main/wildcards.ts"
+    },
+    {
+      "from": "src/preload/preload.ts",
+      "to": "src/preload/preload.ts"
+    },
+    {
+      "from": "src/renderer/AdvancedImageControls.tsx",
+      "to": "src/renderer/AdvancedImageControls.tsx"
+    },
+    {
+      "from": "src/renderer/App.tsx",
+      "to": "src/renderer/App.tsx"
+    },
+    {
+      "from": "src/renderer/assistant.css",
+      "to": "src/renderer/assistant.css"
+    },
+    {
+      "from": "src/renderer/CanvasViewport.tsx",
+      "to": "src/renderer/CanvasViewport.tsx"
+    },
+    {
+      "from": "src/renderer/civitai.css",
+      "to": "src/renderer/civitai.css"
+    },
+    {
+      "from": "src/renderer/CivitaiBrowser.tsx",
+      "to": "src/renderer/CivitaiBrowser.tsx"
+    },
+    {
+      "from": "src/renderer/collections.css",
+      "to": "src/renderer/collections.css"
+    },
+    {
+      "from": "src/renderer/Collections.tsx",
+      "to": "src/renderer/Collections.tsx"
+    },
+    {
+      "from": "src/renderer/compare-image.css",
+      "to": "src/renderer/compare-image.css"
+    },
+    {
+      "from": "src/renderer/CompareImage.tsx",
+      "to": "src/renderer/CompareImage.tsx"
+    },
+    {
+      "from": "src/renderer/ControlNetControls.tsx",
+      "to": "src/renderer/ControlNetControls.tsx"
+    },
+    {
+      "from": "src/renderer/DownloadStorage.tsx",
+      "to": "src/renderer/DownloadStorage.tsx"
+    },
+    {
+      "from": "src/renderer/dynamic-prompts.css",
+      "to": "src/renderer/dynamic-prompts.css"
+    },
+    {
+      "from": "src/renderer/DynamicPrompts.tsx",
+      "to": "src/renderer/DynamicPrompts.tsx"
+    },
+    {
+      "from": "src/renderer/face-detailer.css",
+      "to": "src/renderer/face-detailer.css"
+    },
+    {
+      "from": "src/renderer/FaceDetailerControls.tsx",
+      "to": "src/renderer/FaceDetailerControls.tsx"
+    },
+    {
+      "from": "src/renderer/FaceDetailerEditor.tsx",
+      "to": "src/renderer/FaceDetailerEditor.tsx"
+    },
+    {
+      "from": "src/renderer/hardware-recommendations.css",
+      "to": "src/renderer/hardware-recommendations.css"
+    },
+    {
+      "from": "src/renderer/HardwareRecommendations.tsx",
+      "to": "src/renderer/HardwareRecommendations.tsx"
+    },
+    {
+      "from": "src/renderer/History.tsx",
+      "to": "src/renderer/History.tsx"
+    },
+    {
+      "from": "src/renderer/image-preview-recovery.ts",
+      "to": "src/renderer/image-preview-recovery.ts"
+    },
+    {
+      "from": "src/renderer/ImagePreview.tsx",
+      "to": "src/renderer/ImagePreview.tsx"
+    },
+    {
+      "from": "src/renderer/ipadapter.css",
+      "to": "src/renderer/ipadapter.css"
+    },
+    {
+      "from": "src/renderer/IPAdapterControls.tsx",
+      "to": "src/renderer/IPAdapterControls.tsx"
+    },
+    {
+      "from": "src/renderer/LocalModelMetadata.tsx",
+      "to": "src/renderer/LocalModelMetadata.tsx"
+    },
+    {
+      "from": "src/renderer/main.tsx",
+      "to": "src/renderer/main.tsx"
+    },
+    {
+      "from": "src/renderer/mask-transform.ts",
+      "to": "src/renderer/mask-transform.ts"
+    },
+    {
+      "from": "src/renderer/mask-transform.worker.ts",
+      "to": "src/renderer/mask-transform.worker.ts"
+    },
+    {
+      "from": "src/renderer/MaskEditor.tsx",
+      "to": "src/renderer/MaskEditor.tsx"
+    },
+    {
+      "from": "src/renderer/model-locations.css",
+      "to": "src/renderer/model-locations.css"
+    },
+    {
+      "from": "src/renderer/ModelLocationsUI.tsx",
+      "to": "src/renderer/ModelLocationsUI.tsx"
+    },
+    {
+      "from": "src/renderer/ModelPicker.tsx",
+      "to": "src/renderer/ModelPicker.tsx"
+    },
+    {
+      "from": "src/renderer/Models.tsx",
+      "to": "src/renderer/Models.tsx"
+    },
+    {
+      "from": "src/renderer/ModelTransfers.tsx",
+      "to": "src/renderer/ModelTransfers.tsx"
+    },
+    {
+      "from": "src/renderer/NotificationCenter.tsx",
+      "to": "src/renderer/NotificationCenter.tsx"
+    },
+    {
+      "from": "src/renderer/PackageSetupStorage.tsx",
+      "to": "src/renderer/PackageSetupStorage.tsx"
+    },
+    {
+      "from": "src/renderer/preview-selection.ts",
+      "to": "src/renderer/preview-selection.ts"
+    },
+    {
+      "from": "src/renderer/PromptAssistant.tsx",
+      "to": "src/renderer/PromptAssistant.tsx"
+    },
+    {
+      "from": "src/renderer/queue-view.ts",
+      "to": "src/renderer/queue-view.ts"
+    },
+    {
+      "from": "src/renderer/qwen-editor.css",
+      "to": "src/renderer/qwen-editor.css"
+    },
+    {
+      "from": "src/renderer/QwenEditor.tsx",
+      "to": "src/renderer/QwenEditor.tsx"
+    },
+    {
+      "from": "src/renderer/RecipeExtras.tsx",
+      "to": "src/renderer/RecipeExtras.tsx"
+    },
+    {
+      "from": "src/renderer/regional-prompts.css",
+      "to": "src/renderer/regional-prompts.css"
+    },
+    {
+      "from": "src/renderer/RegionalPrompts.tsx",
+      "to": "src/renderer/RegionalPrompts.tsx"
+    },
+    {
+      "from": "src/renderer/RuntimeUpdates.tsx",
+      "to": "src/renderer/RuntimeUpdates.tsx"
+    },
+    {
+      "from": "src/renderer/Settings.tsx",
+      "to": "src/renderer/Settings.tsx"
+    },
+    {
+      "from": "src/renderer/SharedBackendActivity.tsx",
+      "to": "src/renderer/SharedBackendActivity.tsx"
+    },
+    {
+      "from": "src/renderer/source-input.css",
+      "to": "src/renderer/source-input.css"
+    },
+    {
+      "from": "src/renderer/SourceInput.tsx",
+      "to": "src/renderer/SourceInput.tsx"
+    },
+    {
+      "from": "src/renderer/storage-overview.css",
+      "to": "src/renderer/storage-overview.css"
+    },
+    {
+      "from": "src/renderer/StorageOverview.tsx",
+      "to": "src/renderer/StorageOverview.tsx"
+    },
+    {
+      "from": "src/renderer/studio-help.css",
+      "to": "src/renderer/studio-help.css"
+    },
+    {
+      "from": "src/renderer/StudioHelp.tsx",
+      "to": "src/renderer/StudioHelp.tsx"
+    },
+    {
+      "from": "src/renderer/styles.css",
+      "to": "src/renderer/styles.css"
+    },
+    {
+      "from": "src/renderer/ui.tsx",
+      "to": "src/renderer/ui.tsx"
+    },
+    {
+      "from": "src/renderer/UrlDownload.tsx",
+      "to": "src/renderer/UrlDownload.tsx"
+    },
+    {
+      "from": "src/renderer/usability.css",
+      "to": "src/renderer/usability.css"
+    },
+    {
+      "from": "src/renderer/variation-description.ts",
+      "to": "src/renderer/variation-description.ts"
+    },
+    {
+      "from": "src/renderer/video-history-state.ts",
+      "to": "src/renderer/video-history-state.ts"
+    },
+    {
+      "from": "src/renderer/video-studio.css",
+      "to": "src/renderer/video-studio.css"
+    },
+    {
+      "from": "src/renderer/VideoAssetSetup.tsx",
+      "to": "src/renderer/VideoAssetSetup.tsx"
+    },
+    {
+      "from": "src/renderer/VideoHistory.tsx",
+      "to": "src/renderer/VideoHistory.tsx"
+    },
+    {
+      "from": "src/renderer/VideoPlanner.tsx",
+      "to": "src/renderer/VideoPlanner.tsx"
+    },
+    {
+      "from": "src/renderer/VideoStudio.tsx",
+      "to": "src/renderer/VideoStudio.tsx"
+    },
+    {
+      "from": "src/shared/action-error.ts",
+      "to": "src/shared/action-error.ts"
+    },
+    {
+      "from": "src/shared/advanced-image-types.ts",
+      "to": "src/shared/advanced-image-types.ts"
+    },
+    {
+      "from": "src/shared/advanced-image-workflow.ts",
+      "to": "src/shared/advanced-image-workflow.ts"
+    },
+    {
+      "from": "src/shared/assistant-conversation.ts",
+      "to": "src/shared/assistant-conversation.ts"
+    },
+    {
+      "from": "src/shared/assistant-types.ts",
+      "to": "src/shared/assistant-types.ts"
+    },
+    {
+      "from": "src/shared/backend-activity-types.ts",
+      "to": "src/shared/backend-activity-types.ts"
+    },
+    {
+      "from": "src/shared/civitai-types.ts",
+      "to": "src/shared/civitai-types.ts"
+    },
+    {
+      "from": "src/shared/collections-types.ts",
+      "to": "src/shared/collections-types.ts"
+    },
+    {
+      "from": "src/shared/controlnet-types.ts",
+      "to": "src/shared/controlnet-types.ts"
+    },
+    {
+      "from": "src/shared/controlnet-workflow.ts",
+      "to": "src/shared/controlnet-workflow.ts"
+    },
+    {
+      "from": "src/shared/crop-inpaint-geometry.ts",
+      "to": "src/shared/crop-inpaint-geometry.ts"
+    },
+    {
+      "from": "src/shared/crop-inpaint-types.ts",
+      "to": "src/shared/crop-inpaint-types.ts"
+    },
+    {
+      "from": "src/shared/crop-inpaint-workflow.ts",
+      "to": "src/shared/crop-inpaint-workflow.ts"
+    },
+    {
+      "from": "src/shared/defaults.ts",
+      "to": "src/shared/defaults.ts"
+    },
+    {
+      "from": "src/shared/dynamic-prompt-recipe.ts",
+      "to": "src/shared/dynamic-prompt-recipe.ts"
+    },
+    {
+      "from": "src/shared/dynamic-prompts.ts",
+      "to": "src/shared/dynamic-prompts.ts"
+    },
+    {
+      "from": "src/shared/face-detailer-recipe.ts",
+      "to": "src/shared/face-detailer-recipe.ts"
+    },
+    {
+      "from": "src/shared/face-detailer-types.ts",
+      "to": "src/shared/face-detailer-types.ts"
+    },
+    {
+      "from": "src/shared/face-detailer-workflow.ts",
+      "to": "src/shared/face-detailer-workflow.ts"
+    },
+    {
+      "from": "src/shared/generation-phase.ts",
+      "to": "src/shared/generation-phase.ts"
+    },
+    {
+      "from": "src/shared/hardware-profile-application.ts",
+      "to": "src/shared/hardware-profile-application.ts"
+    },
+    {
+      "from": "src/shared/hardware-profile-types.ts",
+      "to": "src/shared/hardware-profile-types.ts"
+    },
+    {
+      "from": "src/shared/history-selection.ts",
+      "to": "src/shared/history-selection.ts"
+    },
+    {
+      "from": "src/shared/image-workflow.ts",
+      "to": "src/shared/image-workflow.ts"
+    },
+    {
+      "from": "src/shared/ipadapter-release.ts",
+      "to": "src/shared/ipadapter-release.ts"
+    },
+    {
+      "from": "src/shared/ipadapter-types.ts",
+      "to": "src/shared/ipadapter-types.ts"
+    },
+    {
+      "from": "src/shared/ipadapter-workflow.ts",
+      "to": "src/shared/ipadapter-workflow.ts"
+    },
+    {
+      "from": "src/shared/model-catalog.ts",
+      "to": "src/shared/model-catalog.ts"
+    },
+    {
+      "from": "src/shared/model-download-space.ts",
+      "to": "src/shared/model-download-space.ts"
+    },
+    {
+      "from": "src/shared/model-locations.ts",
+      "to": "src/shared/model-locations.ts"
+    },
+    {
+      "from": "src/shared/model-transfer-types.ts",
+      "to": "src/shared/model-transfer-types.ts"
+    },
+    {
+      "from": "src/shared/qwen-conversation.ts",
+      "to": "src/shared/qwen-conversation.ts"
+    },
+    {
+      "from": "src/shared/qwen-edit-canvas.ts",
+      "to": "src/shared/qwen-edit-canvas.ts"
+    },
+    {
+      "from": "src/shared/qwen-edit-types.ts",
+      "to": "src/shared/qwen-edit-types.ts"
+    },
+    {
+      "from": "src/shared/qwen-edit-workflow.ts",
+      "to": "src/shared/qwen-edit-workflow.ts"
+    },
+    {
+      "from": "src/shared/regional-prompt-editor.ts",
+      "to": "src/shared/regional-prompt-editor.ts"
+    },
+    {
+      "from": "src/shared/regional-prompt-types.ts",
+      "to": "src/shared/regional-prompt-types.ts"
+    },
+    {
+      "from": "src/shared/regional-prompt-workflow.ts",
+      "to": "src/shared/regional-prompt-workflow.ts"
+    },
+    {
+      "from": "src/shared/runtime-identity.ts",
+      "to": "src/shared/runtime-identity.ts"
+    },
+    {
+      "from": "src/shared/runtime-update-capabilities.ts",
+      "to": "src/shared/runtime-update-capabilities.ts"
+    },
+    {
+      "from": "src/shared/runtime-update-types.ts",
+      "to": "src/shared/runtime-update-types.ts"
+    },
+    {
+      "from": "src/shared/segmentation-types.ts",
+      "to": "src/shared/segmentation-types.ts"
+    },
+    {
+      "from": "src/shared/source-types.ts",
+      "to": "src/shared/source-types.ts"
+    },
+    {
+      "from": "src/shared/storage-types.ts",
+      "to": "src/shared/storage-types.ts"
+    },
+    {
+      "from": "src/shared/trigger-editing.ts",
+      "to": "src/shared/trigger-editing.ts"
+    },
+    {
+      "from": "src/shared/trigger-resolution.ts",
+      "to": "src/shared/trigger-resolution.ts"
+    },
+    {
+      "from": "src/shared/types.ts",
+      "to": "src/shared/types.ts"
+    },
+    {
+      "from": "src/shared/validation.ts",
+      "to": "src/shared/validation.ts"
+    },
+    {
+      "from": "src/shared/video-assets.ts",
+      "to": "src/shared/video-assets.ts"
+    },
+    {
+      "from": "src/shared/video-conversation.ts",
+      "to": "src/shared/video-conversation.ts"
+    },
+    {
+      "from": "src/shared/video-history.ts",
+      "to": "src/shared/video-history.ts"
+    },
+    {
+      "from": "src/shared/video-output.ts",
+      "to": "src/shared/video-output.ts"
+    },
+    {
+      "from": "src/shared/video-plan.ts",
+      "to": "src/shared/video-plan.ts"
+    },
+    {
+      "from": "src/shared/video-types.ts",
+      "to": "src/shared/video-types.ts"
+    },
+    {
+      "from": "src/shared/video-workflow.ts",
+      "to": "src/shared/video-workflow.ts"
+    },
+    {
+      "from": "src/shared/workflow-model-paths.ts",
+      "to": "src/shared/workflow-model-paths.ts"
+    },
+    {
+      "from": "src/shared/workflow.ts",
+      "to": "src/shared/workflow.ts"
+    },
+    {
+      "from": "resources/face-detailer-NOTICES.txt",
+      "to": "resources/face-detailer-NOTICES.txt"
+    },
+    {
+      "from": "resources/face-detailer-worker.py",
+      "to": "resources/face-detailer-worker.py"
+    },
+    {
+      "from": "resources/latent-icon-NOTICES.txt",
+      "to": "resources/latent-icon-NOTICES.txt"
+    },
+    {
+      "from": "resources/latent-icon.ico",
+      "to": "resources/latent-icon.ico"
+    },
+    {
+      "from": "resources/latent-icon.svg",
+      "to": "resources/latent-icon.svg"
+    },
+    {
+      "from": "resources/latent-video-attention.py",
+      "to": "resources/latent-video-attention.py"
+    },
+    {
+      "from": "resources/segmentation-worker.py",
+      "to": "resources/segmentation-worker.py"
+    },
+    {
+      "from": "resources/video-inspector.py",
+      "to": "resources/video-inspector.py"
+    },
+    {
+      "from": "resources/video-playback-fixture.mp4",
+      "to": "resources/video-playback-fixture.mp4"
+    },
+    {
+      "from": "package.json",
+      "to": "package.json"
+    },
+    {
+      "from": "package-lock.json",
+      "to": "package-lock.json"
+    },
+    {
+      "from": "tsconfig.json",
+      "to": "tsconfig.json"
+    },
+    {
+      "from": "vite.config.ts",
+      "to": "vite.config.ts"
+    },
+    {
+      "from": "index.html",
+      "to": "index.html"
+    },
+    {
+      "from": "scripts/build-main.mjs",
+      "to": "scripts/build-main.mjs"
+    },
+    {
+      "from": "scripts/package-windows.mjs",
+      "to": "scripts/package-windows.mjs"
+    },
+    {
+      "from": "scripts/packaging-resources.mjs",
+      "to": "scripts/packaging-resources.mjs"
+    },
+    {
+      "from": "scripts/packaging-hooks.cjs",
+      "to": "scripts/packaging-hooks.cjs"
+    },
+    {
+      "from": "scripts/windows-icon.mjs",
+      "to": "scripts/windows-icon.mjs"
+    },
+    {
+      "from": "scripts/check-package-resources.mjs",
+      "to": "scripts/check-package-resources.mjs"
+    },
+    {
+      "from": "scripts/start.mjs",
+      "to": "scripts/start.mjs"
+    },
+    {
+      "from": "scripts/dev.mjs",
+      "to": "scripts/dev.mjs"
+    },
+    {
+      "from": "scripts/public-source.mjs",
+      "to": "scripts/public-source.mjs"
+    },
+    {
+      "from": "tests/runtime-isolation.test.ts",
+      "to": "tests/runtime-isolation.test.ts"
+    },
+    {
+      "from": "tests/runtime-update-storage.test.ts",
+      "to": "tests/runtime-update-storage.test.ts"
+    },
+    {
+      "from": "tests/portable-studio.test.ts",
+      "to": "tests/portable-studio.test.ts"
+    },
+    {
+      "from": "tests/store-paths.test.ts",
+      "to": "tests/store-paths.test.ts"
+    },
+    {
+      "from": "tests/runtime-install-packages.test.ts",
+      "to": "tests/runtime-install-packages.test.ts"
+    },
+    {
+      "from": "tests/runtime-command-error.test.ts",
+      "to": "tests/runtime-command-error.test.ts",
+      "exceptions": [
+        {
+          "category": "user-profile-path",
+          "sha256": "d99824422c3b2b5a1fbc4ddf49e360f4ec62568c34fb1e8c4f15d8810376b434",
+          "reason": "Reviewed synthetic Example User path / user:secret@example.com rejection fixture; not a personal credential."
+        }
+      ]
+    },
+    {
+      "from": "tests/workflow-model-paths.test.ts",
+      "to": "tests/workflow-model-paths.test.ts"
+    },
+    {
+      "from": "tests/civitai.test.ts",
+      "to": "tests/civitai.test.ts"
+    },
+    {
+      "from": "tests/civitai-transfer.test.ts",
+      "to": "tests/civitai-transfer.test.ts"
+    },
+    {
+      "from": "tests/civitai-catalog.test.ts",
+      "to": "tests/civitai-catalog.test.ts"
+    },
+    {
+      "from": "tests/storage-locations.test.ts",
+      "to": "tests/storage-locations.test.ts"
+    },
+    {
+      "from": "tests/face-detailer.test.ts",
+      "to": "tests/face-detailer.test.ts"
+    },
+    {
+      "from": "tests/runtime-identity.test.ts",
+      "to": "tests/runtime-identity.test.ts",
+      "exceptions": [
+        {
+          "category": "credential-url",
+          "sha256": "4c1a6bc8cbcace548cd47806f92f6b2c9fe9912056f651482d2201c2a33f2e6c",
+          "reason": "Reviewed synthetic Example User path / user:secret@example.com rejection fixture; not a personal credential."
+        }
+      ]
+    },
+    {
+      "from": "tests/runtime-environments.test.ts",
+      "to": "tests/runtime-environments.test.ts"
+    },
+    {
+      "from": "tests/hardware-profile-application.test.ts",
+      "to": "tests/hardware-profile-application.test.ts"
+    },
+    {
+      "from": "README.md",
+      "to": "README.md"
+    },
+    {
+      "from": "docs/DISTRIBUTION.md",
+      "to": "docs/DISTRIBUTION.md"
+    },
+    {
+      "from": "THIRD_PARTY.md",
+      "to": "THIRD_PARTY.md"
+    },
+    {
+      "from": ".gitignore",
+      "to": ".gitignore"
+    },
+    {
+      "from": "tests/hardware-public.test.ts",
+      "to": "tests/hardware-public.test.ts"
+    },
+    {
+      "from": ".github/workflows/public-source.yml",
+      "to": ".github/workflows/public-source.yml"
+    },
+    {
+      "from": "scripts/check-public-boundary.mjs",
+      "to": "scripts/check-public-boundary.mjs"
+    },
+    {
+      "from": "LICENSE",
+      "to": "LICENSE"
+    },
+    {
+      "from": "src/shared/setup.ts",
+      "to": "src/shared/setup.ts"
+    },
+    {
+      "from": "src/renderer/SetupHub.tsx",
+      "to": "src/renderer/SetupHub.tsx"
+    },
+    {
+      "from": "src/renderer/setup.css",
+      "to": "src/renderer/setup.css"
+    },
+    {
+      "from": "tests/setup.test.ts",
+      "to": "tests/setup.test.ts"
+    },
+    {
+      "from": "tests/setup-hub-dom.test.tsx",
+      "to": "tests/setup-hub-dom.test.tsx"
+    },
+    {
+      "from": "tests/app-history-dom.test.tsx",
+      "to": "tests/app-history-dom.test.tsx"
+    },
+    {
+      "from": "scripts/third-party-notices.mjs",
+      "to": "scripts/third-party-notices.mjs"
+    },
+    {
+      "from": "scripts/windows-distribution.mjs",
+      "to": "scripts/windows-distribution.mjs"
+    },
+    {
+      "from": "scripts/check-windows-distribution.mjs",
+      "to": "scripts/check-windows-distribution.mjs"
+    },
+    {
+      "from": "THIRD-PARTY-NOTICES.txt",
+      "to": "THIRD-PARTY-NOTICES.txt"
+    },
+    {
+      "from": "README-WINDOWS.txt",
+      "to": "README-WINDOWS.txt"
+    },
+    {
+      "from": "licenses/LGPL-3.0.txt",
+      "to": "licenses/LGPL-3.0.txt"
+    },
+    {
+      "from": "scripts/test-windows-installer.ps1",
+      "to": "scripts/test-windows-installer.ps1"
+    },
+    {
+      "from": "docs/public/WINDOWS-ACCEPTANCE.md",
+      "to": "docs/public/WINDOWS-ACCEPTANCE.md"
+    },
+    {
+      "from": "docs/public/NATIVE-SOURCES.md",
+      "to": "docs/public/NATIVE-SOURCES.md"
+    },
+    {
+      "from": "docs/public/native-source-provenance.json",
+      "to": "docs/public/native-source-provenance.json"
+    },
+    {
+      "from": "scripts/native-source-bundle.py",
+      "to": "scripts/native-source-bundle.py"
+    },
+    {
+      "from": "docs/public/native-source-inputs.json",
+      "to": "docs/public/native-source-inputs.json"
+    }
+  ]
+}

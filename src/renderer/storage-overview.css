@@ -1,0 +1,33 @@
+.storage-overview { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.storage-overview > .section-heading { flex-wrap: wrap; gap: 10px; }
+.storage-overview h3 { display: flex; align-items: center; gap: 8px; }
+.storage-overview h4 { margin: 0 0 8px; }
+.storage-help { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.storage-volumes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 10px; }
+.storage-volume { display: flex; flex-direction: column; gap: 5px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
+.storage-volume > span { font-size: 14px; }
+.storage-volume small { color: var(--muted); line-height: 1.5; }
+.storage-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.storage-counts > div { display: flex; flex-direction: column; gap: 5px; padding: 10px; background: var(--panel); border-radius: 9px; }
+.storage-counts span { font-size: 11px; color: var(--muted); }
+.storage-folders > summary, .storage-package > summary { cursor: pointer; padding: 12px; font-size: 13px; }
+.storage-folders, .storage-package { border: 1px solid var(--border); border-radius: 10px; min-width: 0; }
+.storage-folder-list, .storage-package-body { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 12px; }
+.storage-folder, .storage-package-destination { display: flex; align-items: center; gap: 10px; justify-content: space-between; min-width: 0; }
+.storage-folder > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.storage-folder strong { font-size: 12px; }
+.storage-folder span { font-size: 11px; color: var(--muted); }
+.storage-overview code { overflow-wrap: anywhere; word-break: break-word; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.storage-overview .icon-button { flex-shrink: 0; }
+.storage-package { margin-top: 10px; }
+.storage-package > summary > span { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin-right: 12px; }
+.storage-package summary small { color: var(--muted); }
+.storage-package summary > span:last-child { font-size: 11px; color: var(--muted); }
+.storage-package-numbers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.storage-package-numbers dt { font-size: 11px; color: var(--muted); }
+.storage-package-numbers dd { margin: 4px 0 0; font-size: 13px; }
+.storage-package progress { height: 6px; width: 100%; accent-color: var(--accent); }
+.storage-transfer { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px 14px; padding: 12px 0; border-top: 1px solid var(--border); font-size: 12px; }
+.storage-transfer strong { overflow-wrap: anywhere; }
+.storage-transfer > span, .storage-transfer > small { color: var(--muted); }
+@media (max-width: 480px) { .storage-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .storage-package-numbers { grid-template-columns: 1fr; } }

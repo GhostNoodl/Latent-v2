@@ -1,0 +1,50 @@
+import type { ReactNode } from 'react';
+import { videoProfileReady } from '../shared/video-assets';
+import { Film } from 'lucide-react';
+import { resolveVideoDuration, videoDraftSchema, videoProfileAssets } from '../shared/video-plan';
+import type { VideoAvailability, VideoDraft } from '../shared/video-types';
+import type { SourceImageAsset } from '../shared/source-types';
+import { Notice } from './ui';
+export interface VideoPlannerProps {
+  assetSetup?: ReactNode; sidebarExtras?: ReactNode; saveLabel?: string; onAssistant?(): void;
+  draft: VideoDraft; status: VideoAvailability; sources: readonly SourceImageAsset[]; busy?: boolean; message?: string;
+  onChange(draft: VideoDraft): void; onSaveDraft(): void; onResetDraft(): void; onImportSource(): void; onOpenLicense(): void; onReviewPlan?(): void; onGenerate?(): void;
+}
+/** Callback-only form. Main's capability gate must allow any generation request. */
+export function VideoPlanner({ assetSetup, sidebarExtras, saveLabel, onAssistant, draft, status, sources, busy = false, message, onChange, onSaveDraft, onResetDraft, onImportSource, onOpenLicense, onReviewPlan, onGenerate }: VideoPlannerProps) {
+  const parsed = videoDraftSchema.safeParse(draft); const duration = Number.isFinite(draft.requestedDurationSeconds) && draft.requestedDurationSeconds >= 5 && draft.requestedDurationSeconds <= 15 ? resolveVideoDuration(draft.requestedDurationSeconds) : undefined;
+  const references = [draft.firstFrame, draft.lastFrame].filter(reference => reference !== undefined);
+  const sourcesReady = draft.mode === 'txt2vid' || references.length > 0 && references.every(reference => sources.some(source => source.id === reference.sourceId && source.normalized.sha256 === reference.sha256));
+  const filesReady = status.assets ? videoProfileReady(status.assets, draft.profile) : status.canGenerate;
+  const canSubmit = !busy && parsed.success && Boolean(draft.prompt.trim()) && sourcesReady;
+  const update = (patch: Partial<VideoDraft>) => onChange({ ...draft, ...patch });
+  const selectSource = (role: 'firstFrame' | 'lastFrame', id: string) => { const source = sources.find(item => item.id === id); update({ [role]: source ? { sourceId: source.id, sha256: source.normalized.sha256 } : undefined }); };
+  return <section className="video-planner video-composer">
+    <aside className="video-controls" aria-label="Video parameters"><div className="video-control-fields"><h2>Model & generation</h2>
+    <div className="settings-grid video-mode-options"><label>Video mode<select value={draft.mode} disabled={busy} onChange={event => update(event.target.value === 'txt2vid' ? { mode: 'txt2vid', firstFrame: undefined, lastFrame: undefined } : { mode: 'img2vid' })}><option value="txt2vid">Text to video</option><option value="img2vid">Image to video</option></select></label><label>Generation profile<select aria-label="Generation profile" value={draft.profile} disabled={busy} onChange={event => update({ profile: event.target.value as VideoDraft['profile'], attention: undefined, decodeMode: event.target.value === 'fused4' ? 'auto' : undefined })}><option value="base">Base · 20 steps</option><option value="turbo8">Turbo adapter · 8 steps</option><option value="fused4">Fast fused · 4 steps</option></select></label></div>
+    {!filesReady && <Notice>This profile needs files. Open its setup below.</Notice>}{filesReady && !status.canGenerate && <Notice>{status.message}</Notice>}
+    {status.assets?.fusedPresent && draft.profile !== 'fused4' && <button type="button" disabled={busy} onClick={() => update({ profile: 'fused4', decodeMode: 'auto', attention: undefined })}>Use installed fast fused profile</button>}
+    <details className="video-setup" open={!filesReady}><summary>{filesReady ? 'Profile files — ready' : 'Set up this profile'}</summary>{assetSetup}</details>
+    <div className="settings-grid">
+      <label>Width<input type="number" value={draft.width} min={32} max={2048} step={32} disabled={busy} onChange={event => update({ width: Number(event.target.value) })} /></label>
+      <label>Height<input type="number" value={draft.height} min={32} max={2048} step={32} disabled={busy} onChange={event => update({ height: Number(event.target.value) })} /></label>
+      <label>Duration (seconds)<input type="number" value={draft.requestedDurationSeconds} min={5} max={15} step={0.1} disabled={busy} onChange={event => update({ requestedDurationSeconds: Number(event.target.value) })} /></label>
+      <label>Seed<input value={draft.seed} maxLength={32} disabled={busy} placeholder="random" onChange={event => update({ seed: event.target.value })} /></label>
+      <label>Audio export<select value={draft.audio} disabled={busy} onChange={event => update({ audio: event.target.value as VideoDraft['audio'] })}><option value="none">Silent video</option><option value="stereo-candidate">Stereo audio</option></select></label>
+    </div>
+    
+    {duration && <p>Resolved output: {draft.width} × {draft.height}, {duration.frames} frames at 24 fps, {duration.durationSeconds.toFixed(4)} seconds. The model rounds the requested duration to its supported frame grid.</p>}
+
+    {draft.mode === 'img2vid' && <><div className="settings-grid">{(['firstFrame', 'lastFrame'] as const).map(role => <label key={role}>{role === 'firstFrame' ? 'First frame' : 'Last frame'}<select value={draft[role]?.sourceId ?? ''} disabled={busy} onChange={event => selectSource(role, event.target.value)}><option value="">No {role === 'firstFrame' ? 'first' : 'last'} frame</option>{draft[role] && !sources.some(source => source.id === draft[role]?.sourceId) && <option value={draft[role]!.sourceId}>Saved source unavailable</option>}{sources.map(source => <option key={source.id} value={source.id}>{source.name} · {source.normalized.width} × {source.normalized.height}</option>)}</select></label>)}
+      <label>Fit both source images<select value={draft.resize} disabled={busy} onChange={event => update({ resize: event.target.value as VideoDraft['resize'] })}><option value="center-crop">Center crop to fill canvas</option><option value="stretch">Stretch to canvas</option></select></label></div><button type="button" disabled={busy} onClick={onImportSource}>Import source image</button><p>Choose one or both frames. The fit applies to each reference; original source pixels remain preserved.</p>{!draft.firstFrame && !draft.lastFrame && <Notice>Choose a source before this image-to-video plan can run.</Notice>}</>}
+    {draft.mode === 'img2vid' && <div className="video-source-previews">{(['firstFrame', 'lastFrame'] as const).map(role => { const reference = draft[role]; const source = sources.find(item => item.id === reference?.sourceId); return reference && <figure key={role}>{source && source.normalized.sha256 === reference.sha256 ? <><img src={`latent-asset://source/${source.id}`} alt={`${role === 'firstFrame' ? 'First' : 'Last'} frame original reference`} /><figcaption>{role === 'firstFrame' ? 'First' : 'Last'} frame original · {source.normalized.width} × {source.normalized.height}</figcaption></> : <Notice error>The saved {role === 'firstFrame' ? 'first' : 'last'} frame is unavailable or changed. Select a replacement deliberately.</Notice>}</figure>; })}</div>}
+    {!parsed.success && <Notice error>{parsed.error.issues[0]?.message} Finish these settings before generating.</Notice>}
+    <details><summary>Technical details and model license</summary><button type="button" onClick={onOpenLicense}>Read MiniMax H3 license</button><p>{((['base', 'turbo8', 'fused4'].includes(draft.profile) ? videoProfileAssets(draft.profile) : []).reduce((sum, asset) => sum + asset.bytes, 0) / 1e9).toFixed(2)} GB candidate model storage, plus setup headroom. No video weights are included. Performance varies with your hardware and settings.</p></details>
+{sidebarExtras}
+    <details className="video-advanced"><summary>More options</summary><div className="settings-grid">      {draft.profile === 'fused4' && <label>Attention<select value={draft.attention ?? 'default'} disabled={busy} onChange={event => update({ attention: event.target.value as VideoDraft['attention'] })}><option value="default">Default</option><option value="sage-auto">SageAttention · optional acceleration</option></select></label>}
+      {draft.profile === 'fused4' && <label>Video decoding<select value={draft.decodeMode ?? 'tiled'} disabled={busy} onChange={event => update({ decodeMode: event.target.value as VideoDraft['decodeMode'] })}><option value="auto">Automatic · faster when memory fits</option><option value="tiled">Tiled · lower peak memory</option></select></label>}
+</div><div className="button-row"><button type="button" disabled={busy} onClick={onResetDraft}>Reset settings</button>{onReviewPlan && <button type="button" disabled={!canSubmit} onClick={onReviewPlan}>Review video plan</button>}</div></details>
+    </div><div className="video-generate"><button type="button" className="primary" disabled={!canSubmit || !filesReady || !status.canGenerate || !onGenerate} onClick={onGenerate} aria-describedby="video-unavailable"><Film size={16} />Generate video</button><small id="video-unavailable">{!filesReady ? 'Set up this profile to begin.' : !status.canGenerate ? status.message : !sourcesReady ? 'Choose an available source frame.' : !draft.prompt.trim() ? 'Describe your video to begin.' : saveLabel || 'Settings saved automatically'}</small></div></aside>
+    <section className="video-prompt" aria-label="Video prompt composer"><div className="label-row"><label htmlFor="video-prompt">Video prompt</label><button type="button" className="text-button" disabled={busy} onClick={onAssistant}>Help me write</button></div><label className="video-prompt-input"><textarea id="video-prompt" rows={4} maxLength={8000} disabled={busy} value={draft.prompt} onChange={event => update({ prompt: event.target.value })} placeholder="Describe the scene, motion, camera, and any requested audio." /></label>{message && <Notice>{message}</Notice>}</section>
+  </section>;
+}
