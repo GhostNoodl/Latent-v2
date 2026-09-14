@@ -368,8 +368,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 69824,
-      "sha256": "e24200efb0fe278a0cfad6011acea50738ae41d22e61f73f8b0ef21225f3cfdb"
+      "bytes": 69897,
+      "sha256": "5e1409fca143effb4dc115313030c28d15c6365bac4d9962d5793191f2eb3a8a"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -628,8 +628,8 @@
     },
     {
       "path": "src/renderer/styles.css",
-      "bytes": 34106,
-      "sha256": "3e78587f9c3acc47b1f7af5c53e9a5c7f04f9c932b36ba074cce71611ece238e"
+      "bytes": 34210,
+      "sha256": "89868887e69904ed18488d06bc560fa959cd7f2a26f007726e8e8b091da1e424"
     },
     {
       "path": "src/renderer/ui.tsx",
@@ -643,8 +643,8 @@
     },
     {
       "path": "src/renderer/usability.css",
-      "bytes": 22139,
-      "sha256": "4f35f9ac726fd2a2b9a26682863e7c24d7926494755303a6f7b2685df3fca390"
+      "bytes": 23003,
+      "sha256": "828bc046e98b000309ad803f55ceb8c0143cf383e45aa7281282034181c61b76"
     },
     {
       "path": "src/renderer/variation-description.ts",
@@ -978,18 +978,18 @@
     },
     {
       "path": "resources/latent-icon-NOTICES.txt",
-      "bytes": 902,
-      "sha256": "a8e116312d559f721d34d75ce15b41b16ff278259cd5556c3de0d0824a30cda0"
+      "bytes": 336,
+      "sha256": "97e38bfdb2aef96209006a401265fa6fe08f6c577a3339fb4d71da31aed62d03"
     },
     {
       "path": "resources/latent-icon.ico",
-      "bytes": 21983,
-      "sha256": "88847ea975cd5d14fccb2e2fd2882b351070d0a4dc4c0976e6ae210df327c400"
+      "bytes": 26124,
+      "sha256": "16cceb1c91342b3c407e069eb3f32c2db6974033c62820eb52b4849111ed64ff"
     },
     {
       "path": "resources/latent-icon.svg",
-      "bytes": 696,
-      "sha256": "ad9ad85ab4d8dba6faa487704abb4913ff81edbee4788ca98bb7f79acd52763e"
+      "bytes": 674,
+      "sha256": "7a8fc9a90056b3b53299a90b3c5b9518267ce5c605739fc92364a990b52a75ef"
     },
     {
       "path": "resources/latent-video-attention.py",
@@ -1033,8 +1033,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 701,
-      "sha256": "99ffc12a5bf7ef9758dbd27e8ce488da67e9c06be2042871f0e2607ed425ae81"
+      "bytes": 773,
+      "sha256": "2f60223768972e4eec15f7dc538ac24ec76ddf5276de572c8ea2cc2c5f34946e"
     },
     {
       "path": "scripts/build-main.mjs",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 17719,
-      "sha256": "c84a6e9de6756595696ab366a9d9fc0f13b2a3cf0600f6db541d0e4b28d58193"
+      "bytes": 19001,
+      "sha256": "abdf09dd275e866ac2866f745c8e4b9601d1d52fafe52771db3b2d8050c9893d"
     },
     {
       "path": "src/shared/model-names.ts",

@@ -220,10 +220,22 @@
 .selected-lora-heading strong {min-width:0;overflow-wrap:anywhere;}
 .selected-lora-heading .model-artwork {width:42px;height:48px;flex-shrink:0;object-fit:cover;border-radius:6px;}
 .accent-picker {flex-wrap:wrap;gap:8px;}
+/* Short entrance motion only: closing panels and dialogs stays immediate.
+   Do not animate workspace containers: they host fixed menus and live canvases. */
 @media (prefers-reduced-motion:no-preference) {
- .studio button, .studio input, .studio select {transition:background-color 140ms ease,border-color 140ms ease,color 140ms ease,box-shadow 140ms ease;}
- .queue-panel, .notification-center, .context-menu {animation:studio-panel-in 140ms ease-out;}
- @keyframes studio-panel-in {from {opacity:0;transform:translateY(5px);}to {opacity:1;transform:translateY(0);}}
+ .studio button, .studio input, .studio select, .studio textarea {transition:background-color 140ms ease,border-color 140ms ease,color 140ms ease,box-shadow 140ms ease;}
+ .studio button:not(:disabled):active {filter:brightness(.94);}
+ .navigation > button svg {transition:scale 140ms ease;}
+ .navigation > button[aria-pressed=true] svg {scale:1.08;}
+ .model-card {transition:border-color 140ms ease;}
+ .model-card:focus-within, .model-card:hover {border-color:var(--accent);}
+ .queue-panel, .notification-center, .context-menu, .toast {animation:studio-panel-in 160ms ease-out;}
+ .modal-backdrop {animation:studio-fade-in 140ms ease-out;}
+ .modal {animation:studio-dialog-in 180ms cubic-bezier(.2,.8,.2,1);}
+ .page-heading, .boot .brand-mark {animation:studio-fade-in 180ms ease-out;}
+ @keyframes studio-panel-in {from {opacity:0;translate:0 5px;}to {opacity:1;translate:0 0;}}
+ @keyframes studio-dialog-in {from {opacity:0;translate:0 8px;scale:.985;}to {opacity:1;translate:0 0;scale:1;}}
+ @keyframes studio-fade-in {from {opacity:0;}to {opacity:1;}}
 }
 .studio[data-accent=sky] { --accent:#9fc9f4;--accent-text:#201b24;--soft:#213a51; }
 .accent-swatch.sky {background:#9fc9f4;color:#201b24;}

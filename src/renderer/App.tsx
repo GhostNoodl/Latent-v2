@@ -1,3 +1,4 @@
+import brandIcon from '../../resources/latent-icon.svg';
 import { EnhanceDialog } from './EnhanceDialog';
 import { prepareEnhancement, enhancementIssue } from '../shared/enhancement';
 import { reconcileVisibleTriggers } from '../shared/visible-triggers';
@@ -15,7 +16,7 @@ import { CivitaiBrowser } from './CivitaiBrowser';
 import { variationDescription } from './variation-description';
 import { ImagePreview } from './ImagePreview';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpRight, Boxes, Compass, Check, ChevronDown, ChevronUp, CircleHelp, Dices, Film, Images, ListOrdered, Maximize, Minus, Orbit, Play, Plus, RefreshCw, RotateCcw, Save, Settings2, Sparkles, Sprout, Trash2, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpRight, Boxes, Compass, Check, ChevronDown, ChevronUp, CircleHelp, Dices, Film, Images, ListOrdered, Maximize, Minus, Play, Plus, RefreshCw, RotateCcw, Save, Settings2, Sparkles, Sprout, Trash2, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { isImageJob, isVideoJob, type AppSnapshot, type GenerationDraft, type GenerationRecord, type LoraSelection, type ModelAsset, type StudioJob } from '../shared/types';
 import { DEFAULT_DRAFT, SAMPLERS, SCHEDULERS } from '../shared/defaults';
 import { automaticTriggerWords, resolvePrompt } from '../shared/workflow';
@@ -353,7 +354,7 @@ export default function App() {
     setNotice({ text: 'This LoRA now uses its current model trigger words. Your prompt text is unchanged. Undo restores the previous draft.' });
   }
 
-  if (!snapshot) return <div className="boot"><span className="brand-mark"><Orbit size={28} /></span><h1>latent <small>v2</small></h1>{bootError ? <><Notice error>{bootError}</Notice>{window.latent && <button className="primary" onClick={() => void connect()}><RefreshCw size={17} />Try again</button>}</> : <><Busy active /><p>Opening your studio…</p></>}</div>;
+  if (!snapshot) return <div className="boot"><span className="brand-mark"><img src={brandIcon} alt="" /></span><h1>latent <small>v2</small></h1>{bootError ? <><Notice error>{bootError}</Notice>{window.latent && <button className="primary" onClick={() => void connect()}><RefreshCw size={17} />Try again</button>}</> : <><Busy active /><p>Opening your studio…</p></>}</div>;
 
   const models = snapshot.models;
   const checkpoints = models.filter(model => model.kind === 'checkpoint');
@@ -430,7 +431,7 @@ export default function App() {
   const onKeyDown = (event: React.KeyboardEvent) => { if (event.nativeEvent.isComposing || event.defaultPrevented || (event.target instanceof Element && event.target.closest('[role="dialog"]'))) return; if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && page === 'create' && !cannotGenerate) { event.preventDefault(); generate(); } };
 
   return <div className="studio" data-theme={snapshot.settings.theme} data-accent={snapshot.settings.accent} onKeyDown={onKeyDown}>
-    <header className="titlebar"><div className="brand"><span className="brand-mark"><Orbit size={19} /></span>latent <small>v2</small></div><span className="edition">Moonstone studio</span><button className="runtime" onClick={() => setPage('settings')}><span className={`status-dot ${snapshot.backend.state}`} /><span>{snapshot.backend.state === 'ready' ? engineLabel : snapshot.backend.state === 'not-installed' ? 'Setup needed' : snapshot.backend.state === 'installing' ? 'Setting up…' : snapshot.backend.state === 'starting' ? 'Starting…' : snapshot.backend.state === 'error' ? 'Backend needs attention' : 'Backend stopped'}</span><ChevronDown size={13} /></button></header>
+    <header className="titlebar"><div className="brand"><span className="brand-mark"><img src={brandIcon} alt="" /></span>latent <small>v2</small></div><span className="edition">Moonstone studio</span><button className="runtime" onClick={() => setPage('settings')}><span className={`status-dot ${snapshot.backend.state}`} /><span>{snapshot.backend.state === 'ready' ? engineLabel : snapshot.backend.state === 'not-installed' ? 'Setup needed' : snapshot.backend.state === 'installing' ? 'Setting up…' : snapshot.backend.state === 'starting' ? 'Starting…' : snapshot.backend.state === 'error' ? 'Backend needs attention' : 'Backend stopped'}</span><ChevronDown size={13} /></button></header>
     <div className="shell"><nav className="navigation" aria-label="Studio navigation">{([['create', Sparkles, 'Create'], ['video', Film, 'Video'], ['library', Images, 'Library'], ['models', Boxes, 'Models'], ['discover', Compass, 'Discover'], ['settings', Settings2, 'Settings']] as const).map(([key, Icon, label]) => <button key={key} aria-pressed={page === key} onClick={() => setPage(key)}><Icon size={21} /><span>{label}</span></button>)}<button className="help-button" aria-label="Studio help" onClick={() => setHelpOpen(true)}><CircleHelp size={19} /><span>Help</span></button></nav>
     <main className={`main ${page === 'create' ? 'main-create' : page === 'video' ? 'main-video' : ''}`}>{page === 'create' || page === 'video' ? <h1 className="create-page-title">{pages[page][0]}</h1> : <div className="page-heading"><h1>{pages[page][0]}</h1><p>{pages[page][1]}</p></div>}
       {page === 'create' && <div className="workspace"><form className="composer" onSubmit={event => { event.preventDefault(); if (!cannotGenerate) generate(); }}><div className="composer-fields"><SizePresets sizes={snapshot.settings.sizePresets} width={draft.width} height={draft.height} onChoose={size => changeDraft({width: size.width, height: size.height})} onSave={async sizePresets => { receive(await window.latent.updateSettings({sizePresets})); }} />

@@ -15,12 +15,12 @@ Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release ha
 - [x] #22 Move upscale and hires controls below models, before fine-tuning.
 - [x] #24 Link selected hires scales to base-size edits. Manual dimensions and older saved recipes remain fixed until deliberately edited; existing output limits still apply.
 - [x] #26 Add a preview context menu and an Image actions button, with copy image, open, show in folder and reuse parameters.
-- [~] #8 Add consistent activity-panel transitions and color transitions, honoring reduced motion. Broader animation polish remains.
+- [x] #8 Consistent dialog, activity-panel, menu and toast entrances, navigation feedback and control/card transitions, honoring reduced motion.
 
 ## Remaining batches
 
 - [x] #1 Unified setup progress with the current component, known byte counts and installation/verification messages. Dependency installation uses clearly labeled stage estimates.
-- [ ] #3 A new application icon, reviewed at small sizes and applied to Windows packaging.
+- [x] #3 Original Moonstone application icon, reviewed at small sizes and wired into Windows packaging, studio branding and favicon. Native shortcut/taskbar appearance will be checked with the final installer.
 - [x] #4 Confirmed Recycle Bin removal for studio-owned models, with in-use checks, refreshed selectors and hidden deliberately removed entries. External folders stay read-only.
 - [ ] #6 Smaller Qwen editing model route, including GGUF feasibility and real 16 GB GPU memory/speed/quality testing.
 - [~] #7 Optional app-update controls, verified downloads and deferred installation implemented. A live published installer and real Windows upgrade/data-preservation test remain required.
@@ -112,3 +112,11 @@ Settings now separates desktop app updates from generation-runtime updates. Manu
 Installation is restricted to the installed Windows edition, waits for studio/shared-engine work, uses the existing editor flush, and starts only after successful shutdown. Flush failures preserve open edits and postpone installation. Development and portable executables are protected. No actual installer was downloaded or executed during implementation.
 
 Validation: all 283 tests across 34 files passed, plus both public-boundary tests and development compilation. The 11 focused update tests and type checking passed again after the final exclusive-copy storage adjustment. Headless controls exercised opt-in preferences, installation request and postponement with no page errors; the screenshot was inspected. The anonymous release endpoint returned 404, so live release availability and the real 0.1.1 upgrade remain unverified. See APP-UPDATES.md for the final VM acceptance steps.
+
+## Ninth batch: original icon and motion polish
+
+Original MIT vector artwork replaces the stock Orbit brand: a curved L and emerging spark on a lavender Moonstone tile. The header, boot screen, favicon and nine Windows ICO sizes share the same artwork. Generic Lucide UI icons retain their existing attribution.
+
+Dialogs use a short fade/settle entrance, activity panels and menus share a brief slide/fade, and navigation and controls have consistent feedback. Dismissal stays immediate. Motion respects the operating-system reduced-motion preference; workspace/canvas containers are not transformed.
+
+Validation: reviewed 16 through 256 pixel icon previews on dark/light surfaces; headless checks passed normal/reduced motion, dialog initial focus, Escape and restored focus, backdrop dismissal and overflow, with no page errors. Type checking and development compilation passed. Windows icon generation validates all nine transparent frames. Actual installed icon/shortcut appearance remains part of final packaging acceptance. Qwen is the remaining feature batch and is intentionally last. No installer was assembled or release published.
