@@ -9,9 +9,16 @@ const dirs: string[] = []; const stores: StudioStore[] = [];
 function fixture() { const root = fs.mkdtempSync(path.join(os.tmpdir(), 'latent-store-test-')); dirs.push(root); return root; }
 afterEach(() => { for (const store of stores.splice(0)) store.close(); for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true }); });
 describe('private storage', () => {
+  it('persists trigger ownership and clears its text when positive prompt memory is disabled',()=>{
+    const store=new StudioStore(path.join(fixture(),'studio.sqlite'));stores.push(store);
+    store.saveDraft({...DEFAULT_DRAFT,prompt:'style, garden',loras:[{modelId:'a',weight:1,clipWeight:1}],triggerWords:{a:['style']},promptTriggerSpans:[{start:0,text:'style, ',word:'style'}]});
+    expect(store.draft().promptTriggerSpans).toEqual([{start:0,text:'style, ',word:'style'}]);
+    store.saveSettings({rememberPositivePrompt:false});expect(store.draft().prompt).toBe('');expect(store.draft().promptTriggerSpans).toBeUndefined();
+  });
+
   it('distinguishes a fresh composer from unversioned saved drafts and preserves recipes across reopening', () => {
     const file = path.join(fixture(), 'studio.sqlite'); let store = new StudioStore(file);
-    expect(store.draft().triggerResolutionVersion).toBe('punctuation@2');
+    expect(store.draft().triggerResolutionVersion).toBe('visible@3');
     const saved = { ...DEFAULT_DRAFT, prompt: '(c0pi1ot)' }; delete saved.triggerResolutionVersion;
     store.setState('draft', saved); store.savePreset({ id: 'old', name: 'Old recipe', draft: saved });
     const untouched = JSON.stringify(store.getState('draft', null));

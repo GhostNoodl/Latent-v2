@@ -1098,6 +1098,22 @@
     {
       "from": "tests/civitai-gallery.test.tsx",
       "to": "tests/civitai-gallery.test.tsx"
+    },
+    {
+      "from": "src/shared/visible-triggers.ts",
+      "to": "src/shared/visible-triggers.ts"
+    },
+    {
+      "from": "src/renderer/LoraTriggerChoices.tsx",
+      "to": "src/renderer/LoraTriggerChoices.tsx"
+    },
+    {
+      "from": "tests/visible-triggers.test.ts",
+      "to": "tests/visible-triggers.test.ts"
+    },
+    {
+      "from": "tests/lora-trigger-choices.test.tsx",
+      "to": "tests/lora-trigger-choices.test.tsx"
     }
   ]
 }

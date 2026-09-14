@@ -340,3 +340,8 @@ strong { font-weight: 500; }
 
 .image-preview-unavailable { width: min(100%, 440px); margin: auto; padding: 28px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
 .image-preview-unavailable p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+.lora-trigger-choices { margin-top:10px; font-size:12px; }
+.lora-trigger-options { max-height:210px; overflow:auto; display:flex; flex-direction:column; gap:8px; padding:6px 0; }
+.lora-trigger-options .toggle { align-items:flex-start; }
+.lora-trigger-options .toggle span { overflow-wrap:anywhere; min-width:0; }

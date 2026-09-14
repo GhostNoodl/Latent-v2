@@ -108,8 +108,8 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 94952,
-      "sha256": "7ece25cd2fddf53cd9fbe77ab480cb711e70f9fa7dcd26ed4dcf16eb8019f23b"
+      "bytes": 95008,
+      "sha256": "c39b9de03ef3c17f88c58fdd3cbf622b6987718e4944fa1eb154392feeb01c34"
     },
     {
       "path": "src/main/main.ts",
@@ -298,8 +298,8 @@
     },
     {
       "path": "src/main/store.ts",
-      "bytes": 10497,
-      "sha256": "9a960c933ab9cd90b964c2a5f5996a3f4a527dd3c7c4020706c594d445f991c3"
+      "bytes": 10582,
+      "sha256": "30d309f138dc3326085e1d18c757b73c529a91b17f47cac1a31478f65f98642c"
     },
     {
       "path": "src/main/upscaler.ts",
@@ -368,8 +368,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 67177,
-      "sha256": "0b12337d1e741f4935772c701e85a64e04981dd5d55a8a9f0cab20c743868df0"
+      "bytes": 68014,
+      "sha256": "da535ca081cb946a1f8d5167040fad9eb38c9c7066934cad467cec00a4d33062"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -628,8 +628,8 @@
     },
     {
       "path": "src/renderer/styles.css",
-      "bytes": 33695,
-      "sha256": "6b0e4e2311f807e1af3126944f7dbb982140c43de6a1e1886d81d586ee76add4"
+      "bytes": 34014,
+      "sha256": "2cf3c163bf33410ee11dd73e7b3fc55d625b8d3298295f5407a4364327aa94a5"
     },
     {
       "path": "src/renderer/ui.tsx",
@@ -748,8 +748,8 @@
     },
     {
       "path": "src/shared/defaults.ts",
-      "bytes": 1998,
-      "sha256": "3dee3070c354bffa491d9fece0eccace742c26ecacdd812c94c0e7585d35f3f7"
+      "bytes": 1994,
+      "sha256": "029e24293074c1490cf9fa6b855dae74d8e25c0b6c4c38ca54d14ad70d2c3961"
     },
     {
       "path": "src/shared/dynamic-prompt-recipe.ts",
@@ -908,18 +908,18 @@
     },
     {
       "path": "src/shared/trigger-resolution.ts",
-      "bytes": 1110,
-      "sha256": "e6e229e50cc8f45b04e4258f04ff03a6edafbb2494289c535b6698177bee9dbf"
+      "bytes": 1269,
+      "sha256": "19e3d1f79b129b1d994a1634f3f96356d1af804db7a97a122684b10045ee0cc2"
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 17742,
-      "sha256": "ba982933e51cef2785e0402b2303e5f6acfcc8849cabfb28ebf0729b1296419a"
+      "bytes": 17830,
+      "sha256": "0fbe4d4ec8682b245a3ad871a5899b57a8853f59ae830147c5d8584064bfa085"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 7228,
-      "sha256": "b8daa7025e4d93869d319087af95aefc744eb18f9fc5bbb2c2905c5d0c5ad356"
+      "bytes": 7420,
+      "sha256": "55e38e5785936c087711af63d53ba33b6cd85011fcc1ff93687af1aa8bcbc7a7"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -963,8 +963,8 @@
     },
     {
       "path": "src/shared/workflow.ts",
-      "bytes": 4735,
-      "sha256": "4fd9a20f376e357d52fca1abae42418fc0ccf27aae010d4e278039f49335ad0c"
+      "bytes": 4785,
+      "sha256": "d19d3597050e2766b0817512b18f990cbcc37594cc923ae30b3247bcddc7300a"
     },
     {
       "path": "resources/face-detailer-NOTICES.txt",
@@ -1098,8 +1098,8 @@
     },
     {
       "path": "tests/store-paths.test.ts",
-      "bytes": 4092,
-      "sha256": "b0553536163e4ab5e18af0b3dbe5d20ccddcad2340a84a7e648d61d632158a2c"
+      "bytes": 4732,
+      "sha256": "e5090bbe45aa489024e2416d2e4a1dd1c2bcfe3d756d57f622bdfd7f407eaa5d"
     },
     {
       "path": "tests/runtime-install-packages.test.ts",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 8399,
-      "sha256": "cb2bdcdea075b92c34d5e141bd5de602cc56e9d31ff560af92b8fc558b92bc55"
+      "bytes": 10338,
+      "sha256": "62547f7c66811d7e5bb3ef3c76399635579515febc95eec756ae03a71981783f"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1355,6 +1355,26 @@
       "path": "tests/civitai-gallery.test.tsx",
       "bytes": 3290,
       "sha256": "77de822344cfda0cffd1d38d8a80571c1f37742efbfa03b958e45f2f7f65c995"
+    },
+    {
+      "path": "src/shared/visible-triggers.ts",
+      "bytes": 3843,
+      "sha256": "6415551a17dbd70b2a7cf107329c84a2b5bc8dc7c7c8b4d84e5e5f691262ba7e"
+    },
+    {
+      "path": "src/renderer/LoraTriggerChoices.tsx",
+      "bytes": 1127,
+      "sha256": "541beb9f92b715445137073ea77c780af0b0990d9c79ec39babd8e7afe400b92"
+    },
+    {
+      "path": "tests/visible-triggers.test.ts",
+      "bytes": 5112,
+      "sha256": "fb017726e78fdc5d700de595897acf43f83dd5620655fa3fec3fba6ce360b73c"
+    },
+    {
+      "path": "tests/lora-trigger-choices.test.tsx",
+      "bytes": 1879,
+      "sha256": "5b337a1a208b5d9efb8853dec7bb45494ee25ad3ee80656a2c267e2e6ed16c9b"
     }
   ],
   "privateHistoryIncluded": false

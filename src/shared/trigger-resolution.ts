@@ -12,8 +12,9 @@ const ownership = (draft: GenerationDraft) => JSON.stringify(draft.loras.map(lor
 export function applyTriggerResolutionChange(previous: GenerationDraft, change: Partial<GenerationDraft>): GenerationDraft {
   const next = { ...previous, ...change };
   if (Object.hasOwn(change, 'triggerResolutionVersion')) return restoreTriggerResolution(next);
+  if (!previous.loras.length && next.loras.length) next.triggerResolutionVersion = 'visible@3';
   if (previous.prompt !== next.prompt || previous.autoTriggers !== next.autoTriggers || ownership(previous) !== ownership(next)) {
-    next.triggerResolutionVersion = 'punctuation@2';
+    next.triggerResolutionVersion = next.triggerResolutionVersion === 'visible@3' ? 'visible@3' : 'punctuation@2';
   }
   return next;
 }

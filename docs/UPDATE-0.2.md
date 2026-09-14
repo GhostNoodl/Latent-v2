@@ -28,7 +28,7 @@ Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release ha
 - [x] #10 Clean display names, new Civitai download/import filenames and existing files through Details / manage file. Saved references survive renames; occupied names cannot be overwritten. Civitai collisions get a short checksum suffix.
 - [x] #12 Version-specific creator galleries with thumbnail selection, previous/next controls, larger view, failure retry and empty states. Up to 24 unique image previews are retained per version, regardless of rating.
 - [x] #14 Stop/restart an idle managed engine around model changes. Busy queues/downloads request a retry after work finishes; no active job is interrupted or silently cancelled. Live engine verification remains a release check.
-- [ ] #16/16B Select LoRA triggers and insert them into the visible prompt, tracking ownership so removing a LoRA preserves manual edits and shared triggers. Maintain old history/recipe reproduction.
+- [x] #16/16B Optional per-LoRA trigger choices insert literal text into new visible-mode prompts. Owned spans support removal, shared words and user edits. Older recipes retain their original resolver until explicitly converted.
 - [ ] #20 Curated, editable booru wildcard packs with provenance and alias/duplicate cleanup.
 - [ ] #23 Enhance saved generations through diffusion refinement, saving a linked result and preserving the original.
 - [ ] #25 Automatic face refinement after generation/hires, retaining the result when no face is detected; test stylized and furry faces.
@@ -62,3 +62,13 @@ Model details show the selected version's creator images, with thumbnails, keybo
 Headless verification used the real renderer components with synthetic metadata/images at 1440 and 900 pixels: gallery navigation, larger view, version reset, base query wiring, compatibility filtering and horizontal overflow checks passed with no page errors. Screenshots were visually inspected. Anonymous live API requests for Pony, NoobAI and Flux.1 D returned HTTP 200 and matching bases. No accounts, model downloads or GPU generation were needed. Public-source checks and the development compilation remain separate from final packaged-app validation.
 
 Validation: all 233 automated tests passed across 24 files, along with both public-boundary tests, TypeScript/development compilation and the 271-file public-source check. No installer was assembled or release published.
+
+## Fourth batch: visible LoRA triggers
+
+New drafts use visible trigger choices. Each LoRA offers individual checkboxes, Select all and Select none; nothing is selected implicitly. The existing global switch enables/disables selected additions. Generation uses the visible authored text (resolved normally when variations are enabled), without a hidden second trigger prefix. Selected trigger metadata is pinned into the saved job.
+
+Inserted text has bounded, persisted ownership spans. Removing a LoRA or deselecting a word removes unchanged owned text only; shared words stay while another selected LoRA uses them. Preexisting manual text is never claimed. Edits affecting an insertion release it to the user, including adjective prefixes and word suffixes; ambiguous edits conservatively preserve text. Literal variation syntax is escaped when needed, and capacity failures produce an actionable message. Ownership text is cleared when positive-prompt memory is disabled.
+
+Unversioned and punctuation-version historical recipes preserve their original generation behavior. Adding the first LoRA to a previously empty selection adopts visible choices; existing legacy LoRA recipes offer an explicit conversion button. Conversion preserves existing additions as user-owned prompt text and leaves a previous-draft undo available.
+
+Validation: 249 automated tests across 26 files (including selection/removal UI, shared ownership, user edits, variation escaping, capacity, persistence and legacy replay), TypeScript/development compilation, and public-source boundary checks. A headless renderer fixture at 1000 pixels exercised the actual trigger controls and ownership helper; selection visibly updated the prompt, edited text survived removal, and no page errors occurred. Its screenshot was inspected. This does not claim a packaged-app or GPU generation test. No installer was built or release published.

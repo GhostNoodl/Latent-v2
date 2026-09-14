@@ -192,7 +192,7 @@ export class JobService {
       if (prepared.recipe) { draft.dynamicPrompts = { enabled: true, frozen: prepared.recipe }; context.dynamicPromptRecipe = prepared.recipe; }
       await this.models.refresh(); const { checkpoint, loras } = validateAssets(draft, this.models.assets);
       await this.models.verifyExternalModels?.([checkpoint.id, ...loras.map(asset => asset.id)]);
-      draft.triggerWords = Object.fromEntries(loras.map(asset => [asset.id, draft.triggerWords?.[asset.id] ?? asset.triggers]));
+      draft.triggerWords = Object.fromEntries(loras.map(asset => [asset.id, draft.triggerWords?.[asset.id] ?? (draft.triggerResolutionVersion === 'visible@3' ? [] : asset.triggers)]));
       draft.assetHashes = Object.fromEntries([checkpoint, ...loras].filter(asset => asset.sha256).map(asset => [asset.id, asset.sha256!]));
       context.checkpoint = checkpoint; context.loras = loras.map((asset, index) => ({ ...asset, triggers: draft.triggerWords![asset.id], weight: draft.loras[index].weight, clipWeight: draft.loras[index].clipWeight }));
       const resolvedDraft = { ...draft, prompt: prepared.prompt, negativePrompt: prepared.negativePrompt };

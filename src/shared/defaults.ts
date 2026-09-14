@@ -6,7 +6,7 @@ export const SIZE_PRESETS = [
 export const DEFAULT_DRAFT: GenerationDraft = {
   family: 'illustrious', checkpointId: '', prompt: '', negativePrompt: '', width: 1024, height: 1024,
   steps: 28, cfg: 5, sampler: 'euler', scheduler: 'normal', seed: 'random', batchSize: 1, loras: [], autoTriggers: true,
-  triggerResolutionVersion: 'punctuation@2',
+  triggerResolutionVersion: 'visible@3',
 };
 export const DEFAULT_SETTINGS: AppSettings = {
   showGenerationPreview: true, sizePresets: SIZE_PRESETS,

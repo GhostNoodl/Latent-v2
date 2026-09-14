@@ -26,8 +26,9 @@ export const draftSchema = z.object({
   sampler: z.enum(SAMPLERS as [string, ...string[]]), scheduler: z.enum(SCHEDULERS as [string, ...string[]]),
   seed: z.string().refine(value => value === 'random' || (/^\d+$/.test(value) && BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER)), 'Use random or an integer seed between 0 and 9007199254740991.'),
   batchSize: z.number().int().min(1).max(4), autoTriggers: z.boolean(),
-  triggerResolutionVersion: z.enum(['legacy@1', 'punctuation@2']).optional(),
+  triggerResolutionVersion: z.enum(['legacy@1', 'punctuation@2', 'visible@3']).optional(),
   loras: z.array(z.object({ modelId: z.string().min(1).max(500), weight: z.number().min(-2).max(2), clipWeight: z.number().min(-2).max(2) }).strict()).max(8),
+  promptTriggerSpans: z.array(z.object({start:z.number().int().min(0).max(16000),text:z.string().min(1).max(404),word:z.string().min(1).max(200)}).strict()).max(400).optional(),
   triggerWords: z.record(z.string().max(500), z.array(z.string().max(200)).max(50)).refine(value => Object.keys(value).length <= 9).optional(),
   assetHashes: z.record(z.string().max(500), z.string().regex(/^[a-f0-9]{64}$/i)).refine(value => Object.keys(value).length <= 9).optional(),
 }).strict();

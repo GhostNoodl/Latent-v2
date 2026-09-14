@@ -46,6 +46,7 @@ export class StudioStore {
   saveDraft(draft: GenerationDraft) {
     const validated = draftSchema.parse(draft); const settings = this.settings();
     const remembered = redactDynamicPromptDraft(validated, settings.rememberPositivePrompt, settings.rememberNegativePrompt);
+    if (!settings.rememberPositivePrompt) remembered.promptTriggerSpans = undefined;
     if (remembered.regionalPrompts && (!settings.rememberPositivePrompt || !settings.rememberNegativePrompt)) {
       remembered.regionalPrompts = { settings: { ...remembered.regionalPrompts.settings, regions: remembered.regionalPrompts.settings.regions.map(region => ({ ...region, positivePrompt: settings.rememberPositivePrompt ? region.positivePrompt : '', negativePrompt: settings.rememberNegativePrompt ? region.negativePrompt : '' })) } };
     }

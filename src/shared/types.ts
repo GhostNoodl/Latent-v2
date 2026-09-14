@@ -69,7 +69,8 @@ export interface GenerationDraft {
   batchSize: number;
   loras: LoraSelection[];
   autoTriggers: boolean;
-  triggerResolutionVersion?: 'legacy@1' | 'punctuation@2';
+  triggerResolutionVersion?: 'legacy@1' | 'punctuation@2' | 'visible@3';
+  promptTriggerSpans?: import('./visible-triggers').PromptTriggerSpan[];
   triggerWords?: Record<string, string[]>;
   assetHashes?: Record<string, string>;
 }
