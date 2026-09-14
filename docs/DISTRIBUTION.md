@@ -12,7 +12,7 @@ Before release: finish onboarding and supported-hardware acceptance, validate a 
 
 ## Guided setup preview
 
-Setup is available from the sidebar and opens automatically when the private engine is not installed. It offers engine setup, an optional Illustrious starter checkpoint, Qwen Base editing, and fused H3 video. Existing files are passed through each service's verification/reuse logic. Video acquisition still follows its existing availability rules.
+Setup is available from Settings and opens automatically when the private engine is not installed. It offers engine setup, an optional Illustrious starter checkpoint, Qwen Base editing, and fused H3 video. Existing files are passed through each service's verification/reuse logic. Video acquisition still follows its existing availability rules.
 
 Guided setup currently targets Windows x64 with a single identifiable NVIDIA RTX GPU, driver 580.88+, at least 8 GB GPU memory / 16 GB RAM for images and 16 GB GPU memory / 32 GB RAM for Qwen/video. These are conservative setup admission rules, not performance or full hardware compatibility guarantees. Existing advanced configuration remains available. NVIDIA documents driver requirements at https://nvidia.github.io/cuda-python/cuda-bindings/13.0.1/install.html . Setup installs private GPU libraries; users do not need the CUDA development toolkit.
 

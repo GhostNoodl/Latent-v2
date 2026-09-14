@@ -78,7 +78,8 @@ export interface AppSettings {
   civitaiAutoMetadata?: boolean; civitaiDisplayMetadata?: boolean;
   showGenerationPreview: boolean;
   theme: 'system' | 'dark' | 'light';
-  accent: 'iris' | 'sea-glass' | 'rose';
+  accent: 'iris' | 'sea-glass' | 'rose' | 'sky' | 'amber' | 'peach' | 'mint' | 'lilac';
+  sizePresets?: { name: string; width: number; height: number }[];
   rememberPositivePrompt: boolean;
   rememberNegativePrompt: boolean;
   desktopNotifications?: boolean;
@@ -333,6 +334,7 @@ export interface LatentAPI {
   reorderJobs(ids: string[]): Promise<void>;
   savePreset(preset: Preset): Promise<AppSnapshot>;
   deletePreset(id: string): Promise<AppSnapshot>;
+  copyOutput(id: string): Promise<void>;
   revealOutput(id: string): Promise<void>;
   openOutput(id: string): Promise<void>;
   onSnapshot(listener: (snapshot: AppSnapshot) => void): () => void;

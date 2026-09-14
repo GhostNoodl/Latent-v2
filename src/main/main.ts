@@ -2,7 +2,7 @@ import { setupStorageBlockers, setupHardwareBlockers, type SetupCapability, type
 import { inspectHardware as inspectSetupHardware } from './hardware-profile-probe';
 import { storageBoundary, copyStorageLocation } from './storage-locations';
 import { reviewedRuntimeSet } from './reviewed-runtime-channel';
-import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, net, Notification, protocol, safeStorage, session, shell } from 'electron';
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, nativeImage, nativeTheme, net, Notification, protocol, safeStorage, session, shell } from 'electron';
 import { copyStudioText } from './clipboard';
 import path from 'node:path';
 import os from 'node:os';
@@ -387,6 +387,7 @@ async function initialize() {
     reorderJobs: async ids => jobs.reorder(z.array(id).max(10000).parse(ids)),
     savePreset: async preset => { const value = z.object({ id: z.string().max(100), name: z.string().trim().min(1).max(80), draft: draftSchema }).strict().parse(preset); store.savePreset({ ...value, id: value.id || randomUUID() }); broadcast(); return snapshot(); },
     deletePreset: async presetId => { store.deletePreset(id.parse(presetId)); broadcast(); return snapshot(); },
+    copyOutput: async recordId => { const filename = await privateShellPath(paths.outputs, await outputPath(id.parse(recordId))); const image = nativeImage.createFromPath(filename); if (image.isEmpty()) throw new Error('The saved image could not be loaded.'); await clipboard.write([new ClipboardItem({ 'image/png': new Blob([new Uint8Array(image.toPNG())], { type: 'image/png' }) })]); },
     revealOutput: async recordId => { shell.showItemInFolder(await privateShellPath(paths.outputs, await outputPath(id.parse(recordId)))); },
     openOutput: async recordId => { const error = await shell.openPath(await privateShellPath(paths.outputs, await outputPath(id.parse(recordId)))); if (error) throw new Error(error); },
   };

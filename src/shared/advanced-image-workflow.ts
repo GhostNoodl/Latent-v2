@@ -10,7 +10,7 @@ const seed = z.string().regex(/^(random|\d+)$/).refine(value => value === 'rando
 const settingsSchema = z.object({ mode: z.enum(['resize', 'learned']), width: pixelDimension, height: pixelDimension, resize: z.enum(['stretch', 'center-crop']) }).strict();
 export type LatentHiresWorkflowVersion = 'sdxl-hires-latent@1' | 'sdxl-hires-latent@2';
 const latentHiresVersion = z.enum(['sdxl-hires-latent@1', 'sdxl-hires-latent@2']);
-const hiresSchema = z.object({ workflowVersion: latentHiresVersion.optional(), method: z.enum(['latent', 'image']), interpolation: z.enum(['nearest-exact', 'bilinear', 'area', 'bicubic']).optional(), width: pixelDimension.min(64).multipleOf(8), height: pixelDimension.min(64).multipleOf(8), steps: z.number().int().min(1).max(100), cfg: z.number().finite().min(0).max(30), sampler: z.string().refine(value => SAMPLERS.includes(value)), scheduler: z.string().refine(value => SCHEDULERS.includes(value)), denoise: z.number().finite().min(0).max(1), seed }).strict();
+const hiresSchema = z.object({ workflowVersion: latentHiresVersion.optional(), scaleFactor: z.number().min(1.01).max(4).optional(), method: z.enum(['latent', 'image']), interpolation: z.enum(['nearest-exact', 'bilinear', 'area', 'bicubic']).optional(), width: pixelDimension.min(64).multipleOf(8), height: pixelDimension.min(64).multipleOf(8), steps: z.number().int().min(1).max(100), cfg: z.number().finite().min(0).max(30), sampler: z.string().refine(value => SAMPLERS.includes(value)), scheduler: z.string().refine(value => SCHEDULERS.includes(value)), denoise: z.number().finite().min(0).max(1), seed }).strict();
 export function restoreHiresSettings(settings: HiresFixSettings, recordedVersion: string): HiresFixSettings {
   if (settings.method === 'latent') {
     const version = latentHiresVersion.parse(recordedVersion);
@@ -135,4 +135,10 @@ export function validateHiresCapabilities(objects: Record<string, any>, value: A
   const required: Record<string, Record<string, string>> = { GetImageSize: { image: 'IMAGE' }, LatentFromBatch: { samples: 'LATENT', batch_index: 'INT', length: 'INT' } };
   for (const [name, inputs] of Object.entries(required)) for (const [input, kind] of Object.entries(inputs)) if (objects[name]?.input?.required?.[input]?.[0] !== kind) throw new Error(`The engine changed the required latent hires input ${name}.${input}.`);
   if (JSON.stringify(objects.GetImageSize?.output) !== JSON.stringify(['INT', 'INT', 'INT']) || JSON.stringify(objects.LatentFromBatch?.output) !== JSON.stringify(['LATENT'])) throw new Error('The engine changed the required latent hires batch outputs.');
+}
+
+/** Only follow a user-selected scale; old recipes and explicit dimensions stay fixed. */
+export function followHiresScale(settings: HiresFixSettings, width: number, height: number): HiresFixSettings {
+  if (!settings.scaleFactor || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return settings;
+  return editHiresSettings(settings, { width: Math.round(width * settings.scaleFactor / 8) * 8, height: Math.round(height * settings.scaleFactor / 8) * 8 });
 }

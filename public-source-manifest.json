@@ -1042,6 +1042,26 @@
     {
       "from": "docs/public/native-source-inputs.json",
       "to": "docs/public/native-source-inputs.json"
+    },
+    {
+      "from": "src/renderer/SizePresets.tsx",
+      "to": "src/renderer/SizePresets.tsx"
+    },
+    {
+      "from": "src/renderer/PreviewMenu.tsx",
+      "to": "src/renderer/PreviewMenu.tsx"
+    },
+    {
+      "from": "src/renderer/useDismissiblePanel.ts",
+      "to": "src/renderer/useDismissiblePanel.ts"
+    },
+    {
+      "from": "tests/create-update.test.tsx",
+      "to": "tests/create-update.test.tsx"
+    },
+    {
+      "from": "docs/UPDATE-0.2.md",
+      "to": "docs/UPDATE-0.2.md"
     }
   ]
 }

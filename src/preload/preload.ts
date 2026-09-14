@@ -41,7 +41,7 @@ const api: LatentAPI = {
   updateModel: (id, changes) => invoke('updateModel', id, changes),
   downloadModel: request => invoke('downloadModel', request), cancelDownload: id => invoke('cancelDownload', id),
   queueGeneration: draft => invoke('queueGeneration', draft), cancelJob: id => invoke('cancelJob', id), retryJob: id => invoke('retryJob', id), reorderJobs: ids => invoke('reorderJobs', ids),
-  savePreset: preset => invoke('savePreset', preset), deletePreset: id => invoke('deletePreset', id), revealOutput: id => invoke('revealOutput', id), openOutput: id => invoke('openOutput', id),
+  savePreset: preset => invoke('savePreset', preset), deletePreset: id => invoke('deletePreset', id), copyOutput: id => invoke('copyOutput', id), revealOutput: id => invoke('revealOutput', id), openOutput: id => invoke('openOutput', id),
   onSnapshot: listener => { const handler = (_event: Electron.IpcRendererEvent, snapshot: AppSnapshot) => listener(snapshot); ipcRenderer.on('latent:snapshot', handler); return () => ipcRenderer.removeListener('latent:snapshot', handler); },
   onBeforeClose: listener => { closeListeners.add(listener); return () => { closeListeners.delete(listener); }; },
   onCloseCancelled: listener => { ipcRenderer.on('latent:close-cancelled', listener); return () => { ipcRenderer.removeListener('latent:close-cancelled', listener); }; },
