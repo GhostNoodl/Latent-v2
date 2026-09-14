@@ -423,13 +423,13 @@
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
-      "bytes": 2278,
-      "sha256": "915fb7e60fe89b60ba657ec4995c1970e0764f144cda13aecd686ff2c8228683"
+      "bytes": 2494,
+      "sha256": "073f7e3a353c5c78b885eb2dba20c7777b59f43d1195868c97e3ed3a4ec357e7"
     },
     {
       "path": "src/renderer/DynamicPrompts.tsx",
-      "bytes": 12997,
-      "sha256": "7c668e1916dea6af522e80c7b93439b0e440ca3c783ddfbb780af36e5d432136"
+      "bytes": 13445,
+      "sha256": "9566f8be2b285b059b768e4e782976418a1f3f482bb27a9283a2665be55bba62"
     },
     {
       "path": "src/renderer/face-detailer.css",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 13616,
-      "sha256": "dfe53459f62ee59ba3d6f10fdd0af9f7dc65157280247674953e58f917819ad1"
+      "bytes": 15103,
+      "sha256": "ae600758c868007fb5482af5c454ae3415943c5de971eaa0db14d7e923e8cda7"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1415,6 +1415,31 @@
       "path": "tests/automatic-face-controls.test.tsx",
       "bytes": 1462,
       "sha256": "a6b54b68a3e97d0c607f2c23576545632aebf6f2b66e464e959306a95268a446"
+    },
+    {
+      "path": "src/shared/wildcard-packs.ts",
+      "bytes": 3810,
+      "sha256": "8317cd87e6f5b46f7f8ca04952c8b9442c31656d14f1bca8bd2c81b033005dd3"
+    },
+    {
+      "path": "src/renderer/WildcardPacks.tsx",
+      "bytes": 1015,
+      "sha256": "5733ea356bd4ec8a1efa951599208301c9cca564d132479d4ede1c49f384ca15"
+    },
+    {
+      "path": "tests/wildcard-packs.test.ts",
+      "bytes": 2503,
+      "sha256": "ed6a1fb4e7af16dfffe38c8cc2a411d64c00b9e226bb4586a69b0270d21f0f63"
+    },
+    {
+      "path": "tests/wildcard-packs-ui.test.tsx",
+      "bytes": 1946,
+      "sha256": "635ef32a902404314dbb95f3d24caa1e5252e3679a8c3beb095f292fb1e32e2d"
+    },
+    {
+      "path": "docs/WILDCARD-PACKS.md",
+      "bytes": 2408,
+      "sha256": "a52d32164a35fcc701fc1d1ed10db080eba434979aed1739526c816a253298f0"
     }
   ],
   "privateHistoryIncluded": false

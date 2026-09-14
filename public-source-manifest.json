@@ -1146,6 +1146,26 @@
     {
       "from": "tests/automatic-face-controls.test.tsx",
       "to": "tests/automatic-face-controls.test.tsx"
+    },
+    {
+      "from": "src/shared/wildcard-packs.ts",
+      "to": "src/shared/wildcard-packs.ts"
+    },
+    {
+      "from": "src/renderer/WildcardPacks.tsx",
+      "to": "src/renderer/WildcardPacks.tsx"
+    },
+    {
+      "from": "tests/wildcard-packs.test.ts",
+      "to": "tests/wildcard-packs.test.ts"
+    },
+    {
+      "from": "tests/wildcard-packs-ui.test.tsx",
+      "to": "tests/wildcard-packs-ui.test.tsx"
+    },
+    {
+      "from": "docs/WILDCARD-PACKS.md",
+      "to": "docs/WILDCARD-PACKS.md"
     }
   ]
 }

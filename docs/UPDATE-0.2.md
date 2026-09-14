@@ -29,7 +29,7 @@ Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release ha
 - [x] #12 Version-specific creator galleries with thumbnail selection, previous/next controls, larger view, failure retry and empty states. Up to 24 unique image previews are retained per version, regardless of rating.
 - [x] #14 Stop/restart an idle managed engine around model changes. Busy queues/downloads request a retry after work finishes; no active job is interrupted or silently cancelled. Live engine verification remains a release check.
 - [x] #16/16B Optional per-LoRA trigger choices insert literal text into new visible-mode prompts. Owned spans support removal, shared words and user edits. Older recipes retain their original resolver until explicitly converted.
-- [ ] #20 Curated, editable booru wildcard packs with provenance and alias/duplicate cleanup.
+- [x] #20 Five optional, editable starter wildcard packs (106 choices), with source references, bundled alias/duplicate cleanup and collision-safe staging.
 - [x] #23 Enhance saved generations through a reviewed Create draft and one latent diffusion refinement pass, saving a linked result and preserving the original. GPU quality remains a release check.
 - [x] #25 Optional automatic face refinement after generation/hires, with separate cancellable follow-up jobs, restart recovery and preserved originals. Real stylized/furry-face quality remains a hardware release check.
 
@@ -88,3 +88,11 @@ Create now has an opt-in Automatically refine faces control, with illustration/p
 No detections and preparation failures retain the original and show a concise queue outcome. Child jobs use normal cancel/retry controls. Parent receipts and durable child lineage prevent duplicate automatic queueing after restart, including cancelled children. Busy detection waits; shutdown cancels the owned detection and leaves unfinished preparation recoverable. Finished parent bookkeeping avoids rescanning its records on every queue tick. Removed output records are not recreated.
 
 Validation: the full 264-test suite, development build, public-source check and both boundary tests passed. A subsequent removed-output regression brings the suite to 265 tests; all 10 targeted automatic-face tests and type checking passed after final refinements. A headless renderer fixture exercised opt-in, profile selection, strength changes and overflow checks, with no page errors; its screenshot was inspected. These are automated orchestration and UI results, not live detector accuracy, GPU quality or packaged-app proof. Real stylized/furry-face validation remains outstanding. No model downloads, installer build or publication was performed.
+
+## Seventh batch: starter wildcard packs
+
+Wildcards now offers five previewable starter lists: species, locations, background styles, clothing and poses. The 106 choices were selected from public e621/Danbooru tag references. Bundled normalization removes duplicate spellings and applies the verified bunny-to-rabbit alias. Source references, the review date and selection boundaries are documented in [WILDCARD-PACKS.md](WILDCARD-PACKS.md).
+
+Adding a pack stages an editable copy and collapses its catalog to reveal the editor. Save remains explicit; unsaved additions use the existing close/discard protection. Occupied names receive a suffix. Re-adding an unchanged copy selects it, while edited copies, manually weighted lists and frozen generation recipes remain intact. The update does not automatically add lists, alter prompts or enable variations. Runtime use is fully offline.
+
+Validation: five focused tests cover catalog validity and actual prompt expansion, normalization, collisions, repeat imports, snapshot independence and the real editor's save/discard boundary. Type checking, development compilation and the 288-file public-source check passed. A headless renderer fixture exercised category preview, adding/selecting a pack, automatic catalog collapse and explicit save without overflow or page errors; the final screenshot was inspected. No GPU generation or installer build was needed for this batch.
