@@ -183,8 +183,8 @@
     },
     {
       "path": "src/main/reviewed-asset-lock.ts",
-      "bytes": 5455,
-      "sha256": "a0e52f9a9750c1db2b922b05aa5c578472884867c953a07b52c13d137fbd2ebe"
+      "bytes": 5962,
+      "sha256": "aa14b0b4e6db8c0d1f278a84a429939365a5e342635c19a9ea248d1e6c1d7100"
     },
     {
       "path": "src/main/reviewed-asset-repair.ts",
@@ -208,8 +208,8 @@
     },
     {
       "path": "src/main/runtime-config.ts",
-      "bytes": 9812,
-      "sha256": "7c43cb6b448f1bb4f83128273e04544d3c0afbbefdd4e753adcdbae77ed966a3"
+      "bytes": 10189,
+      "sha256": "f742e1a450d5ce13b75abf9b635d36dd28843f7136ba68d9d080ff64325d69fd"
     },
     {
       "path": "src/main/runtime-environment-command.ts",
@@ -1014,12 +1014,12 @@
     {
       "path": "package.json",
       "bytes": 4116,
-      "sha256": "a565d15d4a6d09ffff8649254f9f0c14197834b585e8cf74da0d37e9b1cca752"
+      "sha256": "5b9af68f8326b93f5fedcad552c96908ca3b1b515b4fb3d8d661d7fe65b04881"
     },
     {
       "path": "package-lock.json",
       "bytes": 239342,
-      "sha256": "5aab09254ea182dded41ff3505ffc670dae2fd76dcd8bbbae76d5dfff1390daf"
+      "sha256": "4bb5ccd544aee2936f8ec36678997c2eb48f96b2289db2d48c6c1d74b361210b"
     },
     {
       "path": "tsconfig.json",
@@ -1158,8 +1158,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 2390,
-      "sha256": "9d4ae3128d353f2546c1380ed64c0546c4b71dd253a549f0c77d09efe8ea2c21"
+      "bytes": 2524,
+      "sha256": "ab28184677725d854d680bd253843dabc68fea3e61df1e30590e1fcfffd2ca34"
     },
     {
       "path": "docs/DISTRIBUTION.md",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 20325,
-      "sha256": "8fdfa66292f6873d2fe92d3683b5d8f306aa69e0b16c2b18652777fb2c95ac55"
+      "bytes": 23112,
+      "sha256": "1b597427f3a5d012c3234bd45edeab9cf415c648036ff2a84bc7d600d37a61a5"
     },
     {
       "path": "src/shared/model-names.ts",

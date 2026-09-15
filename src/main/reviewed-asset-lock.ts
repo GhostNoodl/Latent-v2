@@ -37,7 +37,15 @@ if os.name == 'nt':
     prefix = 'Global\\\\LatentV2Backend-' if sys.argv[3] == 'backend' else 'Global\\\\Latentv2ReviewedAsset_'
     handle = k.CreateMutexW(None, True, prefix + sys.argv[1])
     if not handle: raise ctypes.WinError(ctypes.get_last_error())
-    if ctypes.get_last_error() == 183: sys.exit(42)
+    if ctypes.get_last_error() == 183:
+        if sys.argv[3] != 'backend': sys.exit(42)
+        # A terminated GPU process can leave a named object briefly alive.
+        # Wait for actual ownership; object existence alone is not a live owner.
+        k.WaitForSingleObject.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+        k.WaitForSingleObject.restype = ctypes.c_uint32
+        result = k.WaitForSingleObject(handle, 5000)
+        if result == 258: sys.exit(42)
+        if result not in (0, 128): raise ctypes.WinError(ctypes.get_last_error())
 else:
     import fcntl
     name = 'backend-owner.lock' if sys.argv[3] == 'backend' else '.asset-' + sys.argv[1] + '.lock'

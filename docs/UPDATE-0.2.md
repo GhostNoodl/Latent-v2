@@ -1,6 +1,6 @@
 # Latent v2 0.2.0 work plan
 
-Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release has been published. The app version remains 0.1.1 until release preparation.
+Status: 0.2.0 candidate preparation on `codex/0.2.0-update`. No 0.2.0 release has been published. Actual Windows upgrade acceptance remains outstanding. Further Qwen speed tuning is deferred by request.
 
 ## First completed batch
 
@@ -27,11 +27,11 @@ Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release ha
 - [x] #9 Expanded base-model discovery choices (including an exact custom label), workflow compatibility badges, and an explicitly loaded-results compatibility filter. Searching does not broaden download/generation support.
 - [x] #10 Clean display names, new Civitai download/import filenames and existing files through Details / manage file. Saved references survive renames; occupied names cannot be overwritten. Civitai collisions get a short checksum suffix.
 - [x] #12 Version-specific creator galleries with thumbnail selection, previous/next controls, larger view, failure retry and empty states. Up to 24 unique image previews are retained per version, regardless of rating.
-- [x] #14 Stop/restart an idle managed engine around model changes. Busy queues/downloads request a retry after work finishes; no active job is interrupted or silently cancelled. Live engine verification remains a release check.
+- [x] #14 Stop/restart an idle managed engine around model changes. Busy queues/downloads request a retry after work finishes; no active job is interrupted or silently cancelled. Live idle-engine restart after Recycle Bin removal passed; a Windows ownership race found during that check was fixed.
 - [x] #16/16B Optional per-LoRA trigger choices insert literal text into new visible-mode prompts. Owned spans support removal, shared words and user edits. Older recipes retain their original resolver until explicitly converted.
 - [x] #20 Thirteen optional, editable starter wildcard packs (817 choices), with source references, bundled alias/duplicate cleanup and collision-safe staging.
-- [x] #23 Enhance saved generations through a reviewed Create draft and one latent diffusion refinement pass, saving a linked result and preserving the original. GPU quality remains a release check.
-- [x] #25 Optional automatic face refinement after generation/hires, with separate cancellable follow-up jobs, restart recovery and preserved originals. Real stylized/furry-face quality remains a hardware release check.
+- [x] #23 Enhance saved generations through a reviewed Create draft and one latent diffusion refinement pass, saving a linked result and preserving the original. A real 768-to-1152-pixel Enhance run passed, with composition retained and a more painterly result; quality remains image-dependent.
+- [x] #25 Optional automatic face refinement after generation/hires, with separate cancellable follow-up jobs, restart recovery and preserved originals. A real anime face pass completed. The tested anthro fox was not detected and was safely skipped; reliable furry-face detection is not established.
 
 ## Qwen integration findings
 
@@ -128,3 +128,15 @@ The editor, stored recipes, job validation, setup and storage inventory recogniz
 Validation: the 289-test regression suite passed before final repair/capability additions, followed by nine focused Compact tests and five setup tests. Headless editor checks covered selection, setup dispatch, readiness and persistence without page errors or overflow. The loader and verified model bundle were installed in an isolated studio. Two real GPU edits used the same synthetic source, instruction, seed and canvas in separate engine processes; both outputs were inspected. The harness needed an additional shutdown wait between runs; only Compact was restarted, preserving the Fast measurement. All test engines were stopped afterward.
 
 No installer was assembled or release published. Previously deferred hardware/upgrade acceptance and final release packaging remain.
+
+## Candidate acceptance pass
+
+The actual development app ran headlessly against an isolated studio on the RTX 4060 Ti 16 GB. Existing checkpoint files were registered read-only; the user's installed app and studio were not changed. An anime portrait passed through the real queue, CPU detector, automatic child job and saved history. The original stayed intact, and the face edit was visibly softer rather than universally better. A second anthro fox portrait produced no detection: the queue reported that the original was kept, without a spurious refinement job. The current detector should not be advertised as reliable for furry faces.
+
+Enhance processed the saved 768-square portrait into a linked 1152-square output through one latent refinement pass. The original file hash stayed unchanged. Composition and recognizable facial features remained, with a more painterly texture. The latest generated image became the saved preview selection. All app windows stayed hidden and renderer checks recorded no page errors.
+
+Real Windows Recycle Bin removal used only tiny disposable test model files. The first run exposed a restart race: object existence was mistaken for mutex ownership after the engine was terminated. Backend startup and private-Python preparation now acquire the Windows mutex with a bounded wait; a retained unowned object or abandoned owner is recoverable, while a live owner is still rejected. Native-process checks passed for all three cases, and the actual app then removed the fixture, refreshed its library and restarted the engine successfully. No existing user model was removed.
+
+The full 292-test suite passed before the mutex fix; 21 focused runtime and model-maintenance tests and a production compilation passed afterward. Separate native Windows checks exercised both the configuration helper and launcher against unowned, abandoned and live-owner mutexes. All owned GPU test processes were stopped. See [Microsoft's mutex documentation](https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexw) for the distinction between named-object existence and ownership.
+
+Remaining release proof: packaged candidate startup/icon checks, actual 0.1.1-to-0.2.0 upgrade with preserved studio data, and the new updater's real installer handoff. Hyper-V was unavailable through the host management interface during this pass. Source/native payload assembly and an installer do not substitute for that VM test. Qwen optimization is deferred.
