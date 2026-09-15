@@ -108,8 +108,8 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 97454,
-      "sha256": "625212698a3ce048ccc2e3a54790f6f160eabb7d89a293680e2c972d900e47a4"
+      "bytes": 97481,
+      "sha256": "862b0c188c0bbdb027942eb0b161dcacd80224c3a20733ea82253f18f03f8ff5"
     },
     {
       "path": "src/main/main.ts",
@@ -363,8 +363,8 @@
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
-      "bytes": 8974,
-      "sha256": "96724de2d2cdb70f992017762f2dc4a627025146a0a2236e7fdd89f5b63129e4"
+      "bytes": 8984,
+      "sha256": "ccf794b9fbf1ff03fcaea5542dc0e194f88ef117d829db63ca1c8d23cdc7a222"
     },
     {
       "path": "src/renderer/App.tsx",
@@ -1303,13 +1303,13 @@
     },
     {
       "path": "tests/create-update.test.tsx",
-      "bytes": 6946,
-      "sha256": "e104807ab092642893e79fd36a733ba3484af3abd900ee8d3ec4392022676377"
+      "bytes": 9120,
+      "sha256": "5b9d4ce1079344e5e86208595cf87b2d38078a98593a6cddfb3f73eb379237d8"
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 27728,
-      "sha256": "1dbd708726c788c4c768421a0032081883c8c05babd43aae6fd50919909ab860"
+      "bytes": 27996,
+      "sha256": "0789fe2bfd9caef12277f663de1d358346fda5bb88f2a1f9107117f03e25b461"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1403,8 +1403,8 @@
     },
     {
       "path": "src/renderer/AutomaticFaceControls.tsx",
-      "bytes": 1748,
-      "sha256": "1c52db19b3309ac84156fd0d8ad2a5fe16b58a48a6d307ffed9df38ecf181788"
+      "bytes": 2832,
+      "sha256": "2307c5a812fe89c71389f72ae577d517d427a390ced264d64e10a510ce842ee3"
     },
     {
       "path": "tests/automatic-faces.test.ts",
@@ -1413,8 +1413,8 @@
     },
     {
       "path": "tests/automatic-face-controls.test.tsx",
-      "bytes": 1468,
-      "sha256": "5534c47860f20c239e4c4f168d5aaabac74d5f6e21a92712321c36eaeca4e6cb"
+      "bytes": 1541,
+      "sha256": "85ddda00b15102f09e0280b6cc8628e42567a02a5bfdb879c3936aa0edf2758e"
     },
     {
       "path": "src/shared/wildcard-packs.ts",

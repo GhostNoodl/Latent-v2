@@ -40,5 +40,5 @@ export function AdvancedImageControls({ draft, snapshot, onChange, run }: { draf
         <Field label="Refinement scheduler"><select value={hires.scheduler} onChange={event => updateHires({ scheduler: event.target.value })}>{SCHEDULERS.map(value => <option key={value}>{value}</option>)}</select></Field>
       </div>}
     </>}
-  </details><AutomaticFaceControls draft={draft} status={snapshot.faceDetailer} onChange={onChange}/></section>;
+  </details><AutomaticFaceControls draft={draft} status={snapshot.faceDetailer} onChange={onChange} run={run}/></section>;
 }

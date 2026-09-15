@@ -170,3 +170,5 @@ Generation parameters start open and precede upscaling/hires and Source image. S
 The BrowserWindow now receives the bundled Latent ICO explicitly. Windows taskbar details use the matching app ID and real unpacked icon path, including in installed builds. The existing executable and shortcut icon packaging remains in place.
 
 Validation: 43 focused trigger, generation-settings and history tests passed. A hidden actual-app check verified the section order, open normal parameters, collapsed/expanded Source image and absence of the removed controls and prose. No image generation rerun was needed for these UI changes.
+
+Face detector setup is now available directly beneath Automatically refine faces in Create, including installation progress, cancellation and retry. This restores setup access after removing the manual face editor shortcut and corrects the old Settings instruction.

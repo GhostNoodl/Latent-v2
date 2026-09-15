@@ -172,7 +172,7 @@ export class JobService {
     const draft = draftSchema.parse(input);
     if (this.ipAdapterService?.status().state === 'activating') throw new Error('Wait for reference-tool activation to finish before queueing generation.');
     if (draft.autoFace && (draft.faceDetailer || draft.autoFaceParentRecordId || draft.qwenEdit || draft.upscale)) throw new Error('Automatic face refinement requires an image generation, without another face pass or standalone resize.');
-    if (draft.autoFace && !['ready', 'detecting'].includes(this.faceDetailerService?.status().state ?? '')) throw new Error('Set up face refinement in Settings before enabling automatic faces.');
+    if (draft.autoFace && !['ready', 'detecting'].includes(this.faceDetailerService?.status().state ?? '')) throw new Error('In Create, use Set up / update face detector below Automatically refine faces, then try again.');
     if (draft.autoFaceParentRecordId && !draft.faceDetailer) throw new Error('Automatic face lineage requires a face refinement recipe.');
     const enhanceError = enhancementIssue(draft); if (enhanceError) throw new Error(enhanceError);
     if (draft.faceDetailer && (draft.qwenEdit || draft.imageInput || draft.controlNet || draft.hiresFix || draft.upscale || draft.ipAdapter || draft.regionalPrompts?.settings.enabled || draft.batchSize !== 1 || draft.width !== 512 || draft.height !== 512)) throw new Error('Face refinement requires baseline SDXL/Illustrious, 512 square working crops, batch 1, and no other image workflow.');
