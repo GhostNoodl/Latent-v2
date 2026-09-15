@@ -363,13 +363,13 @@
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
-      "bytes": 9540,
-      "sha256": "06f1384fa4f6fe1bc915c234fcbcddcf2b56d3edb6f654348943c5420b0fb9e2"
+      "bytes": 8835,
+      "sha256": "a85148fc5fa63cdd60cf59adba6a6cf40ff18f0fe0710c3fa1860074f7582fd0"
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 70567,
-      "sha256": "b8151f7901da31e1486cfbf80ef84d7afc34dcdb66b070f5c9f85ff3ea6dda9c"
+      "bytes": 70575,
+      "sha256": "dd163546b7e89325fe9f124fa5c8af0681a71c17566d66739eb031501a448f42"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -913,13 +913,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 18585,
-      "sha256": "c7859d24a7baa47bce6726028debb6d46adad85d92406a8bdce1e94b361890f0"
+      "bytes": 18605,
+      "sha256": "c3664dfb30e57a0285944219e8c51eab05a14b45e59bd9b418cba7e012307a3f"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 8049,
-      "sha256": "8e92d8c42df34cbb18465a833d754be1ac232ea51281e70514b62c92009e8739"
+      "bytes": 8081,
+      "sha256": "16cbd9ab7ba8de69f3d9bf99f3b150bf7fb02e870e4bb9c9c3d54f9c8ad7db1c"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1223,8 +1223,8 @@
     },
     {
       "path": "tests/app-history-dom.test.tsx",
-      "bytes": 34341,
-      "sha256": "a0f814f8f17dc9c7fe624f088420e0df53de91511ce0921bb31c6151fa43bc65"
+      "bytes": 36007,
+      "sha256": "0f4f28282ce4f43eaaedec96bd22706e78a6d9f7c90971f4e5600b16eb642b23"
     },
     {
       "path": "scripts/third-party-notices.mjs",
@@ -1293,8 +1293,8 @@
     },
     {
       "path": "src/renderer/PreviewMenu.tsx",
-      "bytes": 2686,
-      "sha256": "73cf3f135d88f76531883ff7ab596d228a930cd287e2b5a39f66fbae111e7c6f"
+      "bytes": 2770,
+      "sha256": "85be14c70a0eaa4804f8758c18a714b349546177b947eb053a775a129cacd199"
     },
     {
       "path": "src/renderer/useDismissiblePanel.ts",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 28589,
-      "sha256": "d0d2b80f1019a37679fc61ef557dd4ef4b5c40c1f9e9c9e585b6d71519af65c7"
+      "bytes": 29046,
+      "sha256": "964c9e2dc0df3b8de0a4d0d2a2327846bda7b4700ac9e9f48af911550509f9d1"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1378,8 +1378,8 @@
     },
     {
       "path": "src/shared/enhancement.ts",
-      "bytes": 5278,
-      "sha256": "2b9fc87cd9f78148b4b7efbf42294738174bff6e8a85aad74e6478eb0b895a25"
+      "bytes": 6355,
+      "sha256": "8096c75862b81ea03cf0234c278b179adb9502559674f47ffe50e1e62d6206b0"
     },
     {
       "path": "src/renderer/EnhanceDialog.tsx",
@@ -1388,8 +1388,8 @@
     },
     {
       "path": "tests/enhancement.test.ts",
-      "bytes": 5232,
-      "sha256": "fcdaca3251da197a0028f8aae0ca1051b178bac339f28fe2971f28bc73736bf9"
+      "bytes": 6443,
+      "sha256": "1d933a326a9ce669585d89fa5e96316bed7b3a975012372dbd6f8f9c08f6da2d"
     },
     {
       "path": "tests/enhance-dialog.test.tsx",
@@ -1403,8 +1403,8 @@
     },
     {
       "path": "src/renderer/AutomaticFaceControls.tsx",
-      "bytes": 4420,
-      "sha256": "4f846d25d59161131b353a75d8c2d5a52fc9bd7d20fcac25eebb59bc896aec33"
+      "bytes": 4112,
+      "sha256": "43a1efbb3a2bd83f6376758f5f0db0edb5f15b13924d9d7772e05d54d0d7902d"
     },
     {
       "path": "tests/automatic-faces.test.ts",

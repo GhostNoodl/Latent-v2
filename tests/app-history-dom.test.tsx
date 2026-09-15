@@ -296,3 +296,18 @@ describe('Create history, draft and asynchronous acceptance', () => {
   });
 
 });
+
+it('one click queues the selected image with no settings dialog, draft replacement or queue popup',async()=>{
+ const waiting=gate();api.useOutputAsSource=vi.fn(async()=>{await waiting.promise;return {id:'src_11111111-1111-4111-8111-111111111111',originGenerationId:first.id,normalized:{sha256:'f'.repeat(64),width:first.width,height:first.height}} as SourceImageAsset;});
+ await click(button('Upscale & refine'));expect(host.querySelector('[role="dialog"]')).toBeNull();
+ expect(button('Queueing...').disabled).toBe(true);await click(button('Queueing...'));expect(api.useOutputAsSource).toHaveBeenCalledTimes(1);
+ await act(async()=>waiting.release());expect(api.queueGeneration).toHaveBeenCalledTimes(1);
+ const queued=vi.mocked(api.queueGeneration!).mock.calls[0][0];expect(queued).toMatchObject({prompt:first.resolvedPrompt,seed:first.actualSeed,steps:15,sampler:'euler',scheduler:'simple',enhance:{parentRecordId:first.id,standard:true}});
+ expect(host.querySelector('.queue-panel')).toBeNull();expect(host.querySelector<HTMLTextAreaElement>('#prompt')!.value).toBe(authored().prompt);
+ await closeAndCancel();expect(savedDraft.prompt).toBe(authored().prompt);
+});
+it('one-click source failures leave the draft intact and allow retry',async()=>{
+ api.useOutputAsSource=vi.fn().mockRejectedValue(new Error('Original image is missing.'));
+ await click(button('Upscale & refine'));expect(api.queueGeneration).not.toHaveBeenCalled();expect(host.textContent).toContain('Original image is missing');expect(button('Upscale & refine').disabled).toBe(false);
+ expect(host.querySelector<HTMLTextAreaElement>('#prompt')!.value).toBe(authored().prompt);
+});

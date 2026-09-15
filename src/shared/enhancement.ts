@@ -37,7 +37,7 @@ export function buildEnhancementWorkflow(workflow:ComfyWorkflow,draft:Generation
  const scaled=(result['4'].inputs.pixels as [string,number])[0];
  result['4'].inputs.pixels=result[scaled].inputs.image;delete result[scaled];
  const node=String(Math.max(...Object.keys(result).map(Number))+1);
- result[node]={class_type:'LatentUpscale',inputs:{samples:['4',0],upscale_method:'bislerp',width:draft.width,height:draft.height,crop:'disabled'}};
+ result[node]={class_type:'LatentUpscale',inputs:{samples:['4',0],upscale_method:draft.enhance.standard?'nearest-exact':'bislerp',width:draft.width,height:draft.height,crop:'disabled'}};
  result['5'].inputs.latent_image=[node,0];return result;
 }
 
@@ -48,4 +48,14 @@ export function reconcileEnhancementChange(previous:GenerationDraft, change:Part
  const sourceChanged=Object.hasOwn(change,'imageInput') && (!input || input.mode!=='img2img' || input.sourceId!==previous.imageInput?.sourceId || input.sourceSha256!==previous.imageInput?.sourceSha256);
  if(!sourceChanged&&!change.hiresFix&&!change.upscale&&!change.qwenEdit&&!change.faceDetailer)return change;
  return {...change,enhance:undefined,variationOfRecordId:undefined};
+}
+
+/** One-click authoring is separate from historical recipe replay. */
+export function prepareOneClickEnhancement(record:GenerationRecord,source:SourceImageAsset,current:GenerationDraft):GenerationDraft {
+ const next=prepareEnhancement(record,source,current,1.5,.5);
+ const scale=Math.max(next.width/record.width,next.height/record.height);
+ return draftSchema.parse({...next,steps:15,sampler:'euler',scheduler:'simple',seed:record.actualSeed,enhance:{...next.enhance!,standard:true},imageInput:{...next.imageInput!,denoise:scale>1.5?Math.min(.5,Math.max(.3,.6-(scale-1.5)*.4)):.5},autoFace:current.autoFace?{...current.autoFace,classic:true,steps:current.autoFace.steps??20,cfg:current.autoFace.cfg??7,sampler:current.autoFace.sampler??'euler',scheduler:current.autoFace.scheduler??'normal',applyLoras:current.autoFace.applyLoras??false}:undefined});
+}
+export function enhancementActionLabel(record:Pick<GenerationRecord,'width'|'height'>):string {
+ return Math.max(record.width,record.height)>=2048?'Refine image':'Upscale & refine';
 }

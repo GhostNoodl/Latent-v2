@@ -2,13 +2,13 @@ import { AutomaticFaceControls } from './AutomaticFaceControls';
 import { PackageSetupStorage } from './PackageSetupStorage';
 import type { AppSnapshot, GenerationDraft } from '../shared/types';
 import type { HiresFixSettings } from '../shared/advanced-image-types';
-import { applyHiresPreset, editHiresSettings, suggestedHiresDimensions, suggestedUpscaleDimensions } from '../shared/advanced-image-workflow';
+import { editHiresSettings, suggestedHiresDimensions, suggestedUpscaleDimensions } from '../shared/advanced-image-workflow';
 import { SAMPLERS, SCHEDULERS } from '../shared/defaults';
 import { Field, Notice, Toggle, type RunAction } from './ui';
 
 export function AdvancedImageControls({ draft, snapshot, onChange, run }: { draft: GenerationDraft; snapshot: AppSnapshot; onChange: (change: Partial<GenerationDraft>) => void; run: RunAction }) {
   const hires = draft.hiresFix; const upscale = draft.upscale;
-  const updateHires = (change: Partial<HiresFixSettings>) => { if (hires) onChange({ hiresFix: editHiresSettings(hires, change) }); };
+  const updateHires = (change: Partial<HiresFixSettings>) => { if (hires) onChange({ hiresFix: editHiresSettings(hires, { ...change, classic: true }) }); };
   const enableHires = () => onChange({ upscale: undefined, hiresFix: { classic: true, method: 'latent', interpolation: 'nearest-exact', scaleFactor: suggestedHiresDimensions(draft.width, draft.height).width / draft.width >= 1.01 ? suggestedHiresDimensions(draft.width, draft.height).width / draft.width : undefined, ...suggestedHiresDimensions(draft.width, draft.height), steps: 15, cfg: draft.cfg, sampler: 'euler', scheduler: 'simple', denoise: 0.5, seed: 'random' } });
   const source = snapshot.sourceImages.sources.find(source => source.id === draft.imageInput?.sourceId);
   return <section className="advanced-image-controls"><details open={Boolean(hires || upscale)}><summary>Upscale and refine</summary>
@@ -26,8 +26,6 @@ export function AdvancedImageControls({ draft, snapshot, onChange, run }: { draf
     </div>}
     {!upscale && <><Toggle label="Hires fix · retain base and refine" checked={Boolean(hires)} onChange={enabled => enabled ? enableHires() : onChange({ hiresFix: undefined })} />
       {hires && <div className="advanced-image-options">
-        <div className="button-row" aria-label="Hires presets"><button type="button" aria-pressed={!!hires.classic} onClick={() => onChange({hiresFix:applyHiresPreset(hires, 'classic')})}>Latent Classic</button><button type="button" onClick={() => onChange({ hiresFix: applyHiresPreset(hires, 'gentle') })}>Gentle refinement</button><button type="button" onClick={() => onChange({ hiresFix: applyHiresPreset(hires, 'resize') })}>Resize only</button></div>
-        <Toggle label="Link base seed / CFG and protect structure" checked={!!hires.classic} onChange={classic => updateHires({classic})}/>{hires.classic && <p className="muted small">Seed and CFG follow the base. Strength is limited above 1.5x.</p>}
         {draft.width * draft.height >= 4 * 1024 * 1024 && <Notice error>The base already reaches the 4 megapixel refinement limit. Reduce the base width or height before using hires fix.</Notice>}
         {hires.workflowVersion === 'sdxl-hires-latent@1' && <Notice>This saved recipe uses the original latent refinement graph. It does not guarantee that the base file is saved before refinement starts. Editing a refinement setting uses the revised save order.<button type="button" onClick={() => onChange({ hiresFix: { ...hires, workflowVersion: 'sdxl-hires-latent@2' } })}>Use revised save order</button></Notice>}
         {draft.imageInput?.mode === 'inpaint' && <Notice error>Hires fix and inpainting are not available together yet. Turn off one before generating.</Notice>}

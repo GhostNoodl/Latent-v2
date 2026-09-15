@@ -48,7 +48,7 @@ export interface LoraSelection { modelId: string; weight: number; clipWeight: nu
 export interface GenerationDraft {
   autoFace?: { profile: 'illustrated' | 'anime' | 'photographic'; strength: number; classic?: boolean; applyLoras?: boolean; steps?: number; cfg?: number; sampler?: string; scheduler?: string };
   autoFaceParentRecordId?: string;
-  enhance?: { parentRecordId: string };
+  enhance?: { parentRecordId: string; standard?: boolean };
   faceDetailer?: { request: FaceRefinementRequest; frozen?: FaceRefinementPlan };
   ipAdapter?: { settings: IPAdapterSettings; frozen?: IPAdapterPlan };
   regionalPrompts?: { settings: RegionalPromptSettings; frozen?: RegionalPromptPlan };

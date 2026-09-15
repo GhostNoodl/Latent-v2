@@ -35,3 +35,14 @@ it('leaves Enhance on source removal or workflow changes, preserving ordinary ed
  expect(Object.hasOwn(reconcileEnhancementChange(prior,{imageInput:{...prior.imageInput!,denoise:.4}}),'enhance')).toBe(false);
  expect(reconcileEnhancementChange(prior,prior)).toBe(prior);
 });
+
+it('one-click refinement uses standard sampling and saved seed without changing legacy replay',async()=>{
+ const {prepareOneClickEnhancement,enhancementActionLabel}=await import('../src/shared/enhancement');
+ const current={...DEFAULT_DRAFT,autoFace:{profile:'illustrated' as const,strength:.45,classic:true}};
+ const before=JSON.stringify(current),d=prepareOneClickEnhancement(parent,source,current);
+ expect(d).toMatchObject({width:1536,height:1536,steps:15,sampler:'euler',scheduler:'simple',seed:'4',enhance:{standard:true},autoFace:{classic:true,cfg:7,applyLoras:false}});
+ const graph=buildEnhancementWorkflow(buildWorkflow(d,[checkpoint],'4','one-click'),d,'sources/example.png');
+ expect(Object.values(graph).find(n=>n.class_type==='LatentUpscale')?.inputs.upscale_method).toBe('nearest-exact');
+ expect(Object.values(buildEnhancementWorkflow(buildWorkflow(prepared(),[checkpoint],'42','old'),prepared(),'sources/example.png')).find(n=>n.class_type==='LatentUpscale')?.inputs.upscale_method).toBe('bislerp');
+ expect(JSON.stringify(current)).toBe(before);expect(enhancementActionLabel(parent)).toBe('Upscale & refine');expect(enhancementActionLabel({width:2048,height:2048})).toBe('Refine image');
+});
