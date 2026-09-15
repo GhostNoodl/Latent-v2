@@ -159,3 +159,14 @@ A real hidden-app check updated an isolated installation and detected a face wit
 New hires settings use image/Lanczos resizing with 20% strength, DPM++ 2M and Karras. Gentle refinement applies that strategy to existing settings without changing their size or seed. Resize only skips the second sampler entirely. Switching refinement methods resets interpolation to the matching default; existing saved recipes are not silently rewritten. Stronger and latent refinement remain available with a concise explanation of anatomy changes.
 
 A real 2048-square GPU comparison refined an existing base image with the same checkpoint, LoRA, conditioning and refinement seed. The gentle pass completed in about 95 seconds and visually retained the base pose, torso and hand shapes more closely than the prior 2x latent / nearest-exact / 35% pass. This is one inspected comparison, not a universal quality benchmark. All evaluation used a separate studio and headless processes; personal images and evidence are excluded from public source.
+
+
+## Candidate follow-up: compact Create layout and window identity
+
+Selected visible LoRA triggers are now enabled when editing their selections; a saved current draft with visible selections disabled resumes with those selections applied. The redundant master toggle is removed, and trigger lists start expanded. Historical recipe playback remains separate from authoring changes.
+
+Generation parameters start open and precede upscaling/hires and Source image. Source image is collapsible, starting closed without an input and open with an input. Verbose hires guidance and redundant size summaries are removed. The manual Refine faces button is removed from Create; automatic refinement remains available and saved face edits can still be reused from history.
+
+The BrowserWindow now receives the bundled Latent ICO explicitly. Windows taskbar details use the matching app ID and real unpacked icon path, including in installed builds. The existing executable and shortcut icon packaging remains in place.
+
+Validation: 43 focused trigger, generation-settings and history tests passed. A hidden actual-app check verified the section order, open normal parameters, collapsed/expanded Source image and absence of the removed controls and prose. No image generation rerun was needed for these UI changes.

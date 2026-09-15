@@ -475,7 +475,9 @@ async function initialize() {
   // Recovery precedes JobService.start and every engine launch. Stored jobs stay intact.
   try { await runtimeCoordinator.recover(() => runtimeUpdates.recover()); } catch (error) { await fs.appendFile(path.join(paths.logs, 'desktop.log'), `${new Date().toISOString()} Runtime recovery needs attention: ${errorMessage(error)}\n`); }
   nativeTheme.themeSource = store.settings().theme;
-  window = new BrowserWindow({ title: 'Latent v2', width: 1500, height: 980, minWidth: 1000, minHeight: 700, backgroundColor: '#f5f2ec', show: false, autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true, spellcheck: true } });
+  const windowIcon = app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'dist-electron', 'resources', 'latent-icon.ico') : path.join(__dirname, 'resources', 'latent-icon.ico');
+  window = new BrowserWindow({ title: 'Latent v2', icon: windowIcon, width: 1500, height: 980, minWidth: 1000, minHeight: 700, backgroundColor: '#f5f2ec', show: false, autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true, spellcheck: true } });
+  if (process.platform === 'win32') window.setAppDetails({ appId: 'studio.latent.v2', appIconPath: windowIcon, appIconIndex: 0 });
   window.removeMenu();
   window.webContents.setWindowOpenHandler(({ url }) => {
     const known = [...[...MODEL_CATALOG, ...models.assets].flatMap(model => [model.sourceUrl, model.licenseUrl]), IPADAPTER_RELEASE.modelCardUrl, IPADAPTER_RELEASE.encoderOriginUrl, IPADAPTER_RELEASE.codeSourceUrl].filter(Boolean);
