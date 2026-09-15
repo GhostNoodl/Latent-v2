@@ -22,7 +22,7 @@ Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release ha
 - [x] #1 Unified setup progress with the current component, known byte counts and installation/verification messages. Dependency installation uses clearly labeled stage estimates.
 - [x] #3 Original Moonstone application icon, reviewed at small sizes and wired into Windows packaging, studio branding and favicon. Native shortcut/taskbar appearance will be checked with the final installer.
 - [x] #4 Confirmed Recycle Bin removal for studio-owned models, with in-use checks, refreshed selectors and hidden deliberately removed entries. External folders stay read-only.
-- [ ] #6 Smaller Qwen editing model route, including GGUF feasibility and real 16 GB GPU memory/speed/quality testing.
+- [x] #6 Optional Compact Qwen editing with GGUF Q4_K_S and Lightning, including a matched real RTX 4060 Ti 16 GB memory/speed/quality check.
 - [~] #7 Optional app-update controls, verified downloads and deferred installation implemented. A live published installer and real Windows upgrade/data-preservation test remain required.
 - [x] #9 Expanded base-model discovery choices (including an exact custom label), workflow compatibility badges, and an explicitly loaded-results compatibility filter. Searching does not broaden download/generation support.
 - [x] #10 Clean display names, new Civitai download/import filenames and existing files through Details / manage file. Saved references survive renames; occupied names cannot be overwritten. Civitai collisions get a short checksum suffix.
@@ -35,7 +35,7 @@ Status: in development on `codex/0.2.0-update`. No 0.2.0 installer or release ha
 
 ## Qwen integration findings
 
-The current image editor uses a pinned native INT8-convrot workflow and is still marked `unverified-16gb` in its runtime contract. GGUF cannot be substituted by renaming the existing asset: acquisition/validation, a compatible loader, workflow capability checks and persisted recipe identity all need an explicit route. Candidate quantizations must be compared with the whole pipeline (text encoder, VAE, temporary buffers and offloading), not just model file size. No new Qwen weights have been downloaded or benchmarked for this update yet.
+Base and Fast retain their native INT8 recipes. Compact adds a separate Q4_K_S GGUF route with Lightning, the shared CPU text encoder/VAE and a pinned optional loader. Its diffusion file is 12.4 GB instead of 20.5 GB. A matched recoloring edit completed on the RTX 4060 Ti 16 GB: Fast took 57.2 seconds and Compact took 83.4 seconds. Both retained the scene and recolored the teapot. Compact had a lower sampled whole-device GPU peak (14,611 versus 15,293 MiB) and more available host RAM. It is a smaller-memory option; Fast was quicker in this test. See QWEN-COMPACT.md for scope and limitations.
 
 ## Validation of the first batch
 
@@ -120,3 +120,11 @@ Original MIT vector artwork replaces the stock Orbit brand: a curved L and emerg
 Dialogs use a short fade/settle entrance, activity panels and menus share a brief slide/fade, and navigation and controls have consistent feedback. Dismissal stays immediate. Motion respects the operating-system reduced-motion preference; workspace/canvas containers are not transformed.
 
 Validation: reviewed 16 through 256 pixel icon previews on dark/light surfaces; headless checks passed normal/reduced motion, dialog initial focus, Escape and restored focus, backdrop dismissal and overflow, with no page errors. Type checking and development compilation passed. Windows icon generation validates all nine transparent frames. Actual installed icon/shortcut appearance remains part of final packaging acceptance. Qwen is the remaining feature batch and is intentionally last. No installer was assembled or release published.
+
+## Tenth batch: Compact Qwen
+
+The editor, stored recipes, job validation, setup and storage inventory recognize Compact independently from Base/Fast. Setup installs pinned loader code and an exact GGUF wheel under idle-engine maintenance. Repair retains changed loader code; conflicting dependency versions are preserved. Engine-update checks require the optional loader when installed. The older engine generation is not advertised as supporting this new route.
+
+Validation: the 289-test regression suite passed before final repair/capability additions, followed by nine focused Compact tests and five setup tests. Headless editor checks covered selection, setup dispatch, readiness and persistence without page errors or overflow. The loader and verified model bundle were installed in an isolated studio. Two real GPU edits used the same synthetic source, instruction, seed and canvas in separate engine processes; both outputs were inspected. The harness needed an additional shutdown wait between runs; only Compact was restarted, preserving the Fast measurement. All test engines were stopped afterward.
+
+No installer was assembled or release published. Previously deferred hardware/upgrade acceptance and final release packaging remain.

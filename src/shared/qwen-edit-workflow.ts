@@ -1,13 +1,15 @@
 import type { ComfyWorkflow } from './types';
-import { QWEN_EDIT_IDENTITIES, qwenEditSettingsSchema, qwenEditWorkflowVersionSchema, type QwenEditBundle, type QwenEditProfile, type QwenEditWorkflowInput, type QwenEditWorkflowPlan } from './qwen-edit-types';
+import { QWEN_GGUF_RELEASE } from './qwen-gguf-release';
+import { QWEN_COMPACT_DIFFUSION, isFastQwenProfile, QWEN_EDIT_IDENTITIES, qwenEditSettingsSchema, qwenEditWorkflowVersionSchema, type QwenEditBundle, type QwenEditProfile, type QwenEditWorkflowInput, type QwenEditWorkflowPlan } from './qwen-edit-types';
 import { qwenInferenceSize } from './qwen-edit-canvas';
 
 export function validateQwenEditBundle(bundle: QwenEditBundle, profile: QwenEditProfile = bundle?.profile) {
-  if (!bundle || bundle.id !== 'qwen-edit-2511-native-int8' || bundle.profile !== profile || !['base', 'fast'].includes(profile) || bundle.runtime?.route !== 'native-int8-convrot' || bundle.runtime.comfySourceCommit !== '12d5279438bfefc058a269eae805ceab6047777f' || bundle.runtime.comfyVersion !== '0.34.0' || bundle.runtime.torchVersion !== '2.11.0+cu130' || bundle.runtime.comfyKitchenVersion !== '0.2.31' || !Array.isArray(bundle.runtime.customNodes) || bundle.runtime.customNodes.length || bundle.runtime.cpuTextEncoder !== true) throw new Error('Verify the reviewed native Qwen edit bundle and runtime before editing.');
+  const compact = profile === 'compact';
+  if (!bundle || bundle.id !== (compact ? 'qwen-edit-2511-gguf-q4ks' : 'qwen-edit-2511-native-int8') || bundle.profile !== profile || !['base', 'fast', 'compact'].includes(profile) || bundle.runtime?.route !== (compact ? 'gguf-q4ks' : 'native-int8-convrot') || bundle.runtime.comfySourceCommit !== '12d5279438bfefc058a269eae805ceab6047777f' || bundle.runtime.comfyVersion !== '0.34.0' || bundle.runtime.torchVersion !== '2.11.0+cu130' || bundle.runtime.comfyKitchenVersion !== '0.2.31' || !Array.isArray(bundle.runtime.customNodes) || JSON.stringify(bundle.runtime.customNodes) !== JSON.stringify(compact ? [QWEN_GGUF_RELEASE.revision] : []) || bundle.runtime.cpuTextEncoder !== true) throw new Error('Verify the selected Qwen edit bundle and runtime before editing.');
   let bytes = 0;
-  for (const role of ['diffusion', 'encoder', 'vae', ...(profile === 'fast' ? ['lightning'] : [])] as const) {
-    const key = role as keyof typeof QWEN_EDIT_IDENTITIES; const expected = QWEN_EDIT_IDENTITIES[key]; const asset = bundle.assets?.[key];
-    if (!asset || asset.role !== role || asset.status !== 'ready' || asset.format !== 'safetensors' || Object.entries(expected).some(([field, value]) => asset[field as keyof typeof asset] !== value)) throw new Error(`Verify the exact reviewed Qwen ${role} asset before editing.`);
+  for (const role of ['diffusion', 'encoder', 'vae', ...(isFastQwenProfile(profile) ? ['lightning'] : [])] as const) {
+    const key = role as keyof typeof QWEN_EDIT_IDENTITIES; const expected = compact && key === 'diffusion' ? QWEN_COMPACT_DIFFUSION : QWEN_EDIT_IDENTITIES[key]; const asset = bundle.assets?.[key];
+    if (!asset || asset.role !== role || asset.status !== 'ready' || asset.format !== (compact && key === 'diffusion' ? 'gguf' : 'safetensors') || Object.entries(expected).some(([field, value]) => asset[field as keyof typeof asset] !== value)) throw new Error(`Verify the exact reviewed Qwen ${role} asset before editing.`);
     bytes += asset.bytes;
   }
   if (bundle.totalBytes !== bytes || profile === 'base' && bundle.assets.lightning) throw new Error('The Qwen profile and its installed artifact set do not match.');
@@ -21,9 +23,10 @@ function sourceFilename(value: string) {
 /** Native one-image 2511 recipe. Its input pixels must be resolved and rehashed by the job service. */
 export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: QwenEditBundle): QwenEditWorkflowPlan {
   const parsed = qwenEditSettingsSchema.parse(input.settings); validateQwenEditBundle(bundle, parsed.profile);
-  const settings = { ...parsed, steps: parsed.steps ?? (parsed.profile === 'fast' ? 4 : 40), guidance: parsed.guidance ?? (parsed.profile === 'fast' ? 1 : 4) };
-  const workflowVersion = qwenEditWorkflowVersionSchema.parse(input.workflowVersion ?? 'qwen-image-edit-2511-int8@2');
-  const aligned = workflowVersion === 'qwen-image-edit-2511-int8@2';
+  const settings = { ...parsed, steps: parsed.steps ?? (isFastQwenProfile(parsed.profile) ? 4 : 40), guidance: parsed.guidance ?? (isFastQwenProfile(parsed.profile) ? 1 : 4) };
+  const workflowVersion = qwenEditWorkflowVersionSchema.parse(input.workflowVersion ?? (parsed.profile === 'compact' ? 'qwen-image-edit-2511-gguf-q4ks@1' : 'qwen-image-edit-2511-int8@2'));
+  if ((parsed.profile === 'compact') !== (workflowVersion === 'qwen-image-edit-2511-gguf-q4ks@1')) throw new Error('The Qwen model route does not match this recorded recipe.');
+  const aligned = workflowVersion !== 'qwen-image-edit-2511-int8@1';
   const native = aligned ? qwenInferenceSize(settings.width, settings.height) : { width: settings.width, height: settings.height };
   const source = input.source; const size = source?.normalized; const filename = sourceFilename(input.sourceFilename);
   if (!/^src_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(source?.id ?? '') || !/^[0-9a-f]{64}$/.test(size?.sha256 ?? '') || size?.mimeType !== 'image/png' || !Number.isInteger(size.width) || !Number.isInteger(size.height) || size.width < 1 || size.height < 1 || Math.max(size.width, size.height) > 8192 || size.width * size.height > 32 * 1024 * 1024) throw new Error('Qwen edit requires a bounded immutable source image and its SHA-256 identity.');
@@ -31,7 +34,7 @@ export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: Qwen
   if (typeof input.instruction !== 'string' || !input.instruction.trim() || input.instruction.length > 4000 || input.instruction.includes('\0') || input.negativePrompt !== undefined && (typeof input.negativePrompt !== 'string' || input.negativePrompt.length > 4000 || input.negativePrompt.includes('\0'))) throw new Error('Enter an edit instruction of 1–4000 characters.');
   const negativePrompt = input.negativePrompt ?? ''; const filenamePrefix = `Latent_${input.jobId}_qwen_edit`;
   const workflow: ComfyWorkflow = {
-    '1': { class_type: 'UNETLoader', inputs: { unet_name: bundle.assets.diffusion.filename, weight_dtype: 'default' } },
+    '1': parsed.profile === 'compact' ? { class_type: 'UnetLoaderGGUF', inputs: { unet_name: bundle.assets.diffusion.filename } } : { class_type: 'UNETLoader', inputs: { unet_name: bundle.assets.diffusion.filename, weight_dtype: 'default' } },
     '2': { class_type: 'CLIPLoader', inputs: { clip_name: bundle.assets.encoder.filename, type: 'qwen_image', device: 'cpu' } },
     '3': { class_type: 'VAELoader', inputs: { vae_name: bundle.assets.vae.filename } },
     '4': { class_type: 'LoadImage', inputs: { image: filename } },
@@ -44,10 +47,10 @@ export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: Qwen
     '11': { class_type: 'FluxKontextMultiReferenceLatentMethod', inputs: { conditioning: ['9', 0], reference_latents_method: 'index_timestep_zero' } },
     '12': { class_type: 'ModelSamplingAuraFlow', inputs: { model: ['1', 0], shift: 3.1 } },
     '13': { class_type: 'CFGNorm', inputs: { model: ['12', 0], strength: 1, pre_cfg: false } },
-    '15': { class_type: 'KSampler', inputs: { model: [parsed.profile === 'fast' ? '14' : '13', 0], seed: Number(settings.seed), steps: settings.steps, cfg: settings.guidance, sampler_name: 'euler', scheduler: 'simple', positive: ['10', 0], negative: ['11', 0], latent_image: ['6', 0], denoise: 1 } },
+    '15': { class_type: 'KSampler', inputs: { model: [isFastQwenProfile(parsed.profile) ? '14' : '13', 0], seed: Number(settings.seed), steps: settings.steps, cfg: settings.guidance, sampler_name: 'euler', scheduler: 'simple', positive: ['10', 0], negative: ['11', 0], latent_image: ['6', 0], denoise: 1 } },
     '16': { class_type: 'VAEDecode', inputs: { samples: ['15', 0], vae: ['3', 0] } },
   };
-  if (parsed.profile === 'fast') workflow['14'] = { class_type: 'LoraLoaderModelOnly', inputs: { model: ['13', 0], lora_name: bundle.assets.lightning!.filename, strength_model: 1 } };
+  if (isFastQwenProfile(parsed.profile)) workflow['14'] = { class_type: 'LoraLoaderModelOnly', inputs: { model: ['13', 0], lora_name: bundle.assets.lightning!.filename, strength_model: 1 } };
   if (aligned) workflow['17'] = { class_type: 'ImageScale', inputs: { image: ['16', 0], upscale_method: 'lanczos', width: settings.width, height: settings.height, crop: 'disabled' } };
   return { workflow, workflowVersion, bundle: structuredClone(bundle), source: structuredClone(source), instruction: input.instruction, negativePrompt, settings, sampler: { nodeId: '15', name: 'euler', scheduler: 'simple', denoise: 1, modelShift: 3.1, cfgNorm: 1, textEncoderDevice: 'cpu' }, output: { nodeId: '7', filenamePrefix, width: settings.width, height: settings.height, batchSize: 1 }, expectedOutputCount: 1, ...(aligned ? { canvas: { sourceFitting: { ...native, mode: settings.resize }, inference: { ...native }, reference: { ...native }, output: { width: settings.width, height: settings.height, method: 'lanczos' as const } } } : {}) };
 }
@@ -60,14 +63,15 @@ export function validateQwenEditCapabilities(objects: Record<string, any>, bundl
     ImageScale: { image: 'IMAGE', width: 'INT', height: 'INT' }, TextEncodeQwenImageEditPlus: { clip: 'CLIP', prompt: 'STRING', vae: 'VAE', image1: 'IMAGE' },
     FluxKontextMultiReferenceLatentMethod: { conditioning: 'CONDITIONING' }, ModelSamplingAuraFlow: { model: 'MODEL', shift: 'FLOAT' }, CFGNorm: { model: 'MODEL', strength: 'FLOAT', pre_cfg: 'BOOLEAN' },
     KSampler: { model: 'MODEL', seed: 'INT', steps: 'INT', cfg: 'FLOAT', positive: 'CONDITIONING', negative: 'CONDITIONING', latent_image: 'LATENT', denoise: 'FLOAT' }, SaveImage: { images: 'IMAGE', filename_prefix: 'STRING' },
-    ...(bundle.profile === 'fast' ? { LoraLoaderModelOnly: { model: 'MODEL', strength_model: 'FLOAT' } } : {}),
+    ...(isFastQwenProfile(bundle.profile) ? { LoraLoaderModelOnly: { model: 'MODEL', strength_model: 'FLOAT' } } : {}),
   };
   const definition = (node: string, field: string) => objects[node]?.input?.required?.[field] ?? objects[node]?.input?.optional?.[field];
   const choices = (value: any): unknown[] => Array.isArray(value?.[0]) ? value[0] : value?.[0] === 'COMBO' && Array.isArray(value?.[1]?.options) ? value[1].options : [];
   for (const [node, inputs] of Object.entries(fields)) for (const [field, type] of Object.entries(inputs)) if (definition(node, field)?.[0] !== type) throw new Error(`The engine does not provide reviewed ${node}.${field}.`);
-  const enums = [['UNETLoader', 'unet_name', bundle.assets.diffusion.filename], ['UNETLoader', 'weight_dtype', 'default'], ['CLIPLoader', 'clip_name', bundle.assets.encoder.filename], ['CLIPLoader', 'type', 'qwen_image'], ['CLIPLoader', 'device', 'cpu'], ['VAELoader', 'vae_name', bundle.assets.vae.filename], ['ImageScale', 'upscale_method', 'lanczos'], ['ImageScale', 'crop', 'center'], ['ImageScale', 'crop', 'disabled'], ['FluxKontextMultiReferenceLatentMethod', 'reference_latents_method', 'index_timestep_zero'], ['KSampler', 'sampler_name', 'euler'], ['KSampler', 'scheduler', 'simple'], ...(bundle.profile === 'fast' ? [['LoraLoaderModelOnly', 'lora_name', bundle.assets.lightning!.filename]] : [])];
+  const loader = bundle.profile === 'compact' ? 'UnetLoaderGGUF' : 'UNETLoader';
+  const enums = [[loader, 'unet_name', bundle.assets.diffusion.filename], ...(bundle.profile === 'compact' ? [] : [['UNETLoader', 'weight_dtype', 'default']]), ['CLIPLoader', 'clip_name', bundle.assets.encoder.filename], ['CLIPLoader', 'type', 'qwen_image'], ['CLIPLoader', 'device', 'cpu'], ['VAELoader', 'vae_name', bundle.assets.vae.filename], ['ImageScale', 'upscale_method', 'lanczos'], ['ImageScale', 'crop', 'center'], ['ImageScale', 'crop', 'disabled'], ['FluxKontextMultiReferenceLatentMethod', 'reference_latents_method', 'index_timestep_zero'], ['KSampler', 'sampler_name', 'euler'], ['KSampler', 'scheduler', 'simple'], ...(isFastQwenProfile(bundle.profile) ? [['LoraLoaderModelOnly', 'lora_name', bundle.assets.lightning!.filename]] : [])];
   for (const [node, field, value] of enums) if (!choices(definition(node, field)).some(option => typeof option === 'string' && option.replaceAll('\\', '/') === value)) throw new Error(`The engine does not offer reviewed ${node}.${field}; verify model paths and restart the private engine.`);
-  const outputs: Record<string, string> = { UNETLoader: 'MODEL', CLIPLoader: 'CLIP', VAELoader: 'VAE', LoadImage: 'IMAGE', ImageScale: 'IMAGE', VAEEncode: 'LATENT', VAEDecode: 'IMAGE', TextEncodeQwenImageEditPlus: 'CONDITIONING', FluxKontextMultiReferenceLatentMethod: 'CONDITIONING', ModelSamplingAuraFlow: 'MODEL', CFGNorm: 'MODEL', KSampler: 'LATENT', SaveImage: 'IMAGE', ...(bundle.profile === 'fast' ? { LoraLoaderModelOnly: 'MODEL' } : {}) };
+  const outputs: Record<string, string> = { [loader]: 'MODEL', CLIPLoader: 'CLIP', VAELoader: 'VAE', LoadImage: 'IMAGE', ImageScale: 'IMAGE', VAEEncode: 'LATENT', VAEDecode: 'IMAGE', TextEncodeQwenImageEditPlus: 'CONDITIONING', FluxKontextMultiReferenceLatentMethod: 'CONDITIONING', ModelSamplingAuraFlow: 'MODEL', CFGNorm: 'MODEL', KSampler: 'LATENT', SaveImage: 'IMAGE', ...(isFastQwenProfile(bundle.profile) ? { LoraLoaderModelOnly: 'MODEL' } : {}) };
   for (const [node, type] of Object.entries(outputs)) if (objects[node]?.output?.[0] !== type) throw new Error(`The engine does not provide reviewed ${node} output.`);
   if (!Array.isArray(definition('LoadImage', 'image')?.[0]) && definition('LoadImage', 'image')?.[0] !== 'COMBO') throw new Error('The engine does not provide the reviewed source-image loader.');
 }
@@ -75,7 +79,7 @@ export function validateQwenEditCapabilities(objects: Record<string, any>, bundl
 /** Windows reports backslashes in model COMBO values. Bind only the exact canonical reviewed name. */
 export function bindQwenEditWorkflow(plan: QwenEditWorkflowPlan, objects: Record<string, any>): QwenEditWorkflowPlan {
   validateQwenEditCapabilities(objects, plan.bundle); const result = structuredClone(plan);
-  const fields = [['1', 'unet_name', plan.bundle.assets.diffusion.filename], ['2', 'clip_name', plan.bundle.assets.encoder.filename], ['3', 'vae_name', plan.bundle.assets.vae.filename], ...(plan.bundle.profile === 'fast' ? [['14', 'lora_name', plan.bundle.assets.lightning!.filename]] : [])];
+  const fields = [['1', 'unet_name', plan.bundle.assets.diffusion.filename], ['2', 'clip_name', plan.bundle.assets.encoder.filename], ['3', 'vae_name', plan.bundle.assets.vae.filename], ...(isFastQwenProfile(plan.bundle.profile) ? [['14', 'lora_name', plan.bundle.assets.lightning!.filename]] : [])];
   for (const [id, field, canonical] of fields) {
     const node = result.workflow[id]; const definition = objects[node.class_type]?.input?.required?.[field]; const options: unknown[] = Array.isArray(definition?.[0]) ? definition[0] : definition?.[0] === 'COMBO' && Array.isArray(definition?.[1]?.options) ? definition[1].options : [];
     const matches = options.filter(option => typeof option === 'string' && option.replaceAll('\\', '/') === canonical);

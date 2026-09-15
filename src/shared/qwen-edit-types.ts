@@ -1,8 +1,11 @@
 import { z } from 'zod';
 import type { ComfyWorkflow } from './types';
 import type { SourceImageAsset } from './source-types';
-export type QwenEditProfile = 'base' | 'fast';
-export const qwenEditWorkflowVersionSchema = z.enum(['qwen-image-edit-2511-int8@1', 'qwen-image-edit-2511-int8@2']);
+export const qwenEditProfileSchema = z.enum(['base', 'fast', 'compact']);
+export type QwenEditProfile = z.infer<typeof qwenEditProfileSchema>;
+export const isFastQwenProfile = (profile: QwenEditProfile) => profile !== 'base';
+export const QWEN_COMPACT_DIFFUSION = Object.freeze({ filename: 'qwen-edit-2511/qwen-image-edit-2511-Q4_K_S.gguf', directory: 'diffusion_models', bytes: 12410747488, sha256: 'df952ef0d2b46463bd95d9afbb78e045ec5412316f453a7ad5a3d7bcbb111b72' });
+export const qwenEditWorkflowVersionSchema = z.enum(['qwen-image-edit-2511-int8@1', 'qwen-image-edit-2511-int8@2', 'qwen-image-edit-2511-gguf-q4ks@1']);
 export type QwenEditWorkflowVersion = z.infer<typeof qwenEditWorkflowVersionSchema>;
 export type QwenEditAssetRole = 'diffusion' | 'encoder' | 'vae' | 'lightning';
 /** Renderer-safe publisher identities; acquisition additionally verifies tensor-header pins. */
@@ -14,19 +17,20 @@ export const QWEN_EDIT_IDENTITIES = Object.freeze({
 });
 export interface QwenEditAsset {
   role: QwenEditAssetRole; filename: string; directory: 'diffusion_models' | 'text_encoders' | 'vae' | 'qwen-edit-loras';
-  bytes: number; sha256: string; format: 'safetensors'; status: 'ready';
+  bytes: number; sha256: string; format: 'safetensors' | 'gguf'; status: 'ready';
   provenance: { repository: string; revision: string; sourceFile: string; sourceUrl: string; modelCardUrl: string; licenseName: 'Apache-2.0'; licenseUrl: string };
   validation: { headerBytes: number; headerSha256: string; tensorCount: number; dtypes: string[] };
   verifiedAt: string;
 }
 export interface QwenEditBundle {
-  id: 'qwen-edit-2511-native-int8'; profile: QwenEditProfile;
+  id: 'qwen-edit-2511-native-int8' | 'qwen-edit-2511-gguf-q4ks'; profile: QwenEditProfile;
   assets: { diffusion: QwenEditAsset; encoder: QwenEditAsset; vae: QwenEditAsset; lightning?: QwenEditAsset };
   totalBytes: number; verifiedAt: string;
-  runtime: { route: 'native-int8-convrot'; comfySourceCommit: string; comfyVersion: string; torchVersion: string; comfyKitchenVersion: string; customNodes: []; cpuTextEncoder: true; memoryStatus: 'unverified-16gb' };
+  runtime: { route: 'native-int8-convrot' | 'gguf-q4ks'; comfySourceCommit: string; comfyVersion: string; torchVersion: string; comfyKitchenVersion: string; customNodes: string[]; cpuTextEncoder: true; memoryStatus: 'unverified-16gb' };
 }
 export interface QwenEditAssetsStatus {
   state: 'not-installed' | 'installing' | 'ready' | 'error'; message: string;
+  compactReady?: boolean; compactBytes?: number;
   baseBytes: number; fastBytes: number; baseReady: boolean; fastReady: boolean;
   installedRoles: QwenEditAssetRole[]; profile?: QwenEditProfile; activeRole?: QwenEditAssetRole;
   installProgress?: number; bundle?: QwenEditBundle;
@@ -36,7 +40,7 @@ export interface QwenEditAssetsStatus {
     startedAt: string; finishedAt?: string; message: string;
   };
 }
-export const qwenEditSettingsSchema = z.object({ profile: z.enum(['base', 'fast']), width: z.number().int().min(256).max(1024).multipleOf(16), height: z.number().int().min(256).max(1024).multipleOf(16), seed: z.string().regex(/^\d+$/).refine(value => BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER)), resize: z.enum(['stretch', 'center-crop']), steps: z.number().int().min(1).max(60).optional(), guidance: z.number().finite().min(1).max(8).optional() }).strict().refine(value => value.profile !== 'fast' || (value.steps === undefined || value.steps === 4) && (value.guidance === undefined || value.guidance === 1), 'The fast profile uses its reviewed four-step, CFG 1 recipe.');
+export const qwenEditSettingsSchema = z.object({ profile: qwenEditProfileSchema, width: z.number().int().min(256).max(1024).multipleOf(16), height: z.number().int().min(256).max(1024).multipleOf(16), seed: z.string().regex(/^\d+$/).refine(value => BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER)), resize: z.enum(['stretch', 'center-crop']), steps: z.number().int().min(1).max(60).optional(), guidance: z.number().finite().min(1).max(8).optional() }).strict().refine(value => !isFastQwenProfile(value.profile) || (value.steps === undefined || value.steps === 4) && (value.guidance === undefined || value.guidance === 1), 'The fast profile uses its reviewed four-step, CFG 1 recipe.');
 export type QwenEditSettings = z.infer<typeof qwenEditSettingsSchema>;
 export const qwenEditJobRequestSchema = z.object({
   mode: z.literal('qwen-edit'), sourceId: z.string().regex(/^src_[a-f0-9-]{36}$/), sourceSha256: z.string().regex(/^[a-f0-9]{64}$/),

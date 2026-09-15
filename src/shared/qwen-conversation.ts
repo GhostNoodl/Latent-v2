@@ -1,15 +1,15 @@
 import { z } from 'zod';
-import { qwenEditJobRequestSchema, qwenEditWorkflowVersionSchema } from './qwen-edit-types';
+import { qwenEditProfileSchema, isFastQwenProfile, qwenEditJobRequestSchema, qwenEditWorkflowVersionSchema } from './qwen-edit-types';
 
 export const QWEN_CONVERSATION_LIMIT = 50;
 const recordId = z.string().regex(/^[a-f0-9]{32}$/);
 const text = (maximum: number) => z.string().max(maximum).refine(value => !value.includes('\0'), 'Text cannot contain NUL characters.');
 /** Editor text can contain an unfinished seed. Generation validates it later. */
 export const qwenEditorSettingsSchema = z.object({
-  profile: z.enum(['base', 'fast']), width: z.number().int().min(256).max(1024).multipleOf(64), height: z.number().int().min(256).max(1024).multipleOf(64),
+  profile: qwenEditProfileSchema, width: z.number().int().min(256).max(1024).multipleOf(64), height: z.number().int().min(256).max(1024).multipleOf(64),
   seed: text(32), resize: z.enum(['stretch', 'center-crop']),
   steps: z.number().int().min(1).max(60).optional(), guidance: z.number().finite().min(1).max(8).optional(),
-}).strict().refine(value => value.profile !== 'fast' || (value.steps === undefined || value.steps === 4) && (value.guidance === undefined || value.guidance === 1), 'The fast profile requires four steps and CFG 1.');
+}).strict().refine(value => !isFastQwenProfile(value.profile) || (value.steps === undefined || value.steps === 4) && (value.guidance === undefined || value.guidance === 1), 'The fast profile requires four steps and CFG 1.');
 export const qwenConversationDraftSchema = z.object({
   id: z.uuid(), title: text(80).min(1), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime(), branchId: z.uuid(),
   source: z.object({ id: z.string().regex(/^src_[a-f0-9-]{36}$/), sha256: z.string().regex(/^[a-f0-9]{64}$/), parentRecordId: recordId.optional() }).strict().optional(),

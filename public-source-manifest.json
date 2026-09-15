@@ -1190,6 +1190,26 @@
     {
       "from": "docs/APP-UPDATES.md",
       "to": "docs/APP-UPDATES.md"
+    },
+    {
+      "from": "src/shared/qwen-gguf-release.ts",
+      "to": "src/shared/qwen-gguf-release.ts"
+    },
+    {
+      "from": "src/main/qwen-gguf-runtime.ts",
+      "to": "src/main/qwen-gguf-runtime.ts"
+    },
+    {
+      "from": "tests/qwen-compact.test.ts",
+      "to": "tests/qwen-compact.test.ts"
+    },
+    {
+      "from": "docs/QWEN-COMPACT.md",
+      "to": "docs/QWEN-COMPACT.md"
+    },
+    {
+      "from": "tests/qwen-compact-runtime.test.ts",
+      "to": "tests/qwen-compact-runtime.test.ts"
     }
   ]
 }
