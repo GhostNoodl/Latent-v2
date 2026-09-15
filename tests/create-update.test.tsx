@@ -78,6 +78,16 @@ it('offers face setup directly in Create and follows progress, cancellation, ret
   await render('error',true);expect(host.querySelector('[role="alert"]')?.textContent).toContain('Setup failed');expect(host.querySelector('input')?.disabled).toBe(false);
   await act(async()=>host.querySelector('input')!.click());expect(change).toHaveBeenCalledWith({autoFace:undefined});
   await act(async()=>host.querySelector('button')!.click());expect(setup).toHaveBeenLastCalledWith(true);
-  await render('ready');expect(host.querySelector('button')).toBeNull();await act(async()=>host.querySelector('input')!.click());expect(change).toHaveBeenLastCalledWith({autoFace:{profile:'illustrated',strength:.3}});
+  await render('ready');expect(host.querySelector('button')).toBeNull();await act(async()=>host.querySelector('input')!.click());expect(change).toHaveBeenLastCalledWith({autoFace:{profile:'illustrated',strength:.45,classic:true,applyLoras:false,steps:20,cfg:7,sampler:'euler',scheduler:'normal'}});
  } finally {await act(async()=>root.unmount());host.remove();vi.unstubAllGlobals();}
+});
+
+it('Classic hires links seed and CFG and protects larger scales without changing old recipes',async()=>{
+ const {resolveClassicHires}=await import('../src/shared/advanced-image-workflow');
+ const classic=applyHiresPreset(hires,'classic');expect(classic).toMatchObject({classic:true,method:'latent',interpolation:'nearest-exact',sampler:'euler',scheduler:'simple',denoise:.5});
+ const base={width:1024,height:1024,cfg:6};
+ expect(resolveClassicHires({...classic,width:2048,height:2048,denoise:.7},base,'42')).toMatchObject({cfg:6,seed:'42',denoise:.4});
+ expect(resolveClassicHires({...classic,width:1536,height:1536,denoise:.6},base,'42').denoise).toBe(.6);
+ expect(resolveClassicHires(hires,base,'42')).toBe(hires);
+ expect(applyHiresPreset(classic,'gentle').classic).toBe(false);
 });

@@ -1,3 +1,4 @@
+import { resolveClassicHires } from '../shared/advanced-image-workflow';
 import { processAutomaticFace } from './automatic-faces';
 import { enhancementIssue, validateEnhancementSource, buildEnhancementWorkflow } from '../shared/enhancement';
 import fs from 'node:fs/promises';
@@ -275,6 +276,7 @@ export class JobService {
       context.controlNet = { plan }; context.workflow = plan.workflow; context.workflowVersion = plan.workflowVersion;
     }
     if (draft.hiresFix) {
+      draft.hiresFix = resolveClassicHires(draft.hiresFix, draft, actualSeed);
       const secondSeed = draft.hiresFix.seed === 'random' ? String(randomBytes(6).readUIntBE(0, 6)) : BigInt(draft.hiresFix.seed).toString();
       context.advancedImage = augmentHiresWorkflow(context.workflow, draft, draft.hiresFix, secondSeed, draft.hiresFix.workflowVersion);
       draft.hiresFix = restoreHiresSettings(context.advancedImage.hires!, context.advancedImage.workflowVersion); context.advancedImage.hires = structuredClone(draft.hiresFix); context.workflow = context.advancedImage.workflow; context.workflowVersion = context.advancedImage.workflowVersion;

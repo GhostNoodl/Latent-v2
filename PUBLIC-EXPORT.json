@@ -78,8 +78,8 @@
     },
     {
       "path": "src/main/face-detailer.ts",
-      "bytes": 25855,
-      "sha256": "7be077add6a7b5c2c3da7a775c335aa77e966232ea0f9ff332a3675db768b465"
+      "bytes": 26415,
+      "sha256": "b5310f778ae593c34b930fa4a48745b67585fd63acf2aa39848b866b573a8f3a"
     },
     {
       "path": "src/main/hardware-profile-evidence.ts",
@@ -108,8 +108,8 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 97481,
-      "sha256": "862b0c188c0bbdb027942eb0b161dcacd80224c3a20733ea82253f18f03f8ff5"
+      "bytes": 97635,
+      "sha256": "2b76358684aa57de97d7c1fdc8089dcdcc2ca8f0620d03707c4421e6be47f884"
     },
     {
       "path": "src/main/main.ts",
@@ -363,8 +363,8 @@
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
-      "bytes": 8984,
-      "sha256": "ccf794b9fbf1ff03fcaea5542dc0e194f88ef117d829db63ca1c8d23cdc7a222"
+      "bytes": 9540,
+      "sha256": "06f1384fa4f6fe1bc915c234fcbcddcf2b56d3edb6f654348943c5420b0fb9e2"
     },
     {
       "path": "src/renderer/App.tsx",
@@ -688,13 +688,13 @@
     },
     {
       "path": "src/shared/advanced-image-types.ts",
-      "bytes": 2209,
-      "sha256": "c68d0f19395a535d5cb3185a5a13277e17121a5f96358a243491ce741d1711d3"
+      "bytes": 2231,
+      "sha256": "5fbf7c521cce04cc91b0290faaa3744bd4949acb237227e901cd4984e38e6709"
     },
     {
       "path": "src/shared/advanced-image-workflow.ts",
-      "bytes": 17228,
-      "sha256": "a9f1a3b322b540a48cb4a964204c8819472aba82446da0b578948bd6ec5573cd"
+      "bytes": 17996,
+      "sha256": "3e54803d4a7f86b16b913f4cb25a9a1bbd7855d6ad19ba8a72318afb4f85c7c9"
     },
     {
       "path": "src/shared/assistant-conversation.ts",
@@ -768,13 +768,13 @@
     },
     {
       "path": "src/shared/face-detailer-types.ts",
-      "bytes": 4968,
-      "sha256": "411746bb4b4b5fd381d817b2157dc46827050a1cb434ace107d4b37eeec2ce5e"
+      "bytes": 5126,
+      "sha256": "cd1d92cdde5ab28704abc69ec5ba15e27418fa23743eb320e2863f88b0202f95"
     },
     {
       "path": "src/shared/face-detailer-workflow.ts",
-      "bytes": 6390,
-      "sha256": "e37d70021ed1628e0c6f5d7dc287ba852027a9078d2bfb2b82ec52523cffb7c5"
+      "bytes": 7586,
+      "sha256": "d12e1432be59d6cb92fb822c009f3ee4be8b380ad7155e3779f573ab36409f85"
     },
     {
       "path": "src/shared/generation-phase.ts",
@@ -913,13 +913,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 18476,
-      "sha256": "079b2a04a27f699c395cea8145810dbba7c89d3905043dd98378beeb28fa5fde"
+      "bytes": 18585,
+      "sha256": "c7859d24a7baa47bce6726028debb6d46adad85d92406a8bdce1e94b361890f0"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 7736,
-      "sha256": "5e0798c5dfcf4d3a1a1a9a0c893a54ff90e9854737c1a95918a40ab98596a7aa"
+      "bytes": 8049,
+      "sha256": "8e92d8c42df34cbb18465a833d754be1ac232ea51281e70514b62c92009e8739"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1138,8 +1138,8 @@
     },
     {
       "path": "tests/face-detailer.test.ts",
-      "bytes": 12800,
-      "sha256": "ec45cff87c17b25c547439367763b4946b1f121ad96c3e5cf1aab8c9a4030d29"
+      "bytes": 14313,
+      "sha256": "13b78c865f63a0baaeee23c4d9704dda8a16730c1f1215a73a7c01827ed369a9"
     },
     {
       "path": "tests/runtime-identity.test.ts",
@@ -1303,13 +1303,13 @@
     },
     {
       "path": "tests/create-update.test.tsx",
-      "bytes": 9120,
-      "sha256": "5b9d4ce1079344e5e86208595cf87b2d38078a98593a6cddfb3f73eb379237d8"
+      "bytes": 10024,
+      "sha256": "4d6a5c86446efca1813edefca8a7fed2e6cc9483c5eaba20b77246bf74d3e5b9"
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 27996,
-      "sha256": "0789fe2bfd9caef12277f663de1d358346fda5bb88f2a1f9107117f03e25b461"
+      "bytes": 28589,
+      "sha256": "d0d2b80f1019a37679fc61ef557dd4ef4b5c40c1f9e9c9e585b6d71519af65c7"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1398,23 +1398,23 @@
     },
     {
       "path": "src/main/automatic-faces.ts",
-      "bytes": 4184,
-      "sha256": "f831aed038e1aaf79c54032325d43f1c8b9c80c4e790179b9b1fb417c3b2aa75"
+      "bytes": 4358,
+      "sha256": "902a662b5d4608e0386d2f049efe6a667474cc61fe9cdb7e77ea88fddfad2955"
     },
     {
       "path": "src/renderer/AutomaticFaceControls.tsx",
-      "bytes": 2832,
-      "sha256": "2307c5a812fe89c71389f72ae577d517d427a390ced264d64e10a510ce842ee3"
+      "bytes": 4420,
+      "sha256": "4f846d25d59161131b353a75d8c2d5a52fc9bd7d20fcac25eebb59bc896aec33"
     },
     {
       "path": "tests/automatic-faces.test.ts",
-      "bytes": 7192,
-      "sha256": "e05c9d09a3920ae0c9cb46e51c7f2fcff147608ee4579ed1ec3346d51d63ce72"
+      "bytes": 7951,
+      "sha256": "8d1fa1f94ae3d530a164953cc111f637012a62486cb8f20cd82dd2c769baca48"
     },
     {
       "path": "tests/automatic-face-controls.test.tsx",
-      "bytes": 1541,
-      "sha256": "85ddda00b15102f09e0280b6cc8628e42567a02a5bfdb879c3936aa0edf2758e"
+      "bytes": 1598,
+      "sha256": "6b9cfeef30ef384d7accb38f245987539db7ea9f96860f49c6335e8699aa926c"
     },
     {
       "path": "src/shared/wildcard-packs.ts",

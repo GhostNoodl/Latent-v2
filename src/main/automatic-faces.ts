@@ -15,11 +15,11 @@ export function automaticFaceDraft(record: GenerationRecord, detection: FaceDete
  const settings=record.draft.autoFace;
  if(!settings||!record.checkpoint||detection.source.originGenerationId!==record.id||detection.source.width!==record.width||detection.source.height!==record.height) throw Error('The face refinement source does not match its saved image.');
  return draftSchema.parse({...DEFAULT_DRAFT,family:record.draft.family,checkpointId:record.checkpoint.id,
-  loras:record.loras.map(l=>({modelId:l.id,weight:l.weight,clipWeight:l.clipWeight})),assetHashes:Object.fromEntries([record.checkpoint,...record.loras].filter(a=>a.sha256).map(a=>[a.id,a.sha256])),
+  loras:(settings.applyLoras===false?[]:record.loras).map(l=>({modelId:l.id,weight:l.weight,clipWeight:l.clipWeight})),assetHashes:Object.fromEntries([record.checkpoint,...(settings.applyLoras===false?[]:record.loras)].filter(a=>a.sha256).map(a=>[a.id,a.sha256])),
   prompt:record.resolvedPrompt,negativePrompt:record.dynamicPromptRecipe?.negative.resolved??record.draft.negativePrompt,
-  autoTriggers:false,triggerWords:Object.fromEntries(record.loras.map(l=>[l.id,[]])),width:512,height:512,steps:20,cfg:record.draft.cfg,sampler:record.draft.sampler,scheduler:record.draft.scheduler,
+  autoTriggers:false,triggerWords:Object.fromEntries(record.loras.map(l=>[l.id,[]])),width:512,height:512,steps:settings.steps??20,cfg:settings.cfg??record.draft.cfg,sampler:settings.sampler??record.draft.sampler,scheduler:settings.scheduler??record.draft.scheduler,
   seed:record.actualSeed,autoFaceParentRecordId:record.id,variationOfRecordId:record.id,
-  faceDetailer:{request:{detectionId:detection.id,faceIds:detection.faces.map(f=>f.id),denoise:settings.strength,contextPadding:32,seed:record.actualSeed}}});
+  faceDetailer:{request:{...(settings.classic?{classic:true}:{}),detectionId:detection.id,faceIds:detection.faces.map(f=>f.id),denoise:settings.strength,contextPadding:32,seed:record.actualSeed}}});
 }
 /** Called serially by the queue. Durable child lineage repairs a crash between acceptance and parent bookkeeping. */
 export async function processAutomaticFace(deps:Dependencies):Promise<void> {

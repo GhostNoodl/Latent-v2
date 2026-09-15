@@ -222,10 +222,16 @@ export class FaceDetailerService {
     const { source } = await this.sources.resolve(receipt.source.id); const passes: FaceRefinementPlan['passes'] = [];
     for (const [index, face] of selected.entries()) {
       const { mask, path: filename } = await this.sources.resolveMask(face.mask.id); const decoded = PNG.sync.read(await fs.promises.readFile(filename), { checkCRC: true });
-      const { plan: crop } = await createCropInpaintPlan({ source, mask, maskRed: redMaskFromRgba(decoded.data, decoded.width, decoded.height), working: { width: 512, height: 512 }, settings: { mode: 'refine', contextPadding: request.contextPadding }, denoise: request.denoise });
+      const padding = request.classic ? Math.min(2048, Math.ceil(Math.max(face.box.width, face.box.height) * .85)) : request.contextPadding;
+      const { plan: crop } = await createCropInpaintPlan({ source, mask, maskRed: redMaskFromRgba(decoded.data, decoded.width, decoded.height), working: { width: 512, height: 512 }, settings: { mode: 'refine', contextPadding: padding }, denoise: request.denoise });
+      if (request.classic) {
+        const scale = Math.min(512 / Math.min(face.box.width, face.box.height), 1024 / Math.max(crop.crop.width, crop.crop.height));
+        crop.working.width = Math.max(256, Math.min(1024, Math.ceil(crop.crop.width * scale / 64) * 64));
+        crop.working.height = Math.max(256, Math.min(1024, Math.ceil(crop.crop.height * scale / 64) * 64));
+      }
       passes.push({ faceId: face.id, seed: seeds[index], crop });
     }
-    return faceRefinementPlanSchema.parse({ version: 'sdxl-face-refinement@1', detectionId: receipt.id, source: receipt.source, passes, inputSequence: 'previous-composite-in-original-coordinates', preservation: 'original-zero-union-mask-pixels-and-alpha' });
+    return faceRefinementPlanSchema.parse({ ...(request.classic ? {classic:true} : {}), version: 'sdxl-face-refinement@1', detectionId: receipt.id, source: receipt.source, passes, inputSequence: 'previous-composite-in-original-coordinates', preservation: 'original-zero-union-mask-pixels-and-alpha' });
   }
   async dispose() { this.disposed = true; await Promise.all([this.cancelSetup(), this.cancelDetection()]); }
 }

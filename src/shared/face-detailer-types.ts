@@ -32,6 +32,7 @@ export interface FaceDetailerStatus {
 }
 /** Main resolves the saved receipt and face IDs; renderer coordinates are never accepted. */
 export const faceRefinementRequestSchema = z.object({
+  classic: z.boolean().optional(),
   detectionId: z.string().uuid(), faceIds: z.array(z.string().uuid()).min(1).max(4),
   denoise: z.number().finite().min(0).max(1), contextPadding: z.number().int().min(0).max(512),
   seed: z.string().max(32).refine(value => value === 'random' || /^\d+$/.test(value) && BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER), 'Use random or an integer seed between 0 and 9007199254740991.'),
@@ -40,6 +41,7 @@ export type FaceRefinementRequest = z.infer<typeof faceRefinementRequestSchema>;
 
 const seed = z.string().max(32).regex(/^\d+$/).refine(value => BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER));
 export const faceRefinementPlanSchema = z.object({
+  classic: z.boolean().optional(),
   version: z.literal('sdxl-face-refinement@1'), detectionId: z.string().uuid(),
   source: z.object({ id: z.string().regex(/^src_[0-9a-f-]{36}$/), sha256: z.string().regex(/^[a-f0-9]{64}$/), width: z.number().int().positive().max(8192), height: z.number().int().positive().max(8192), originGenerationId: z.string().regex(/^[a-f0-9]{32}$/).optional() }).strict(),
   passes: z.array(z.object({ faceId: z.string().uuid(), seed, crop: cropInpaintPlanSchema }).strict()).min(1).max(4),
@@ -48,6 +50,6 @@ export const faceRefinementPlanSchema = z.object({
   const fail = (message: string) => context.addIssue({ code: 'custom', message });
   if (plan.source.width * plan.source.height > 4194304) fail('Face refinement supports source canvases up to 4 megapixels.');
   if (new Set(plan.passes.map(pass => pass.faceId)).size !== plan.passes.length || new Set(plan.passes.map(pass => pass.crop.mask.id)).size !== plan.passes.length) fail('Each face and mask must appear once in a refinement plan.');
-  for (const pass of plan.passes) if (pass.crop.source.id !== plan.source.id || pass.crop.source.sha256 !== plan.source.sha256 || pass.crop.source.width !== plan.source.width || pass.crop.source.height !== plan.source.height || pass.crop.working.width !== 512 || pass.crop.working.height !== 512 || pass.crop.settings.mode !== 'refine') fail('Face passes require the original source, 512 square working crops, and refine mode.');
+  for (const pass of plan.passes) if (pass.crop.source.id !== plan.source.id || pass.crop.source.sha256 !== plan.source.sha256 || pass.crop.source.width !== plan.source.width || pass.crop.source.height !== plan.source.height || (plan.classic ? Math.max(pass.crop.working.width, pass.crop.working.height) > 1024 : pass.crop.working.width !== 512 || pass.crop.working.height !== 512) || pass.crop.settings.mode !== 'refine') fail('Face passes require the original source, 512 square working crops, and refine mode.');
 });
 export type FaceRefinementPlan = z.infer<typeof faceRefinementPlanSchema>;

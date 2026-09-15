@@ -10,7 +10,7 @@ const seed = z.string().regex(/^(random|\d+)$/).refine(value => value === 'rando
 const settingsSchema = z.object({ mode: z.enum(['resize', 'learned']), width: pixelDimension, height: pixelDimension, resize: z.enum(['stretch', 'center-crop']) }).strict();
 export type LatentHiresWorkflowVersion = 'sdxl-hires-latent@1' | 'sdxl-hires-latent@2';
 const latentHiresVersion = z.enum(['sdxl-hires-latent@1', 'sdxl-hires-latent@2']);
-const hiresSchema = z.object({ workflowVersion: latentHiresVersion.optional(), scaleFactor: z.number().min(1.01).max(4).optional(), method: z.enum(['latent', 'image']), interpolation: z.enum(['nearest-exact', 'bilinear', 'area', 'bicubic']).optional(), width: pixelDimension.min(64).multipleOf(8), height: pixelDimension.min(64).multipleOf(8), steps: z.number().int().min(1).max(100), cfg: z.number().finite().min(0).max(30), sampler: z.string().refine(value => SAMPLERS.includes(value)), scheduler: z.string().refine(value => SCHEDULERS.includes(value)), denoise: z.number().finite().min(0).max(1), seed }).strict();
+const hiresSchema = z.object({ classic: z.boolean().optional(), workflowVersion: latentHiresVersion.optional(), scaleFactor: z.number().min(1.01).max(4).optional(), method: z.enum(['latent', 'image']), interpolation: z.enum(['nearest-exact', 'bilinear', 'area', 'bicubic']).optional(), width: pixelDimension.min(64).multipleOf(8), height: pixelDimension.min(64).multipleOf(8), steps: z.number().int().min(1).max(100), cfg: z.number().finite().min(0).max(30), sampler: z.string().refine(value => SAMPLERS.includes(value)), scheduler: z.string().refine(value => SCHEDULERS.includes(value)), denoise: z.number().finite().min(0).max(1), seed }).strict();
 export function restoreHiresSettings(settings: HiresFixSettings, recordedVersion: string): HiresFixSettings {
   if (settings.method === 'latent') {
     const version = latentHiresVersion.parse(recordedVersion);
@@ -25,8 +25,14 @@ export function editHiresSettings(settings: HiresFixSettings, change: Partial<Hi
   return { ...structuredClone(settings), ...(change.method && change.method !== settings.method ? { interpolation: undefined } : {}), ...change, workflowVersion: undefined };
 }
 /** Deliberate presets preserve size and seed while changing only the refinement strategy. */
-export function applyHiresPreset(settings: HiresFixSettings, preset: 'gentle' | 'resize'): HiresFixSettings {
-  return editHiresSettings(settings, { method: 'image', interpolation: undefined, denoise: preset === 'resize' ? 0 : 0.2, sampler: 'dpmpp_2m', scheduler: 'karras', steps: 20 });
+export function applyHiresPreset(settings: HiresFixSettings, preset: 'classic' | 'gentle' | 'resize'): HiresFixSettings {
+  if (preset === 'classic') return editHiresSettings(settings, { classic: true, method: 'latent', interpolation: 'nearest-exact', denoise: .5, sampler: 'euler', scheduler: 'simple', steps: 15, seed: 'random' });
+  return editHiresSettings(settings, { classic: false, method: 'image', interpolation: undefined, denoise: preset === 'resize' ? 0 : 0.2, sampler: 'dpmpp_2m', scheduler: 'karras', steps: 20 });
+}
+export function resolveClassicHires(settings: HiresFixSettings, draft: Pick<GenerationDraft, 'width'|'height'|'cfg'>, actualSeed: string): HiresFixSettings {
+  if (!settings.classic) return settings;
+  const scale = Math.max(settings.width / draft.width, settings.height / draft.height);
+  return { ...settings, cfg: draft.cfg, seed: actualSeed, denoise: scale > 1.5 ? Math.min(settings.denoise, Math.round(Math.max(.3, .6 - (scale - 1.5) * .4) * 1000) / 1000) : settings.denoise };
 }
 /** Scale both axes together; rounding down to latent pixels keeps the area within budget. */
 export function suggestedHiresDimensions(width: number, height: number): { width: number; height: number } {
