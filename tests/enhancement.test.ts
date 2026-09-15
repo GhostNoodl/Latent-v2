@@ -26,3 +26,12 @@ it('uses current model choices explicitly when the saved image has no checkpoint
  const current={...DEFAULT_DRAFT,checkpointId:checkpoint.id,assetHashes:{[checkpoint.id]:checkpoint.sha256!}};
  const d=prepareEnhancement({...parent,checkpoint:undefined},source,current,1,.2);expect(d.checkpointId).toBe(checkpoint.id);expect(d.assetHashes).toEqual(current.assetHashes);
 });
+
+it('leaves Enhance on source removal or workflow changes, preserving ordinary edits and explicit recipe restores',async()=>{
+ const {reconcileEnhancementChange}=await import('../src/shared/enhancement');const prior=prepared();
+ for(const patch of [{imageInput:undefined},{hiresFix:{width:2048}},{upscale:{mode:'resize'}},{imageInput:{...prior.imageInput!,mode:'inpaint'}},{imageInput:{...prior.imageInput!,sourceId:'different'}}] as Partial<typeof prior>[]){const next={...prior,...reconcileEnhancementChange(prior,patch)};expect(next.enhance).toBeUndefined();expect(next.variationOfRecordId).toBeUndefined();expect(next.prompt).toBe(prior.prompt);expect(next.checkpointId).toBe(prior.checkpointId);}
+ expect(reconcileEnhancementChange(prior,{prompt:'edited'})).toEqual({prompt:'edited'});
+ expect(reconcileEnhancementChange(prior,{imageInput:{...prior.imageInput!,denoise:.4}}).enhance).toBeUndefined();
+ expect(Object.hasOwn(reconcileEnhancementChange(prior,{imageInput:{...prior.imageInput!,denoise:.4}}),'enhance')).toBe(false);
+ expect(reconcileEnhancementChange(prior,prior)).toBe(prior);
+});

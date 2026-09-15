@@ -140,3 +140,11 @@ Real Windows Recycle Bin removal used only tiny disposable test model files. The
 The full 292-test suite passed before the mutex fix; 21 focused runtime and model-maintenance tests and a production compilation passed afterward. Separate native Windows checks exercised both the configuration helper and launcher against unowned, abandoned and live-owner mutexes. All owned GPU test processes were stopped. See [Microsoft's mutex documentation](https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexw) for the distinction between named-object existence and ownership.
 
 Remaining release proof: packaged candidate startup/icon checks, actual 0.1.1-to-0.2.0 upgrade with preserved studio data, and the new updater's real installer handoff. Hyper-V was unavailable through the host management interface during this pass. Source/native payload assembly and an installer do not substitute for that VM test. Qwen optimization is deferred.
+
+## Candidate follow-up: exit Enhance
+
+A reported draft retained Enhance after its source was removed. Create now clears that mode when the user removes/replaces the source or switches to an incompatible workflow. Explicit saved-recipe restores stay unchanged. Exit Enhance is also available beside Generate, outside the scrolling settings panel, including for already-stuck drafts; prompt/model settings are preserved.
+
+Face-refinement outcomes were previously folded into queue summaries. They now have a separate queue line, and skipped/failed results appear under the selected original preview. The current detector is unchanged: the reported furry generations were skipped because no face was detected, not successfully refined.
+
+Validation: 16 focused enhancement and automatic-face tests passed, plus production compilation. A hidden actual-app check restored a source-less Enhance draft, scrolled the sidebar to the bottom, used the visible exit, and verified persisted removal of Enhance/source lineage while preserving the prompt, negative prompt and hires settings. A corrected candidate supersedes the earlier 0.2.0 installer; the earlier VM disc still contains the original candidate.

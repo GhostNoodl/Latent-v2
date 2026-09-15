@@ -40,3 +40,12 @@ export function buildEnhancementWorkflow(workflow:ComfyWorkflow,draft:Generation
  result[node]={class_type:'LatentUpscale',inputs:{samples:['4',0],upscale_method:'bislerp',width:draft.width,height:draft.height,crop:'disabled'}};
  result['5'].inputs.latent_image=[node,0];return result;
 }
+
+/** Editing a source/workflow deliberately leaves Enhance; saved recipes are not rewritten. */
+export function reconcileEnhancementChange(previous:GenerationDraft, change:Partial<GenerationDraft>):Partial<GenerationDraft> {
+ if(!previous.enhance || Object.hasOwn(change,'enhance'))return change;
+ const input=change.imageInput;
+ const sourceChanged=Object.hasOwn(change,'imageInput') && (!input || input.mode!=='img2img' || input.sourceId!==previous.imageInput?.sourceId || input.sourceSha256!==previous.imageInput?.sourceSha256);
+ if(!sourceChanged&&!change.hiresFix&&!change.upscale&&!change.qwenEdit&&!change.faceDetailer)return change;
+ return {...change,enhance:undefined,variationOfRecordId:undefined};
+}
