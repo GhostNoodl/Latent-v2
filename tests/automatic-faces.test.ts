@@ -50,3 +50,8 @@ it('strips hires, enhancement and variation engines from the child and pins mode
 });
 
 it('marks removed outputs finished without repeatedly scanning or queueing them',async()=>{const f=fixture();f.records.length=0;await processAutomaticFace(f.deps);expect(f.parent.autoFaceFinished).toBe(true);expect(f.deps.enqueue).not.toHaveBeenCalled();await processAutomaticFace(f.deps);expect(f.deps.save).toHaveBeenCalledTimes(1);});
+
+it('uses the original-detector threshold for automatic illustrated faces',async()=>{
+ const f=fixture();f.parent.draft.autoFace!.profile='illustrated';f.record.draft.autoFace!.profile='illustrated';
+ await processAutomaticFace(f.deps);expect(f.deps.detect).toHaveBeenCalledWith(expect.objectContaining({profile:'illustrated',confidence:.5}));expect(f.deps.enqueue).toHaveBeenCalledTimes(1);
+});

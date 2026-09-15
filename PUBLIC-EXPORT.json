@@ -68,18 +68,18 @@
     },
     {
       "path": "src/main/face-detailer-geometry.ts",
-      "bytes": 6979,
-      "sha256": "433b6adc11b7b11455df48226ef7fcc3c864690c7a12996a82c229ca0b89bdda"
+      "bytes": 7135,
+      "sha256": "90bf1f898094be5e300c85258a58ef5e4b980fcb593f94a974cb7ee7f3afa0a3"
     },
     {
       "path": "src/main/face-detailer-release.ts",
-      "bytes": 1247,
-      "sha256": "f92628e7f141c5de742d49acee509c372e9ae7fdda0e176699352701c6ff9acf"
+      "bytes": 1946,
+      "sha256": "d6d02db022361a30d2dd004d2bbdea99d926b199ed2e0ab8f66d5384bc374d09"
     },
     {
       "path": "src/main/face-detailer.ts",
-      "bytes": 24885,
-      "sha256": "7763dfea4959a3ffb91f255a5e189b2f3e4664e295b74fe845bb50c576c52305"
+      "bytes": 25855,
+      "sha256": "7be077add6a7b5c2c3da7a775c335aa77e966232ea0f9ff332a3675db768b465"
     },
     {
       "path": "src/main/hardware-profile-evidence.ts",
@@ -283,8 +283,8 @@
     },
     {
       "path": "src/main/storage-catalog.ts",
-      "bytes": 10953,
-      "sha256": "8827a599660d11efa74ee987033206cd1437854619f941d4f67052d1a051e64b"
+      "bytes": 11191,
+      "sha256": "d32461e16e7879b378943f31a6baf86c4f052832ed0f0e5a7f57dece25149d4f"
     },
     {
       "path": "src/main/storage-locations.ts",
@@ -363,8 +363,8 @@
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
-      "bytes": 9387,
-      "sha256": "fb163aee01eb800ee42e245f6eeb4479aaba5e50606aa1efb1d4e3196b45f09b"
+      "bytes": 10133,
+      "sha256": "41b54795a42b806e27bbcd51eeb1b8b2f8c62c9855d70731a03348e81944e6ad"
     },
     {
       "path": "src/renderer/App.tsx",
@@ -438,8 +438,8 @@
     },
     {
       "path": "src/renderer/FaceDetailerControls.tsx",
-      "bytes": 13623,
-      "sha256": "541c7f9548f3bbc58e6a998658dd25febd9b0af6ad44e2b4f45456999bf4ae84"
+      "bytes": 13769,
+      "sha256": "b2632a2cf02b846902d1b60566b4d888596f1057cf664d4910204cdd2c7b5e8d"
     },
     {
       "path": "src/renderer/FaceDetailerEditor.tsx",
@@ -693,8 +693,8 @@
     },
     {
       "path": "src/shared/advanced-image-workflow.ts",
-      "bytes": 16751,
-      "sha256": "316d3efe86407778494fbb7cbdc66b73f493a441ab6fde6025672dd4a843f993"
+      "bytes": 17228,
+      "sha256": "a9f1a3b322b540a48cb4a964204c8819472aba82446da0b578948bd6ec5573cd"
     },
     {
       "path": "src/shared/assistant-conversation.ts",
@@ -768,8 +768,8 @@
     },
     {
       "path": "src/shared/face-detailer-types.ts",
-      "bytes": 4857,
-      "sha256": "8d11c363ebb316f6461298faabe8cde0a72256104b101b0a8826fa4bd900e157"
+      "bytes": 4968,
+      "sha256": "411746bb4b4b5fd381d817b2157dc46827050a1cb434ace107d4b37eeec2ce5e"
     },
     {
       "path": "src/shared/face-detailer-workflow.ts",
@@ -913,13 +913,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 18460,
-      "sha256": "918865207fe5e49dee1a65dfc61a145e8f599620e9f0451280350af9d18ff36a"
+      "bytes": 18476,
+      "sha256": "079b2a04a27f699c395cea8145810dbba7c89d3905043dd98378beeb28fa5fde"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 7722,
-      "sha256": "b189d1e78ac8ed90f051942a5d61f713224ca52dab00277e886c2cc401d4d3f8"
+      "bytes": 7736,
+      "sha256": "5e0798c5dfcf4d3a1a1a9a0c893a54ff90e9854737c1a95918a40ab98596a7aa"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -968,13 +968,13 @@
     },
     {
       "path": "resources/face-detailer-NOTICES.txt",
-      "bytes": 1745,
-      "sha256": "ee71009b84f2f9f9d3b72d786d11f336cfa99034ce2efeec3e3330837b315c6d"
+      "bytes": 37376,
+      "sha256": "945899d47c8c9f01c4eb49f97aa8b47c3afd0b84f8b2fb05a2660f5582b45db7"
     },
     {
       "path": "resources/face-detailer-worker.py",
-      "bytes": 6512,
-      "sha256": "b576a4901306d503ff2377678f382697770a42781761b005ae9a9cf014e6f0eb"
+      "bytes": 9710,
+      "sha256": "14d94ce8ffdbaccf863683f1150a351cfc104bcb55512508cdf74ef6321bfb8b"
     },
     {
       "path": "resources/latent-icon-NOTICES.txt",
@@ -1138,8 +1138,8 @@
     },
     {
       "path": "tests/face-detailer.test.ts",
-      "bytes": 11123,
-      "sha256": "ceceb839429843853c8e7f33b2fbe46dddf5fd2b2916aa1876e01c7c34fd8676"
+      "bytes": 12800,
+      "sha256": "ec45cff87c17b25c547439367763b4946b1f121ad96c3e5cf1aab8c9a4030d29"
     },
     {
       "path": "tests/runtime-identity.test.ts",
@@ -1303,13 +1303,13 @@
     },
     {
       "path": "tests/create-update.test.tsx",
-      "bytes": 4564,
-      "sha256": "5f552db3e38305051afa0530d5bf5b16caf89ea94f542d81550a6bff5e1da093"
+      "bytes": 6946,
+      "sha256": "e104807ab092642893e79fd36a733ba3484af3abd900ee8d3ec4392022676377"
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 24310,
-      "sha256": "3e1624b0f8d34ca036b09770cbaad9d9264127034cdcdb8b9bb800f116eda2d2"
+      "bytes": 26425,
+      "sha256": "eebbb202c0d90a630290865b681d2281b23e03c5482e222fda77927a5f86b958"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1398,23 +1398,23 @@
     },
     {
       "path": "src/main/automatic-faces.ts",
-      "bytes": 4135,
-      "sha256": "3dc65486043641ecf945c9142d1ce4a5d1b521ce97e8deb974115ada99d45689"
+      "bytes": 4184,
+      "sha256": "f831aed038e1aaf79c54032325d43f1c8b9c80c4e790179b9b1fb417c3b2aa75"
     },
     {
       "path": "src/renderer/AutomaticFaceControls.tsx",
-      "bytes": 1671,
-      "sha256": "d1d594b307150b23681a498639d33f330e18141714ed2f5262eca468641e76cd"
+      "bytes": 1748,
+      "sha256": "1c52db19b3309ac84156fd0d8ad2a5fe16b58a48a6d307ffed9df38ecf181788"
     },
     {
       "path": "tests/automatic-faces.test.ts",
-      "bytes": 6796,
-      "sha256": "2ef1ab03b90bc86b54dab42ccfef1169ba12d0df7fbe99b545889cce5227b78d"
+      "bytes": 7192,
+      "sha256": "e05c9d09a3920ae0c9cb46e51c7f2fcff147608ee4579ed1ec3346d51d63ce72"
     },
     {
       "path": "tests/automatic-face-controls.test.tsx",
-      "bytes": 1462,
-      "sha256": "a6b54b68a3e97d0c607f2c23576545632aebf6f2b66e464e959306a95268a446"
+      "bytes": 1468,
+      "sha256": "5534c47860f20c239e4c4f168d5aaabac74d5f6e21a92712321c36eaeca4e6cb"
     },
     {
       "path": "src/shared/wildcard-packs.ts",

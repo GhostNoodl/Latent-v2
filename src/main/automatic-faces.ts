@@ -36,7 +36,7 @@ export async function processAutomaticFace(deps:Dependencies):Promise<void> {
    if(!deps.ready()||deps.stopped())return;
    try {
     const source=await deps.source(record);if(deps.stopped()||!deps.ready())return;
-    const detection=await deps.detect({sourceId:source.id,sourceSha256:source.normalized.sha256,profile:parent.draft.autoFace.profile,maxFaces:4,confidence:.7,expansion:.15,feather:12});
+    const detection=await deps.detect({sourceId:source.id,sourceSha256:source.normalized.sha256,profile:parent.draft.autoFace.profile,maxFaces:4,confidence:parent.draft.autoFace.profile==='illustrated'?.5:.7,expansion:.15,feather:12});
     if(deps.stopped())return;
     if(detection.source.id!==source.id||detection.source.sha256!==source.normalized.sha256||detection.source.originGenerationId!==record.id)throw Error('Face detection returned a different source.');
     if(!detection.faces.length){save({state:'skipped',message:'No face found; original kept.'});return;}

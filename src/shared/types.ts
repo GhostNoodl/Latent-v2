@@ -46,7 +46,7 @@ export interface ModelAsset {
 }
 export interface LoraSelection { modelId: string; weight: number; clipWeight: number; }
 export interface GenerationDraft {
-  autoFace?: { profile: 'anime' | 'photographic'; strength: number };
+  autoFace?: { profile: 'illustrated' | 'anime' | 'photographic'; strength: number };
   autoFaceParentRecordId?: string;
   enhance?: { parentRecordId: string };
   faceDetailer?: { request: FaceRefinementRequest; frozen?: FaceRefinementPlan };

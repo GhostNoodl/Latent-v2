@@ -117,3 +117,24 @@ describe('private wheel extraction', () => {
     await expect(extractFaceWheel(file, destination, new AbortController().signal)).rejects.toThrow('unsafe');
   });
 });
+
+
+it('maps scored illustrated faces without requiring human landmarks', () => {
+  const yolo = { ...request, profile: 'illustrated' as const, confidence: 0.5 };
+  const detected = raw(1000, 700, [{ frame: 0, box, score: 0.85 }], 'illustrated');
+  expect(mapFaceDetections(detected, 1000, 700, yolo).faces[0]).toEqual({ box: { x: 156, y: 187, width: 126, height: 157 }, score: 0.85 });
+  expect(() => mapFaceDetections(detected, 1000, 700, { ...yolo, confidence: 0.9 })).toThrow('confidence');
+  expect(() => mapFaceDetections(raw(1000, 700, [{ frame: 0, box }], 'illustrated'), 1000, 700, yolo)).toThrow('confidence');
+});
+
+it('reopens illustrated receipts and creates refinement crops, rejecting altered detector identity', async () => {
+  const source=await sourceFixture();
+  vi.spyOn(service as any,'verifyInstallation').mockResolvedValue('b'.repeat(64));
+  vi.spyOn(service as any,'runWorker').mockResolvedValue(raw(256,128,[{frame:0,box:{x:15,y:15,width:60,height:70},score:.85}],'illustrated'));
+  const receipt=await service.detect({...request,profile:'illustrated',confidence:.5,sourceId:source.id,sourceSha256:source.normalized.sha256});
+  expect(await service.getDetection(receipt.id)).toEqual(receipt);
+  const plan=await service.createRefinementPlan({detectionId:receipt.id,faceIds:receipt.faces.map(f=>f.id),denoise:.3,contextPadding:32,seed:'42'},['42']);
+  expect(plan.passes).toHaveLength(1);expect(plan.source.sha256).toBe(source.normalized.sha256);
+  store.setState(`face.detection:${receipt.id}`,{...receipt,detector:{...receipt.detector,yoloWheelSha256:'c'.repeat(64)}});
+  await expect(service.getDetection(receipt.id)).rejects.toThrow('provenance');
+});

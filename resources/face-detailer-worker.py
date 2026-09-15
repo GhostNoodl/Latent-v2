@@ -6,6 +6,7 @@ import hashlib
 import threading
 import time
 import math
+import contextlib
 from pathlib import Path
 
 ROOT = Path(sys.argv[1]).resolve()
@@ -84,13 +85,13 @@ def main():
     if image is None or image.shape[:2] != (height, width):
         raise RuntimeError("The source dimensions do not match the saved image.")
     profile = request["profile"]
-    if profile not in ("anime", "photographic"):
+    if profile not in ("illustrated", "anime", "photographic"):
         raise RuntimeError("Unknown face detector profile.")
     confidence = request["confidence"]
     if not isinstance(confidence, (float, int)) or not math.isfinite(confidence) or not 0.1 <= confidence <= 0.99:
         raise RuntimeError("Invalid face detection threshold.")
     frames = []
-    for side in ([640] if profile == "anime" else [320, 640]):
+    for side in ([320, 640] if profile == "photographic" else [640]):
         scale = min(1, side / max(width, height))
         frame = {"width": max(1, math.floor(width * scale + 0.5)), "height": max(1, math.floor(height * scale + 0.5))}
         if frame not in frames:
@@ -101,16 +102,64 @@ def main():
         detector = cv.CascadeClassifier(str(MODEL))
         if detector.empty():
             raise RuntimeError("The anime cascade could not be loaded.")
+    elif profile == "illustrated":
+        # Only the publisher-pinned face checkpoint above is accepted. Never load user pickles.
+        # Inference imports the model architecture only, not training, plotting or package setup.
+        config = ROOT / "cache" / "face-detailer" / "yolo"
+        for directory in (ROOT / "cache" / "face-detailer", config, config / "Ultralytics"):
+            if directory.exists():
+                checked_path(directory)
+            else:
+                checked_path(directory.parent)
+                directory.mkdir()
+        settings_file = config / "Ultralytics" / "settings.json"
+        if settings_file.exists():
+            checked_path(settings_file)
+        os.environ.update(YOLO_CONFIG_DIR=str(config), YOLO_OFFLINE="true", YOLO_AUTOINSTALL="false", YOLO_VERBOSE="false", CUDA_VISIBLE_DEVICES="-1")
+        def offline(event, args):
+            if event in ("socket.connect", "socket.getaddrinfo", "subprocess.Popen"):
+                raise RuntimeError("The face detector cannot connect to a network or install packages.")
+        sys.addaudithook(offline)
+        with contextlib.redirect_stdout(sys.stderr):
+            import torch
+            import ultralytics
+            from ultralytics.nn.tasks import DetectionModel
+            if ultralytics.__version__ != "8.4.104" or not Path(ultralytics.__file__).resolve().is_relative_to(VENDOR):
+                raise RuntimeError("The private detector imported an unexpected YOLO build.")
+            torch.set_num_threads(2)
+            detector = torch.load(MODEL, map_location="cpu", weights_only=False)["model"].float().eval()
     else:
         detector = cv.FaceDetectorYN.create(str(MODEL), "", (320, 320), float(confidence), 0.3, 5000, cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_TARGET_CPU)
     for frame_index, frame in enumerate(frames):
         size = (frame["width"], frame["height"])
-        resized = image if size == (width, height) else cv.resize(image, size, interpolation=cv.INTER_AREA)
+        resized = image if size == (width, height) else cv.resize(image, size, interpolation=cv.INTER_LINEAR if profile == "illustrated" else cv.INTER_AREA)
         if profile == "anime":
             gray = cv.equalizeHist(cv.cvtColor(resized, cv.COLOR_BGR2GRAY))
             boxes = detector.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(24, 24))
             for x, y, w, h in boxes:
                 candidates.append({"frame": frame_index, "box": {"x": int(x), "y": int(y), "width": int(w), "height": int(h)}})
+        elif profile == "illustrated":
+            # A fixed square input and centered 114 padding match the original YOLO preprocessing.
+            left, top = (640 - size[0]) // 2, (640 - size[1]) // 2
+            padded = np.full((640, 640, 3), 114, dtype=np.uint8)
+            padded[top:top + size[1], left:left + size[0]] = resized
+            tensor = torch.from_numpy(np.ascontiguousarray(padded[:, :, ::-1].transpose(2, 0, 1))).float().unsqueeze(0) / 255
+            with torch.inference_mode(), contextlib.redirect_stdout(sys.stderr):
+                rows = detector(tensor)[0][0].T.numpy()
+            if rows.shape != (8400, 5) or not np.isfinite(rows).all():
+                raise RuntimeError("YOLO returned an unexpected face prediction layout.")
+            boxes, scores = [], []
+            for x, y, w, h, score in rows:
+                if float(score) < confidence:
+                    continue
+                x, y = float(x - w / 2 - left), float(y - h / 2 - top)
+                if w <= 0 or h <= 0 or x >= size[0] or y >= size[1] or x + w <= 0 or y + h <= 0:
+                    continue
+                boxes.append([x, y, float(w), float(h)])
+                scores.append(float(score))
+            for index in cv.dnn.NMSBoxes(boxes, scores, float(confidence), 0.3):
+                x, y, w, h = boxes[int(index)]
+                candidates.append({"frame": frame_index, "box": {"x": x, "y": y, "width": w, "height": h}, "score": scores[int(index)]})
         else:
             detector.setInputSize(size)
             _, faces = detector.detect(resized)

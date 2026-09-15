@@ -22,7 +22,11 @@ export function restoreHiresSettings(settings: HiresFixSettings, recordedVersion
 }
 /** A deliberate edit to hires settings chooses the current authored workflow. */
 export function editHiresSettings(settings: HiresFixSettings, change: Partial<HiresFixSettings>): HiresFixSettings {
-  return { ...structuredClone(settings), ...change, workflowVersion: undefined };
+  return { ...structuredClone(settings), ...(change.method && change.method !== settings.method ? { interpolation: undefined } : {}), ...change, workflowVersion: undefined };
+}
+/** Deliberate presets preserve size and seed while changing only the refinement strategy. */
+export function applyHiresPreset(settings: HiresFixSettings, preset: 'gentle' | 'resize'): HiresFixSettings {
+  return editHiresSettings(settings, { method: 'image', interpolation: undefined, denoise: preset === 'resize' ? 0 : 0.2, sampler: 'dpmpp_2m', scheduler: 'karras', steps: 20 });
 }
 /** Scale both axes together; rounding down to latent pixels keeps the area within budget. */
 export function suggestedHiresDimensions(width: number, height: number): { width: number; height: number } {

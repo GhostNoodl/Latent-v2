@@ -3,12 +3,12 @@ import { cropInpaintPlanSchema } from './crop-inpaint-types';
 import type { SourceMaskAsset } from './source-types';
 
 export const FACE_DETAILER_LIMITS = Object.freeze({ maxPixels: 4194304, maxSide: 8192, maxFaces: 4, workingSide: 512, maxCandidates: 128 });
-export const FACE_PROFILE_LABELS = { anime: 'Anime / manga · LBP', photographic: 'Photographic · YuNet' } as const;
+export const FACE_PROFILE_LABELS = { illustrated: 'Illustration / furry · YOLO', anime: 'Anime / manga · LBP', photographic: 'Photographic · YuNet' } as const;
 export type FaceDetectorProfile = keyof typeof FACE_PROFILE_LABELS;
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 export const faceDetectionRequestSchema = z.object({
   sourceId: z.string().regex(/^src_[0-9a-f-]{36}$/), sourceSha256: hash,
-  profile: z.enum(['anime', 'photographic']), maxFaces: z.number().int().min(1).max(4),
+  profile: z.enum(['illustrated', 'anime', 'photographic']), maxFaces: z.number().int().min(1).max(4),
   confidence: z.number().finite().min(0.1).max(0.99), expansion: z.number().finite().min(0).max(0.5), feather: z.number().int().min(0).max(32),
 }).strict();
 export type FaceDetectionRequest = z.infer<typeof faceDetectionRequestSchema>;
@@ -22,8 +22,8 @@ export interface DetectedFace {
 export interface FaceDetectionReceipt {
   version: 'face-detection@1'; id: string; createdAt: string;
   request: FaceDetectionRequest; source: { id: string; sha256: string; width: number; height: number; originGenerationId?: string };
-  detector: { profile: FaceDetectorProfile; modelSha256: string; codeRevision: string; opencv: '4.13.0'; wheelSha256: string; workerSha256: string; device: 'cpu' };
-  preprocessing: { version: 'opencv-area-bgr-multiscale@1'; frames: Array<{ width: number; height: number; scaleX: number; scaleY: number }>; nmsIoU: 0.3; animeMinNeighbors: 5; animeMinSize: 24 };
+  detector: { profile: FaceDetectorProfile; modelSha256: string; codeRevision: string; opencv: '4.13.0'; wheelSha256: string; yoloWheelSha256?: string; workerSha256: string; device: 'cpu' };
+  preprocessing: { version: 'opencv-area-bgr-multiscale@1' | 'yolo-letterbox-rgb@1'; frames: Array<{ width: number; height: number; scaleX: number; scaleY: number }>; nmsIoU: 0.3; animeMinNeighbors: 5; animeMinSize: 24 };
   faces: DetectedFace[]; candidateCount: number; omittedCount: number; durationMs: number;
 }
 export interface FaceDetailerStatus {

@@ -61,7 +61,7 @@ export class FaceDetailerService {
   constructor(private paths: AppPaths, private store: StudioStore, private changed: () => void, sources?: SourceImageService) {
     this.files = faceDetailerPaths(paths); this.sources = sources ?? new SourceImageService(paths, store); this.validatePaths();
     const installed = Boolean(this.installation());
-    this.current = { state: installed ? 'ready' : 'not-installed', message: installed ? 'CPU face detection is installed. Review each detected region before refining.' : 'Optional CPU face detection: approximately 41 MB, kept inside this studio.', device: 'cpu', experimental: true, logTail: [] };
+    this.current = { state: installed ? 'ready' : 'not-installed', message: installed ? 'CPU face detection is installed. Review each detected region before refining.' : fs.existsSync(this.files.marker) ? 'A face detector update is available, including illustration / furry detection. Run setup to update.' : 'Optional CPU face detection: approximately 94 MB, kept inside this studio.', device: 'cpu', experimental: true, logTail: [] };
   }
   status(): FaceDetailerStatus { return structuredClone(this.current); }
   private update(patch: Partial<FaceDetailerStatus>) { this.current = { ...this.current, ...patch }; this.changed(); }
@@ -110,15 +110,15 @@ export class FaceDetailerService {
     const disk = await fs.promises.statfs(this.paths.root); if (disk.bavail * disk.bsize < 512 * 1024 * 1024) throw new Error('Face-detector setup needs at least 512 MiB free for verified extraction.');
     for (const directory of [this.files.root, this.files.models, this.files.cache]) { this.assertPrivate(directory); await fs.promises.mkdir(directory, { recursive: true }); }
     this.update({ state: 'installing', message: 'Downloading and verifying the CPU detector bundle…', installProgress: 0 });
-    const assets = [FACE_DETAILER_RELEASE.wheel, FACE_DETAILER_RELEASE.anime, FACE_DETAILER_RELEASE.photographic]; let receivedBefore = 0; const total = assets.reduce((n, a) => n + a.bytes, 0);
+    const assets = [FACE_DETAILER_RELEASE.wheel, FACE_DETAILER_RELEASE.yoloWheel, FACE_DETAILER_RELEASE.anime, FACE_DETAILER_RELEASE.photographic, FACE_DETAILER_RELEASE.illustrated]; let receivedBefore = 0; const total = assets.reduce((n, a) => n + a.bytes, 0);
     const downloaded: string[] = [];
     for (const asset of assets) {
-      if (repair) await preserveChangedReviewedAsset(this.paths, path.join(asset === FACE_DETAILER_RELEASE.wheel ? this.files.cache : this.files.models, asset.filename), asset, signal);
-      downloaded.push(await downloadAssistantAsset(asset, asset === FACE_DETAILER_RELEASE.wheel ? this.files.cache : this.files.models, signal, (received, _total, verifying) => this.update({ installProgress: (receivedBefore + received) / total * 90, message: `${verifying ? 'Verifying' : 'Downloading'} ${asset.filename}…` })));
+      if (repair) await preserveChangedReviewedAsset(this.paths, path.join((asset === FACE_DETAILER_RELEASE.wheel || asset === FACE_DETAILER_RELEASE.yoloWheel) ? this.files.cache : this.files.models, asset.filename), asset, signal);
+      downloaded.push(await downloadAssistantAsset(asset, (asset === FACE_DETAILER_RELEASE.wheel || asset === FACE_DETAILER_RELEASE.yoloWheel) ? this.files.cache : this.files.models, signal, (received, _total, verifying) => this.update({ installProgress: (receivedBefore + received) / total * 90, message: `${verifying ? 'Verifying' : 'Downloading'} ${asset.filename}…` })));
       receivedBefore += asset.bytes;
     }
     signal.throwIfAborted(); const stage = path.join(this.files.root, `vendor-stage-${randomUUID()}`); await fs.promises.mkdir(stage);
-    await extractFaceWheel(downloaded[0], stage, signal); const inventory = await this.inventory(stage, signal);
+    await extractFaceWheel(downloaded[0], stage, signal); await extractFaceWheel(downloaded[1], stage, signal); const inventory = await this.inventory(stage, signal);
     if (!inventory['cv2/__init__.py'] || !Object.keys(inventory).some(name => name.endsWith('LICENSE.txt'))) throw new Error('The extracted OpenCV package or license notice is missing.');
     signal.throwIfAborted();
     if (fs.existsSync(this.files.vendor)) { this.assertPrivate(this.files.vendor); await fs.promises.rename(this.files.vendor, `${this.files.vendor}.previous-${randomUUID()}`); }
@@ -134,7 +134,7 @@ export class FaceDetailerService {
     this.validatePaths(); const marker = this.installation(); if (!marker) throw new Error('Install the CPU face detector before detecting faces.');
     const actual = await this.inventory(this.files.vendor, signal);
     if (Object.keys(actual).length !== Object.keys(marker.files).length || Object.entries(marker.files).some(([name, hash]) => actual[name] !== hash)) throw new Error('The CPU detector package changed. Run setup to restore its reviewed files.');
-    for (const asset of [FACE_DETAILER_RELEASE.anime, FACE_DETAILER_RELEASE.photographic]) {
+    for (const asset of [FACE_DETAILER_RELEASE.anime, FACE_DETAILER_RELEASE.photographic, FACE_DETAILER_RELEASE.illustrated]) {
       const filename = path.join(this.files.models, asset.filename); this.assertPrivate(filename); const stat = await fs.promises.lstat(filename);
       if (!stat.isFile() || stat.nlink !== 1 || stat.size !== asset.bytes || await assistantHash(filename, signal) !== asset.sha256) throw new Error('The face detector model changed. Its original file was preserved.');
     }
@@ -162,8 +162,8 @@ export class FaceDetailerService {
     const receipt: FaceDetectionReceipt = {
       version: 'face-detection@1', id: randomUUID(), createdAt: new Date().toISOString(), request: structuredClone(request),
       source: { id: source.id, sha256: source.normalized.sha256, width, height, ...(source.originGenerationId ? { originGenerationId: source.originGenerationId } : {}) },
-      detector: { profile: request.profile, modelSha256: FACE_DETAILER_RELEASE[request.profile].sha256, codeRevision: FACE_DETAILER_RELEASE[request.profile].revision, opencv: FACE_DETAILER_RELEASE.opencv, wheelSha256: FACE_DETAILER_RELEASE.wheel.sha256, workerSha256, device: 'cpu' },
-      preprocessing: { version: 'opencv-area-bgr-multiscale@1', frames: mapped.frames, nmsIoU: 0.3, animeMinNeighbors: 5, animeMinSize: 24 }, faces: [], candidateCount: mapped.candidateCount, omittedCount: mapped.omittedCount, durationMs: mapped.durationMs,
+      detector: { profile: request.profile, modelSha256: FACE_DETAILER_RELEASE[request.profile].sha256, codeRevision: FACE_DETAILER_RELEASE[request.profile].revision, opencv: FACE_DETAILER_RELEASE.opencv, wheelSha256: FACE_DETAILER_RELEASE.wheel.sha256, ...(request.profile === 'illustrated' ? { yoloWheelSha256: FACE_DETAILER_RELEASE.yoloWheel.sha256 } : {}), workerSha256, device: 'cpu' },
+      preprocessing: { version: request.profile === 'illustrated' ? 'yolo-letterbox-rgb@1' : 'opencv-area-bgr-multiscale@1', frames: mapped.frames, nmsIoU: 0.3, animeMinNeighbors: 5, animeMinSize: 24 }, faces: [], candidateCount: mapped.candidateCount, omittedCount: mapped.omittedCount, durationMs: mapped.durationMs,
     };
     // Cancellation is deferred during these atomic, immutable saves; cancel waits for the complete receipt.
     for (const { face, mask: preparedMask } of prepared) {
@@ -202,16 +202,16 @@ export class FaceDetailerService {
     if (!receipt || receipt.id !== id || receipt.version !== 'face-detection@1' || !Array.isArray(receipt.faces) || receipt.faces.length > 4) throw new Error('This saved face detection is missing or invalid.');
     faceDetectionRequestSchema.parse(receipt.request); const { source } = await this.sources.resolve(receipt.source.id);
     if (receipt.source.id !== receipt.request.sourceId || source.normalized.sha256 !== receipt.request.sourceSha256 || source.normalized.sha256 !== receipt.source.sha256 || source.normalized.width !== receipt.source.width || source.normalized.height !== receipt.source.height) throw new Error('The saved face detection no longer matches its source.');
-    if (receipt.source.originGenerationId !== source.originGenerationId || receipt.detector.profile !== receipt.request.profile || receipt.detector.modelSha256 !== FACE_DETAILER_RELEASE[receipt.request.profile].sha256 || receipt.detector.codeRevision !== FACE_DETAILER_RELEASE[receipt.request.profile].revision || receipt.detector.opencv !== FACE_DETAILER_RELEASE.opencv || receipt.detector.wheelSha256 !== FACE_DETAILER_RELEASE.wheel.sha256 || !/^[a-f0-9]{64}$/.test(receipt.detector.workerSha256) || receipt.detector.device !== 'cpu') throw new Error('The saved face detector provenance is inconsistent.');
+    if (receipt.source.originGenerationId !== source.originGenerationId || receipt.detector.profile !== receipt.request.profile || receipt.detector.modelSha256 !== FACE_DETAILER_RELEASE[receipt.request.profile].sha256 || receipt.detector.codeRevision !== FACE_DETAILER_RELEASE[receipt.request.profile].revision || receipt.detector.yoloWheelSha256 !== (receipt.request.profile === 'illustrated' ? FACE_DETAILER_RELEASE.yoloWheel.sha256 : undefined) || receipt.detector.opencv !== FACE_DETAILER_RELEASE.opencv || receipt.detector.wheelSha256 !== FACE_DETAILER_RELEASE.wheel.sha256 || !/^[a-f0-9]{64}$/.test(receipt.detector.workerSha256) || receipt.detector.device !== 'cpu') throw new Error('The saved face detector provenance is inconsistent.');
     const frames = detectionFrames(receipt.source.width, receipt.source.height, receipt.request.profile).map(frame => ({ ...frame, scaleX: receipt.source.width / frame.width, scaleY: receipt.source.height / frame.height }));
-    if (JSON.stringify(receipt.preprocessing) !== JSON.stringify({ version: 'opencv-area-bgr-multiscale@1', frames, nmsIoU: 0.3, animeMinNeighbors: 5, animeMinSize: 24 }) || !Number.isFinite(receipt.durationMs) || receipt.durationMs < 0 || !Number.isSafeInteger(receipt.omittedCount) || receipt.omittedCount < 0 || !Number.isSafeInteger(receipt.candidateCount) || receipt.candidateCount < receipt.faces.length || receipt.faces.length > receipt.request.maxFaces || new Set(receipt.faces.map(face => face.id)).size !== receipt.faces.length) throw new Error('The saved face detector receipt is inconsistent.');
+    if (JSON.stringify(receipt.preprocessing) !== JSON.stringify({ version: receipt.request.profile === 'illustrated' ? 'yolo-letterbox-rgb@1' : 'opencv-area-bgr-multiscale@1', frames, nmsIoU: 0.3, animeMinNeighbors: 5, animeMinSize: 24 }) || !Number.isFinite(receipt.durationMs) || receipt.durationMs < 0 || !Number.isSafeInteger(receipt.omittedCount) || receipt.omittedCount < 0 || !Number.isSafeInteger(receipt.candidateCount) || receipt.candidateCount < receipt.faces.length || receipt.faces.length > receipt.request.maxFaces || new Set(receipt.faces.map(face => face.id)).size !== receipt.faces.length) throw new Error('The saved face detector receipt is inconsistent.');
     for (const face of receipt.faces) {
       z.string().uuid().parse(face.id);
       const { mask } = await this.sources.resolveMask(face.mask.id);
       if (mask.sha256 !== face.mask.sha256 || mask.sourceId !== source.id || mask.sourceSha256 !== source.normalized.sha256) throw new Error('A saved face mask no longer matches its source or pixels.');
       const rebuilt = createFaceMask(source.normalized.width, source.normalized.height, face.box, receipt.request.expansion, receipt.request.feather);
       if (JSON.stringify(rebuilt.geometry) !== JSON.stringify(face.maskGeometry) || createHash('sha256').update(rebuilt.png).digest('hex') !== mask.sha256) throw new Error('The face mask no longer matches its recorded detector geometry.');
-      if (receipt.request.profile === 'anime' && (face.score !== undefined || face.landmarks !== undefined) || receipt.request.profile === 'photographic' && (typeof face.score !== 'number' || !Number.isFinite(face.score) || face.score < receipt.request.confidence || face.score > 1 || !Array.isArray(face.landmarks) || face.landmarks.length !== 5 || face.landmarks.some(point => !Number.isFinite(point.x) || !Number.isFinite(point.y) || point.x < 0 || point.y < 0 || point.x >= source.normalized.width || point.y >= source.normalized.height))) throw new Error('The saved detector scores or landmarks are invalid.');
+      if (receipt.request.profile === 'illustrated' && (typeof face.score !== 'number' || !Number.isFinite(face.score) || face.score < receipt.request.confidence || face.score > 1 || face.landmarks !== undefined) || receipt.request.profile === 'anime' && (face.score !== undefined || face.landmarks !== undefined) || receipt.request.profile === 'photographic' && (typeof face.score !== 'number' || !Number.isFinite(face.score) || face.score < receipt.request.confidence || face.score > 1 || !Array.isArray(face.landmarks) || face.landmarks.length !== 5 || face.landmarks.some(point => !Number.isFinite(point.x) || !Number.isFinite(point.y) || point.x < 0 || point.y < 0 || point.x >= source.normalized.width || point.y >= source.normalized.height))) throw new Error('The saved detector scores or landmarks are invalid.');
     }
     return structuredClone(receipt);
   }

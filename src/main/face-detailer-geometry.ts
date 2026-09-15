@@ -14,7 +14,7 @@ export interface MappedFace { box: FaceBox; score?: number; landmarks?: FaceLand
 export function detectionFrames(width: number, height: number, profile: FaceDetectionRequest['profile']) {
   if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1 || width > 8192 || height > 8192 || width * height > FACE_DETAILER_LIMITS.maxPixels) throw new Error('Face refinement currently supports sources up to 4 megapixels and 8192 pixels per side.');
   const frames: Array<{ width: number; height: number }> = [];
-  for (const side of profile === 'anime' ? [640] : [320, 640]) {
+  for (const side of profile === 'photographic' ? [320, 640] : [640]) {
     const scale = Math.min(1, side / Math.max(width, height));
     const frame = { width: Math.max(1, Math.floor(width * scale + 0.5)), height: Math.max(1, Math.floor(height * scale + 0.5)) };
     if (!frames.some(other => other.width === frame.width && other.height === frame.height)) frames.push(frame);
@@ -30,7 +30,7 @@ export function mapFaceDetections(value: unknown, width: number, height: number,
   if (result.width !== width || result.height !== height || JSON.stringify(result.frames) !== JSON.stringify(expectedFrames) || result.candidateCount < result.candidates.length) throw new Error('The face detector returned a different source or preprocessing layout.');
   const mapped: MappedFace[] = result.candidates.map(candidate => {
     const frame = result.frames[candidate.frame]; if (!frame) throw new Error('The face detector returned an unknown scale.');
-    if (request.profile === 'anime' && (candidate.score !== undefined || candidate.landmarks) || request.profile === 'photographic' && (candidate.score === undefined || candidate.score < request.confidence || !candidate.landmarks)) throw new Error('The face detector returned incompatible profile confidence or landmarks.');
+    if (request.profile === 'illustrated' && (candidate.score === undefined || candidate.score < request.confidence || candidate.landmarks !== undefined) || request.profile === 'anime' && (candidate.score !== undefined || candidate.landmarks) || request.profile === 'photographic' && (candidate.score === undefined || candidate.score < request.confidence || !candidate.landmarks)) throw new Error('The face detector returned incompatible profile confidence or landmarks.');
     const scaleX = width / frame.width; const scaleY = height / frame.height; const b = candidate.box;
     if (b.x >= frame.width || b.y >= frame.height || b.x + b.width <= 0 || b.y + b.height <= 0) throw new Error('The face detector returned a box outside the image.');
     const left = Math.max(0, Math.floor(b.x * scaleX)); const top = Math.max(0, Math.floor(b.y * scaleY));
