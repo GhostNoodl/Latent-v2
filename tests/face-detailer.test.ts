@@ -149,6 +149,22 @@ it('reopens illustrated receipts and creates refinement crops, rejecting altered
   expect(nodes.some(n=>n.class_type==='EmptyImage')).toBe(true);
   expect(Object.values(make(plan).workflow).some(n=>n.class_type==='EmptyImage')).toBe(false);
   expect(Math.max(classic.passes[0].crop.working.width,classic.passes[0].crop.working.height)).toBeLessThanOrEqual(1024);
+  const { JobService } = await import('../src/main/jobs');
+  const { resolvePrompt } = await import('../src/shared/workflow');
+  const asset={id:draft.checkpointId,kind:'checkpoint',family:draft.family,filename:'test.safetensors',status:'ready'} as any;
+  for (const frozen of [plan,classic]) {
+    const request={...(frozen.classic?{classic:true}:{}),detectionId:receipt.id,faceIds:receipt.faces.map(f=>f.id),denoise:frozen.passes[0].crop.settings.denoise,contextPadding:32,seed:'42'};
+    const job={id:'test',actualSeed:'42',draft:{...draft,seed:'42',faceDetailer:{request,frozen}}};
+    const input={plan:frozen,sourceFilename:`source-images/${source.id}/${source.normalizedStoredSeparately?'image.png':'original.png'}`,maskFilenames:Object.fromEntries(frozen.passes.map(p=>[p.crop.mask.id,`source-images/${p.crop.mask.id}/mask.png`]))};
+    const generated=buildFaceRefinementWorkflow(buildWorkflow(job.draft,[asset],'42','test'),job.draft,input);
+    const context={checkpoint:asset,loras:[],resolvedPrompt:resolvePrompt(job.draft,[asset]),workflowVersion:frozen.version,workflow:generated.workflow,faceDetailer:{plan:frozen,source,detection:receipt,outputs:generated.outputs}};
+    const validate=(j=job,c=context)=>(JobService.prototype as any).frozenFaceRecipe.call({},j,c);
+    expect(()=>validate()).not.toThrow();
+    const wrongPadding=structuredClone(context);wrongPadding.faceDetailer.plan.passes[0].crop.settings.contextPadding+=1;
+    const alteredJob=structuredClone(job);alteredJob.draft.faceDetailer.frozen=wrongPadding.faceDetailer.plan;
+    expect(()=>validate(alteredJob,wrongPadding)).toThrow();
+    expect(()=>validate({...job,draft:{...job.draft,faceDetailer:{...job.draft.faceDetailer,request:{...request,classic:!frozen.classic}}}})).toThrow('refinement settings');
+  }
   const legacy = {...receipt, preprocessing: {...receipt.preprocessing, version: 'yolo-letterbox-rgb@1' as const, frames: receipt.preprocessing.frames.slice(0,1)}};
   store.setState(`face.detection:${receipt.id}`, legacy);
   expect(await service.getDetection(receipt.id)).toEqual(legacy);

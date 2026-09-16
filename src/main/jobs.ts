@@ -42,7 +42,7 @@ import { augmentIPAdapterWorkflow, validateIPAdapterCapabilities } from '../shar
 import type { IPAdapterService } from './ipadapter';
 import { generationPhase } from '../shared/generation-phase';
 import type { FaceDetailerService } from './face-detailer';
-import { faceRefinementRequestSchema } from '../shared/face-detailer-types';
+import { faceContextPadding, faceRefinementRequestSchema } from '../shared/face-detailer-types';
 import { buildFaceRefinementWorkflow, faceRefinementPlanSchema, validateFaceRefinementCapabilities, validateFrozenFaceRefinementWorkflow, type FaceRefinementOutput } from '../shared/face-detailer-workflow';
 import { isVideoJob } from '../shared/types';
 import type { VideoDraft } from '../shared/video-types';
@@ -699,7 +699,7 @@ export class JobService {
     if (seed === 'random' || request.seed !== seed || job.draft.seed !== seed || JSON.stringify(plan) !== JSON.stringify(authored.frozen) || plan.detectionId !== request.detectionId || context.workflowVersion !== plan.version || JSON.stringify(faceSeeds(seed, plan.passes.length)) !== JSON.stringify(plan.passes.map(pass => pass.seed))) throw new Error('The saved face seed or frozen plan is inconsistent.');
     if (saved.source.id !== plan.source.id || saved.source.normalized.sha256 !== plan.source.sha256 || saved.source.normalized.width !== plan.source.width || saved.source.normalized.height !== plan.source.height || JSON.stringify(saved.detection.source) !== JSON.stringify(plan.source) || saved.detection.id !== plan.detectionId) throw new Error('The saved face source or detection identity is inconsistent.');
     const selected = saved.detection.faces.filter(face => request.faceIds.includes(face.id));
-    if (selected.length !== request.faceIds.length || selected.length !== plan.passes.length || plan.passes.some((pass, index) => pass.faceId !== selected[index].id || pass.crop.mask.id !== selected[index].mask.id || pass.crop.mask.sha256 !== selected[index].mask.sha256 || pass.crop.settings.contextPadding !== request.contextPadding || pass.crop.settings.denoise !== request.denoise)) throw new Error('The saved face order, mask or refinement settings are inconsistent.');
+    if (Boolean(plan.classic) !== Boolean(request.classic) || selected.length !== request.faceIds.length || selected.length !== plan.passes.length || plan.passes.some((pass, index) => pass.faceId !== selected[index].id || pass.crop.mask.id !== selected[index].mask.id || pass.crop.mask.sha256 !== selected[index].mask.sha256 || pass.crop.settings.contextPadding !== faceContextPadding(request, selected[index].box) || pass.crop.settings.denoise !== request.denoise)) throw new Error('The saved face order, mask or refinement settings are inconsistent.');
     const sourceFilename = `source-images/${saved.source.id}/${saved.source.normalizedStoredSeparately ? 'image.png' : 'original.png'}`;
     const maskFilenames = Object.fromEntries(plan.passes.map(pass => [pass.crop.mask.id, `source-images/${pass.crop.mask.id}/mask.png`]));
     const resolved = { ...job.draft, prompt: context.dynamicPromptRecipe?.positive.resolved ?? job.draft.prompt, negativePrompt: context.dynamicPromptRecipe?.negative.resolved ?? job.draft.negativePrompt };

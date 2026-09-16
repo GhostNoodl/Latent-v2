@@ -53,3 +53,8 @@ export const faceRefinementPlanSchema = z.object({
   for (const pass of plan.passes) if (pass.crop.source.id !== plan.source.id || pass.crop.source.sha256 !== plan.source.sha256 || pass.crop.source.width !== plan.source.width || pass.crop.source.height !== plan.source.height || (plan.classic ? Math.max(pass.crop.working.width, pass.crop.working.height) > 1024 : pass.crop.working.width !== 512 || pass.crop.working.height !== 512) || pass.crop.settings.mode !== 'refine') fail('Face passes require the original source, 512 square working crops, and refine mode.');
 });
 export type FaceRefinementPlan = z.infer<typeof faceRefinementPlanSchema>;
+
+/** Shared by plan creation and frozen-job validation. */
+export function faceContextPadding(request: Pick<FaceRefinementRequest, 'classic' | 'contextPadding'>, box: FaceBox): number {
+  return request.classic ? Math.min(2048, Math.ceil(Math.max(box.width, box.height) * .85)) : request.contextPadding;
+}

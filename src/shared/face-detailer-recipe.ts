@@ -15,6 +15,6 @@ export function restoreFaceDraft(record: GenerationRecord): GenerationDraft {
 export function prepareFaceDraft(draft: GenerationDraft, input: FaceRefinementRequest): GenerationDraft {
   const request = faceRefinementRequestSchema.parse(input);
   const previous = draft.faceDetailer?.request;
-  const same = previous && previous.detectionId === request.detectionId && previous.seed === request.seed && previous.denoise === request.denoise && previous.contextPadding === request.contextPadding && [...previous.faceIds].sort().join() === [...request.faceIds].sort().join();
+  const same = previous && Boolean(previous.classic) === Boolean(request.classic) && previous.detectionId === request.detectionId && previous.seed === request.seed && previous.denoise === request.denoise && previous.contextPadding === request.contextPadding && [...previous.faceIds].sort().join() === [...request.faceIds].sort().join();
   return { ...structuredClone(draft), autoFace: undefined, autoFaceParentRecordId: undefined, width: 512, height: 512, batchSize: 1, seed: request.seed, faceDetailer: { request, ...(same && draft.faceDetailer?.frozen ? { frozen: structuredClone(draft.faceDetailer.frozen) } : {}) } };
 }

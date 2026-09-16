@@ -78,8 +78,8 @@
     },
     {
       "path": "src/main/face-detailer.ts",
-      "bytes": 26577,
-      "sha256": "390116e48f376b0e2ca073bbfab1b53210f9a4c3f8cffa7752dd25525bc738ad"
+      "bytes": 26517,
+      "sha256": "7bd170fb4bb332aa7d198156f8b5d11b628a5647c3ab5fefe613dac30346cd81"
     },
     {
       "path": "src/main/hardware-profile-evidence.ts",
@@ -108,8 +108,8 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 97635,
-      "sha256": "2b76358684aa57de97d7c1fdc8089dcdcc2ca8f0620d03707c4421e6be47f884"
+      "bytes": 97735,
+      "sha256": "727d5716dbe82f6a57b5f3ec507e3c2adca37229f6a958d04b00e483e1b9354c"
     },
     {
       "path": "src/main/main.ts",
@@ -763,13 +763,13 @@
     },
     {
       "path": "src/shared/face-detailer-recipe.ts",
-      "bytes": 2336,
-      "sha256": "be35f7f726a5ec0ef441af9ad5789a3a0fa7ead519006358bd351788582346e6"
+      "bytes": 2394,
+      "sha256": "74333d8bc53d63065c9fbfc31ed09fca62e21cad0dd09e9456e70f956e022c70"
     },
     {
       "path": "src/shared/face-detailer-types.ts",
-      "bytes": 5160,
-      "sha256": "02dceec6ad85b3e267c5d454efc09abb66e75a817ecd626d319e57249c9c1d50"
+      "bytes": 5471,
+      "sha256": "0565d70affb59468b62d27cccce8852ded997efe08741d785fe7c625bbaad4e4"
     },
     {
       "path": "src/shared/face-detailer-workflow.ts",
@@ -1138,8 +1138,8 @@
     },
     {
       "path": "tests/face-detailer.test.ts",
-      "bytes": 15243,
-      "sha256": "a51ddb34ad6cf11a21001f7ee7f5d810b04e00802e55376629d4da9b443fdbdc"
+      "bytes": 17057,
+      "sha256": "d82ca20deec0a6b5d72c30a821c2037ceb34c28f92e529171a5d411768f76491"
     },
     {
       "path": "tests/runtime-identity.test.ts",

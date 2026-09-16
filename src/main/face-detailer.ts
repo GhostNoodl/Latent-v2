@@ -7,7 +7,7 @@ import AdmZip from 'adm-zip';
 import { z } from 'zod';
 import { PNG } from 'pngjs';
 import type { AppPaths } from '../shared/types';
-import { faceDetectionRequestSchema, faceRefinementRequestSchema, type FaceDetectionRequest, type FaceDetectionReceipt, type FaceDetailerStatus, type FaceRefinementRequest } from '../shared/face-detailer-types';
+import { faceContextPadding, faceDetectionRequestSchema, faceRefinementRequestSchema, type FaceDetectionRequest, type FaceDetectionReceipt, type FaceDetailerStatus, type FaceRefinementRequest } from '../shared/face-detailer-types';
 import { createCropInpaintPlan, redMaskFromRgba } from '../shared/crop-inpaint-geometry';
 import { faceRefinementPlanSchema, type FaceRefinementPlan } from '../shared/face-detailer-workflow';
 import { FACE_DETAILER_RELEASE } from './face-detailer-release';
@@ -222,7 +222,7 @@ export class FaceDetailerService {
     const { source } = await this.sources.resolve(receipt.source.id); const passes: FaceRefinementPlan['passes'] = [];
     for (const [index, face] of selected.entries()) {
       const { mask, path: filename } = await this.sources.resolveMask(face.mask.id); const decoded = PNG.sync.read(await fs.promises.readFile(filename), { checkCRC: true });
-      const padding = request.classic ? Math.min(2048, Math.ceil(Math.max(face.box.width, face.box.height) * .85)) : request.contextPadding;
+      const padding = faceContextPadding(request, face.box);
       const { plan: crop } = await createCropInpaintPlan({ source, mask, maskRed: redMaskFromRgba(decoded.data, decoded.width, decoded.height), working: { width: 512, height: 512 }, settings: { mode: 'refine', contextPadding: padding }, denoise: request.denoise });
       if (request.classic) {
         const scale = Math.min(512 / Math.min(face.box.width, face.box.height), 1024 / Math.max(crop.crop.width, crop.crop.height));
