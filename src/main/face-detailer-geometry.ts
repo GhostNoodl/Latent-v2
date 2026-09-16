@@ -11,13 +11,13 @@ const workerResultSchema = z.object({
   candidateCount: z.number().int().min(0).max(100000), durationMs: finite.min(0).max(120000),
 }).strict();
 export interface MappedFace { box: FaceBox; score?: number; landmarks?: FaceLandmark[]; }
-export function detectionFrames(width: number, height: number, profile: FaceDetectionRequest['profile']) {
+export function detectionFrames(width: number, height: number, profile: FaceDetectionRequest['profile'], fallback = true) {
   if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1 || width > 8192 || height > 8192 || width * height > FACE_DETAILER_LIMITS.maxPixels) throw new Error('Face refinement currently supports sources up to 4 megapixels and 8192 pixels per side.');
   const frames: Array<{ width: number; height: number }> = [];
-  for (const side of profile === 'photographic' ? [320, 640] : [640]) {
+  for (const side of profile === 'photographic' ? [320, 640] : profile === 'illustrated' && fallback ? [640, 320] : [640]) {
     const scale = Math.min(1, side / Math.max(width, height));
     const frame = { width: Math.max(1, Math.floor(width * scale + 0.5)), height: Math.max(1, Math.floor(height * scale + 0.5)) };
-    if (!frames.some(other => other.width === frame.width && other.height === frame.height)) frames.push(frame);
+    if (profile === 'illustrated' && fallback || !frames.some(other => other.width === frame.width && other.height === frame.height)) frames.push(frame);
   }
   return frames;
 }

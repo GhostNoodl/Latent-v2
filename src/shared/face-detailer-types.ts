@@ -23,7 +23,7 @@ export interface FaceDetectionReceipt {
   version: 'face-detection@1'; id: string; createdAt: string;
   request: FaceDetectionRequest; source: { id: string; sha256: string; width: number; height: number; originGenerationId?: string };
   detector: { profile: FaceDetectorProfile; modelSha256: string; codeRevision: string; opencv: '4.13.0'; wheelSha256: string; yoloWheelSha256?: string; workerSha256: string; device: 'cpu' };
-  preprocessing: { version: 'opencv-area-bgr-multiscale@1' | 'yolo-letterbox-rgb@1'; frames: Array<{ width: number; height: number; scaleX: number; scaleY: number }>; nmsIoU: 0.3; animeMinNeighbors: 5; animeMinSize: 24 };
+  preprocessing: { version: 'opencv-area-bgr-multiscale@1' | 'yolo-letterbox-rgb@1' | 'yolo-letterbox-rgb-fallback@2'; frames: Array<{ width: number; height: number; scaleX: number; scaleY: number }>; nmsIoU: 0.3; animeMinNeighbors: 5; animeMinSize: 24 };
   faces: DetectedFace[]; candidateCount: number; omittedCount: number; durationMs: number;
 }
 export interface FaceDetailerStatus {

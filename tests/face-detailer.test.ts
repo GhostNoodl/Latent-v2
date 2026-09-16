@@ -149,6 +149,18 @@ it('reopens illustrated receipts and creates refinement crops, rejecting altered
   expect(nodes.some(n=>n.class_type==='EmptyImage')).toBe(true);
   expect(Object.values(make(plan).workflow).some(n=>n.class_type==='EmptyImage')).toBe(false);
   expect(Math.max(classic.passes[0].crop.working.width,classic.passes[0].crop.working.height)).toBeLessThanOrEqual(1024);
+  const legacy = {...receipt, preprocessing: {...receipt.preprocessing, version: 'yolo-letterbox-rgb@1' as const, frames: receipt.preprocessing.frames.slice(0,1)}};
+  store.setState(`face.detection:${receipt.id}`, legacy);
+  expect(await service.getDetection(receipt.id)).toEqual(legacy);
   store.setState(`face.detection:${receipt.id}`,{...receipt,detector:{...receipt.detector,yoloWheelSha256:'c'.repeat(64)}});
   await expect(service.getDetection(receipt.id)).rejects.toThrow('provenance');
+});
+
+
+it('maps the smaller illustrated fallback to original coordinates without lowering confidence', () => {
+  const req = { ...request, profile: 'illustrated' as const, confidence: .5 };
+  expect(detectionFrames(2048,1024,'illustrated')).toEqual([{width:640,height:320},{width:320,height:160}]);
+  const result = mapFaceDetections(raw(2048,1024,[{frame:1,box:{x:100,y:30,width:80,height:90},score:.83}],'illustrated'),2048,1024,req);
+  expect(result.faces[0].box).toEqual({x:640,y:192,width:512,height:576});
+  expect(() => mapFaceDetections(raw(2048,1024,[{frame:1,box,score:.49}],'illustrated'),2048,1024,req)).toThrow('confidence');
 });

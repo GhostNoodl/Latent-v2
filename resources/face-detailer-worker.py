@@ -91,10 +91,10 @@ def main():
     if not isinstance(confidence, (float, int)) or not math.isfinite(confidence) or not 0.1 <= confidence <= 0.99:
         raise RuntimeError("Invalid face detection threshold.")
     frames = []
-    for side in ([320, 640] if profile == "photographic" else [640]):
+    for side in ([320, 640] if profile == "photographic" else [640, 320] if profile == "illustrated" else [640]):
         scale = min(1, side / max(width, height))
         frame = {"width": max(1, math.floor(width * scale + 0.5)), "height": max(1, math.floor(height * scale + 0.5))}
-        if frame not in frames:
+        if profile == "illustrated" or frame not in frames:
             frames.append(frame)
     started = time.monotonic()
     candidates = []
@@ -131,6 +131,8 @@ def main():
     else:
         detector = cv.FaceDetectorYN.create(str(MODEL), "", (320, 320), float(confidence), 0.3, 5000, cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_TARGET_CPU)
     for frame_index, frame in enumerate(frames):
+        if profile == "illustrated" and frame_index == 1 and candidates:
+            break
         size = (frame["width"], frame["height"])
         resized = image if size == (width, height) else cv.resize(image, size, interpolation=cv.INTER_LINEAR if profile == "illustrated" else cv.INTER_AREA)
         if profile == "anime":
@@ -139,14 +141,15 @@ def main():
             for x, y, w, h in boxes:
                 candidates.append({"frame": frame_index, "box": {"x": int(x), "y": int(y), "width": int(w), "height": int(h)}})
         elif profile == "illustrated":
-            # A fixed square input and centered 114 padding match the original YOLO preprocessing.
-            left, top = (640 - size[0]) // 2, (640 - size[1]) // 2
-            padded = np.full((640, 640, 3), 114, dtype=np.uint8)
+            # Retry at 320 only if the normal 640 pass accepted no face.
+            side = 640 if frame_index == 0 else 320
+            left, top = (side - size[0]) // 2, (side - size[1]) // 2
+            padded = np.full((side, side, 3), 114, dtype=np.uint8)
             padded[top:top + size[1], left:left + size[0]] = resized
             tensor = torch.from_numpy(np.ascontiguousarray(padded[:, :, ::-1].transpose(2, 0, 1))).float().unsqueeze(0) / 255
             with torch.inference_mode(), contextlib.redirect_stdout(sys.stderr):
                 rows = detector(tensor)[0][0].T.numpy()
-            if rows.shape != (8400, 5) or not np.isfinite(rows).all():
+            if rows.shape != (sum((side // stride) ** 2 for stride in (8, 16, 32)), 5) or not np.isfinite(rows).all():
                 raise RuntimeError("YOLO returned an unexpected face prediction layout.")
             boxes, scores = [], []
             for x, y, w, h, score in rows:

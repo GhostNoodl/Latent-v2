@@ -68,8 +68,8 @@
     },
     {
       "path": "src/main/face-detailer-geometry.ts",
-      "bytes": 7135,
-      "sha256": "90bf1f898094be5e300c85258a58ef5e4b980fcb593f94a974cb7ee7f3afa0a3"
+      "bytes": 7246,
+      "sha256": "9472fc48ca21532de43071ba96d9c2388470316991a22a5665189e0f44d5e2b6"
     },
     {
       "path": "src/main/face-detailer-release.ts",
@@ -78,8 +78,8 @@
     },
     {
       "path": "src/main/face-detailer.ts",
-      "bytes": 26415,
-      "sha256": "b5310f778ae593c34b930fa4a48745b67585fd63acf2aa39848b866b573a8f3a"
+      "bytes": 26577,
+      "sha256": "390116e48f376b0e2ca073bbfab1b53210f9a4c3f8cffa7752dd25525bc738ad"
     },
     {
       "path": "src/main/hardware-profile-evidence.ts",
@@ -768,8 +768,8 @@
     },
     {
       "path": "src/shared/face-detailer-types.ts",
-      "bytes": 5126,
-      "sha256": "cd1d92cdde5ab28704abc69ec5ba15e27418fa23743eb320e2863f88b0202f95"
+      "bytes": 5160,
+      "sha256": "02dceec6ad85b3e267c5d454efc09abb66e75a817ecd626d319e57249c9c1d50"
     },
     {
       "path": "src/shared/face-detailer-workflow.ts",
@@ -973,8 +973,8 @@
     },
     {
       "path": "resources/face-detailer-worker.py",
-      "bytes": 9710,
-      "sha256": "14d94ce8ffdbaccf863683f1150a351cfc104bcb55512508cdf74ef6321bfb8b"
+      "bytes": 9951,
+      "sha256": "dc0c11cda73ff580bdcc1546f9bfc780f0056b28bc09e3ba86042776f2f24064"
     },
     {
       "path": "resources/latent-icon-NOTICES.txt",
@@ -1138,8 +1138,8 @@
     },
     {
       "path": "tests/face-detailer.test.ts",
-      "bytes": 14313,
-      "sha256": "13b78c865f63a0baaeee23c4d9704dda8a16730c1f1215a73a7c01827ed369a9"
+      "bytes": 15243,
+      "sha256": "a51ddb34ad6cf11a21001f7ee7f5d810b04e00802e55376629d4da9b443fdbdc"
     },
     {
       "path": "tests/runtime-identity.test.ts",
