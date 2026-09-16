@@ -11,7 +11,7 @@ const advancedDimension = z.number().int().min(1).max(4096);
 export const draftSchema = z.object({
   autoFace: z.object({profile:z.enum(['illustrated','anime','photographic']),strength:z.number().finite().min(.05).max(.8),classic:z.boolean().optional(),applyLoras:z.boolean().optional(),steps:z.number().int().min(1).max(100).optional(),cfg:z.number().min(0).max(30).optional(),sampler:z.enum(SAMPLERS as [string,...string[]]).optional(),scheduler:z.enum(SCHEDULERS as [string,...string[]]).optional()}).strict().optional(),
   autoFaceParentRecordId: z.string().regex(/^[a-f0-9]{32}$/).optional(),
-  enhance: z.object({standard:z.boolean().optional(),parentRecordId:z.string().regex(/^[a-f0-9]{32}$/)}).strict().optional(),
+  enhance: z.object({standard:z.boolean().optional(),method:z.literal('image').optional(),parentRecordId:z.string().regex(/^[a-f0-9]{32}$/)}).strict().optional(),
   faceDetailer: z.object({ request: faceRefinementRequestSchema, frozen: faceRefinementPlanSchema.optional() }).strict().optional(),
   ipAdapter: z.object({ settings: ipAdapterSettingsSchema, frozen: ipAdapterPlanSchema.optional() }).strict().optional(),
   regionalPrompts: z.object({ settings: regionalPromptSettingsSchema, frozen: regionalPromptPlanSchema.optional() }).strict().optional(),

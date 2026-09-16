@@ -363,8 +363,8 @@
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
-      "bytes": 8835,
-      "sha256": "a85148fc5fa63cdd60cf59adba6a6cf40ff18f0fe0710c3fa1860074f7582fd0"
+      "bytes": 8802,
+      "sha256": "38c989060069557aa73493c77003cdc4cb1c7762b3367c42760f9b10cab2b67c"
     },
     {
       "path": "src/renderer/App.tsx",
@@ -913,13 +913,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 18605,
-      "sha256": "c3664dfb30e57a0285944219e8c51eab05a14b45e59bd9b418cba7e012307a3f"
+      "bytes": 18623,
+      "sha256": "52570f272c134ff9106658d4628cddd8b08986942cd786a659670413d4a3d88e"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 8081,
-      "sha256": "16cbd9ab7ba8de69f3d9bf99f3b150bf7fb02e870e4bb9c9c3d54f9c8ad7db1c"
+      "bytes": 8118,
+      "sha256": "9e347e0f9e2361e194c42433c49a41b7bdbef5f637f74a0b4c5f07cd012f9a1b"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1224,7 +1224,7 @@
     {
       "path": "tests/app-history-dom.test.tsx",
       "bytes": 36007,
-      "sha256": "0f4f28282ce4f43eaaedec96bd22706e78a6d9f7c90971f4e5600b16eb642b23"
+      "sha256": "a1d660589e1ebdfd930621155442e8f3b26167eade933a4d5daa8204bcf90d27"
     },
     {
       "path": "scripts/third-party-notices.mjs",
@@ -1303,8 +1303,8 @@
     },
     {
       "path": "tests/create-update.test.tsx",
-      "bytes": 10024,
-      "sha256": "4d6a5c86446efca1813edefca8a7fed2e6cc9483c5eaba20b77246bf74d3e5b9"
+      "bytes": 11709,
+      "sha256": "c04bdd042e196770c130ca1cfb16821474676317021817506c7bb36bb6de12b8"
     },
     {
       "path": "docs/UPDATE-0.2.md",
@@ -1378,8 +1378,8 @@
     },
     {
       "path": "src/shared/enhancement.ts",
-      "bytes": 6355,
-      "sha256": "8096c75862b81ea03cf0234c278b179adb9502559674f47ffe50e1e62d6206b0"
+      "bytes": 6298,
+      "sha256": "bacea36d54363a49578c4cd4fccb9564883c003811482972027d1b6a7623212b"
     },
     {
       "path": "src/renderer/EnhanceDialog.tsx",
@@ -1388,8 +1388,8 @@
     },
     {
       "path": "tests/enhancement.test.ts",
-      "bytes": 6443,
-      "sha256": "1d933a326a9ce669585d89fa5e96316bed7b3a975012372dbd6f8f9c08f6da2d"
+      "bytes": 6932,
+      "sha256": "8328becd3b6ac8c5d18fd2cea8a4a15d15903dd92fd02b74554972a416c4d7ff"
     },
     {
       "path": "tests/enhance-dialog.test.tsx",

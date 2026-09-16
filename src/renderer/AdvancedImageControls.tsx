@@ -9,7 +9,7 @@ import { Field, Notice, Toggle, type RunAction } from './ui';
 export function AdvancedImageControls({ draft, snapshot, onChange, run }: { draft: GenerationDraft; snapshot: AppSnapshot; onChange: (change: Partial<GenerationDraft>) => void; run: RunAction }) {
   const hires = draft.hiresFix; const upscale = draft.upscale;
   const updateHires = (change: Partial<HiresFixSettings>) => { if (hires) onChange({ hiresFix: editHiresSettings(hires, { ...change, classic: true }) }); };
-  const enableHires = () => onChange({ upscale: undefined, hiresFix: { classic: true, method: 'latent', interpolation: 'nearest-exact', scaleFactor: suggestedHiresDimensions(draft.width, draft.height).width / draft.width >= 1.01 ? suggestedHiresDimensions(draft.width, draft.height).width / draft.width : undefined, ...suggestedHiresDimensions(draft.width, draft.height), steps: 15, cfg: draft.cfg, sampler: 'euler', scheduler: 'simple', denoise: 0.5, seed: 'random' } });
+  const enableHires = () => onChange({ upscale: undefined, hiresFix: { classic: true, method: 'image', scaleFactor: suggestedHiresDimensions(draft.width, draft.height).width / draft.width >= 1.01 ? suggestedHiresDimensions(draft.width, draft.height).width / draft.width : undefined, ...suggestedHiresDimensions(draft.width, draft.height), steps: 20, cfg: draft.cfg, sampler: 'euler', scheduler: 'simple', denoise: 0.3, seed: 'random' } });
   const source = snapshot.sourceImages.sources.find(source => source.id === draft.imageInput?.sourceId);
   return <section className="advanced-image-controls"><details open={Boolean(hires || upscale)}><summary>Upscale and refine</summary>
     <Toggle label="Resize or enhance a source" checked={Boolean(upscale)} onChange={enabled => {

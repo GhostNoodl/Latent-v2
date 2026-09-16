@@ -91,3 +91,24 @@ it('Classic hires links seed and CFG and protects larger scales without changing
  expect(resolveClassicHires(hires,base,'42')).toBe(hires);
  expect(applyHiresPreset(classic,'gentle').classic).toBe(false);
 });
+
+
+it('enables hires with candidate pixel resizing and encodes the resized base',async()=>{
+ const {AdvancedImageControls}=await import('../src/renderer/AdvancedImageControls');
+ const {buildWorkflow}=await import('../src/shared/workflow');
+ vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true);const host=document.createElement('div');document.body.append(host);const root=createRoot(host),change=vi.fn();
+ const draft={...DEFAULT_DRAFT,checkpointId:'checkpoint:test.safetensors'};
+ try{
+  await act(async()=>root.render(<AdvancedImageControls draft={draft} snapshot={{sourceImages:{sources:[]},faceDetailer:{state:'ready'}} as any} onChange={change} run={vi.fn()}/>));
+  const label=[...host.querySelectorAll('label')].find(l=>l.textContent?.includes('Hires fix'))!;
+  await act(async()=>(label.querySelector('input') as HTMLInputElement).click());
+  const settings=change.mock.calls[0][0].hiresFix;
+  expect(settings).toMatchObject({method:'image',denoise:.3,steps:20,sampler:'euler',scheduler:'simple'});
+  const base=buildWorkflow(draft,[{id:draft.checkpointId,kind:'checkpoint',family:draft.family,filename:'test.safetensors',status:'ready'}] as any,'42','candidate-test');
+  const graph=augmentHiresWorkflow(base,draft,settings,'42').workflow;
+  expect(Object.values(graph).some(n=>n.class_type==='LatentUpscale')).toBe(false);
+  const encode=Object.values(graph).find(n=>n.class_type==='VAEEncode')!;
+  const resize=graph[(encode.inputs.pixels as [string,number])[0]];
+  expect(resize).toMatchObject({class_type:'ImageScale',inputs:{upscale_method:'lanczos',image:['7',0]}});
+ }finally{await act(async()=>root.unmount());host.remove();vi.unstubAllGlobals();}
+});

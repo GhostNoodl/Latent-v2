@@ -302,7 +302,7 @@ it('one click queues the selected image with no settings dialog, draft replaceme
  await click(button('Upscale & refine'));expect(host.querySelector('[role="dialog"]')).toBeNull();
  expect(button('Queueing...').disabled).toBe(true);await click(button('Queueing...'));expect(api.useOutputAsSource).toHaveBeenCalledTimes(1);
  await act(async()=>waiting.release());expect(api.queueGeneration).toHaveBeenCalledTimes(1);
- const queued=vi.mocked(api.queueGeneration!).mock.calls[0][0];expect(queued).toMatchObject({prompt:first.resolvedPrompt,seed:first.actualSeed,steps:15,sampler:'euler',scheduler:'simple',enhance:{parentRecordId:first.id,standard:true}});
+ const queued=vi.mocked(api.queueGeneration!).mock.calls[0][0];expect(queued).toMatchObject({prompt:first.resolvedPrompt,seed:first.actualSeed,steps:20,sampler:'euler',scheduler:'simple',enhance:{parentRecordId:first.id,standard:true}});
  expect(host.querySelector('.queue-panel')).toBeNull();expect(host.querySelector<HTMLTextAreaElement>('#prompt')!.value).toBe(authored().prompt);
  await closeAndCancel();expect(savedDraft.prompt).toBe(authored().prompt);
 });
