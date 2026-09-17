@@ -48,3 +48,11 @@ it('refuses changed bytes and occupied destinations',async()=>{
  await expect(f.locations.deleteModel({modelId:f.asset.id,expectedSha256:f.asset.sha256!},async()=>{recycled=true;})).rejects.toThrow();expect(recycled).toBe(false);
  expect(await fs.stat(occupied)).toBeTruthy();
 });
+
+it('imports NoobAI as an Illustrious-family SDXL derivative despite a generic architecture header',async()=>{
+ const f=await fixture();const file=path.join(f.root,'NoobAI-XL-v1.safetensors');
+ const header=Buffer.from(JSON.stringify({__metadata__:{'modelspec.architecture':'stable-diffusion-xl-v1-base'},weight:{dtype:'F32',shape:[1],data_offsets:[0,4]}})),length=Buffer.alloc(8);length.writeBigUInt64LE(BigInt(header.length));
+ await fs.writeFile(file,Buffer.concat([length,header,Buffer.alloc(4)]));
+ await f.models.importFiles([file],'checkpoint');
+ expect(f.models.assets.find(a=>a.filename==='NoobAI-XL-v1.safetensors')).toMatchObject({family:'illustrious',status:'ready'});
+});

@@ -104,9 +104,9 @@ describe('exact compatible Civitai acquisition', () => {
     expect(fetchMock.mock.calls.map(call => call[1].headers.Authorization)).toEqual(['Bearer synthetic-secret', 'Bearer synthetic-secret']);
     expect(JSON.stringify([...metadata.values()])).not.toContain('synthetic-secret'); expect(JSON.stringify(models.downloads)).not.toContain('synthetic-secret');
   });
-  it.each(['SDXL Turbo', 'SDXL 1.0 LCM', 'SDXL Lightning', 'SDXL Hyper', 'Pony', 'NoobAI'])('blocks incompatible current workflow %s', async base => {
-    const raw = rawModel(); raw.modelVersions[0].baseModel = base; fetchMock.mockResolvedValue(json(raw));
-    await expect(catalog().download(selected)).rejects.toThrow(/workflow|unsupported/); expect(fetchMock).toHaveBeenCalledTimes(1); expect(models.assets).toEqual([]);
+  it.each(['SDXL Turbo', 'SDXL 1.0 LCM', 'SDXL Lightning', 'SDXL Hyper', 'Pony', 'NoobAI'])('downloads SDXL-derived workflow %s', async base => {
+    const raw = rawModel(); raw.modelVersions[0].baseModel = base; fetchMock.mockResolvedValueOnce(json(raw)).mockResolvedValueOnce(weights());
+    await catalog().download(selected); expect(models.assets).toHaveLength(1); expect(models.assets[0].family).toBe(base==='NoobAI'?'illustrious':'sdxl');
   });
   it('rejects checkpoint subtype uncertainty, early access and changed IDs before downloading', async () => {
     const service = catalog(); const checkpoint = rawModel(); checkpoint.type = 'Checkpoint'; checkpoint.modelVersions[0].baseModelType = 'Inpainting';

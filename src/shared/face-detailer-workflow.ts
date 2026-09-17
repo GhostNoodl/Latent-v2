@@ -55,7 +55,7 @@ export function buildFaceRefinementWorkflow(baseline: ComfyWorkflow, draft: Gene
     if (!final) previous = [add('SplitImageWithAlpha', { image: [nodeId, 0] }), 0];
   }
   if (plan.passes.every(pass => pass.crop.settings.denoise === 0)) {
-    for (const [id, node] of Object.entries(graph)) if (['CheckpointLoaderSimple', 'LoraLoader', 'CLIPTextEncode'].includes(node.class_type)) delete graph[id];
+    for (const [id, node] of Object.entries(graph)) if (['CheckpointLoaderSimple', 'LoraLoader', 'CLIPTextEncode', 'ModelSamplingDiscrete'].includes(node.class_type)) delete graph[id];
   }
   return { workflow: graph, workflowVersion: 'sdxl-face-refinement@1' as const, plan, outputs };
 }

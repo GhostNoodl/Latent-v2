@@ -67,6 +67,7 @@ export interface GenerationDraft {
   height: number;
   steps: number;
   cfg: number;
+  modelSampling?: { prediction: 'eps' | 'v_prediction' | 'lcm' | 'x0'; zeroTerminalSnr: boolean };
   sampler: string;
   scheduler: string;
   seed: string;

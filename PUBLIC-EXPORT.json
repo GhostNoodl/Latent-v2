@@ -23,8 +23,8 @@
     },
     {
       "path": "src/main/civitai-catalog.ts",
-      "bytes": 12091,
-      "sha256": "7516e7c9b5fd049dad4c9e7a31666bf155ca6e49df4394fa6070960ba5c9fe31"
+      "bytes": 11602,
+      "sha256": "e38eb3488afbe23ee89ac17104fe6d4ca048edcd3f3bc23c382c8054b28c6a00"
     },
     {
       "path": "src/main/civitai-transfer.ts",
@@ -33,8 +33,8 @@
     },
     {
       "path": "src/main/civitai.ts",
-      "bytes": 21716,
-      "sha256": "1f9ad1289be7c7e64da522e3ea52601275b21a2141043af4d717923bf4b4d68e"
+      "bytes": 21589,
+      "sha256": "39be1d7c1045e5d13f6ba5a330dae262d77817b42628d4126dffd75e341be27b"
     },
     {
       "path": "src/main/clipboard.ts",
@@ -148,8 +148,8 @@
     },
     {
       "path": "src/main/models.ts",
-      "bytes": 38592,
-      "sha256": "02d08a2677495fbb31f6b8d2e651d1eecf220731e366338aa3e9e00bc52d9036"
+      "bytes": 38718,
+      "sha256": "a5441215d92f6715b7a800057f2625f96c5f862cb6aa6a22e0eae131f7d17386"
     },
     {
       "path": "src/main/paths.ts",
@@ -368,8 +368,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 70575,
-      "sha256": "dd163546b7e89325fe9f124fa5c8af0681a71c17566d66739eb031501a448f42"
+      "bytes": 71822,
+      "sha256": "0b1cfeb36aac92c5c8f55ede44f82b02b823ee010fbf50134dcec70e64be6397"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -743,8 +743,8 @@
     },
     {
       "path": "src/shared/crop-inpaint-workflow.ts",
-      "bytes": 9713,
-      "sha256": "399a0fc1bf4ac4b19d22c09c92f5b34b5003b768991751a81cb2688cfb393709"
+      "bytes": 9865,
+      "sha256": "7aca9d527605e6eada08483e886b170be374d36fb48c9e29da027403f8bf27a0"
     },
     {
       "path": "src/shared/defaults.ts",
@@ -773,8 +773,8 @@
     },
     {
       "path": "src/shared/face-detailer-workflow.ts",
-      "bytes": 7586,
-      "sha256": "d12e1432be59d6cb92fb822c009f3ee4be8b380ad7155e3779f573ab36409f85"
+      "bytes": 7611,
+      "sha256": "700fef3186f5a2b23d288d048e98602148ad2fc02b49360703faf1d5be6e03ad"
     },
     {
       "path": "src/shared/generation-phase.ts",
@@ -813,8 +813,8 @@
     },
     {
       "path": "src/shared/ipadapter-workflow.ts",
-      "bytes": 8909,
-      "sha256": "1d17c3b813be3b24b041a8619de83adb77e31f83e40ec4d4cf4ab77cde346133"
+      "bytes": 9043,
+      "sha256": "10984c3414d786c545d007b782e16593e4f630d0e57f2632b57e77bc61e17e1a"
     },
     {
       "path": "src/shared/model-catalog.ts",
@@ -868,8 +868,8 @@
     },
     {
       "path": "src/shared/regional-prompt-workflow.ts",
-      "bytes": 10123,
-      "sha256": "bcb45e8cd992f78676cb7041ca07b4171bd329269ac1eb72e01b89edaf399d59"
+      "bytes": 10234,
+      "sha256": "63c4fceb4d873216d483048dce3d927d15c1a39cb4f13d8e7c7f45dd34c8b4eb"
     },
     {
       "path": "src/shared/runtime-identity.ts",
@@ -913,13 +913,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 18623,
-      "sha256": "52570f272c134ff9106658d4628cddd8b08986942cd786a659670413d4a3d88e"
+      "bytes": 18723,
+      "sha256": "96b75f7d32d56efbfe1afe12415660256217c6b745c97202198bddaacbdaf4e4"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 8118,
-      "sha256": "9e347e0f9e2361e194c42433c49a41b7bdbef5f637f74a0b4c5f07cd012f9a1b"
+      "bytes": 8250,
+      "sha256": "ae43074050ecfea96b085dc4ff83e94a0521f0f788d3d22404ef22eb452bb368"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -963,8 +963,8 @@
     },
     {
       "path": "src/shared/workflow.ts",
-      "bytes": 4785,
-      "sha256": "d19d3597050e2766b0817512b18f990cbcc37594cc923ae30b3247bcddc7300a"
+      "bytes": 5840,
+      "sha256": "ef9b6ffbb5a115739a35eda89576bee8abaf7e08327795d7e0864c1969d9f45d"
     },
     {
       "path": "resources/face-detailer-NOTICES.txt",
@@ -1118,8 +1118,8 @@
     },
     {
       "path": "tests/civitai.test.ts",
-      "bytes": 18841,
-      "sha256": "7e65d71872eff31e82ef4d020f4800adfffc5ff21e2a84bdb75982cb57a7d759"
+      "bytes": 18906,
+      "sha256": "bc2b1c8414f87212e2259756e645ac9e53e3673a7edc3513e253a20d05a6aedf"
     },
     {
       "path": "tests/civitai-transfer.test.ts",
@@ -1128,8 +1128,8 @@
     },
     {
       "path": "tests/civitai-catalog.test.ts",
-      "bytes": 16080,
-      "sha256": "3739d088c5fcfb4b660fbee010893c6ef02dcfbdc816f5bbe7d394bfea342e1c"
+      "bytes": 16100,
+      "sha256": "5fcf6be6f61f4be868d2545075dbf3ff40a3bb36880bb0c9f515d7732ad86c53"
     },
     {
       "path": "tests/storage-locations.test.ts",
@@ -1138,8 +1138,8 @@
     },
     {
       "path": "tests/face-detailer.test.ts",
-      "bytes": 17057,
-      "sha256": "d82ca20deec0a6b5d72c30a821c2037ceb34c28f92e529171a5d411768f76491"
+      "bytes": 17129,
+      "sha256": "afd0990d13356bccb74bc2cf8ca65053629fbea2702f4780e5b4dc3d5fde25fb"
     },
     {
       "path": "tests/runtime-identity.test.ts",
@@ -1303,13 +1303,13 @@
     },
     {
       "path": "tests/create-update.test.tsx",
-      "bytes": 11709,
-      "sha256": "c04bdd042e196770c130ca1cfb16821474676317021817506c7bb36bb6de12b8"
+      "bytes": 13456,
+      "sha256": "6cc0fea9a7d60c00c1760c15866a6712d59ed9d62b282c62b1ce0fb6b34cdcd7"
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 29046,
-      "sha256": "964c9e2dc0df3b8de0a4d0d2a2327846bda7b4700ac9e9f48af911550509f9d1"
+      "bytes": 30557,
+      "sha256": "17a490e8d35744821302ae24dfe76542747aa26ec80f3988c10f470088cc687c"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1328,8 +1328,8 @@
     },
     {
       "path": "tests/model-file-management.test.ts",
-      "bytes": 3973,
-      "sha256": "55619f9e1432b8882de055431b09954bc982b45540533ae8fcf2ca5c8c4bd266"
+      "bytes": 4658,
+      "sha256": "deba1b596ee66a7456eda29a4e7d9916f1284ff5d2bd34ce966414cd85aa477b"
     },
     {
       "path": "tests/model-management-ui.test.tsx",
@@ -1343,8 +1343,8 @@
     },
     {
       "path": "src/shared/civitai-discovery.ts",
-      "bytes": 1509,
-      "sha256": "9fe79ecb7361e867f0a60b06e5e7529deb659db457c21fbed0e8f340f6b083a0"
+      "bytes": 1918,
+      "sha256": "2b64bdb2aaa2781c1c293c6e3a159caae35b861b687075673af3cfd20eaf6662"
     },
     {
       "path": "src/renderer/CivitaiGallery.tsx",
@@ -1353,8 +1353,8 @@
     },
     {
       "path": "tests/civitai-gallery.test.tsx",
-      "bytes": 3290,
-      "sha256": "77de822344cfda0cffd1d38d8a80571c1f37742efbfa03b958e45f2f7f65c995"
+      "bytes": 3298,
+      "sha256": "88da9baf0f8695c9ef795069d32c7a6a70dfa481550d3cecb56b840e15c0f063"
     },
     {
       "path": "src/shared/visible-triggers.ts",
@@ -1378,8 +1378,8 @@
     },
     {
       "path": "src/shared/enhancement.ts",
-      "bytes": 6298,
-      "sha256": "bacea36d54363a49578c4cd4fccb9564883c003811482972027d1b6a7623212b"
+      "bytes": 6335,
+      "sha256": "205893cf9d3a1d64bce16a6e70015985bd1dea2b391e96afbfea20ac68c7f360"
     },
     {
       "path": "src/renderer/EnhanceDialog.tsx",
@@ -1388,8 +1388,8 @@
     },
     {
       "path": "tests/enhancement.test.ts",
-      "bytes": 6932,
-      "sha256": "8328becd3b6ac8c5d18fd2cea8a4a15d15903dd92fd02b74554972a416c4d7ff"
+      "bytes": 7238,
+      "sha256": "d1f2efd35e83efa1881e1afa6107cc356cbe14972e8870796363b28b10afc9ef"
     },
     {
       "path": "tests/enhance-dialog.test.tsx",
@@ -1398,8 +1398,8 @@
     },
     {
       "path": "src/main/automatic-faces.ts",
-      "bytes": 4358,
-      "sha256": "902a662b5d4608e0386d2f049efe6a667474cc61fe9cdb7e77ea88fddfad2955"
+      "bytes": 4399,
+      "sha256": "6ea91d04fa25124817c8e2240ba198c3ad210a4c8a56a48bb3bc790f3f3c8fdb"
     },
     {
       "path": "src/renderer/AutomaticFaceControls.tsx",
@@ -1408,8 +1408,8 @@
     },
     {
       "path": "tests/automatic-faces.test.ts",
-      "bytes": 7951,
-      "sha256": "8d1fa1f94ae3d530a164953cc111f637012a62486cb8f20cd82dd2c769baca48"
+      "bytes": 8098,
+      "sha256": "93bd5a0bb569d180ca65eeecc3e3b9e0525388f2f6451593edf2bec34f0ef66c"
     },
     {
       "path": "tests/automatic-face-controls.test.tsx",

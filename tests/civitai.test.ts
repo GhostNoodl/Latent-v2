@@ -22,11 +22,11 @@ afterEach(async () => {
 });
 const client = (extra: object = {}) => new CivitaiClient({ cache }, { fetch: fetchMock as typeof fetch, ...extra });
 
-it('passes exact discovery bases without widening generation families', async () => {
+it('passes exact discovery bases and maps SDXL derivatives', async () => {
   fetchMock.mockResolvedValue(json({items:[{...rawModel(), modelVersions:[{...rawModel().modelVersions[0],baseModel:'Pony'}]}],metadata:{}}));
   const result=await client().search({baseModel:'Pony',family:'sdxl',cursor:'next'});
   const url=new URL(fetchMock.mock.calls[0][0]);expect(url.searchParams.get('baseModels')).toBe('Pony');expect(url.searchParams.get('cursor')).toBe('next');
-  expect(result.data.items[0].versions[0].family).toBe('unknown');
+  expect(result.data.items[0].versions[0].family).toBe('sdxl');
   await expect(client().search({baseModel:'x'.repeat(101)})).rejects.toThrow();
 });
 it('retains up to 24 unique previews regardless of rating and preserves them through cache validation',async()=>{
@@ -72,9 +72,9 @@ describe('Civitai metadata normalization', () => {
     expect(model.versions[0].files[0]).toMatchObject({ id: 99321, sha256: checksum.toLowerCase(), sizeKB: 123.5, estimatedBytes: 126464, safeTensor: true });
     expect(model.permissions).toEqual({ allowNoCredit: false, allowDerivatives: true, allowDifferentLicense: null, allowCommercialUse: [] });
   });
-  it.each(['Pony', 'NoobAI', 'SD 1.5', 'Other', 'My SDXL mixture', 'illustrious'])('does not guess compatibility for base %s', base => { expect(civitaiFamily(base)).toBe('unknown'); });
+  it.each(['SD 1.5', 'Other', 'My SDXL mixture', 'illustrious'])('does not guess compatibility for base %s', base => { expect(civitaiFamily(base)).toBe('unknown'); });
   it('recognizes only explicit supported base labels while retaining special variants', () => {
-    expect(civitaiFamily('Illustrious')).toBe('illustrious'); expect(civitaiFamily('SDXL Turbo')).toBe('sdxl');
+    expect(civitaiFamily('Pony')).toBe('sdxl'); expect(civitaiFamily('NoobAI')).toBe('illustrious'); expect(civitaiFamily('Illustrious')).toBe('illustrious'); expect(civitaiFamily('SDXL Turbo')).toBe('sdxl');
     const raw = rawModel(); raw.modelVersions[0].baseModel = 'SDXL Lightning';
     expect(normalizeCivitaiModel(raw)!.versions[0]).toMatchObject({ baseModel: 'SDXL Lightning', family: 'sdxl' });
   });

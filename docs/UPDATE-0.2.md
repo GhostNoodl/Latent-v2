@@ -176,3 +176,14 @@ Face detector setup is now available directly beneath Automatically refine faces
 Latent Classic refinement: hires presets restore Euler/Simple, base seed and CFG linking, and scale-dependent strength protection. Classic automatic faces use proportional context and adaptive working canvases up to 1024 pixels, preserving crop proportions with padding. Face sampling and generation LoRA use are independently configurable. Newly enabled controls use Classic; existing drafts and saved recipes retain their previous settings until Classic is selected. The custom elliptical masks and separate output history are retained; this is not a bit-for-bit Impact Pack reproduction.
 
 Classic refinement is now the standard authoring behavior, without separate Classic presets or adaptive-crop switches. Upscale & refine immediately queues the selected saved image at up to 1.5x (2048-pixel side limit) with standard sampling and its saved seed; Refine image is shown at the size limit. It preserves the Create draft and original output, and follows with automatic faces when enabled. Existing saved enhancement graphs remain reproducible.
+
+
+## SDXL-derived checkpoints
+
+Discover and downloads now recognize NoobAI, Pony, Illustrious, SDXL 0.9/1.0, SDXL LCM, Lightning, Hyper, Turbo, Distilled, and Playground v2/v2.5. Checkpoints must still be marked Standard; separate refiner and inpainting checkpoint workflows are not enabled by this change. NoobAI uses the Illustrious family grouping. Other recognized derivatives use the SDXL grouping. Original Civitai base labels remain in metadata.
+
+Create > Generation parameters > Model sampling defaults to Automatic, which lets ComfyUI read the checkpoint's embedded prediction information. If an untagged checkpoint needs an explicit mode, choose Epsilon, V-prediction, LCM or X0. V-prediction enables zero terminal SNR initially; it can be adjusted to match the model author's instructions. Changing checkpoints resets a manually selected override. Saved recipes, Enhance, and automatic face refinement retain their model sampling settings.
+
+Prediction type is separate from the sampler/scheduler, steps and CFG. Follow the model author's settings, including secondary hires and face passes. NoobAI V-pred: https://huggingface.co/Laxhar/noobai-XL-Vpred-1.0 . Lightning: https://huggingface.co/ByteDance/SDXL-Lightning . Existing SDXL/Illustrious recipes without an override retain their original graphs.
+
+Verification covers mocked downloads/imports, graph construction, saved-recipe validation and authoring behavior. No claim is made that every derivative checkpoint has been GPU-tested.

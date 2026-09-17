@@ -1,3 +1,4 @@
+import { sdxlBaseFamily } from '../shared/civitai-discovery';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -39,9 +40,7 @@ function safeUrl(value: unknown, purpose: 'download' | 'preview' | 'source'): st
   } catch { return null; }
 }
 export function civitaiFamily(baseModel: string): ModelFamily | 'unknown' {
-  if (baseModel === 'Illustrious') return 'illustrious';
-  if (['SDXL 0.9', 'SDXL 1.0', 'SDXL 1.0 LCM', 'SDXL Lightning', 'SDXL Hyper', 'SDXL Turbo', 'SDXL Distilled'].includes(baseModel)) return 'sdxl';
-  return 'unknown';
+  return sdxlBaseFamily(baseModel);
 }
 function normalizeFile(value: unknown, versionId: number): CivitaiFile | null {
   const raw = object(value); const fileId = id(raw.id); if (!fileId) return null;

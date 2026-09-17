@@ -106,8 +106,9 @@ async function publish(staging: string, destination: string) {
 }
 function inferFamily(filename: string, header: Record<string, string>): Metadata['family'] {
   const identity = `${header['modelspec.architecture'] ?? ''} ${header.ss_base_model_version ?? ''}`.toLowerCase();
-  const classify = (name: string): Metadata['family'] => name.includes('illustrious') ? 'illustrious' : /sdxl|xl_base|stable.diffusion.xl/.test(name) ? 'sdxl' : 'unknown';
-  return classify(identity) !== 'unknown' ? classify(identity) : classify(filename.toLowerCase());
+  const classify = (name: string): Metadata['family'] => /illustrious|noob[ _-]?ai/.test(name) ? 'illustrious' : /sdxl|xl_base|stable.diffusion.xl|pony|playground[ _-]?v?2/.test(name) ? 'sdxl' : 'unknown';
+  const declared = classify(identity), named = classify(filename.toLowerCase());
+  return declared === 'sdxl' && named === 'illustrious' ? named : declared !== 'unknown' ? declared : named;
 }
 function identifyImportedModel(kind: ModelKind, filename: string, header: Record<string, string>, sha256: string): Pick<Metadata, 'family' | 'triggers' | 'sourceUrl' | 'licenseUrl' | 'provenance'> {
   // An exact catalog hash is more specific than a derivative's generic SDXL header.

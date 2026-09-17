@@ -1,3 +1,4 @@
+import { samplingValidationGraph } from './workflow';
 import type { ComfyWorkflow, GenerationDraft } from './types';
 import { draftSchema } from './validation';
 import { activeRegionalPromptRegions, REGIONAL_PROMPT_LIMITS, regionalMaskAssetSchema, regionalPromptPlanSchema, regionalPromptRegionSchema, regionalPromptSettingsSchema, type RegionalMaskAsset, type RegionalPromptPlan, type RegionalPromptRegion, type RegionalPromptSettings, type RegionalPromptWorkflowResult } from './regional-prompt-types';
@@ -38,6 +39,7 @@ function canonical(value: unknown): string {
 }
 const linkEquals = (value: unknown, expected: [string, number]) => JSON.stringify(value) === JSON.stringify(expected);
 function validateBase(workflow: ComfyWorkflow, draft: GenerationDraft): [string, number] {
+  workflow = samplingValidationGraph(workflow, draft);
   const expected: Record<string, string> = { '1': 'CheckpointLoaderSimple', '2': 'CLIPTextEncode', '3': 'CLIPTextEncode', '4': 'EmptyLatentImage', '5': 'KSampler', '6': 'VAEDecode', '7': 'SaveImage' };
   for (const [id, type] of Object.entries(expected)) if (workflow[id]?.class_type !== type) throw new Error('Regional prompting requires the baseline workflow at nodes 1–7.');
   for (const [id, node] of Object.entries(workflow)) if (!/^\d{1,6}$/.test(id) || !expected[id] && node.class_type !== 'LoraLoader') throw new Error('Regional prompting cannot yet combine with another advanced workflow.');

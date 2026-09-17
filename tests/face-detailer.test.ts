@@ -139,7 +139,7 @@ it('reopens illustrated receipts and creates refinement crops, rejecting altered
   expect(classic.classic).toBe(true);expect(classic.passes[0].crop.settings.contextPadding).toBeGreaterThan(32);
   const {buildFaceRefinementWorkflow}=await import('../src/shared/face-detailer-workflow');
   const {DEFAULT_DRAFT}=await import('../src/shared/defaults');const {buildWorkflow}=await import('../src/shared/workflow');
-  const draft={...DEFAULT_DRAFT,width:512,height:512,checkpointId:'checkpoint:test.safetensors'};
+  const draft={...DEFAULT_DRAFT,width:512,height:512,checkpointId:'checkpoint:test.safetensors',modelSampling:{prediction:'v_prediction' as const,zeroTerminalSnr:true}};
   const baseline=buildWorkflow(draft,[{id:draft.checkpointId,kind:'checkpoint',family:draft.family,filename:'test.safetensors',status:'ready'}] as any,'42','test');
   const make=(p:typeof plan)=>buildFaceRefinementWorkflow(baseline,draft,{plan:p,sourceFilename:'source.png',maskFilenames:Object.fromEntries(p.passes.map(v=>[v.crop.mask.id,'mask.png']))});
   const graph=make(classic).workflow, nodes=Object.values(graph);

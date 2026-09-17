@@ -57,10 +57,11 @@ it('uses the original-detector threshold for automatic illustrated faces',async(
 });
 
 it('Classic faces use independent sampling and optionally omit generation LoRAs',()=>{
- const f=fixture();f.record.draft.autoFace={profile:'illustrated',classic:true,applyLoras:false,strength:.45,steps:20,cfg:7,sampler:'euler',scheduler:'normal'};
+ const f=fixture();f.record.draft.modelSampling={prediction:'v_prediction',zeroTerminalSnr:true};f.record.draft.autoFace={profile:'illustrated',classic:true,applyLoras:false,strength:.45,steps:20,cfg:7,sampler:'euler',scheduler:'normal'};
  f.record.loras=[{id:'lora:test.safetensors',weight:1,clipWeight:1,sha256:'d'.repeat(64)}] as GenerationRecord['loras'];
  const result=automaticFaceDraft(f.record,f.detection);
  expect(result).toMatchObject({loras:[],cfg:7,sampler:'euler',scheduler:'normal',steps:20,faceDetailer:{request:{classic:true,denoise:.45}}});
+ expect(result.modelSampling).toEqual(f.record.draft.modelSampling);
  expect(result.assetHashes).not.toHaveProperty('lora:test.safetensors');
  f.record.draft.autoFace.applyLoras=true;expect(automaticFaceDraft(f.record,f.detection).loras).toHaveLength(1);
 });

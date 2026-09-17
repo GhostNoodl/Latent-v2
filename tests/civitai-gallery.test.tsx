@@ -27,11 +27,11 @@ it('keeps a failed image recoverable and lets users navigate to another preview'
 it('has a clear empty state',async()=>{expect((await mount(0)).textContent).toContain('No creator images');});
 it('does not label discovery-only families as supported, including mixed-version listings',()=>{
  const supported={family:'sdxl',baseModel:'SDXL 1.0',baseModelType:'Standard'} as CivitaiVersion;
- const unsupported={family:'unknown',baseModel:'Pony',baseModelType:'Standard'} as CivitaiVersion;
+ const unsupported={family:'unknown',baseModel:'Flux.1 D',baseModelType:'Standard'} as CivitaiVersion;
  const model={kind:'checkpoint',versions:[unsupported]} as CivitaiModel;
  expect(civitaiCompatibilityLabel(model)).toBe('Needs another workflow');
  expect(civitaiCompatibilityLabel({...model,versions:[unsupported,supported]})).toBe('Some versions support Create');
  expect(civitaiCompatibilityLabel({...model,versions:[supported]})).toBe('Create supported');
- expect(civitaiPreferredVersion({...model,versions:[supported,unsupported]},'Pony')).toBe(unsupported);
+ expect(civitaiPreferredVersion({...model,versions:[supported,unsupported]},'Flux.1 D')).toBe(unsupported);
  expect(civitaiPreferredVersion({...model,versions:[unsupported,supported]},undefined,true)).toBe(supported);
 });

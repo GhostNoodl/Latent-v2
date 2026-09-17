@@ -112,3 +112,23 @@ it('enables hires with candidate pixel resizing and encodes the resized base',as
   expect(resize).toMatchObject({class_type:'ImageScale',inputs:{upscale_method:'lanczos',image:['7',0]}});
  }finally{await act(async()=>root.unmount());host.remove();vi.unstubAllGlobals();}
 });
+
+
+it('routes SDXL sampling overrides through the base and hires samplers',async()=>{
+ const {buildWorkflow}=await import('../src/shared/workflow');
+ const draft={...DEFAULT_DRAFT,checkpointId:'checkpoint:test.safetensors',modelSampling:{prediction:'v_prediction' as const,zeroTerminalSnr:true}};
+ const asset={id:draft.checkpointId,kind:'checkpoint',family:draft.family,filename:'test.safetensors',status:'ready'} as any;
+ const graph=buildWorkflow(draft,[asset],'42','variant');
+ expect(graph['49']).toEqual({class_type:'ModelSamplingDiscrete',inputs:{model:['1',0],sampling:'v_prediction',zsnr:true}});
+ const hiresGraph=augmentHiresWorkflow(graph,draft,{...hires,method:'image',workflowVersion:undefined,seed:'42'},'42').workflow;
+ for(const node of Object.values(hiresGraph).filter(n=>n.class_type==='KSampler'))expect(node.inputs.model).toEqual(['49',0]);
+ const legacy=buildWorkflow({...draft,modelSampling:undefined},[asset],'42','variant');expect(legacy['49']).toBeUndefined();expect(legacy['5'].inputs.model).toEqual(['1',0]);
+});
+
+it('validates sampling overrides without accepting a changed prediction mode',async()=>{
+ const {buildWorkflow,samplingValidationGraph}=await import('../src/shared/workflow');
+ const draft={...DEFAULT_DRAFT,checkpointId:'checkpoint:test.safetensors',modelSampling:{prediction:'v_prediction' as const,zeroTerminalSnr:true}};
+ const graph=buildWorkflow(draft,[{id:draft.checkpointId,kind:'checkpoint',family:draft.family,filename:'test.safetensors',status:'ready'}] as any,'42','test');
+ expect(samplingValidationGraph(graph,draft)['49']).toBeUndefined();expect(graph['49']).toBeDefined();
+ graph['49'].inputs.sampling='eps';expect(()=>samplingValidationGraph(graph,draft)).toThrow('sampling override');
+});

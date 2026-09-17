@@ -51,3 +51,8 @@ it('one-click refinement uses standard sampling and saved seed without changing 
  expect(Object.values(buildEnhancementWorkflow(buildWorkflow(prepared(),[checkpoint],'42','old'),prepared(),'sources/example.png')).find(n=>n.class_type==='LatentUpscale')?.inputs.upscale_method).toBe('bislerp');
  expect(JSON.stringify(current)).toBe(before);expect(enhancementActionLabel(parent)).toBe('Upscale & refine');expect(enhancementActionLabel({width:2048,height:2048})).toBe('Refine image');
 });
+
+it('keeps model sampling overrides when enhancing a saved image',()=>{
+ const modelSampling={prediction:'v_prediction' as const,zeroTerminalSnr:true};
+ expect(prepareEnhancement({...parent,draft:{...parent.draft,modelSampling}},source,DEFAULT_DRAFT,1.5,.3).modelSampling).toEqual(modelSampling);
+});

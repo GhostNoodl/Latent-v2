@@ -1,3 +1,4 @@
+import { civitaiWorkflowIssue as sharedWorkflowIssue } from '../shared/civitai-discovery';
 import { availableModelFilename } from '../shared/model-names';
 import { z } from 'zod';
 import type { AppPaths, CivitaiProvenance, ModelAsset } from '../shared/types';
@@ -18,11 +19,7 @@ const storedSchema = z.object({ version: z.literal(1), ciphertext: z.string().mi
 const KEY_STATE = 'civitai.encrypted-api-key.v1';
 
 export function civitaiWorkflowIssue(model: CivitaiModel, version: CivitaiVersion): string | null {
-  if (version.family === 'unknown') return 'This version has an unknown or unsupported base family.';
-  if (!['SDXL 1.0', 'Illustrious'].includes(version.baseModel)) return `${version.baseModel} requires a different generation workflow. It is not enabled in Create yet.`;
-  if (model.kind === 'checkpoint' && version.baseModelType !== 'Standard') return 'Only checkpoints explicitly marked Standard can be downloaded into the current Create workflow.';
-  if (model.kind === 'lora' && version.baseModelType && version.baseModelType !== 'Standard') return 'This LoRA targets a different checkpoint workflow.';
-  return null;
+  return sharedWorkflowIssue(model, version);
 }
 
 export class CivitaiCatalog {
