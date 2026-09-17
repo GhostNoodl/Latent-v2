@@ -523,8 +523,8 @@
     },
     {
       "path": "src/renderer/Models.tsx",
-      "bytes": 10144,
-      "sha256": "f482e89b4b82fd20145dc482383bac64489cc071c02e91df799caa9b07d52def"
+      "bytes": 10217,
+      "sha256": "b409f169d65856ab3605299787801bf956aff5cb9ee8db808b7d7610bf823d44"
     },
     {
       "path": "src/renderer/ModelTransfers.tsx",
@@ -643,8 +643,8 @@
     },
     {
       "path": "src/renderer/usability.css",
-      "bytes": 23003,
-      "sha256": "828bc046e98b000309ad803f55ceb8c0143cf383e45aa7281282034181c61b76"
+      "bytes": 24103,
+      "sha256": "f1c988054a2295447f15a404c535d983c8cdc7f63d5abb0d43bd0be138e8f169"
     },
     {
       "path": "src/renderer/variation-description.ts",
