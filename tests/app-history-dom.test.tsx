@@ -297,12 +297,14 @@ describe('Create history, draft and asynchronous acceptance', () => {
 
 });
 
-it('one click queues the selected image with no settings dialog, draft replacement or queue popup',async()=>{
+it.each([[2,1408,2048],[1.5,1280,1856]])('one click at %sx queues the selected image without replacing the draft',async(scale,width,height)=>{
+ const selector=host.querySelector<HTMLSelectElement>('[aria-label="Enhancement scale"]')!;expect(selector.value).toBe('2');
+ if(scale!==2)await act(async()=>{Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')!.set!.call(selector,String(scale));selector.dispatchEvent(new Event('change',{bubbles:true}));});
  const waiting=gate();api.useOutputAsSource=vi.fn(async()=>{await waiting.promise;return {id:'src_11111111-1111-4111-8111-111111111111',originGenerationId:first.id,normalized:{sha256:'f'.repeat(64),width:first.width,height:first.height}} as SourceImageAsset;});
  await click(button('Upscale & refine'));expect(host.querySelector('[role="dialog"]')).toBeNull();
  expect(button('Queueing...').disabled).toBe(true);await click(button('Queueing...'));expect(api.useOutputAsSource).toHaveBeenCalledTimes(1);
  await act(async()=>waiting.release());expect(api.queueGeneration).toHaveBeenCalledTimes(1);
- const queued=vi.mocked(api.queueGeneration!).mock.calls[0][0];expect(queued).toMatchObject({prompt:first.resolvedPrompt,seed:first.actualSeed,steps:20,sampler:'euler',scheduler:'simple',enhance:{parentRecordId:first.id,standard:true}});
+ const queued=vi.mocked(api.queueGeneration!).mock.calls[0][0];expect(queued).toMatchObject({width,height,prompt:first.resolvedPrompt,seed:first.actualSeed,steps:20,sampler:'euler',scheduler:'simple',enhance:{parentRecordId:first.id,standard:true}});
  expect(host.querySelector('.queue-panel')).toBeNull();expect(host.querySelector<HTMLTextAreaElement>('#prompt')!.value).toBe(authored().prompt);
  await closeAndCancel();expect(savedDraft.prompt).toBe(authored().prompt);
 });

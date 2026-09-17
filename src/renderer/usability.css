@@ -271,3 +271,6 @@
 .accent-swatch.lilac {background:#d3b5e9;color:#201b24;}
 .studio[data-theme=light][data-accent=lilac] { --accent:#785196;--accent-text:#fff;--soft:#eee2f5; }
 @media(prefers-color-scheme:light) { .studio[data-theme=system][data-accent=lilac] { --accent:#785196;--accent-text:#fff;--soft:#eee2f5; } }
+
+.enhance-action { display:inline-flex; align-items:center; gap:4px; }
+.enhance-action select { width:68px; padding:5px 6px; min-height:30px; }

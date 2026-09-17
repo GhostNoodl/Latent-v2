@@ -40,11 +40,12 @@ it('one-click refinement uses standard sampling and saved seed without changing 
  const {prepareOneClickEnhancement,enhancementActionLabel}=await import('../src/shared/enhancement');
  const current={...DEFAULT_DRAFT,autoFace:{profile:'illustrated' as const,strength:.45,classic:true}};
  const before=JSON.stringify(current),d=prepareOneClickEnhancement(parent,source,current);
- expect(d).toMatchObject({width:1536,height:1536,steps:20,sampler:'euler',scheduler:'simple',seed:'4',enhance:{standard:true},autoFace:{classic:true,cfg:7,applyLoras:false}});
+ expect(d).toMatchObject({width:2048,height:2048,steps:20,sampler:'euler',scheduler:'simple',seed:'4',enhance:{standard:true},autoFace:{classic:true,cfg:7,applyLoras:false}});
+ expect(prepareOneClickEnhancement(parent,source,current,1.5)).toMatchObject({width:1536,height:1536});
  const graph=buildEnhancementWorkflow(buildWorkflow(d,[checkpoint],'4','one-click'),d,'sources/example.png');
  expect(Object.values(graph).some(n=>n.class_type==='LatentUpscale')).toBe(false);
  const pixels=graph['4'].inputs.pixels as [string,number];
- expect(graph[pixels[0]]).toMatchObject({class_type:'ImageScale',inputs:{upscale_method:'lanczos',width:1536,height:1536}});
+ expect(graph[pixels[0]]).toMatchObject({class_type:'ImageScale',inputs:{upscale_method:'lanczos',width:2048,height:2048}});
  expect(graph['5'].inputs.denoise).toBe(.3);
  const legacy={...d,enhance:{parentRecordId:parent.id,standard:true}};
  expect(Object.values(buildEnhancementWorkflow(buildWorkflow(legacy,[checkpoint],'4','legacy-standard'),legacy,'sources/example.png')).find(n=>n.class_type==='LatentUpscale')?.inputs.upscale_method).toBe('nearest-exact');

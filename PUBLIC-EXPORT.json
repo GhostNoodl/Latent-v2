@@ -368,8 +368,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 71822,
-      "sha256": "0b1cfeb36aac92c5c8f55ede44f82b02b823ee010fbf50134dcec70e64be6397"
+      "bytes": 72324,
+      "sha256": "40dc23bf7ee1d6939b792ecd9e54457a7f561907ff193699348f03d39820262f"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -643,8 +643,8 @@
     },
     {
       "path": "src/renderer/usability.css",
-      "bytes": 24103,
-      "sha256": "f1c988054a2295447f15a404c535d983c8cdc7f63d5abb0d43bd0be138e8f169"
+      "bytes": 24250,
+      "sha256": "8baf0e221bbd08fcee0ff8aed53ffa7c32f08403fdd458129962e95906858041"
     },
     {
       "path": "src/renderer/variation-description.ts",
@@ -1223,8 +1223,8 @@
     },
     {
       "path": "tests/app-history-dom.test.tsx",
-      "bytes": 36007,
-      "sha256": "a1d660589e1ebdfd930621155442e8f3b26167eade933a4d5daa8204bcf90d27"
+      "bytes": 36379,
+      "sha256": "317808db2bec14c26d6c1aafa1e6c930b95c190b4ca53a1b5abca1460377b004"
     },
     {
       "path": "scripts/third-party-notices.mjs",
@@ -1378,8 +1378,8 @@
     },
     {
       "path": "src/shared/enhancement.ts",
-      "bytes": 6335,
-      "sha256": "205893cf9d3a1d64bce16a6e70015985bd1dea2b391e96afbfea20ac68c7f360"
+      "bytes": 6351,
+      "sha256": "2fc2934491f54851de8672fa2bcbb4668657fcb87cdf8caa7eab279326a1976c"
     },
     {
       "path": "src/renderer/EnhanceDialog.tsx",
@@ -1388,8 +1388,8 @@
     },
     {
       "path": "tests/enhancement.test.ts",
-      "bytes": 7238,
-      "sha256": "d1f2efd35e83efa1881e1afa6107cc356cbe14972e8870796363b28b10afc9ef"
+      "bytes": 7343,
+      "sha256": "7f5e9db2dd69f515c150a19ac3ec4bb8504d26c683fbd50ebb8ea49eee93382f"
     },
     {
       "path": "tests/enhance-dialog.test.tsx",

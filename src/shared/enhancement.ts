@@ -52,8 +52,8 @@ export function reconcileEnhancementChange(previous:GenerationDraft, change:Part
 }
 
 /** One-click authoring is separate from historical recipe replay. */
-export function prepareOneClickEnhancement(record:GenerationRecord,source:SourceImageAsset,current:GenerationDraft):GenerationDraft {
- const next=prepareEnhancement(record,source,current,1.5,.3);
+export function prepareOneClickEnhancement(record:GenerationRecord,source:SourceImageAsset,current:GenerationDraft,scale:1.5|2=2):GenerationDraft {
+ const next=prepareEnhancement(record,source,current,scale,.3);
  return draftSchema.parse({...next,steps:20,sampler:'euler',scheduler:'simple',seed:record.actualSeed,enhance:{...next.enhance!,standard:true,method:'image'},imageInput:{...next.imageInput!,denoise:.3},autoFace:current.autoFace?{...current.autoFace,classic:true,steps:current.autoFace.steps??20,cfg:current.autoFace.cfg??7,sampler:current.autoFace.sampler??'euler',scheduler:current.autoFace.scheduler??'normal',applyLoras:current.autoFace.applyLoras??false}:undefined});
 }
 export function enhancementActionLabel(record:Pick<GenerationRecord,'width'|'height'>):string {
