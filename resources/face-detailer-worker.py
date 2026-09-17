@@ -123,11 +123,13 @@ def main():
         with contextlib.redirect_stdout(sys.stderr):
             import torch
             import ultralytics
-            from ultralytics.nn.tasks import DetectionModel
+            from ultralytics.nn.tasks import SegmentationModel
             if ultralytics.__version__ != "8.4.104" or not Path(ultralytics.__file__).resolve().is_relative_to(VENDOR):
                 raise RuntimeError("The private detector imported an unexpected YOLO build.")
             torch.set_num_threads(2)
             detector = torch.load(MODEL, map_location="cpu", weights_only=False)["model"].float().eval()
+            if not isinstance(detector, SegmentationModel) or detector.names != {0: "face", 1: "penis", 2: "pussy", 3: "anus", 4: "sheath", 5: "pawpads"}:
+                raise RuntimeError("The furry detector returned an unexpected class map.")
     else:
         detector = cv.FaceDetectorYN.create(str(MODEL), "", (320, 320), float(confidence), 0.3, 5000, cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_TARGET_CPU)
     for frame_index, frame in enumerate(frames):
@@ -148,9 +150,13 @@ def main():
             padded[top:top + size[1], left:left + size[0]] = resized
             tensor = torch.from_numpy(np.ascontiguousarray(padded[:, :, ::-1].transpose(2, 0, 1))).float().unsqueeze(0) / 255
             with torch.inference_mode(), contextlib.redirect_stdout(sys.stderr):
-                rows = detector(tensor)[0][0].T.numpy()
-            if rows.shape != (sum((side // stride) ** 2 for stride in (8, 16, 32)), 5) or not np.isfinite(rows).all():
+                prediction, prototypes = detector(tensor)[0]
+                rows = prediction[0].T.numpy()
+            if rows.shape != (sum((side // stride) ** 2 for stride in (8, 16, 32)), 42) or not np.isfinite(rows).all():
                 raise RuntimeError("YOLO returned an unexpected face prediction layout.")
+            # Six class scores follow xywh; 32 mask coefficients follow those.
+            # Only class 0 (face) can enter the existing feathered face-box pipeline.
+            rows = rows[rows[:, 4:10].argmax(axis=1) == 0, :5]
             boxes, scores = [], []
             for x, y, w, h, score in rows:
                 if float(score) < confidence:

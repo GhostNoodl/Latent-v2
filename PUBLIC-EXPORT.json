@@ -73,13 +73,13 @@
     },
     {
       "path": "src/main/face-detailer-release.ts",
-      "bytes": 1946,
-      "sha256": "d6d02db022361a30d2dd004d2bbdea99d926b199ed2e0ab8f66d5384bc374d09"
+      "bytes": 2463,
+      "sha256": "56ffacb7b6133b10a2fdeee405af9cd30257ea94b235503df4a29a4ae828c5f5"
     },
     {
       "path": "src/main/face-detailer.ts",
-      "bytes": 26517,
-      "sha256": "7bd170fb4bb332aa7d198156f8b5d11b628a5647c3ab5fefe613dac30346cd81"
+      "bytes": 26776,
+      "sha256": "78ac81cdd9e091e39c8304164c76c8e817cc12576de0163569fefa90f505b85d"
     },
     {
       "path": "src/main/hardware-profile-evidence.ts",
@@ -439,7 +439,7 @@
     {
       "path": "src/renderer/FaceDetailerControls.tsx",
       "bytes": 13769,
-      "sha256": "b2632a2cf02b846902d1b60566b4d888596f1057cf664d4910204cdd2c7b5e8d"
+      "sha256": "bbbf8373981150510e33bc0d709c09193e3a6d9b7bbd9c8f195660d652d4f59b"
     },
     {
       "path": "src/renderer/FaceDetailerEditor.tsx",
@@ -768,8 +768,8 @@
     },
     {
       "path": "src/shared/face-detailer-types.ts",
-      "bytes": 5471,
-      "sha256": "0565d70affb59468b62d27cccce8852ded997efe08741d785fe7c625bbaad4e4"
+      "bytes": 5497,
+      "sha256": "e018e71a579d196cbb5c6ff72eba0ef0fcc0ec2445122cdbde70834c76b7db1d"
     },
     {
       "path": "src/shared/face-detailer-workflow.ts",
@@ -968,13 +968,13 @@
     },
     {
       "path": "resources/face-detailer-NOTICES.txt",
-      "bytes": 37376,
-      "sha256": "945899d47c8c9f01c4eb49f97aa8b47c3afd0b84f8b2fb05a2660f5582b45db7"
+      "bytes": 38095,
+      "sha256": "a8cb953596625ca61bdcf9f2260cf67fc8795dc1bbbb14b07aabc58847419939"
     },
     {
       "path": "resources/face-detailer-worker.py",
-      "bytes": 9951,
-      "sha256": "dc0c11cda73ff580bdcc1546f9bfc780f0056b28bc09e3ba86042776f2f24064"
+      "bytes": 10481,
+      "sha256": "82494b81b87ceaf31617731c663d803c59d45858b98c3c35c7ce05c4c741bbd7"
     },
     {
       "path": "resources/latent-icon-NOTICES.txt",
@@ -1138,8 +1138,8 @@
     },
     {
       "path": "tests/face-detailer.test.ts",
-      "bytes": 17129,
-      "sha256": "afd0990d13356bccb74bc2cf8ca65053629fbea2702f4780e5b4dc3d5fde25fb"
+      "bytes": 17842,
+      "sha256": "4f8506fe847ec9a53c676c16d352c9fe4b7d7df19d30524807c24820047c4776"
     },
     {
       "path": "tests/runtime-identity.test.ts",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 30557,
-      "sha256": "17a490e8d35744821302ae24dfe76542747aa26ec80f3988c10f470088cc687c"
+      "bytes": 30999,
+      "sha256": "7a0cc176974d1610827891c57b6228dafc0822fb430b8116079a5899cd706ff6"
     },
     {
       "path": "src/shared/model-names.ts",

@@ -11,10 +11,10 @@ export const FACE_DETAILER_RELEASE = Object.freeze({
     url: 'https://files.pythonhosted.org/packages/64/15/543669b21ab8dc8a882cc872620eef7ed40343d7089ac66a8d448645ed5f/ultralytics-8.4.104-py3-none-any.whl',
   },
   illustrated: {
-    filename: 'face_yolov8m.pt', bytes: 52026019,
-    sha256: '717923c19b3f4bbf5250b728f1fa6b2cb72a33aed1d236ea9caf0e21ad943e5f',
-    revision: '53cc19de382014514d9d4038601d261a7faa9b7b', license: 'Apache-2.0 (publisher model card)',
-    url: 'https://huggingface.co/Bingsu/adetailer/resolve/53cc19de382014514d9d4038601d261a7faa9b7b/face_yolov8m.pt',
+    filename: 'fdetailer_seg_v11.pt', bytes: 20553245,
+    sha256: 'cb669b3953c4d0d30f5d50b9ac2da571acb6d1bb91b31ed430cf69b984618fcc',
+    revision: 'civitai-1384450', license: 'Publisher permissions: https://civitai.com/models/1228695',
+    url: 'https://huggingface.co/ThirdTimesTheCiarc/misc/resolve/667074b2905570cae40078560866447b58087cf6/1228695/1384450/fdetailerAdetailerFor_v11.pt',
   },
   anime: {
     filename: 'lbpcascade_animeface.xml', bytes: 246945,
@@ -29,3 +29,11 @@ export const FACE_DETAILER_RELEASE = Object.freeze({
     url: 'https://media.githubusercontent.com/media/opencv/opencv_zoo/47534e27c9851bb1128ccc0102f1145e27f23f98/models/face_detection_yunet/face_detection_yunet_2023mar.onnx',
   },
 });
+
+// Provenance for existing saved detections; never used for new detection.
+export const LEGACY_ILLUSTRATED_DETECTOR = {
+    filename: 'face_yolov8m.pt', bytes: 52026019,
+    sha256: '717923c19b3f4bbf5250b728f1fa6b2cb72a33aed1d236ea9caf0e21ad943e5f',
+    revision: '53cc19de382014514d9d4038601d261a7faa9b7b', license: 'Apache-2.0 (publisher model card)',
+    url: 'https://huggingface.co/Bingsu/adetailer/resolve/53cc19de382014514d9d4038601d261a7faa9b7b/face_yolov8m.pt',
+  };

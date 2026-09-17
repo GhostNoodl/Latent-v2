@@ -713,3 +713,15 @@ specific requirements.
 if any, to sign a "copyright disclaimer" for the program, if necessary.
 For more information on this, and how to apply and follow the GNU AGPL, see
 <https://www.gnu.org/licenses/>.
+
+Fdetailer v1.1 by eihpirtsa
+Publisher: https://civitai.com/models/1228695 (version 1384450)
+SHA-256: cb669b3953c4d0d30f5d50b9ac2da571acb6d1bb91b31ed430cf69b984618fcc
+Optional, separately downloaded model; weights are not bundled with Latent.
+Publisher permissions were recorded on 2026-09-17: credit not required;
+commercial use includes Image, RentCivit, Rent and Sell; derivatives and
+license changes allowed. Consult the publisher page for current terms.
+The model is a YOLO segmentation model. Latent uses only the face category
+(class 0) bounding boxes with its own feathered refinement masks.
+Other model categories never enter automatic face refinement.
+The Ultralytics library notices above continue to apply.

@@ -1,3 +1,4 @@
+import { LEGACY_ILLUSTRATED_DETECTOR } from '../src/main/face-detailer-release';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -165,9 +166,15 @@ it('reopens illustrated receipts and creates refinement crops, rejecting altered
     expect(()=>validate(alteredJob,wrongPadding)).toThrow();
     expect(()=>validate({...job,draft:{...job.draft,faceDetailer:{...job.draft.faceDetailer,request:{...request,classic:!frozen.classic}}}})).toThrow('refinement settings');
   }
-  const legacy = {...receipt, preprocessing: {...receipt.preprocessing, version: 'yolo-letterbox-rgb@1' as const, frames: receipt.preprocessing.frames.slice(0,1)}};
+  expect(receipt.preprocessing.version).toBe('fdetailer-face-only@1');
+  const legacy = {...receipt, detector:{...receipt.detector,modelSha256:LEGACY_ILLUSTRATED_DETECTOR.sha256,codeRevision:LEGACY_ILLUSTRATED_DETECTOR.revision}, preprocessing: {...receipt.preprocessing, version: 'yolo-letterbox-rgb@1' as const, frames: receipt.preprocessing.frames.slice(0,1)}};
   store.setState(`face.detection:${receipt.id}`, legacy);
   expect(await service.getDetection(receipt.id)).toEqual(legacy);
+  const legacyFallback={...legacy,preprocessing:{...receipt.preprocessing,version:'yolo-letterbox-rgb-fallback@2' as const}};
+  store.setState(`face.detection:${receipt.id}`,legacyFallback);
+  expect(await service.getDetection(receipt.id)).toEqual(legacyFallback);
+  store.setState(`face.detection:${receipt.id}`,{...receipt,detector:legacy.detector});
+  await expect(service.getDetection(receipt.id)).rejects.toThrow('provenance');
   store.setState(`face.detection:${receipt.id}`,{...receipt,detector:{...receipt.detector,yoloWheelSha256:'c'.repeat(64)}});
   await expect(service.getDetection(receipt.id)).rejects.toThrow('provenance');
 });

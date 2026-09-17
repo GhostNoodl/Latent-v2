@@ -187,3 +187,11 @@ Create > Generation parameters > Model sampling defaults to Automatic, which let
 Prediction type is separate from the sampler/scheduler, steps and CFG. Follow the model author's settings, including secondary hires and face passes. NoobAI V-pred: https://huggingface.co/Laxhar/noobai-XL-Vpred-1.0 . Lightning: https://huggingface.co/ByteDance/SDXL-Lightning . Existing SDXL/Illustrious recipes without an override retain their original graphs.
 
 Verification covers mocked downloads/imports, graph construction, saved-recipe validation and authoring behavior. No claim is made that every derivative checkpoint has been GPU-tested.
+
+### Furry face detection update
+
+Illustration / furry now uses publisher-hash-verified Fdetailer v1.1, restricted to
+face class 0. New detections retain the 640/320 fallback and existing feathered
+face-box masks. Old YOLO detections retain their original provenance and remain
+replayable. Existing installations must run face-detector setup once in Settings
+to download the replacement model; model weights are not bundled in the installer.
