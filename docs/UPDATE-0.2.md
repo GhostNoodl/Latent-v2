@@ -204,3 +204,9 @@ Standard, four-step Lightning and Compact remain selectable. Saved conversations
 and recorded recipes keep their original profile and artifact identities.
 Eight-step setup shares the installed diffusion model, encoder and VAE; its adapter
 has a separate verified receipt so four-step replay remains available.
+
+### Offline tag autocomplete
+
+- Create prompts now offer local e621 and Danbooru tag and alias suggestions.
+- Choose either dictionary, both, or Off; insert with Tab, Enter, or a click.
+- Prompt weights and surrounding tags are preserved. No search queries leave the app.

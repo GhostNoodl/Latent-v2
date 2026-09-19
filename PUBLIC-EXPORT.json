@@ -368,8 +368,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 72324,
-      "sha256": "40dc23bf7ee1d6939b792ecd9e54457a7f561907ff193699348f03d39820262f"
+      "bytes": 72367,
+      "sha256": "9aa066d5799c0ead2e8f64d737536000c47a9e63a47f28d4dbf6d3987e8d72c0"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -1228,8 +1228,8 @@
     },
     {
       "path": "scripts/third-party-notices.mjs",
-      "bytes": 4243,
-      "sha256": "b20e6b01bd0b8a089117d7ea71a28e015db426cea96e90740151f09cf5ea71a8"
+      "bytes": 4566,
+      "sha256": "8c0bf2f631d13d15478cb625c401aec56486252278410f9834f03de720a056d6"
     },
     {
       "path": "scripts/windows-distribution.mjs",
@@ -1243,8 +1243,8 @@
     },
     {
       "path": "THIRD-PARTY-NOTICES.txt",
-      "bytes": 102463,
-      "sha256": "31ccd930e451d6949275a4ae428afc0c39fa498beb294f72a02b372e7496361b"
+      "bytes": 103824,
+      "sha256": "183389772275af7f0924f6f49bf5976fd14ce7c6bd503a5d847f63dfa6e24e91"
     },
     {
       "path": "README-WINDOWS.txt",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 31513,
-      "sha256": "17134901c6114455eae18c42cde79fc3a2d77861119bb081f2f398444eb96250"
+      "bytes": 31787,
+      "sha256": "e27509088ba83dd99508e8c545b51859b5cf7da5833c25ebe3a9d5afa877e37a"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1495,6 +1495,61 @@
       "path": "tests/qwen-compact-runtime.test.ts",
       "bytes": 3502,
       "sha256": "c3a3b5a1a9e27f8480b152073b4f3485f8d1f868a5f4add49e61c61c0f1b31f1"
+    },
+    {
+      "path": "src/shared/tag-autocomplete.ts",
+      "bytes": 3917,
+      "sha256": "9d4b3144368b2ffcc14495de2f25c8ec657e782f330942b1a03724ec6b4653e7"
+    },
+    {
+      "path": "src/renderer/TagPrompt.tsx",
+      "bytes": 6632,
+      "sha256": "a35f6e0b72d9d5116a1aa2f2120da480a80467d2f0c47998656fb69d02603a5f"
+    },
+    {
+      "path": "src/renderer/tag-search.ts",
+      "bytes": 891,
+      "sha256": "1e4a058fad67ac485383b57425c57aedc98b01e41e8a51a6e54c208a723b8dea"
+    },
+    {
+      "path": "src/renderer/tag-search.worker.ts",
+      "bytes": 482,
+      "sha256": "ab1fec472fd86b8f422b4041406b53d83a83fb8cc8f3ac7dfe6cce0449e9b2c0"
+    },
+    {
+      "path": "src/renderer/tag-prompt.css",
+      "bytes": 1400,
+      "sha256": "3857bf75bf74a43b6bdc0df6e416b48cc50f7ce3c192add1790ff7021867264a"
+    },
+    {
+      "path": "src/renderer/tag-data/e621.csv",
+      "bytes": 2681621,
+      "sha256": "b6b36579f1843d04c5c81fb054828806aadce494dc417c80d492e4b3ebf73e46"
+    },
+    {
+      "path": "src/renderer/tag-data/danbooru.csv",
+      "bytes": 3518020,
+      "sha256": "f936684fa0b041e9a55d35f2052588e28d95eef8672be6829241f8b1a7214732"
+    },
+    {
+      "path": "tests/tag-autocomplete.test.ts",
+      "bytes": 2787,
+      "sha256": "98ef49bbd60b584418a5fb25e38ac2e931250a89ad162e787f7e58ea42017e86"
+    },
+    {
+      "path": "tests/tag-prompt-dom.test.tsx",
+      "bytes": 2210,
+      "sha256": "ce9c2fbf6531103b1801dcdfdb085bedfbad9e08c85b381544606aaa39ab1422"
+    },
+    {
+      "path": "licenses/TAG-AUTOCOMPLETE-MIT.txt",
+      "bytes": 1068,
+      "sha256": "c1532c29734187eddd3948321379fa95ba79191bc3cb41d2787d7dff6e5913b5"
+    },
+    {
+      "path": "docs/TAG-AUTOCOMPLETE.md",
+      "bytes": 1867,
+      "sha256": "bc4e2f8581126efbc4239cb33886154abbb7d4953bf5585144732a712e690cc1"
     }
   ],
   "privateHistoryIncluded": false

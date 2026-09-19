@@ -1210,6 +1210,50 @@
     {
       "from": "tests/qwen-compact-runtime.test.ts",
       "to": "tests/qwen-compact-runtime.test.ts"
+    },
+    {
+      "from": "src/shared/tag-autocomplete.ts",
+      "to": "src/shared/tag-autocomplete.ts"
+    },
+    {
+      "from": "src/renderer/TagPrompt.tsx",
+      "to": "src/renderer/TagPrompt.tsx"
+    },
+    {
+      "from": "src/renderer/tag-search.ts",
+      "to": "src/renderer/tag-search.ts"
+    },
+    {
+      "from": "src/renderer/tag-search.worker.ts",
+      "to": "src/renderer/tag-search.worker.ts"
+    },
+    {
+      "from": "src/renderer/tag-prompt.css",
+      "to": "src/renderer/tag-prompt.css"
+    },
+    {
+      "from": "src/renderer/tag-data/e621.csv",
+      "to": "src/renderer/tag-data/e621.csv"
+    },
+    {
+      "from": "src/renderer/tag-data/danbooru.csv",
+      "to": "src/renderer/tag-data/danbooru.csv"
+    },
+    {
+      "from": "tests/tag-autocomplete.test.ts",
+      "to": "tests/tag-autocomplete.test.ts"
+    },
+    {
+      "from": "tests/tag-prompt-dom.test.tsx",
+      "to": "tests/tag-prompt-dom.test.tsx"
+    },
+    {
+      "from": "licenses/TAG-AUTOCOMPLETE-MIT.txt",
+      "to": "licenses/TAG-AUTOCOMPLETE-MIT.txt"
+    },
+    {
+      "from": "docs/TAG-AUTOCOMPLETE.md",
+      "to": "docs/TAG-AUTOCOMPLETE.md"
     }
   ]
 }
