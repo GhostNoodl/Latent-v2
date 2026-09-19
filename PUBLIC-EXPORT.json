@@ -113,8 +113,8 @@
     },
     {
       "path": "src/main/main.ts",
-      "bytes": 56850,
-      "sha256": "f9448ac13a782a002190c88d5905b9063a2fc4d3ee174551030a6e56521afdf9"
+      "bytes": 56862,
+      "sha256": "2139beea3d6afd7c502000500db53c0d31cae99c9338ba0e343caea625031be0"
     },
     {
       "path": "src/main/managed-backend.ts",
@@ -173,8 +173,8 @@
     },
     {
       "path": "src/main/qwen-edit-assets.ts",
-      "bytes": 25927,
-      "sha256": "c0ca75f7ae856e459f47961f8a297b91d8a6306575686d49c72d54db954dd074"
+      "bytes": 26901,
+      "sha256": "80078205ad3e4d05d305ef2504fce2be1a44c078648fb92959edcd95b670f73d"
     },
     {
       "path": "src/main/regional-masks.ts",
@@ -283,8 +283,8 @@
     },
     {
       "path": "src/main/storage-catalog.ts",
-      "bytes": 11191,
-      "sha256": "d32461e16e7879b378943f31a6baf86c4f052832ed0f0e5a7f57dece25149d4f"
+      "bytes": 11328,
+      "sha256": "47b0c788366df6c19390dd4fb8a4f5d689f8194fa4b23f9b0a73e21134728c90"
     },
     {
       "path": "src/main/storage-locations.ts",
@@ -563,13 +563,13 @@
     },
     {
       "path": "src/renderer/QwenEditor.tsx",
-      "bytes": 43798,
-      "sha256": "aff69466ce4e17ed91e78894bc03cf123efce578b19d095fc78d0af6596c5fd7"
+      "bytes": 44068,
+      "sha256": "e2f2ee5af569090cba4709c5d77fe0f4882ff96941d70554479a201589e21ba7"
     },
     {
       "path": "src/renderer/RecipeExtras.tsx",
-      "bytes": 10004,
-      "sha256": "68df0bd0b7134b276ce394367053abbca07b4a96a471080059f4c7578f240eea"
+      "bytes": 10086,
+      "sha256": "0b150c450fac32b44406c63d76ae4520058a7bcd758fd34ec2d6b60de4741334"
     },
     {
       "path": "src/renderer/regional-prompts.css",
@@ -838,8 +838,8 @@
     },
     {
       "path": "src/shared/qwen-conversation.ts",
-      "bytes": 2999,
-      "sha256": "28d4969d4e71f5b3cb208ed71d3226bd9cafcc8f1309b2401bb741f86660f48f"
+      "bytes": 3076,
+      "sha256": "639dae275725331efe658e4f5eb14a73238e2aad58be3fd7b67def09cbcac4a3"
     },
     {
       "path": "src/shared/qwen-edit-canvas.ts",
@@ -848,13 +848,13 @@
     },
     {
       "path": "src/shared/qwen-edit-types.ts",
-      "bytes": 6800,
-      "sha256": "0c71d7ecf3c9cc2609546eb552e99fddfd46e246192d73b930f1cf71fd339ad1"
+      "bytes": 7318,
+      "sha256": "bc54b24b007a5b0b3342ae798e1a7ed80d2af39b7d90e759dc87ed54c928b958"
     },
     {
       "path": "src/shared/qwen-edit-workflow.ts",
-      "bytes": 12869,
-      "sha256": "ef81b83f531968220d5f4d4f7593fb836be3a5c9a48e076f5a327e2b08c45ddf"
+      "bytes": 13158,
+      "sha256": "bd015605f91ca4d55da4dd993623deda032fd8cec3d8df45a1a0ae51bea67f95"
     },
     {
       "path": "src/shared/regional-prompt-editor.ts",
@@ -1048,8 +1048,8 @@
     },
     {
       "path": "scripts/packaging-resources.mjs",
-      "bytes": 18823,
-      "sha256": "58811ff75213f458fe5d0f0899888198a440c3ba0728bcbda143598dd2ed9f04"
+      "bytes": 18845,
+      "sha256": "34bbbea5cfa1ca795b6fc179fd750c3711a198354af5e0ff14c4b08a9c157e64"
     },
     {
       "path": "scripts/packaging-hooks.cjs",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "docs/UPDATE-0.2.md",
-      "bytes": 30999,
-      "sha256": "7a0cc176974d1610827891c57b6228dafc0822fb430b8116079a5899cd706ff6"
+      "bytes": 31513,
+      "sha256": "17134901c6114455eae18c42cde79fc3a2d77861119bb081f2f398444eb96250"
     },
     {
       "path": "src/shared/model-names.ts",
@@ -1483,8 +1483,8 @@
     },
     {
       "path": "tests/qwen-compact.test.ts",
-      "bytes": 6877,
-      "sha256": "a93ece27fb60b46f9f8640b4dcb4cad1da436ba7619f501444548a5d269df6c7"
+      "bytes": 8199,
+      "sha256": "1068bc99690a8965bfbfe0fc75133cf0ab6817dc0090bc0abad83aa8dcff4304"
     },
     {
       "path": "docs/QWEN-COMPACT.md",

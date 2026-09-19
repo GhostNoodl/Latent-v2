@@ -63,3 +63,22 @@ it('requires the retained Compact loader when checking an engine update', async 
  expect(()=>validateRuntimeUpdateCapabilities({},set,['latent_qwen_gguf'])).toThrow('Compact Qwen loader');
  expect(()=>validateRuntimeUpdateCapabilities({UnetLoaderGGUF:{output:['IMAGE'],input:{required:{unet_name:[[]]}}}},set,['latent_qwen_gguf'])).toThrow('Compact Qwen loader');
 });
+
+it('uses eight-step Lightning by default for new edits and keeps older profiles exact', async () => {
+ const {createQwenConversationDraft}=await import('../src/shared/qwen-conversation');
+ expect(createQwenConversationDraft('New edit').settings.profile).toBe('lightning8');
+ const b=qwenBundle('lightning8');const plan=buildQwenEditWorkflow(input('lightning8'),b);
+ expect(plan.settings).toMatchObject({steps:8,guidance:1});
+ expect(plan.workflow['14'].inputs.lora_name).toContain('8steps-V1.0-fp32');
+ expect(plan.workflow['15'].inputs).toMatchObject({steps:8,cfg:1,model:['13',0]});
+ expect(plan.workflow['12'].inputs.model).toEqual(['14',0]);
+ expect(plan.workflow['14'].inputs.model).toEqual(['1',0]);
+ for(const schema of [qwenEditSettingsSchema,qwenEditorSettingsSchema]) {
+  expect(schema.safeParse({...input('lightning8').settings,steps:4}).success).toBe(false);
+  expect(schema.safeParse({...input('lightning8').settings,steps:8,guidance:1}).success).toBe(true);
+ }
+ const wrong=qwenBundle('lightning8');wrong.assets.lightning=qwenBundle('fast').assets.lightning;
+ expect(()=>validateQwenEditBundle(wrong)).toThrow('lightning');
+ expect(buildQwenEditWorkflow(input('fast'),qwenBundle('fast')).settings.steps).toBe(4);
+ expect(buildQwenEditWorkflow(input('base'),qwenBundle('base')).settings.steps).toBe(40);
+});

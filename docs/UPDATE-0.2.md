@@ -195,3 +195,12 @@ face class 0. New detections retain the 640/320 fallback and existing feathered
 face-box masks. Old YOLO detections retain their original provenance and remain
 replayable. Existing installations must run face-detector setup once in Settings
 to download the replacement model; model weights are not bundled in the installer.
+
+### Qwen Lightning eight-step editing
+
+New editing conversations default to the tested eight-step FP32 Lightning adapter
+on the native INT8 Qwen Edit 2511 model, CFG 1, Euler/simple, shift 3.1.
+Standard, four-step Lightning and Compact remain selectable. Saved conversations
+and recorded recipes keep their original profile and artifact identities.
+Eight-step setup shares the installed diffusion model, encoder and VAE; its adapter
+has a separate verified receipt so four-step replay remains available.

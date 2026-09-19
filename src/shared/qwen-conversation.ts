@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { qwenEditProfileSchema, isFastQwenProfile, qwenEditJobRequestSchema, qwenEditWorkflowVersionSchema } from './qwen-edit-types';
+import { qwenProfileSteps, qwenEditProfileSchema, isFastQwenProfile, qwenEditJobRequestSchema, qwenEditWorkflowVersionSchema } from './qwen-edit-types';
 
 export const QWEN_CONVERSATION_LIMIT = 50;
 const recordId = z.string().regex(/^[a-f0-9]{32}$/);
@@ -9,7 +9,7 @@ export const qwenEditorSettingsSchema = z.object({
   profile: qwenEditProfileSchema, width: z.number().int().min(256).max(1024).multipleOf(64), height: z.number().int().min(256).max(1024).multipleOf(64),
   seed: text(32), resize: z.enum(['stretch', 'center-crop']),
   steps: z.number().int().min(1).max(60).optional(), guidance: z.number().finite().min(1).max(8).optional(),
-}).strict().refine(value => !isFastQwenProfile(value.profile) || (value.steps === undefined || value.steps === 4) && (value.guidance === undefined || value.guidance === 1), 'The fast profile requires four steps and CFG 1.');
+}).strict().refine(value => !isFastQwenProfile(value.profile) || (value.steps === undefined || value.steps === qwenProfileSteps(value.profile)) && (value.guidance === undefined || value.guidance === 1), 'The fast profile requires its matching Lightning step count and CFG 1.');
 export const qwenConversationDraftSchema = z.object({
   id: z.uuid(), title: text(80).min(1), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime(), branchId: z.uuid(),
   source: z.object({ id: z.string().regex(/^src_[a-f0-9-]{36}$/), sha256: z.string().regex(/^[a-f0-9]{64}$/), parentRecordId: recordId.optional() }).strict().optional(),
@@ -25,5 +25,5 @@ export type QwenConversationDraft = z.infer<typeof qwenConversationDraftSchema>;
 export type QwenConversationStore = z.infer<typeof qwenConversationSchema>;
 export function createQwenConversationDraft(title = 'New image edit', id: string = crypto.randomUUID()): QwenConversationDraft {
   const now = new Date().toISOString();
-  return { id, title, createdAt: now, updatedAt: now, branchId: crypto.randomUUID(), instruction: '', negativePrompt: '', settings: { profile: 'base', width: 512, height: 512, seed: 'random', resize: 'center-crop' } };
+  return { id, title, createdAt: now, updatedAt: now, branchId: crypto.randomUUID(), instruction: '', negativePrompt: '', settings: { profile: 'lightning8', width: 512, height: 512, seed: 'random', resize: 'center-crop' } };
 }

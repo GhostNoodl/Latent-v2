@@ -280,7 +280,7 @@ async function initialize() {
   const preflightSetup = async (raw: SetupCapability): Promise<SetupPreflight> => {
     const capability = z.enum(['engine','images','edit','video']).parse(raw);
     const hardware = await inspectSetupHardware(paths, null);
-    const storage = await storageOverview.packageStorage(capability === 'engine' ? 'backend' : capability === 'edit' ? 'qwen-base' : capability === 'video' ? 'video-fused4' : 'backend');
+    const storage = await storageOverview.packageStorage(capability === 'engine' ? 'backend' : capability === 'edit' ? 'qwen-lightning8' : capability === 'video' ? 'video-fused4' : 'backend');
     const blockers = setupHardwareBlockers(hardware, capability);
     if (capability !== 'engine' && backend.status().state !== 'ready') blockers.push('Set up and start the generation engine first.');
     if (capability === 'video' && !videoAssets.status().canAcquire) blockers.push('Automatic video acquisition is unavailable. Review video setup in the Video tab.');
@@ -303,7 +303,7 @@ async function initialize() {
       if (check.blockers.length) throw new Error(check.blockers.join(' '));
       if (capability === 'engine') { if (backend.status().state === 'stopped') await methods.startBackend(); else if (backend.status().state !== 'ready') await methods.setupBackend(); }
       else if (capability === 'images') { if (!models.assets.some(m => m.kind === 'checkpoint' && m.status === 'ready' && ['sdxl','illustrious'].includes(m.family))) { const {id: _id,name: _name,publisher: _publisher,description: _description,bytes: _bytes,...request} = MODEL_CATALOG.find(m => m.id === 'onoma-illustrious-xl-1.1')!; await methods.downloadModel(request); } }
-      else if (capability === 'edit') await methods.setupQwenEdit('base');
+      else if (capability === 'edit') await methods.setupQwenEdit('lightning8');
       else await methods.setupVideoAssets('fused4');
       } finally { guidedSetupRunning = false; }
     },

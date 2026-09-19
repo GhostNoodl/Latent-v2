@@ -1,14 +1,14 @@
 import type { ComfyWorkflow } from './types';
 import { QWEN_GGUF_RELEASE } from './qwen-gguf-release';
-import { QWEN_COMPACT_DIFFUSION, isFastQwenProfile, QWEN_EDIT_IDENTITIES, qwenEditSettingsSchema, qwenEditWorkflowVersionSchema, type QwenEditBundle, type QwenEditProfile, type QwenEditWorkflowInput, type QwenEditWorkflowPlan } from './qwen-edit-types';
+import { QWEN_LIGHTNING8_IDENTITY, qwenProfileSteps, QWEN_COMPACT_DIFFUSION, isFastQwenProfile, QWEN_EDIT_IDENTITIES, qwenEditSettingsSchema, qwenEditWorkflowVersionSchema, type QwenEditBundle, type QwenEditProfile, type QwenEditWorkflowInput, type QwenEditWorkflowPlan } from './qwen-edit-types';
 import { qwenInferenceSize } from './qwen-edit-canvas';
 
 export function validateQwenEditBundle(bundle: QwenEditBundle, profile: QwenEditProfile = bundle?.profile) {
   const compact = profile === 'compact';
-  if (!bundle || bundle.id !== (compact ? 'qwen-edit-2511-gguf-q4ks' : 'qwen-edit-2511-native-int8') || bundle.profile !== profile || !['base', 'fast', 'compact'].includes(profile) || bundle.runtime?.route !== (compact ? 'gguf-q4ks' : 'native-int8-convrot') || bundle.runtime.comfySourceCommit !== '12d5279438bfefc058a269eae805ceab6047777f' || bundle.runtime.comfyVersion !== '0.34.0' || bundle.runtime.torchVersion !== '2.11.0+cu130' || bundle.runtime.comfyKitchenVersion !== '0.2.31' || !Array.isArray(bundle.runtime.customNodes) || JSON.stringify(bundle.runtime.customNodes) !== JSON.stringify(compact ? [QWEN_GGUF_RELEASE.revision] : []) || bundle.runtime.cpuTextEncoder !== true) throw new Error('Verify the selected Qwen edit bundle and runtime before editing.');
+  if (!bundle || bundle.id !== (compact ? 'qwen-edit-2511-gguf-q4ks' : 'qwen-edit-2511-native-int8') || bundle.profile !== profile || !['base', 'fast', 'compact', 'lightning8'].includes(profile) || bundle.runtime?.route !== (compact ? 'gguf-q4ks' : 'native-int8-convrot') || bundle.runtime.comfySourceCommit !== '12d5279438bfefc058a269eae805ceab6047777f' || bundle.runtime.comfyVersion !== '0.34.0' || bundle.runtime.torchVersion !== '2.11.0+cu130' || bundle.runtime.comfyKitchenVersion !== '0.2.31' || !Array.isArray(bundle.runtime.customNodes) || JSON.stringify(bundle.runtime.customNodes) !== JSON.stringify(compact ? [QWEN_GGUF_RELEASE.revision] : []) || bundle.runtime.cpuTextEncoder !== true) throw new Error('Verify the selected Qwen edit bundle and runtime before editing.');
   let bytes = 0;
   for (const role of ['diffusion', 'encoder', 'vae', ...(isFastQwenProfile(profile) ? ['lightning'] : [])] as const) {
-    const key = role as keyof typeof QWEN_EDIT_IDENTITIES; const expected = compact && key === 'diffusion' ? QWEN_COMPACT_DIFFUSION : QWEN_EDIT_IDENTITIES[key]; const asset = bundle.assets?.[key];
+    const key = role as keyof typeof QWEN_EDIT_IDENTITIES; const expected = profile === 'lightning8' && key === 'lightning' ? QWEN_LIGHTNING8_IDENTITY : compact && key === 'diffusion' ? QWEN_COMPACT_DIFFUSION : QWEN_EDIT_IDENTITIES[key]; const asset = bundle.assets?.[key];
     if (!asset || asset.role !== role || asset.status !== 'ready' || asset.format !== (compact && key === 'diffusion' ? 'gguf' : 'safetensors') || Object.entries(expected).some(([field, value]) => asset[field as keyof typeof asset] !== value)) throw new Error(`Verify the exact reviewed Qwen ${role} asset before editing.`);
     bytes += asset.bytes;
   }
@@ -23,7 +23,7 @@ function sourceFilename(value: string) {
 /** Native one-image 2511 recipe. Its input pixels must be resolved and rehashed by the job service. */
 export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: QwenEditBundle): QwenEditWorkflowPlan {
   const parsed = qwenEditSettingsSchema.parse(input.settings); validateQwenEditBundle(bundle, parsed.profile);
-  const settings = { ...parsed, steps: parsed.steps ?? (isFastQwenProfile(parsed.profile) ? 4 : 40), guidance: parsed.guidance ?? (isFastQwenProfile(parsed.profile) ? 1 : 4) };
+  const settings = { ...parsed, steps: parsed.steps ?? qwenProfileSteps(parsed.profile), guidance: parsed.guidance ?? (isFastQwenProfile(parsed.profile) ? 1 : 4) };
   const workflowVersion = qwenEditWorkflowVersionSchema.parse(input.workflowVersion ?? (parsed.profile === 'compact' ? 'qwen-image-edit-2511-gguf-q4ks@1' : 'qwen-image-edit-2511-int8@2'));
   if ((parsed.profile === 'compact') !== (workflowVersion === 'qwen-image-edit-2511-gguf-q4ks@1')) throw new Error('The Qwen model route does not match this recorded recipe.');
   const aligned = workflowVersion !== 'qwen-image-edit-2511-int8@1';
@@ -51,6 +51,7 @@ export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: Qwen
     '16': { class_type: 'VAEDecode', inputs: { samples: ['15', 0], vae: ['3', 0] } },
   };
   if (isFastQwenProfile(parsed.profile)) workflow['14'] = { class_type: 'LoraLoaderModelOnly', inputs: { model: ['13', 0], lora_name: bundle.assets.lightning!.filename, strength_model: 1 } };
+  if (parsed.profile === 'lightning8') { workflow['14'].inputs.model = ['1', 0]; workflow['12'].inputs.model = ['14', 0]; workflow['15'].inputs.model = ['13', 0]; }
   if (aligned) workflow['17'] = { class_type: 'ImageScale', inputs: { image: ['16', 0], upscale_method: 'lanczos', width: settings.width, height: settings.height, crop: 'disabled' } };
   return { workflow, workflowVersion, bundle: structuredClone(bundle), source: structuredClone(source), instruction: input.instruction, negativePrompt, settings, sampler: { nodeId: '15', name: 'euler', scheduler: 'simple', denoise: 1, modelShift: 3.1, cfgNorm: 1, textEncoderDevice: 'cpu' }, output: { nodeId: '7', filenamePrefix, width: settings.width, height: settings.height, batchSize: 1 }, expectedOutputCount: 1, ...(aligned ? { canvas: { sourceFitting: { ...native, mode: settings.resize }, inference: { ...native }, reference: { ...native }, output: { width: settings.width, height: settings.height, method: 'lanczos' as const } } } : {}) };
 }
