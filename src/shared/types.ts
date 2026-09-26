@@ -1,3 +1,4 @@
+import type { AppUpdateSettings, AppUpdateStatus } from './app-update-types';
 import type { AssistantConversation, AssistantStatus, AssistantSuggestion, AssistantSuggestionRequest } from './assistant-types';
 import type { SourceImageAsset, SourceImageInventory, SourceMaskAsset, SourceMaskSaveOptions } from './source-types';
 import type { CivitaiDownloadRequest, CivitaiModel, CivitaiPermissions, CivitaiReadResult, CivitaiSearchPage, CivitaiSearchRequest, CivitaiSettings } from './civitai-types';
@@ -45,6 +46,9 @@ export interface ModelAsset {
 }
 export interface LoraSelection { modelId: string; weight: number; clipWeight: number; }
 export interface GenerationDraft {
+  autoFace?: { profile: 'illustrated' | 'anime' | 'photographic'; strength: number; classic?: boolean; applyLoras?: boolean; steps?: number; cfg?: number; sampler?: string; scheduler?: string };
+  autoFaceParentRecordId?: string;
+  enhance?: { parentRecordId: string; standard?: boolean; method?: 'image' };
   faceDetailer?: { request: FaceRefinementRequest; frozen?: FaceRefinementPlan };
   ipAdapter?: { settings: IPAdapterSettings; frozen?: IPAdapterPlan };
   regionalPrompts?: { settings: RegionalPromptSettings; frozen?: RegionalPromptPlan };
@@ -63,13 +67,15 @@ export interface GenerationDraft {
   height: number;
   steps: number;
   cfg: number;
+  modelSampling?: { prediction: 'eps' | 'v_prediction' | 'lcm' | 'x0'; zeroTerminalSnr: boolean };
   sampler: string;
   scheduler: string;
   seed: string;
   batchSize: number;
   loras: LoraSelection[];
   autoTriggers: boolean;
-  triggerResolutionVersion?: 'legacy@1' | 'punctuation@2';
+  triggerResolutionVersion?: 'legacy@1' | 'punctuation@2' | 'visible@3';
+  promptTriggerSpans?: import('./visible-triggers').PromptTriggerSpan[];
   triggerWords?: Record<string, string[]>;
   assetHashes?: Record<string, string>;
 }
@@ -78,7 +84,8 @@ export interface AppSettings {
   civitaiAutoMetadata?: boolean; civitaiDisplayMetadata?: boolean;
   showGenerationPreview: boolean;
   theme: 'system' | 'dark' | 'light';
-  accent: 'iris' | 'sea-glass' | 'rose';
+  accent: 'iris' | 'sea-glass' | 'rose' | 'sky' | 'amber' | 'peach' | 'mint' | 'lilac';
+  sizePresets?: { name: string; width: number; height: number }[];
   rememberPositivePrompt: boolean;
   rememberNegativePrompt: boolean;
   desktopNotifications?: boolean;
@@ -116,6 +123,7 @@ export interface BackendStatus {
   url?: string;
   version?: string;
   installProgress?: number;
+  setupDownload?: { filename: string; receivedBytes: number; totalBytes?: number; phase: 'downloading' | 'verifying' };
   logTail: string[];
 }
 export type JobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
@@ -135,7 +143,7 @@ export interface QueueJobBase {
   outputIds: string[];
   previewUrl?: string;
 }
-export interface GenerationJob extends QueueJobBase { kind?: 'image'; draft: GenerationDraft; }
+export interface GenerationJob extends QueueJobBase { kind?: 'image'; draft: GenerationDraft; autoFaceFinished?: boolean; autoFaceResults?: Record<string, { state: 'queued' | 'skipped' | 'failed'; jobId?: string; message?: string }>; }
 export interface VideoJob extends QueueJobBase {
   kind: 'video'; video: VideoDraft; frames: number; durationSeconds: number;
   finalization?: 'pending' | 'failed';
@@ -191,6 +199,7 @@ export interface DownloadStatus {
 }
 export interface ModelDownloadRequest { url: string; filename: string; kind: ModelKind; family: ModelFamily; sha256?: string; triggers?: string[]; sourceUrl?: string; licenseUrl?: string; provenance?: ModelProvenance; civitai?: CivitaiProvenance; }
 export interface AppSnapshot {
+  appUpdates?: AppUpdateStatus;
   dismissedActivity?: { queue: string[]; notifications: string[] };
   notifications?: Array<{ id: string; title: string; body: string; at: string; preference: 'notifyGeneration' | 'notifyError' | 'notifyDownload' }>;
   video: VideoAvailability;
@@ -223,6 +232,11 @@ export interface AppSnapshot {
 export type ComfyInput = string | number | boolean | [string, number];
 export type ComfyWorkflow = Record<string, { class_type: string; inputs: Record<string, ComfyInput>; _meta?: { title: string } }>;
 export interface LatentAPI {
+  saveAppUpdateSettings(settings: Partial<AppUpdateSettings>): Promise<void>;
+  checkAppUpdates(): Promise<void>;
+  downloadAppUpdate(): Promise<void>;
+  installAppUpdate(): Promise<void>;
+  cancelAppUpdate(): Promise<void>;
   getSetupPreflight(capability: import('./setup').SetupCapability): Promise<import('./setup').SetupPreflight>;
   runGuidedSetup(capability: import('./setup').SetupCapability): Promise<void>;
   getModelTransferRecovery(): Promise<ModelTransferRecovery>;
@@ -322,6 +336,7 @@ export interface LatentAPI {
   openComfyUI(): Promise<void>;
   refreshModels(): Promise<AppSnapshot>;
   importModels(kind: ModelKind): Promise<AppSnapshot>;
+  deleteModel(request: { modelId: string; expectedSha256: string }): Promise<AppSnapshot>;
   updateModel(id: string, changes: { family?: ModelFamily | 'unknown'; triggers?: string[] }): Promise<AppSnapshot>;
   downloadModel(request: ModelDownloadRequest): Promise<void>;
   cancelDownload(id: string): Promise<void>;
@@ -333,6 +348,7 @@ export interface LatentAPI {
   reorderJobs(ids: string[]): Promise<void>;
   savePreset(preset: Preset): Promise<AppSnapshot>;
   deletePreset(id: string): Promise<AppSnapshot>;
+  copyOutput(id: string): Promise<void>;
   revealOutput(id: string): Promise<void>;
   openOutput(id: string): Promise<void>;
   onSnapshot(listener: (snapshot: AppSnapshot) => void): () => void;

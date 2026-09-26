@@ -1,10 +1,11 @@
+import { cleanModelStem } from '../shared/model-names';
 import { useEffect, useState } from 'react';
 import { Boxes, Image, Layers } from 'lucide-react';
 import type { AppSnapshot, ModelAsset } from '../shared/types';
 import { LocalModelMetadata } from './LocalModelMetadata';
 import { Modal } from './ui';
 
-export const modelDisplayName = (model: ModelAsset, showCivitai = true) => (showCivitai ? model.civitai?.modelName?.trim() : '') || model.name;
+export const modelDisplayName = (model: ModelAsset, showCivitai = true) => (showCivitai ? model.civitai?.modelName?.trim() : '') || cleanModelStem(model.name);
 
 export function ModelArtwork({ model, history = [], showCivitai = true }: { model: ModelAsset; showCivitai?: boolean; history: AppSnapshot['history'] }) {
   const example = history.find(record => model.kind === 'checkpoint' ? record.checkpoint?.id === model.id : record.loras.some(lora => lora.id === model.id));

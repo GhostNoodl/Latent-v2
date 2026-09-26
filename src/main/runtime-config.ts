@@ -145,9 +145,15 @@ if os.name == 'nt':
     if not owner_mutex:
         raise ctypes.WinError(ctypes.get_last_error())
     if ctypes.get_last_error() == 183:
-        owner_kernel.CloseHandle(owner_mutex)
-        print('Another Latent v2 backend already owns this studio. Close the other app or verification run before starting.', file=sys.stderr, flush=True)
-        sys.exit(12)
+        owner_kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+        owner_kernel.WaitForSingleObject.restype = wintypes.DWORD
+        owner_result = owner_kernel.WaitForSingleObject(owner_mutex, 5000)
+        if owner_result == 258:
+            owner_kernel.CloseHandle(owner_mutex)
+            print('Another Latent v2 backend already owns this studio. Close the other app or verification run before starting.', file=sys.stderr, flush=True)
+            sys.exit(12)
+        if owner_result not in (0, 128):
+            raise ctypes.WinError(ctypes.get_last_error())
 else:
     import fcntl
     owner_lock = open(os.path.join(studio_root, 'runtime', 'backend-owner.lock'), 'a')

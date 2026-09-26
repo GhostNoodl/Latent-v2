@@ -1,3 +1,4 @@
+import { samplingValidationGraph } from './workflow';
 import type { ComfyWorkflow, GenerationDraft } from './types';
 import type { SourceImageAsset } from './source-types';
 import { draftSchema } from './validation';
@@ -11,6 +12,7 @@ export function ipAdapterReferenceRectangle(width: number, height: number, frami
 }
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 function validateBase(graph: ComfyWorkflow, draft: GenerationDraft): [string, 0] {
+  graph = samplingValidationGraph(graph, draft);
   const expected: Record<string, string> = { '1': 'CheckpointLoaderSimple', '2': 'CLIPTextEncode', '3': 'CLIPTextEncode', '4': 'EmptyLatentImage', '5': 'KSampler', '6': 'VAEDecode', '7': 'SaveImage' };
   for (const [id, type] of Object.entries(expected)) if (graph[id]?.class_type !== type) throw new Error('Image reference requires the baseline graph at nodes 1–7.');
   for (const [id, node] of Object.entries(graph)) if (!/^\d{1,6}$/.test(id) || !expected[id] && node.class_type !== 'LoraLoader') throw new Error('Image reference cannot yet combine with another advanced workflow.');
@@ -25,7 +27,7 @@ function validateBase(graph: ComfyWorkflow, draft: GenerationDraft): [string, 0]
     if (node?.class_type !== 'LoraLoader' || !Array.isArray(previous) || typeof previous[0] !== 'string' || previous[1] !== 0 || !same(node.inputs.clip, [previous[0], 1])) throw new Error('The image-reference model chain is invalid.'); current = previous[0];
   }
   if (Object.entries(graph).some(([id, node]) => node.class_type === 'LoraLoader' && !visited.has(id))) throw new Error('The image-reference graph contains a disconnected LoRA.');
-  return [model[0], 0];
+  return [draft.modelSampling ? '49' : model[0], 0];
 }
 export function augmentIPAdapterWorkflow(base: ComfyWorkflow, draft: GenerationDraft, input: IPAdapterSettings, reference: { source: SourceImageAsset; sourceFilename: string }, bundle: ReviewedIPAdapterBundle, frozenPlan?: IPAdapterPlan): IPAdapterWorkflowResult {
   draftSchema.parse(draft); const settings = ipAdapterSettingsSchema.parse(input); const assets = ipAdapterBundleSchema.parse(bundle);

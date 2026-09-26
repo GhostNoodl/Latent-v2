@@ -4,7 +4,7 @@ A Windows desktop studio with a separately managed ComfyUI runtime for SDXL/Illu
 
 ## Release candidate
 
-Version 0.1.1 includes guided first-run setup and an unsigned per-user Windows installer. The 0.1.0 installer passed clean-VM installation, reopening, same-version reinstall, uninstall and studio-file preservation. Version 0.1.1 fixes setup-result visibility; final artifact checks are recorded separately from live installer execution. Do not redistribute private studio files or local development evidence.
+Version 0.2.0 is a candidate for the first major feature update: clearer setup and model management, expanded discovery and wildcards, visible LoRA trigger choices, image enhancement, optional automatic face refinement, optional Compact Qwen editing and desktop update controls. See [the update plan and verification](docs/UPDATE-0.2.md). The real 0.1.1-to-0.2.0 Windows upgrade remains a release acceptance check; candidate availability does not mean that check passed. Do not redistribute private studio files or local development evidence.
 
 ## Build from source
 

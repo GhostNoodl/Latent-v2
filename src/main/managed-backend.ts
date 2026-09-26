@@ -173,7 +173,9 @@ export class ManagedBackend {
     const partial = `${target}.partial`;
     const response = await fetch(url, { signal: AbortSignal.any([this.abort!.signal, AbortSignal.timeout(20 * 60_000)]) });
     if (!response.ok || !response.body) throw new Error(`Download failed (${response.status}): ${filename}`);
-    const total = Number(response.headers.get('content-length'));
+    const length = Number(response.headers.get('content-length'));
+    const total = Number.isFinite(length) && length > 0 ? length : undefined;
+    this.publish({ setupDownload: { filename, receivedBytes: 0, totalBytes: total, phase: 'downloading' } });
     const file = await fs.promises.open(partial, 'w');
     let received = 0;
     let lastUpdate = 0;
@@ -184,15 +186,16 @@ export class ManagedBackend {
         received += chunk.byteLength;
         if (Date.now() - lastUpdate > 250) {
           lastUpdate = Date.now();
-          this.publish({ installProgress: total ? from + Math.min(1, received / total) * (to - from) : from });
+          this.publish({ installProgress: total ? from + Math.min(1, received / total) * (to - from) : from, setupDownload: {filename, receivedBytes: received, totalBytes: total, phase: 'downloading'} });
         }
       }
     } finally { await file.close(); }
+    this.publish({setupDownload: {filename, receivedBytes: received, totalBytes: total, phase: 'verifying'}});
     const actual = await sha256File(partial);
     if (actual !== expectedSha256) throw new Error(`Integrity check failed for ${filename}. Retry setup to download a fresh copy.`);
     this.checkCancelled();
     await fs.promises.rename(partial, target);
-    this.publish({ installProgress: to });
+    this.publish({ installProgress: to, setupDownload: undefined });
     return target;
   }
 
@@ -352,7 +355,7 @@ export class ManagedBackend {
       this.publish({ state: 'stopped', message: 'Your separate ComfyUI runtime is ready to start.', version: RUNTIME_RELEASE.comfyVersion, installProgress: 100 });
     } catch (error) {
       this.log(errorMessage(error));
-      this.publish({ state: 'error', message: errorMessage(error), installProgress: undefined, url: undefined });
+      this.publish({ state: 'error', message: errorMessage(error), installProgress: undefined, setupDownload: undefined, url: undefined });
       throw error;
     } finally { this.abort = undefined; }
   }
@@ -506,7 +509,7 @@ export class ManagedBackend {
       this.child = undefined;
       this.installer = undefined;
       this.activeUrl = null;
-      this.publish({ state: this.readMarker() ? 'stopped' : 'not-installed', message: this.readMarker() ? 'Your backend is stopped.' : 'Setup is incomplete. Run setup to resume.', url: undefined, installProgress: undefined });
+      this.publish({ state: this.readMarker() ? 'stopped' : 'not-installed', message: this.readMarker() ? 'Your backend is stopped.' : 'Setup is incomplete. Run setup to resume.', url: undefined, installProgress: undefined, setupDownload: undefined });
     } catch (error) {
       this.log(errorMessage(error));
       this.publish({ state: 'error', message: errorMessage(error), url: undefined });

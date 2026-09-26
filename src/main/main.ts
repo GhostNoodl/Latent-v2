@@ -1,13 +1,17 @@
+import { QWEN21_SET_ID } from '../shared/qwen21-release';
+import { AppUpdateService } from './app-updates';
+import { isQwen21Profile, qwenEditProfileSchema } from '../shared/qwen-edit-types';
+import { withPausedModelEngine } from './model-maintenance';
 import { setupStorageBlockers, setupHardwareBlockers, type SetupCapability, type SetupPreflight } from '../shared/setup';
 import { inspectHardware as inspectSetupHardware } from './hardware-profile-probe';
 import { storageBoundary, copyStorageLocation } from './storage-locations';
 import { reviewedRuntimeSet } from './reviewed-runtime-channel';
-import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, net, Notification, protocol, safeStorage, session, shell } from 'electron';
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, nativeImage, nativeTheme, net, Notification, protocol, safeStorage, session, shell } from 'electron';
 import { copyStudioText } from './clipboard';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -131,7 +135,7 @@ function videoStatus(): AppSnapshot['video'] {
   return localVideoAvailability(videoDrafts.status(), videoAssets.status(), backend.status().state, backend.getRuntimeIdentity());
 }
 function snapshot(): AppSnapshot {
-  return { dismissedActivity: store.getState('activity.dismissed', { queue: [], notifications: [] }), notifications: store.getState('notifications', []), video: videoStatus(), backendActivity: backendActivity.status(), hardwareProfiles: hardwareProfiles.status(), faceDetailer: faceDetailer.status(), runtimeUpdates: runtimeUpdateSnapshot(), ipAdapter: ipAdapter.status(), qwenEdit: qwenEdit.status(), modelLocations: modelLocations.snapshot(), collections: collections.snapshot(), controlNet: controlNet.status(), upscaler: upscaler.status(), wildcards: wildcards.snapshot(), backend: backend.status(), assistant: assistant.status(), segmentation: segmentation.status(), sourceImages: sources.list(), models: models.assets, history: store.records(), previewSelectedRecordId: store.previewSelectionId(), jobs: jobs.jobs(), settings: store.settings(), draft, presets: store.presets(), paths, hardware, downloads: models.downloads };
+  return { dismissedActivity: store.getState('activity.dismissed', { queue: [], notifications: [] }), notifications: store.getState('notifications', []), video: videoStatus(), backendActivity: backendActivity.status(), hardwareProfiles: hardwareProfiles.status(), faceDetailer: faceDetailer.status(), appUpdates: appUpdates?.status(), runtimeUpdates: runtimeUpdateSnapshot(), ipAdapter: ipAdapter.status(), qwenEdit: qwenEdit.status(), modelLocations: modelLocations.snapshot(), collections: collections.snapshot(), controlNet: controlNet.status(), upscaler: upscaler.status(), wildcards: wildcards.snapshot(), backend: backend.status(), assistant: assistant.status(), segmentation: segmentation.status(), sourceImages: sources.list(), models: models.assets, history: store.records(), previewSelectedRecordId: store.previewSelectionId(), jobs: jobs.jobs(), settings: store.settings(), draft, presets: store.presets(), paths, hardware, downloads: models.downloads };
 }
 function runtimeUpdateSnapshot() {
   const status = runtimeUpdates.status(); const problem = runtimeCoordinator.recoveryProblem();
@@ -152,18 +156,58 @@ function scheduleRuntimeIdleCheck() {
   if (!runtimeUpdateTimer || runtimeIdleTimer || closing || closed) return;
   runtimeIdleTimer = setTimeout(() => { runtimeIdleTimer = undefined; void automaticRuntimeCheck().catch(() => undefined); }, 1000);
 }
+let appUpdates: AppUpdateService | undefined;
+let appUpdateTimer: NodeJS.Timeout | undefined;
+let appUpdateTickRunning=false, appInstallClosing=false;
+let installerToLaunch:string|undefined;
+function appUpdateBusyReason():string|undefined {
+  if(storageChanging||storageRestartPending||pendingOperations.size||modelChangeInProgress)return 'Waiting for studio operations to finish.';
+  if([assistant.status(),segmentation.status(),faceDetailer.status(),qwenEdit.status(),upscaler.status(),controlNet.status(),ipAdapter.status()].some(value=>['installing','starting','thinking','segmenting','detecting','activating'].includes(value.state)))return 'Waiting for studio tools to finish.';
+  if(modelChangeBlockedReason()||jobs.isProcessing())return 'Waiting for the image engine and queue.';
+  if(jobs.jobs().some(job => isVideoJob(job) ? job.finalization==='pending' : job.status==='completed'&&job.draft.autoFace&&!job.autoFaceFinished))return 'Waiting for saved media and face refinement.';
+  const state=backendActivity.status();if(backend.status().state==='ready'&&(state.state!=='ready'||state.totalRunning||state.totalPending))return 'Waiting for the shared image engine.';
+  return undefined;
+}
+async function tickAppUpdates(){
+  if(!appUpdates||appUpdateTickRunning||closing||closed||quitting)return;appUpdateTickRunning=true;
+  try {await track(appUpdates.automatic());if(appUpdates.status().installRequested&&!appUpdateBusyReason()){await backendActivity.assertIdle('install an app update');if(appUpdateBusyReason())return;appInstallClosing=true;app.quit();}}
+  catch { /* The service reports network errors. Busy installation stays deferred. */ }
+  finally {appUpdateTickRunning=false;}
+}
+let modelChangeInProgress = false;
+function modelChangeBlockedReason(): string | undefined {
+  if (modelChangeInProgress) return 'Wait for the current model change to finish.';
+  const runtimeProblem = runtimeCoordinator?.blockedReason(); if (runtimeProblem) return runtimeProblem;
+  if (!backend || !['ready', 'stopped', 'not-installed'].includes(backend.status().state)) return 'Wait for the image engine to finish its current operation.';
+  if (jobs?.jobs().some(job => ['queued', 'running'].includes(job.status))) return 'Finish or cancel queued and running jobs before changing models.';
+  if (models?.downloads.some(item => ['downloading', 'verifying'].includes(item.state))) return 'Wait for model downloads to finish before changing files.';
+  return undefined;
+}
+async function changeModelFiles<T>(operation: () => Promise<T>): Promise<T> {
+  const blocked = modelChangeBlockedReason(); if (blocked) throw new Error(blocked);
+  modelChangeInProgress = true; broadcast();
+  try {
+    return await jobs.withRuntimeMaintenance(async () => {
+      await backendActivity.assertIdle('change model files');
+      return withPausedModelEngine(backend, operation, () => models.refresh(), () => startEngine(true),
+        error => notify('notifyError', 'Image engine needs attention', `Start the engine when ready. ${errorMessage(error)}`));
+    }, { allowRetainedJobs: false });
+  } finally { modelChangeInProgress = false; broadcast(); }
+}
 function locationChangeBlockedReason(): string | undefined {
   if (!backend || !['stopped', 'not-installed'].includes(backend.status().state)) return 'Stop the image engine before changing model folders.';
   if (jobs?.jobs().some(job => ['queued', 'running'].includes(job.status))) return 'Finish or cancel queued and running jobs before changing model folders.';
   return undefined;
 }
-function assertModelLocationsReady() {
+function assertModelLocationsReady(allowModelChange = false) {
+  if(appInstallClosing)throw new Error('The studio is closing to install an update.');
+  if (modelChangeInProgress && !allowModelChange) throw new Error('Wait for the model change to finish.');
   const runtimeProblem = runtimeCoordinator?.blockedReason(); if (runtimeProblem) throw new Error(runtimeProblem);
   if (ipAdapter?.status().state === 'activating') throw new Error('Wait for reference-tool activation to finish before starting or queuing generation.');
   const state = modelLocations.snapshot();
   if (state.recoveryRequired || state.error) throw new Error(state.error || 'Recover the interrupted model move in Models before starting generation.');
 }
-function startEngine() { return models.library.withShared('starting the image engine', async () => { assertModelLocationsReady(); await backend.start(); }); }
+function startEngine(allowModelChange = false) { return models.library.withShared('starting the image engine', async () => { assertModelLocationsReady(allowModelChange); await backend.start(); }); }
 function broadcast() {
   scheduleRuntimeIdleCheck();
   if (closed || closing || broadcastTimer) return;
@@ -217,10 +261,10 @@ async function initialize() {
   backendActivity = new BackendActivityService({ waitForStartup: () => backend.waitForStartup(), getBackend: () => ({ state: backend.status().state, url: backend.getUrl(), hasOwnedProcess: backend.hasOwnedProcess() }), getOwnedPrompts: () => jobs?.jobs().filter(job => job.promptId).map(job => ({ jobId: job.id, promptId: job.promptId! })) ?? [] }, broadcast);
   const videoPreflight = new VideoPreflightService(paths, videoAssets, sources, backend, { blockedReason: () => runtimeCoordinator?.blockedReason() ?? (!runtimeCoordinator ? 'Checking interrupted runtime maintenance.' : undefined) });
   const videoQueue = new VideoQueueService(paths, videoPreflight, videoHistory);
-  jobs = new JobService(paths, store, models, backend, broadcast, job => { notifications.jobFinished(job); }, app.getVersion(), upscaler, controlNet, qwenEdit, ipAdapter, () => runtimeCoordinator?.blockedReason() ?? (!runtimeCoordinator ? 'Checking for interrupted runtime maintenance before generation.' : undefined), faceDetailer, backendActivity, videoQueue);
+  jobs = new JobService(paths, store, models, backend, broadcast, job => { notifications.jobFinished(job); }, app.getVersion(), upscaler, controlNet, qwenEdit, ipAdapter, () => appInstallClosing ? 'The studio is closing to install an update.' : runtimeCoordinator?.blockedReason() ?? (!runtimeCoordinator ? 'Checking for interrupted runtime maintenance before generation.' : undefined), faceDetailer, backendActivity, videoQueue);
   runtimeCoordinator = new RuntimeUpdateCoordinator(models.library, backend, jobs, () => runtimeUpdates.status());
   runtimeUpdates = new RuntimeUpdateService(paths, store, broadcast, runtimeCoordinator.hooks);
-  modelLocations = new ModelLocationService(paths, store, models, { assertChangesAllowed: () => { const reason = locationChangeBlockedReason(); if (reason) throw new Error(reason); }, changeBlockedReason: locationChangeBlockedReason }, broadcast);
+  modelLocations = new ModelLocationService(paths, store, models, { assertChangesAllowed: () => { const reason = locationChangeBlockedReason(); if (reason) throw new Error(reason); }, changeBlockedReason: modelChangeBlockedReason }, broadcast);
   storageOverview = new StorageOverviewService(paths, {
     catalog: () => builtInStorageCatalog(paths, { video: videoStatus(), backend: backend.status(), assistant: assistant.status(), qwenEdit: qwenEdit.status(), ipAdapter: ipAdapter.status(), controlNet: controlNet.status(), segmentation: segmentation.status(), upscaler: upscaler.status(), faceDetailer: faceDetailer.status() }),
     transfers: () => models.downloads,
@@ -229,12 +273,15 @@ async function initialize() {
     getRuntimeIdentity: () => backend.getRuntimeIdentity(), getBackendUrl: () => backend.getUrl(), getSettings: () => store.settings(), getModels: () => models.assets,
     getSource: async sourceId => (await sources.resolve(sourceId)).source, getMask: async maskId => (await sources.resolveMask(maskId)).mask, isUpscalerReady: () => upscaler.status().state === 'ready',
   });
+  const installed = app.isPackaged && process.platform === 'win32' && process.arch === 'x64' && !process.env.PORTABLE_EXECUTABLE_FILE && await fs.access(path.join(path.dirname(process.execPath), 'Uninstall Latent v2.exe')).then(() => true, () => false);
+  appUpdates = new AppUpdateService(paths.root, store, app.getVersion(), Boolean(installed), broadcast);
+  appUpdateTimer = setInterval(() => void tickAppUpdates(), 30000);
   const id = z.string().min(1).max(1000);
   let guidedSetupRunning = false;
   const preflightSetup = async (raw: SetupCapability): Promise<SetupPreflight> => {
     const capability = z.enum(['engine','images','edit','video']).parse(raw);
     const hardware = await inspectSetupHardware(paths, null);
-    const storage = await storageOverview.packageStorage(capability === 'engine' ? 'backend' : capability === 'edit' ? 'qwen-base' : capability === 'video' ? 'video-fused4' : 'backend');
+    const storage = await storageOverview.packageStorage(capability === 'engine' ? 'backend' : capability === 'edit' ? 'qwen-lightning8' : capability === 'video' ? 'video-fused4' : 'backend');
     const blockers = setupHardwareBlockers(hardware, capability);
     if (capability !== 'engine' && backend.status().state !== 'ready') blockers.push('Set up and start the generation engine first.');
     if (capability === 'video' && !videoAssets.status().canAcquire) blockers.push('Automatic video acquisition is unavailable. Review video setup in the Video tab.');
@@ -257,7 +304,7 @@ async function initialize() {
       if (check.blockers.length) throw new Error(check.blockers.join(' '));
       if (capability === 'engine') { if (backend.status().state === 'stopped') await methods.startBackend(); else if (backend.status().state !== 'ready') await methods.setupBackend(); }
       else if (capability === 'images') { if (!models.assets.some(m => m.kind === 'checkpoint' && m.status === 'ready' && ['sdxl','illustrious'].includes(m.family))) { const {id: _id,name: _name,publisher: _publisher,description: _description,bytes: _bytes,...request} = MODEL_CATALOG.find(m => m.id === 'onoma-illustrious-xl-1.1')!; await methods.downloadModel(request); } }
-      else if (capability === 'edit') await methods.setupQwenEdit('base');
+      else if (capability === 'edit') await methods.setupQwenEdit('lightning8');
       else await methods.setupVideoAssets('fused4');
       } finally { guidedSetupRunning = false; }
     },
@@ -288,6 +335,10 @@ async function initialize() {
     applyHardwareBackendRecommendation: async reportId => { const priorMode = store.settings().deviceMode; const result = await hardwareProfiles.applyBackendRecommendation(z.uuid().parse(reportId)); if (store.settings().deviceMode !== priorMode) throw new Error('The backend preference changed while it was being checked. Recommend again.'); store.saveSettings(result.settings); hardwareProfiles.settingsChanged(); broadcast(); return snapshot(); },
     getJobMemoryAdvice: async jobId => { const job = jobs.jobs().find(value => value.id === id.parse(jobId)); if (!job || job.status !== 'failed') throw new Error('Choose an existing failed generation to inspect its recovery advice.'); if (isVideoJob(job)) throw new Error('Video recovery details are shown in its queue row. Image memory recommendations do not apply to video.'); return hardwareProfiles.oomAdvice(job.error ?? '', job.draft); },
     setupFaceDetailer: async repair => faceDetailer.setup(z.boolean().optional().parse(repair) ?? false), cancelFaceDetailerSetup: async () => faceDetailer.cancelSetup(), detectFaces: async request => faceDetailer.detect(request), cancelFaceDetection: async () => faceDetailer.cancelDetection(), getFaceDetection: async id => faceDetailer.getDetection(id),
+    saveAppUpdateSettings: async value => { appUpdates!.settings(value); },
+    checkAppUpdates: async () => appUpdates!.check(), downloadAppUpdate: async () => appUpdates!.download(),
+    installAppUpdate: async () => { appUpdates!.requestInstall(); setTimeout(() => void tickAppUpdates(), 0); },
+    cancelAppUpdate: async () => { await appUpdates!.cancel(); },
     getRuntimeUpdateStatus: async () => runtimeUpdateSnapshot(),
     saveRuntimeUpdateSettings: async value => { await runtimeUpdates.saveSettings(runtimeUpdateSettingsSchema.partial().parse(value)); automaticRuntimeRetryAfter = 0; scheduleRuntimeIdleCheck(); },
     checkRuntimeUpdates: async () => { await runtimeUpdates.check(); automaticRuntimeRetryAfter = 0; },
@@ -311,21 +362,22 @@ async function initialize() {
     cancelIPAdapterSetup: async () => ipAdapter.cancel(),
     getQwenConversation: async () => { const saved = store.getState('qwen.conversation', null); return saved ? qwenConversationSchema.parse(saved) : null; },
     saveQwenConversation: async value => { store.setState('qwen.conversation', qwenConversationSchema.parse(value)); },
-    setupQwenEdit: async (profile, repair) => { const selected = z.enum(['base', 'fast']).parse(profile); const requested = z.boolean().optional().parse(repair) ?? false; if (requested) await jobs.withRuntimeMaintenance(async () => { await backendActivity.assertIdle('repair Qwen assets'); if (backend.hasOwnedProcess()) throw new Error('Stop the image engine before repairing Qwen assets.'); await qwenEdit.setup(selected, true); }, { allowRetainedJobs: false }); else await qwenEdit.setup(selected); },
+    setupQwenEdit: async (profile, repair) => { const selected = qwenEditProfileSchema.parse(profile); const requested = z.boolean().optional().parse(repair) ?? false; if (isQwen21Profile(selected)) { await runtimeUpdates.check(); if (runtimeUpdates.status().current?.setId !== QWEN21_SET_ID) { await runtimeUpdates.stage('update', QWEN21_SET_ID); await runtimeCoordinator.activateAndRecover(() => runtimeUpdates.activate(), () => runtimeUpdates.recover()); } } if (selected === 'compact') await changeModelFiles(async () => { await qwenEdit.setup(selected, requested); }); else if (requested) await jobs.withRuntimeMaintenance(async () => { await backendActivity.assertIdle('repair Qwen assets'); if (backend.hasOwnedProcess()) throw new Error('Stop the image engine before repairing Qwen assets.'); await qwenEdit.setup(selected, true); }, { allowRetainedJobs: false }); else await qwenEdit.setup(selected); },
     cancelQwenEditSetup: async () => { qwenEdit.cancel(); },
     enqueueQwenEdit: async request => models.library.withShared('queuing an image edit', async () => { assertModelLocationsReady(); return jobs.enqueueQwenEdit(request); }),
     chooseExternalModelRoot: async input => {
       const kind = z.enum(['checkpoint', 'lora']).parse(input);
-      const blocked = locationChangeBlockedReason(); if (blocked) throw new Error(blocked);
+      const blocked = modelChangeBlockedReason(); if (blocked) throw new Error(blocked);
       const result = await dialog.showOpenDialog(window!, { title: `Use an existing ${kind === 'lora' ? 'LoRA' : 'checkpoint'} folder read-only`, properties: ['openDirectory'] });
       if (result.canceled || !result.filePaths[0]) return null;
-      await modelLocations.registerExternalRoot(kind, result.filePaths[0]); await models.refresh(); void civitai.autoMetadata(); broadcast();
+      await changeModelFiles(() => modelLocations.registerExternalRoot(kind, result.filePaths[0])); void civitai.autoMetadata(); broadcast();
       return modelLocations.snapshot();
     },
-    unregisterExternalModelRoot: async rootId => { await modelLocations.unregisterExternalRoot(id.parse(rootId)); await models.refresh(); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
-    createModelFolder: async request => { await modelLocations.createFolder(request); await models.refresh(); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
-    moveModel: async request => { await modelLocations.moveModel(request); await models.refresh(); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
-    recoverModelLocations: async () => { await modelLocations.recover(); await models.refresh(); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
+    unregisterExternalModelRoot: async rootId => { await changeModelFiles(() => modelLocations.unregisterExternalRoot(id.parse(rootId))); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
+    createModelFolder: async request => { await changeModelFiles(() => modelLocations.createFolder(request)); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
+    deleteModel: async request => { await changeModelFiles(() => modelLocations.deleteModel(request, filename => shell.trashItem(filename))); broadcast(); return snapshot(); },
+    moveModel: async request => { await changeModelFiles(() => modelLocations.moveModel(request)); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
+    recoverModelLocations: async () => { await changeModelFiles(() => modelLocations.recover()); void civitai.autoMetadata(); broadcast(); return modelLocations.snapshot(); },
     createCollection: async (kind, name) => collections.create(kind, name), renameCollection: async (collectionId, name) => collections.rename(collectionId, name), removeCollection: async collectionId => collections.remove(collectionId), addCollectionMembers: async (collectionId, memberIds) => collections.addMembers(collectionId, memberIds), removeCollectionMembers: async (collectionId, memberIds) => collections.removeMembers(collectionId, memberIds),
     setupControlNet: async repair => { const requested = z.boolean().optional().parse(repair) ?? false; if (requested) await jobs.withRuntimeMaintenance(async () => { await backendActivity.assertIdle('repair Canny ControlNet'); await controlNet.setup(true); }, { allowRetainedJobs: false }); else await controlNet.setup(); }, cancelControlNet: async () => controlNet.cancel(),
     saveWildcards: entries => wildcards.save(entries), setupUpscaler: async repair => { const requested = z.boolean().optional().parse(repair) ?? false; if (requested) await jobs.withRuntimeMaintenance(async () => { await backendActivity.assertIdle('repair the illustration upscaler'); await upscaler.setup(true); }, { allowRetainedJobs: false }); else await upscaler.setup(); }, cancelUpscaler: async () => upscaler.cancel(),
@@ -371,7 +423,7 @@ async function initialize() {
     importModels: async input => {
       const kind = z.enum(['checkpoint', 'lora']).parse(input);
       const choice = await dialog.showOpenDialog(window!, { title: `Copy ${kind === 'lora' ? 'LoRAs' : 'checkpoints'} into Latent`, properties: ['openFile', 'multiSelections'], filters: [{ name: 'SafeTensor models', extensions: ['safetensors'] }] });
-      if (!choice.canceled) { await models.importFiles(choice.filePaths, kind); void civitai.autoMetadata(); } return snapshot();
+      if (!choice.canceled) { await changeModelFiles(() => models.importFiles(choice.filePaths, kind)); void civitai.autoMetadata(); } return snapshot();
     },
     updateModel: async (modelId, changes) => { await models.update(id.parse(modelId), changes); return snapshot(); },
     downloadModel: async request => {
@@ -387,12 +439,14 @@ async function initialize() {
     reorderJobs: async ids => jobs.reorder(z.array(id).max(10000).parse(ids)),
     savePreset: async preset => { const value = z.object({ id: z.string().max(100), name: z.string().trim().min(1).max(80), draft: draftSchema }).strict().parse(preset); store.savePreset({ ...value, id: value.id || randomUUID() }); broadcast(); return snapshot(); },
     deletePreset: async presetId => { store.deletePreset(id.parse(presetId)); broadcast(); return snapshot(); },
+    copyOutput: async recordId => { const filename = await privateShellPath(paths.outputs, await outputPath(id.parse(recordId))); const image = nativeImage.createFromPath(filename); if (image.isEmpty()) throw new Error('The saved image could not be loaded.'); await clipboard.write([new ClipboardItem({ 'image/png': new Blob([new Uint8Array(image.toPNG())], { type: 'image/png' }) })]); },
     revealOutput: async recordId => { shell.showItemInFolder(await privateShellPath(paths.outputs, await outputPath(id.parse(recordId)))); },
     openOutput: async recordId => { const error = await shell.openPath(await privateShellPath(paths.outputs, await outputPath(id.parse(recordId)))); if (error) throw new Error(error); },
   };
   for (const [method, handler] of Object.entries(methods)) ipcMain.handle(`latent:${method}`, (event, ...args: unknown[]) => {
     if (!window || event.sender !== window.webContents || event.senderFrame !== event.sender.mainFrame || !trusted(event.senderFrame.url)) throw new Error('This request did not come from the studio window.');
     if (closing) throw new Error('The studio is closing.');
+    if (appInstallClosing && !/^(get|save)/.test(method)) throw new Error('The studio is saving and closing to install an update.');
     if ((storageChanging || storageRestartPending) && !/^(get|cancel|stop)/.test(method) && !['saveDraft','saveVideoConversation','saveQwenConversation','saveAssistantConversation','savePreviewSelection','copyText'].includes(method)) throw new Error(storageRestartPending ? 'Storage was copied. Restart the studio before changing models or generating again.' : 'Storage is being changed. Wait for copying and restart to finish.');
     return track(Promise.resolve().then(() => (handler as (...values: unknown[]) => unknown)(...args)));
   });
@@ -422,7 +476,9 @@ async function initialize() {
   // Recovery precedes JobService.start and every engine launch. Stored jobs stay intact.
   try { await runtimeCoordinator.recover(() => runtimeUpdates.recover()); } catch (error) { await fs.appendFile(path.join(paths.logs, 'desktop.log'), `${new Date().toISOString()} Runtime recovery needs attention: ${errorMessage(error)}\n`); }
   nativeTheme.themeSource = store.settings().theme;
-  window = new BrowserWindow({ title: 'Latent v2', width: 1500, height: 980, minWidth: 1000, minHeight: 700, backgroundColor: '#f5f2ec', show: false, autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true, spellcheck: true } });
+  const windowIcon = app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'dist-electron', 'resources', 'latent-icon.ico') : path.join(__dirname, 'resources', 'latent-icon.ico');
+  window = new BrowserWindow({ title: 'Latent v2', icon: windowIcon, width: 1500, height: 980, minWidth: 1000, minHeight: 700, backgroundColor: '#f5f2ec', show: false, autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true, spellcheck: true } });
+  if (process.platform === 'win32') window.setAppDetails({ appId: 'studio.latent.v2', appIconPath: windowIcon, appIconIndex: 0 });
   window.removeMenu();
   window.webContents.setWindowOpenHandler(({ url }) => {
     const known = [...[...MODEL_CATALOG, ...models.assets].flatMap(model => [model.sourceUrl, model.licenseUrl]), IPADAPTER_RELEASE.modelCardUrl, IPADAPTER_RELEASE.encoderOriginUrl, IPADAPTER_RELEASE.codeSourceUrl].filter(Boolean);
@@ -459,21 +515,24 @@ else {
             window!.webContents.send('latent:flush-draft', pendingFlush.nonce);
           });
         } catch (error) {
+          if(appInstallClosing){appUpdates?.cancelInstall('Save your open edits before installing. The update is still downloaded.');appInstallClosing=false;installerToLaunch=undefined;quitting=false;window.webContents.send('latent:close-cancelled');return;}
           const choice = await dialog.showMessageBox(window, { type: 'warning', title: 'Your latest draft has not been saved', message: errorMessage(error), buttons: ['Keep studio open', 'Close without latest draft'], defaultId: 0, cancelId: 0 });
           if (choice.response === 0) { quitting = false; window.webContents.send('latent:close-cancelled'); return; }
         }
       }
+      if(appInstallClosing){try{if(appUpdateBusyReason())throw new Error('Studio work is still finishing. Request installation again when ready.');await backendActivity.assertIdle('install an app update');installerToLaunch=await appUpdates!.installer();}catch(error){appUpdates?.cancelInstall(errorMessage(error));appInstallClosing=false;installerToLaunch=undefined;quitting=false;window?.webContents.send('latent:close-cancelled');return;}}
       try { await backendActivity?.assertNoForeignWork('close the studio'); }
       catch (error) {
         try { if (window && !window.isDestroyed()) { window.webContents.send('latent:close-cancelled'); window.show(); window.focus(); await dialog.showMessageBox(window, { type: 'info', title: 'Shared image engine is still in use', message: errorMessage(error), buttons: ['Keep studio open'], defaultId: 0 }); } }
-        finally { quitting = false; }
+        finally { quitting = false; if(appInstallClosing){appUpdates?.cancelInstall();appInstallClosing=false;installerToLaunch=undefined;} }
         return;
       }
-      closing = true; backendActivity?.dispose(); if (broadcastTimer) clearTimeout(broadcastTimer); if (runtimeUpdateTimer) clearInterval(runtimeUpdateTimer); if (runtimeIdleTimer) clearTimeout(runtimeIdleTimer);
+      closing = true; if(appUpdateTimer)clearInterval(appUpdateTimer); backendActivity?.dispose(); if (broadcastTimer) clearTimeout(broadcastTimer); if (runtimeUpdateTimer) clearInterval(runtimeUpdateTimer); if (runtimeIdleTimer) clearTimeout(runtimeIdleTimer);
       models?.dispose();
       modelTransferActions?.dispose();
       civitai?.cancel();
-      try { await runtimeUpdates?.dispose(); await jobs?.dispose(); await Promise.allSettled([backend?.dispose(), assistant?.dispose(), segmentation?.dispose(), upscaler?.dispose(), controlNet?.dispose(), qwenEdit?.dispose(), ipAdapter?.dispose(), faceDetailer?.dispose(), videoInspector?.dispose(), videoAssets?.dispose()]); await Promise.allSettled([...pendingOperations]); store?.close(); } finally { closed = true; app.quit(); }
+      let updateShutdownComplete=false;
+      try { await appUpdates?.dispose(); await runtimeUpdates?.dispose(); await jobs?.dispose(); const stoppedServices=await Promise.allSettled([backend?.dispose(), assistant?.dispose(), segmentation?.dispose(), upscaler?.dispose(), controlNet?.dispose(), qwenEdit?.dispose(), ipAdapter?.dispose(), faceDetailer?.dispose(), videoInspector?.dispose(), videoAssets?.dispose()]); const finishedWrites=await Promise.allSettled([...pendingOperations]); store?.close(); updateShutdownComplete=[...stoppedServices,...finishedWrites].every(result=>result.status==='fulfilled'); } finally { closed = true; if(appInstallClosing && installerToLaunch && updateShutdownComplete){try{await new Promise<void>((resolve,reject)=>{const child=spawn(installerToLaunch!,[],{detached:true,windowsHide:true,stdio:'ignore',cwd:path.dirname(installerToLaunch!)});child.once('error',reject);child.once('spawn',()=>{child.unref();resolve();});});}catch(error){dialog.showErrorBox('Update installer could not start',errorMessage(error));}} app.quit(); }
     })();
   });
 }

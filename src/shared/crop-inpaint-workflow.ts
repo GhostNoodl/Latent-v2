@@ -1,3 +1,4 @@
+import { samplingValidationGraph } from './workflow';
 import type { ComfyWorkflow, GenerationDraft } from './types';
 import { draftSchema } from './validation';
 import { cropInpaintPlanSchema, type CropInpaintPlan, type CropInpaintWorkflowResult } from './crop-inpaint-types';
@@ -10,6 +11,7 @@ function filename(value: unknown): string {
   return value;
 }
 function validateBase(graph: ComfyWorkflow, draft: GenerationDraft) {
+  graph = samplingValidationGraph(graph, draft);
   const expected: Record<string, string> = { '1': 'CheckpointLoaderSimple', '2': 'CLIPTextEncode', '3': 'CLIPTextEncode', '4': 'EmptyLatentImage', '5': 'KSampler', '6': 'VAEDecode', '7': 'SaveImage' };
   for (const [id, type] of Object.entries(expected)) if (graph[id]?.class_type !== type) throw new Error('Crop inpainting requires the unmodified baseline graph at nodes 1–7.');
   for (const [id, node] of Object.entries(graph)) if (!/^\d{1,6}$/.test(id) || !expected[id] && node.class_type !== 'LoraLoader') throw new Error('Crop inpainting cannot compose with an unrecognized advanced graph.');
@@ -91,7 +93,7 @@ export function validateFrozenCropInpaintWorkflow(workflow: ComfyWorkflow, draft
   // Retain the authored model, prompt and sampler nodes; independently rebuild
   // only this version's crop transforms for comparison with the frozen graph.
   const base: ComfyWorkflow = {};
-  for (const [id, node] of Object.entries(workflow)) if (['1', '2', '3', '5', '6', '7'].includes(id) || node.class_type === 'LoraLoader') base[id] = structuredClone(node);
+  for (const [id, node] of Object.entries(workflow)) if (['1', '2', '3', '5', '6', '7'].includes(id) || node.class_type === 'LoraLoader' || node.class_type === 'ModelSamplingDiscrete') base[id] = structuredClone(node);
   if (!base['5'] || !base['7']) throw new Error('The frozen crop workflow is missing its sampler or output.');
   base['4'] = { class_type: 'EmptyLatentImage', inputs: { width: draft.width, height: draft.height, batch_size: 1 } };
   base['5'].inputs.latent_image = ['4', 0]; base['5'].inputs.denoise = 1; base['7'].inputs.images = ['6', 0];

@@ -8,6 +8,7 @@ ipcRenderer.on('latent:flush-draft', async (_event: Electron.IpcRendererEvent, n
   await ipcRenderer.invoke('latent:flush-complete', nonce, failed?.status === 'rejected' ? (failed.reason instanceof Error ? failed.reason.message : String(failed.reason)) : undefined);
 });
 const api: LatentAPI = {
+  saveAppUpdateSettings: settings => invoke('saveAppUpdateSettings', settings), checkAppUpdates: () => invoke('checkAppUpdates'), downloadAppUpdate: () => invoke('downloadAppUpdate'), installAppUpdate: () => invoke('installAppUpdate'), cancelAppUpdate: () => invoke('cancelAppUpdate'),
   getSetupPreflight: capability => invoke('getSetupPreflight', capability), runGuidedSetup: capability => invoke('runGuidedSetup', capability),
   queueVideo: draft => invoke('queueVideo', draft), retryVideoSave: id => invoke('retryVideoSave', id),
   getModelTransferRecovery: () => invoke('getModelTransferRecovery'), retryModelTransfer: request => invoke('retryModelTransfer', request), cancelModelTransfer: id => invoke('cancelModelTransfer', id),
@@ -21,6 +22,7 @@ const api: LatentAPI = {
   setupQwenEdit: (profile, repair) => invoke('setupQwenEdit', profile, repair), cancelQwenEditSetup: () => invoke('cancelQwenEditSetup'), enqueueQwenEdit: request => invoke('enqueueQwenEdit', request),
   setupVideoAssets: profile => invoke('setupVideoAssets', profile), verifyVideoAssets: profile => invoke('verifyVideoAssets', profile), cancelVideoAssetSetup: () => invoke('cancelVideoAssetSetup'),
   chooseExternalModelRoot: kind => invoke('chooseExternalModelRoot', kind), unregisterExternalModelRoot: id => invoke('unregisterExternalModelRoot', id),
+  deleteModel: request => invoke('deleteModel', request),
   createModelFolder: request => invoke('createModelFolder', request), moveModel: request => invoke('moveModel', request), recoverModelLocations: () => invoke('recoverModelLocations'),
   createCollection: (kind, name) => invoke('createCollection', kind, name), renameCollection: (id, name) => invoke('renameCollection', id, name), removeCollection: id => invoke('removeCollection', id), addCollectionMembers: (id, ids) => invoke('addCollectionMembers', id, ids), removeCollectionMembers: (id, ids) => invoke('removeCollectionMembers', id, ids),
   setupControlNet: repair => invoke('setupControlNet', repair), cancelControlNet: () => invoke('cancelControlNet'),
@@ -41,7 +43,7 @@ const api: LatentAPI = {
   updateModel: (id, changes) => invoke('updateModel', id, changes),
   downloadModel: request => invoke('downloadModel', request), cancelDownload: id => invoke('cancelDownload', id),
   queueGeneration: draft => invoke('queueGeneration', draft), cancelJob: id => invoke('cancelJob', id), retryJob: id => invoke('retryJob', id), reorderJobs: ids => invoke('reorderJobs', ids),
-  savePreset: preset => invoke('savePreset', preset), deletePreset: id => invoke('deletePreset', id), revealOutput: id => invoke('revealOutput', id), openOutput: id => invoke('openOutput', id),
+  savePreset: preset => invoke('savePreset', preset), deletePreset: id => invoke('deletePreset', id), copyOutput: id => invoke('copyOutput', id), revealOutput: id => invoke('revealOutput', id), openOutput: id => invoke('openOutput', id),
   onSnapshot: listener => { const handler = (_event: Electron.IpcRendererEvent, snapshot: AppSnapshot) => listener(snapshot); ipcRenderer.on('latent:snapshot', handler); return () => ipcRenderer.removeListener('latent:snapshot', handler); },
   onBeforeClose: listener => { closeListeners.add(listener); return () => { closeListeners.delete(listener); }; },
   onCloseCancelled: listener => { ipcRenderer.on('latent:close-cancelled', listener); return () => { ipcRenderer.removeListener('latent:close-cancelled', listener); }; },

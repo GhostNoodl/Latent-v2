@@ -86,7 +86,7 @@ describe('exact compatible Civitai acquisition', () => {
   it('re-fetches detail then downloads and persists precise version/file provenance', async () => {
     fetchMock.mockResolvedValueOnce(json(rawModel())).mockResolvedValueOnce(weights());
     const installed = await catalog().download(selected);
-    expect(installed).toMatchObject({ filename: 'civitai_1_11_111_pixel.safetensors', family: 'sdxl', sha256, triggers: ['pixel art'], civitai: { ...selected, versionName: 'Version one', baseModel: 'SDXL 1.0', permissions: { allowNoCredit: false, allowCommercialUse: ['Image'] } } });
+    expect(installed).toMatchObject({ filename: 'pixel.safetensors', family: 'sdxl', sha256, triggers: ['pixel art'], civitai: { ...selected, versionName: 'Version one', baseModel: 'SDXL 1.0', permissions: { allowNoCredit: false, allowCommercialUse: ['Image'] } } });
     expect(await fsp.readFile(path.join(paths.models, 'loras', installed.filename))).toEqual(payload);
     expect(fetchMock.mock.calls.map(call => call[0])).toEqual(['https://civitai.com/api/v1/models/1', 'https://civitai.com/api/download/models/11']);
     expect(fetchMock.mock.calls.every(call => !call[1].headers.Authorization)).toBe(true);
@@ -104,9 +104,9 @@ describe('exact compatible Civitai acquisition', () => {
     expect(fetchMock.mock.calls.map(call => call[1].headers.Authorization)).toEqual(['Bearer synthetic-secret', 'Bearer synthetic-secret']);
     expect(JSON.stringify([...metadata.values()])).not.toContain('synthetic-secret'); expect(JSON.stringify(models.downloads)).not.toContain('synthetic-secret');
   });
-  it.each(['SDXL Turbo', 'SDXL 1.0 LCM', 'SDXL Lightning', 'SDXL Hyper', 'Pony', 'NoobAI'])('blocks incompatible current workflow %s', async base => {
-    const raw = rawModel(); raw.modelVersions[0].baseModel = base; fetchMock.mockResolvedValue(json(raw));
-    await expect(catalog().download(selected)).rejects.toThrow(/workflow|unsupported/); expect(fetchMock).toHaveBeenCalledTimes(1); expect(models.assets).toEqual([]);
+  it.each(['SDXL Turbo', 'SDXL 1.0 LCM', 'SDXL Lightning', 'SDXL Hyper', 'Pony', 'NoobAI'])('downloads SDXL-derived workflow %s', async base => {
+    const raw = rawModel(); raw.modelVersions[0].baseModel = base; fetchMock.mockResolvedValueOnce(json(raw)).mockResolvedValueOnce(weights());
+    await catalog().download(selected); expect(models.assets).toHaveLength(1); expect(models.assets[0].family).toBe(base==='NoobAI'?'illustrious':'sdxl');
   });
   it('rejects checkpoint subtype uncertainty, early access and changed IDs before downloading', async () => {
     const service = catalog(); const checkpoint = rawModel(); checkpoint.type = 'Checkpoint'; checkpoint.modelVersions[0].baseModelType = 'Inpainting';
@@ -129,11 +129,11 @@ describe('exact compatible Civitai acquisition', () => {
     fetchMock.mockResolvedValueOnce(json(rawModel())).mockResolvedValueOnce(response);
     const service = catalog(); const pending = service.download(selected); const rejected = expect(pending).rejects.toThrow(ModelTransferCancelledError);
     await vi.waitFor(() => expect(models.downloads).toHaveLength(1));
-    await vi.waitFor(() => expect(fs.existsSync(path.join(paths.models, 'loras', 'civitai_1_11_111_pixel.safetensors.part.json'))).toBe(true));
+    await vi.waitFor(() => expect(fs.existsSync(path.join(paths.models, 'loras', 'pixel.safetensors.part.json'))).toBe(true));
     controller.enqueue(new Uint8Array(payload.subarray(0, 24))); await vi.waitFor(() => expect(models.downloads[0].receivedBytes).toBe(24));
     service.cancel(); await rejected;
     expect(models.downloads[0].state).toBe('cancelled'); expect(models.assets).toEqual([]);
-    expect(await fsp.readFile(path.join(paths.models, 'loras', 'civitai_1_11_111_pixel.safetensors.part'))).toEqual(payload.subarray(0, 24));
+    expect(await fsp.readFile(path.join(paths.models, 'loras', 'pixel.safetensors.part'))).toEqual(payload.subarray(0, 24));
   });
 });
 

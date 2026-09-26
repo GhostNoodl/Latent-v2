@@ -1,3 +1,4 @@
+import { LEGACY_ILLUSTRATED_DETECTOR } from '../src/main/face-detailer-release';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -116,4 +117,73 @@ describe('private wheel extraction', () => {
     const symlink = new AdmZip(); symlink.addFile('link.py', Buffer.from('target')); symlink.getEntries()[0].attr = (0xa000 << 16) >>> 0; symlink.writeZip(file);
     await expect(extractFaceWheel(file, destination, new AbortController().signal)).rejects.toThrow('unsafe');
   });
+});
+
+
+it('maps scored illustrated faces without requiring human landmarks', () => {
+  const yolo = { ...request, profile: 'illustrated' as const, confidence: 0.5 };
+  const detected = raw(1000, 700, [{ frame: 0, box, score: 0.85 }], 'illustrated');
+  expect(mapFaceDetections(detected, 1000, 700, yolo).faces[0]).toEqual({ box: { x: 156, y: 187, width: 126, height: 157 }, score: 0.85 });
+  expect(() => mapFaceDetections(detected, 1000, 700, { ...yolo, confidence: 0.9 })).toThrow('confidence');
+  expect(() => mapFaceDetections(raw(1000, 700, [{ frame: 0, box }], 'illustrated'), 1000, 700, yolo)).toThrow('confidence');
+});
+
+it('reopens illustrated receipts and creates refinement crops, rejecting altered detector identity', async () => {
+  const source=await sourceFixture();
+  vi.spyOn(service as any,'verifyInstallation').mockResolvedValue('b'.repeat(64));
+  vi.spyOn(service as any,'runWorker').mockResolvedValue(raw(256,128,[{frame:0,box:{x:15,y:15,width:60,height:70},score:.85}],'illustrated'));
+  const receipt=await service.detect({...request,profile:'illustrated',confidence:.5,sourceId:source.id,sourceSha256:source.normalized.sha256});
+  expect(await service.getDetection(receipt.id)).toEqual(receipt);
+  const plan=await service.createRefinementPlan({detectionId:receipt.id,faceIds:receipt.faces.map(f=>f.id),denoise:.3,contextPadding:32,seed:'42'},['42']);
+  expect(plan.passes).toHaveLength(1);expect(plan.source.sha256).toBe(source.normalized.sha256);
+  const classic=await service.createRefinementPlan({classic:true,detectionId:receipt.id,faceIds:receipt.faces.map(f=>f.id),denoise:.45,contextPadding:32,seed:'42'},['42']);
+  expect(classic.classic).toBe(true);expect(classic.passes[0].crop.settings.contextPadding).toBeGreaterThan(32);
+  const {buildFaceRefinementWorkflow}=await import('../src/shared/face-detailer-workflow');
+  const {DEFAULT_DRAFT}=await import('../src/shared/defaults');const {buildWorkflow}=await import('../src/shared/workflow');
+  const draft={...DEFAULT_DRAFT,width:512,height:512,checkpointId:'checkpoint:test.safetensors',modelSampling:{prediction:'v_prediction' as const,zeroTerminalSnr:true}};
+  const baseline=buildWorkflow(draft,[{id:draft.checkpointId,kind:'checkpoint',family:draft.family,filename:'test.safetensors',status:'ready'}] as any,'42','test');
+  const make=(p:typeof plan)=>buildFaceRefinementWorkflow(baseline,draft,{plan:p,sourceFilename:'source.png',maskFilenames:Object.fromEntries(p.passes.map(v=>[v.crop.mask.id,'mask.png']))});
+  const graph=make(classic).workflow, nodes=Object.values(graph);
+  const resize=nodes.find(n=>n.class_type==='ImageScale')!;
+  const crop=classic.passes[0].crop.crop;
+  expect(Number(resize.inputs.width)/Number(resize.inputs.height)).toBeCloseTo(crop.width/crop.height,2);
+  expect(nodes.some(n=>n.class_type==='EmptyImage')).toBe(true);
+  expect(Object.values(make(plan).workflow).some(n=>n.class_type==='EmptyImage')).toBe(false);
+  expect(Math.max(classic.passes[0].crop.working.width,classic.passes[0].crop.working.height)).toBeLessThanOrEqual(1024);
+  const { JobService } = await import('../src/main/jobs');
+  const { resolvePrompt } = await import('../src/shared/workflow');
+  const asset={id:draft.checkpointId,kind:'checkpoint',family:draft.family,filename:'test.safetensors',status:'ready'} as any;
+  for (const frozen of [plan,classic]) {
+    const request={...(frozen.classic?{classic:true}:{}),detectionId:receipt.id,faceIds:receipt.faces.map(f=>f.id),denoise:frozen.passes[0].crop.settings.denoise,contextPadding:32,seed:'42'};
+    const job={id:'test',actualSeed:'42',draft:{...draft,seed:'42',faceDetailer:{request,frozen}}};
+    const input={plan:frozen,sourceFilename:`source-images/${source.id}/${source.normalizedStoredSeparately?'image.png':'original.png'}`,maskFilenames:Object.fromEntries(frozen.passes.map(p=>[p.crop.mask.id,`source-images/${p.crop.mask.id}/mask.png`]))};
+    const generated=buildFaceRefinementWorkflow(buildWorkflow(job.draft,[asset],'42','test'),job.draft,input);
+    const context={checkpoint:asset,loras:[],resolvedPrompt:resolvePrompt(job.draft,[asset]),workflowVersion:frozen.version,workflow:generated.workflow,faceDetailer:{plan:frozen,source,detection:receipt,outputs:generated.outputs}};
+    const validate=(j=job,c=context)=>(JobService.prototype as any).frozenFaceRecipe.call({},j,c);
+    expect(()=>validate()).not.toThrow();
+    const wrongPadding=structuredClone(context);wrongPadding.faceDetailer.plan.passes[0].crop.settings.contextPadding+=1;
+    const alteredJob=structuredClone(job);alteredJob.draft.faceDetailer.frozen=wrongPadding.faceDetailer.plan;
+    expect(()=>validate(alteredJob,wrongPadding)).toThrow();
+    expect(()=>validate({...job,draft:{...job.draft,faceDetailer:{...job.draft.faceDetailer,request:{...request,classic:!frozen.classic}}}})).toThrow('refinement settings');
+  }
+  expect(receipt.preprocessing.version).toBe('fdetailer-face-only@1');
+  const legacy = {...receipt, detector:{...receipt.detector,modelSha256:LEGACY_ILLUSTRATED_DETECTOR.sha256,codeRevision:LEGACY_ILLUSTRATED_DETECTOR.revision}, preprocessing: {...receipt.preprocessing, version: 'yolo-letterbox-rgb@1' as const, frames: receipt.preprocessing.frames.slice(0,1)}};
+  store.setState(`face.detection:${receipt.id}`, legacy);
+  expect(await service.getDetection(receipt.id)).toEqual(legacy);
+  const legacyFallback={...legacy,preprocessing:{...receipt.preprocessing,version:'yolo-letterbox-rgb-fallback@2' as const}};
+  store.setState(`face.detection:${receipt.id}`,legacyFallback);
+  expect(await service.getDetection(receipt.id)).toEqual(legacyFallback);
+  store.setState(`face.detection:${receipt.id}`,{...receipt,detector:legacy.detector});
+  await expect(service.getDetection(receipt.id)).rejects.toThrow('provenance');
+  store.setState(`face.detection:${receipt.id}`,{...receipt,detector:{...receipt.detector,yoloWheelSha256:'c'.repeat(64)}});
+  await expect(service.getDetection(receipt.id)).rejects.toThrow('provenance');
+});
+
+
+it('maps the smaller illustrated fallback to original coordinates without lowering confidence', () => {
+  const req = { ...request, profile: 'illustrated' as const, confidence: .5 };
+  expect(detectionFrames(2048,1024,'illustrated')).toEqual([{width:640,height:320},{width:320,height:160}]);
+  const result = mapFaceDetections(raw(2048,1024,[{frame:1,box:{x:100,y:30,width:80,height:90},score:.83}],'illustrated'),2048,1024,req);
+  expect(result.faces[0].box).toEqual({x:640,y:192,width:512,height:576});
+  expect(() => mapFaceDetections(raw(2048,1024,[{frame:1,box,score:.49}],'illustrated'),2048,1024,req)).toThrow('confidence');
 });

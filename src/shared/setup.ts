@@ -22,7 +22,7 @@ export function setupCards(s: AppSnapshot): SetupCard[] {
 
     { id:'images',title:'Create images',ready:engine && checkpoint,requirements:['Generation engine','SDXL or Illustrious checkpoint','Text encoders and VAE included in supported full checkpoints'],message:!engine?'Set up the engine first':checkpoint?'Ready to choose a model and create':'Choose an existing checkpoint, or download the Illustrious starter' },
 
-    { id:'edit',title:'Edit images with Qwen',ready:engine && s.qwenEdit.baseReady,requirements:['Generation engine','Qwen diffusion model','Text encoder','VAE'],message:!engine?'Set up the engine first':s.qwenEdit.baseReady?'Base editing bundle ready':s.qwenEdit.message },
+    { id:'edit',title:'Edit images with Qwen',ready:engine && (s.qwenEdit.baseReady || s.qwenEdit.compactReady === true),requirements:['Generation engine','Qwen diffusion model','Text encoder','VAE'],message:!engine?'Set up the engine first':s.qwenEdit.baseReady?'Base editing bundle ready':s.qwenEdit.compactReady?'Compact editing bundle ready':s.qwenEdit.message },
 
     { id:'video',title:'Create videos',ready:engine && s.video.canGenerate && !!s.video.assets?.fusedPresent,requirements:['Generation engine','H3 fused diffusion model','Text encoder','Video and audio VAEs'],message:!engine?'Set up the engine first':s.video.message },
 

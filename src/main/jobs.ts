@@ -1,3 +1,6 @@
+import { resolveClassicHires } from '../shared/advanced-image-workflow';
+import { processAutomaticFace } from './automatic-faces';
+import { enhancementIssue, validateEnhancementSource, buildEnhancementWorkflow } from '../shared/enhancement';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
@@ -39,7 +42,7 @@ import { augmentIPAdapterWorkflow, validateIPAdapterCapabilities } from '../shar
 import type { IPAdapterService } from './ipadapter';
 import { generationPhase } from '../shared/generation-phase';
 import type { FaceDetailerService } from './face-detailer';
-import { faceRefinementRequestSchema } from '../shared/face-detailer-types';
+import { faceContextPadding, faceRefinementRequestSchema } from '../shared/face-detailer-types';
 import { buildFaceRefinementWorkflow, faceRefinementPlanSchema, validateFaceRefinementCapabilities, validateFrozenFaceRefinementWorkflow, type FaceRefinementOutput } from '../shared/face-detailer-workflow';
 import { isVideoJob } from '../shared/types';
 import type { VideoDraft } from '../shared/video-types';
@@ -74,7 +77,7 @@ export class JobService {
   private drainWaiters: Array<() => void> = [];
   private sources: SourceImageService;
   private regionalMasks: RegionalMaskService;
-  constructor(private paths: AppPaths, private store: StudioStore, private models: ModelService, private backend: Backend, private changed: () => void, private completed: (job: StudioJob) => void, private appVersion: string, private upscaler?: UpscalerService, private controlNetService?: ControlNetService, private qwenEditAssets?: QwenEditAssetsService, private ipAdapterService?: Pick<IPAdapterService, 'verify' | 'status'>, private runtimeBlockedReason?: () => string | undefined, private faceDetailerService?: Pick<FaceDetailerService, 'getDetection' | 'createRefinementPlan'>, private activity?: Pick<BackendActivityService, 'refresh' | 'status'>, private videoQueue?: VideoQueueService) {
+  constructor(private paths: AppPaths, private store: StudioStore, private models: ModelService, private backend: Backend, private changed: () => void, private completed: (job: StudioJob) => void, private appVersion: string, private upscaler?: UpscalerService, private controlNetService?: ControlNetService, private qwenEditAssets?: QwenEditAssetsService, private ipAdapterService?: Pick<IPAdapterService, 'verify' | 'status'>, private runtimeBlockedReason?: () => string | undefined, private faceDetailerService?: Pick<FaceDetailerService, 'getDetection' | 'createRefinementPlan' | 'detect' | 'status' | 'cancelDetection'>, private activity?: Pick<BackendActivityService, 'refresh' | 'status'>, private videoQueue?: VideoQueueService) {
     this.items = store.jobs();
     this.sources = new SourceImageService(paths, store);
     this.regionalMasks = new RegionalMaskService(paths);
@@ -169,6 +172,10 @@ export class JobService {
     if (this.disposed) throw new Error('The generation queue is stopped.');
     const draft = draftSchema.parse(input);
     if (this.ipAdapterService?.status().state === 'activating') throw new Error('Wait for reference-tool activation to finish before queueing generation.');
+    if (draft.autoFace && (draft.faceDetailer || draft.autoFaceParentRecordId || draft.qwenEdit || draft.upscale)) throw new Error('Automatic face refinement requires an image generation, without another face pass or standalone resize.');
+    if (draft.autoFace && !['ready', 'detecting'].includes(this.faceDetailerService?.status().state ?? '')) throw new Error('In Create, use Set up / update face detector below Automatically refine faces, then try again.');
+    if (draft.autoFaceParentRecordId && !draft.faceDetailer) throw new Error('Automatic face lineage requires a face refinement recipe.');
+    const enhanceError = enhancementIssue(draft); if (enhanceError) throw new Error(enhanceError);
     if (draft.faceDetailer && (draft.qwenEdit || draft.imageInput || draft.controlNet || draft.hiresFix || draft.upscale || draft.ipAdapter || draft.regionalPrompts?.settings.enabled || draft.batchSize !== 1 || draft.width !== 512 || draft.height !== 512)) throw new Error('Face refinement requires baseline SDXL/Illustrious, 512 square working crops, batch 1, and no other image workflow.');
     if (draft.faceDetailer && draft.faceDetailer.request.seed !== draft.seed) throw new Error('Use the same base seed in the face request and its generation recipe.');
     if (draft.ipAdapter && (draft.qwenEdit || draft.imageInput || draft.controlNet || draft.hiresFix || draft.upscale || draft.regionalPrompts?.settings.enabled || draft.batchSize !== 1)) throw new Error('IP Adapter requires one baseline SDXL or Illustrious text-to-image pass without other image workflows.');
@@ -192,7 +199,7 @@ export class JobService {
       if (prepared.recipe) { draft.dynamicPrompts = { enabled: true, frozen: prepared.recipe }; context.dynamicPromptRecipe = prepared.recipe; }
       await this.models.refresh(); const { checkpoint, loras } = validateAssets(draft, this.models.assets);
       await this.models.verifyExternalModels?.([checkpoint.id, ...loras.map(asset => asset.id)]);
-      draft.triggerWords = Object.fromEntries(loras.map(asset => [asset.id, draft.triggerWords?.[asset.id] ?? asset.triggers]));
+      draft.triggerWords = Object.fromEntries(loras.map(asset => [asset.id, draft.triggerWords?.[asset.id] ?? (draft.triggerResolutionVersion === 'visible@3' ? [] : asset.triggers)]));
       draft.assetHashes = Object.fromEntries([checkpoint, ...loras].filter(asset => asset.sha256).map(asset => [asset.id, asset.sha256!]));
       context.checkpoint = checkpoint; context.loras = loras.map((asset, index) => ({ ...asset, triggers: draft.triggerWords![asset.id], weight: draft.loras[index].weight, clipWeight: draft.loras[index].clipWeight }));
       const resolvedDraft = { ...draft, prompt: prepared.prompt, negativePrompt: prepared.negativePrompt };
@@ -205,6 +212,7 @@ export class JobService {
         const frozen = authoring.frozen ? faceRefinementPlanSchema.parse(authoring.frozen) : current;
         if (JSON.stringify(current) !== JSON.stringify(frozen)) throw new Error('The frozen face recipe no longer matches its source, selected masks, seeds or geometry. Restore the original recipe.');
         const detection = await this.faceDetailerService.getDetection(authoring.request.detectionId);
+        if (draft.autoFaceParentRecordId && detection.source.originGenerationId !== draft.autoFaceParentRecordId) throw new Error('The automatic face source differs from its parent image.');
         const source = await this.sources.resolve(frozen.source.id);
         const masks: Record<string, string> = {};
         for (const pass of frozen.passes) { const mask = await this.sources.resolveMask(pass.crop.mask.id); masks[mask.mask.id] = path.relative(this.paths.inputs, mask.path).replaceAll('\\', '/'); }
@@ -244,6 +252,9 @@ export class JobService {
         const asset = draft.upscale.mode === 'learned' ? await this.upscaler!.verify() : undefined;
         context.advancedImage = buildUpscaleWorkflow({ sourceFilename, sourceWidth: source.source.normalized.width, sourceHeight: source.source.normalized.height, jobId: id, settings: draft.upscale }, asset);
         context.workflow = context.advancedImage.workflow; context.workflowVersion = context.advancedImage.workflowVersion;
+      } else if (draft.enhance) {
+        validateEnhancementSource(draft, source.source, this.store.records());
+        context.workflow = buildEnhancementWorkflow(context.workflow, draft, sourceFilename); context.workflowVersion = 'sdxl-saved-latent-enhance@1';
       } else if (input.mode === 'inpaint' && input.crop) {
         const computed = await createCropInpaintPlan({ source: source.source, mask: mask!.mask, maskRed: redMaskFromRgba(decodedMask!.data, decodedMask!.width, decodedMask!.height), working: { width: draft.width, height: draft.height }, settings: input.crop, denoise: input.denoise });
         const frozen = input.cropPlan ? cropInpaintPlanSchema.parse(input.cropPlan) : computed.plan;
@@ -265,6 +276,7 @@ export class JobService {
       context.controlNet = { plan }; context.workflow = plan.workflow; context.workflowVersion = plan.workflowVersion;
     }
     if (draft.hiresFix) {
+      draft.hiresFix = resolveClassicHires(draft.hiresFix, draft, actualSeed);
       const secondSeed = draft.hiresFix.seed === 'random' ? String(randomBytes(6).readUIntBE(0, 6)) : BigInt(draft.hiresFix.seed).toString();
       context.advancedImage = augmentHiresWorkflow(context.workflow, draft, draft.hiresFix, secondSeed, draft.hiresFix.workflowVersion);
       draft.hiresFix = restoreHiresSettings(context.advancedImage.hires!, context.advancedImage.workflowVersion); context.advancedImage.hires = structuredClone(draft.hiresFix); context.workflow = context.advancedImage.workflow; context.workflowVersion = context.advancedImage.workflowVersion;
@@ -281,17 +293,20 @@ export class JobService {
     if (this.ipAdapterService?.status().state === 'activating') throw new Error('Wait for reference-tool activation to finish before queueing generation.');
     const request = qwenEditJobRequestSchema.parse(input);
     if (!this.qwenEditAssets) throw new Error('The reviewed Qwen edit asset service is unavailable.');
-    const source = await this.sources.resolve(request.sourceId);
-    if (source.source.normalized.sha256 !== request.sourceSha256) throw new Error('The selected Qwen source changed. Choose its original image again.');
-    const lineage = this.qwenLineage(request, source.source.originGenerationId);
+    if (request.operation !== 'create' && (!request.sourceId || !request.sourceSha256)) throw new Error('Choose an input image before editing.');
+    if (request.operation === 'create' && (request.sourceId || request.sourceSha256 || request.lineage.parentRecordId || request.references?.length)) throw new Error('Create starts from text only.');
+    const source = request.sourceId ? await this.sources.resolve(request.sourceId) : undefined;
+    if (source && source.source.normalized.sha256 !== request.sourceSha256) throw new Error('The selected Qwen source changed. Choose its original image again.');
+    const lineage = this.qwenLineage(request, source?.source.originGenerationId);
+    const references = await Promise.all((request.references ?? []).map(async ref => { const resolved = await this.sources.resolve(ref.sourceId); if (resolved.source.normalized.sha256 !== ref.sha256) throw new Error('A reference image changed. Choose it again.'); return { source: resolved.source, filename: path.relative(this.paths.inputs, resolved.normalizedPath).replaceAll('\\', '/') }; }));
     const bundle = await this.qwenEditAssets.verify(request.settings.profile);
     const hashes = Object.fromEntries(Object.entries(bundle.assets).map(([role, asset]) => [role, asset.sha256])) as NonNullable<QwenEditJobRequest['assetHashes']>;
     if (request.assetHashes && (Object.keys(request.assetHashes).length !== Object.keys(hashes).length || Object.entries(hashes).some(([role, hash]) => request.assetHashes![role as keyof typeof hashes] !== hash))) throw new Error('The reviewed Qwen assets differ from this frozen edit recipe. Choose a new recipe deliberately before editing.');
     const id = randomUUID(); const actualSeed = request.settings.seed === 'random' ? String(randomBytes(6).readUIntBE(0, 6)) : BigInt(request.settings.seed).toString();
-    const plan = buildQwenEditWorkflow({ source: source.source, sourceFilename: path.relative(this.paths.inputs, source.normalizedPath).replaceAll('\\', '/'), instruction: request.instruction, negativePrompt: request.negativePrompt, jobId: id, settings: { ...request.settings, seed: actualSeed }, workflowVersion: request.workflowVersion }, bundle);
+    const plan = buildQwenEditWorkflow({ source: source?.source, sourceFilename: source ? path.relative(this.paths.inputs, source.normalizedPath).replaceAll('\\', '/') : undefined, operation: request.operation, transparent: request.transparent, references, instruction: request.instruction, negativePrompt: request.negativePrompt, jobId: id, settings: { ...request.settings, seed: actualSeed }, workflowVersion: request.workflowVersion }, bundle);
     request.settings = structuredClone(plan.settings); request.assetHashes = hashes; request.workflowVersion = plan.workflowVersion;
     const draft: GenerationDraft = { ...structuredClone(DEFAULT_DRAFT), checkpointId: '', loras: [], autoTriggers: false, prompt: request.instruction, negativePrompt: request.negativePrompt ?? '', width: plan.settings.width, height: plan.settings.height, steps: plan.settings.steps, cfg: plan.settings.guidance, sampler: 'euler', scheduler: 'simple', seed: actualSeed, batchSize: 1, qwenEdit: request };
-    const context: ExecutionContext = { workflow: plan.workflow, workflowVersion: plan.workflowVersion, qwenEdit: { plan, lineage }, imageInput: { source: source.source }, loras: [], resolvedPrompt: request.instruction, backendVersion: this.backend.status().version ?? 'unknown', appVersion: this.appVersion };
+    const context: ExecutionContext = { workflow: plan.workflow, workflowVersion: plan.workflowVersion, qwenEdit: { plan, lineage }, imageInput: source ? { source: source.source } : undefined, loras: [], resolvedPrompt: request.instruction, backendVersion: this.backend.status().version ?? 'unknown', appVersion: this.appVersion };
     const now = new Date().toISOString(); const job: GenerationJob = { id, createdAt: now, updatedAt: now, draft, actualSeed, status: 'queued', progress: 0, progressMax: plan.settings.steps, outputIds: [] };
     this.accept(job, context); void this.tick(); return structuredClone(job);
   }
@@ -453,8 +468,9 @@ export class JobService {
       const expected = this.frozenQwenPlan(job, context);
       const current = await this.qwenEditAssets.verify(expected.settings.profile);
       if (Object.entries(expected.bundle.assets).some(([role, asset]) => current.assets[role as keyof typeof current.assets]?.sha256 !== asset.sha256)) throw new Error('The Qwen assets changed after this edit was queued.');
-      const source = await this.sources.resolve(expected.source.id);
-      if (source.source.normalized.sha256 !== expected.source.normalized.sha256 || path.relative(this.paths.inputs, source.normalizedPath).replaceAll('\\', '/') !== expected.workflow['4'].inputs.image) throw new Error('The queued Qwen source differs from its frozen edit recipe.');
+      if (expected.source) { const source = await this.sources.resolve(expected.source.id);
+      if (source.source.normalized.sha256 !== expected.source.normalized.sha256 || path.relative(this.paths.inputs, source.normalizedPath).replaceAll('\\', '/') !== expected.workflow['4'].inputs.image) throw new Error('The queued Qwen source differs from its frozen edit recipe.'); }
+      for (const ref of expected.references ?? []) { const actual = await this.sources.resolve(ref.source.id); if (actual.source.normalized.sha256 !== ref.source.normalized.sha256 || path.relative(this.paths.inputs, actual.normalizedPath).replaceAll('\\', '/') !== ref.filename) throw new Error('A queued Qwen reference changed.'); }
       const bound = bindQwenEditWorkflow(expected, objects); context.qwenEdit.plan = bound; context.workflow = bound.workflow;
     }
     if (context.advancedImage?.hires) validateHiresCapabilities(objects, context.advancedImage);
@@ -492,6 +508,12 @@ export class JobService {
         if (isVideoJob(active)) await this.reconcileVideo(active); else await this.reconcile(active); return;
       }
       if (activity && (activity.state !== 'ready' || activity.foreignRunning || activity.foreignPending)) return;
+      if (this.faceDetailerService) await processAutomaticFace({
+        jobs: () => this.items, records: () => this.store.records(), save: job => this.save(job),
+        ready: () => !['detecting', 'installing'].includes(this.faceDetailerService!.status().state), stopped: () => this.disposed || this.maintenance || Boolean(this.runtimeBlockedReason?.()),
+        source: async record => { const file=containedPath(this.paths.outputs,record.filename); const real=await fs.realpath(file); if(!inside(await fs.realpath(this.paths.outputs),real)||(await fs.lstat(file)).isSymbolicLink()||!file.endsWith('.png'))throw Error('The source image is outside this studio.'); return this.sources.importFile(file,record.id); },
+        detect: async request => { const task=this.faceDetailerService!.detect(request); const abort=()=>{ void this.faceDetailerService!.cancelDetection(); }; this.shutdown.signal.addEventListener('abort',abort,{once:true}); try { return await task; } finally { this.shutdown.signal.removeEventListener('abort',abort); } }, enqueue: draft => this.enqueue(draft),
+      });
       const next = this.jobs().find(job => job.status === 'queued'); if (!next) return;
       const job = this.items.find(item => item.id === next.id)!;
       let context: ExecutionContext | VideoQueueContext;
@@ -658,10 +680,11 @@ export class JobService {
   }
   private frozenQwenPlan(job: Pick<GenerationJob, 'id' | 'draft'> & Partial<Pick<GenerationJob, 'actualSeed'>>, context: ExecutionContext) {
     const saved = context.qwenEdit; const request = qwenEditJobRequestSchema.parse(job.draft.qwenEdit);
-    if (!saved || context.checkpoint || context.loras.length || context.advancedImage || context.controlNet || context.cropInpaint || context.dynamicPromptRecipe || job.draft.imageInput || job.draft.hiresFix || job.draft.upscale || job.draft.controlNet || job.draft.dynamicPrompts?.enabled || job.draft.regionalPrompts?.settings.enabled || job.draft.variationOfRecordId || job.draft.loras.length || job.draft.checkpointId || job.draft.batchSize !== 1 || context.imageInput?.mask || !context.imageInput?.source) throw new Error('The saved Qwen edit contains conflicting generation recipes.');
+    if (!saved || context.checkpoint || context.loras.length || context.advancedImage || context.controlNet || context.cropInpaint || context.dynamicPromptRecipe || job.draft.imageInput || job.draft.hiresFix || job.draft.upscale || job.draft.controlNet || job.draft.dynamicPrompts?.enabled || job.draft.regionalPrompts?.settings.enabled || job.draft.variationOfRecordId || job.draft.loras.length || job.draft.checkpointId || job.draft.batchSize !== 1 || context.imageInput?.mask || request.operation !== 'create' && !context.imageInput?.source) throw new Error('The saved Qwen edit contains conflicting generation recipes.');
     if (request.settings.seed === 'random' || request.settings.seed !== job.draft.seed || job.actualSeed !== undefined && job.actualSeed !== request.settings.seed || !request.assetHashes || !request.workflowVersion) throw new Error('The saved Qwen edit is missing its frozen seed, asset hashes or workflow version.');
-    const expected = buildQwenEditWorkflow({ source: saved.plan.source, sourceFilename: `source-images/${request.sourceId}/image.png`, instruction: request.instruction, negativePrompt: request.negativePrompt, settings: { ...request.settings, seed: request.settings.seed }, jobId: job.id, workflowVersion: request.workflowVersion }, saved.plan.bundle);
-    if (request.sourceId !== expected.source.id || request.sourceSha256 !== expected.source.normalized.sha256 || JSON.stringify(context.imageInput.source) !== JSON.stringify(expected.source) || JSON.stringify(saved.lineage) !== JSON.stringify(this.qwenLineage(request, expected.source.originGenerationId))) throw new Error('The saved Qwen source or immutable parent/version lineage is inconsistent.');
+    const expected = buildQwenEditWorkflow({ source: saved.plan.source, sourceFilename: request.sourceId ? `source-images/${request.sourceId}/image.png` : undefined, operation: request.operation, transparent: request.transparent, references: saved.plan.references, instruction: request.instruction, negativePrompt: request.negativePrompt, settings: { ...request.settings, seed: request.settings.seed }, jobId: job.id, workflowVersion: request.workflowVersion }, saved.plan.bundle);
+    if (request.sourceId !== expected.source?.id || request.sourceSha256 !== expected.source?.normalized.sha256 || JSON.stringify(context.imageInput?.source) !== JSON.stringify(expected.source) || JSON.stringify(saved.lineage) !== JSON.stringify(this.qwenLineage(request, expected.source?.originGenerationId))) throw new Error('The saved Qwen source or immutable parent/version lineage is inconsistent.');
+    if (JSON.stringify(request.references ?? []) !== JSON.stringify((expected.references ?? []).map(ref => ({ sourceId: ref.source.id, sha256: ref.source.normalized.sha256 })))) throw new Error('Saved Qwen references differ from the frozen request.');
     if (context.resolvedPrompt !== request.instruction || job.draft.prompt !== request.instruction || job.draft.negativePrompt !== (request.negativePrompt ?? '') || job.draft.width !== expected.settings.width || job.draft.height !== expected.settings.height || job.draft.steps !== expected.settings.steps || job.draft.cfg !== expected.settings.guidance || job.draft.sampler !== 'euler' || job.draft.scheduler !== 'simple' || context.workflowVersion !== expected.workflowVersion || request.workflowVersion !== expected.workflowVersion) throw new Error('The saved Qwen settings differ from its frozen recipe.');
     if (Object.keys(request.assetHashes).length !== Object.keys(expected.bundle.assets).length || Object.entries(expected.bundle.assets).some(([role, asset]) => request.assetHashes![role as keyof typeof request.assetHashes] !== asset.sha256)) throw new Error('The saved Qwen asset identities differ from its frozen recipe.');
     const canonical = (workflow: ComfyWorkflow) => { const value = structuredClone(workflow); for (const [id, field] of [['1', 'unet_name'], ['2', 'clip_name'], ['3', 'vae_name'], ['14', 'lora_name']]) if (value[id] && typeof value[id].inputs[field] === 'string') value[id].inputs[field] = value[id].inputs[field].replaceAll('\\', '/'); return value; };
@@ -681,7 +704,7 @@ export class JobService {
     if (seed === 'random' || request.seed !== seed || job.draft.seed !== seed || JSON.stringify(plan) !== JSON.stringify(authored.frozen) || plan.detectionId !== request.detectionId || context.workflowVersion !== plan.version || JSON.stringify(faceSeeds(seed, plan.passes.length)) !== JSON.stringify(plan.passes.map(pass => pass.seed))) throw new Error('The saved face seed or frozen plan is inconsistent.');
     if (saved.source.id !== plan.source.id || saved.source.normalized.sha256 !== plan.source.sha256 || saved.source.normalized.width !== plan.source.width || saved.source.normalized.height !== plan.source.height || JSON.stringify(saved.detection.source) !== JSON.stringify(plan.source) || saved.detection.id !== plan.detectionId) throw new Error('The saved face source or detection identity is inconsistent.');
     const selected = saved.detection.faces.filter(face => request.faceIds.includes(face.id));
-    if (selected.length !== request.faceIds.length || selected.length !== plan.passes.length || plan.passes.some((pass, index) => pass.faceId !== selected[index].id || pass.crop.mask.id !== selected[index].mask.id || pass.crop.mask.sha256 !== selected[index].mask.sha256 || pass.crop.settings.contextPadding !== request.contextPadding || pass.crop.settings.denoise !== request.denoise)) throw new Error('The saved face order, mask or refinement settings are inconsistent.');
+    if (Boolean(plan.classic) !== Boolean(request.classic) || selected.length !== request.faceIds.length || selected.length !== plan.passes.length || plan.passes.some((pass, index) => pass.faceId !== selected[index].id || pass.crop.mask.id !== selected[index].mask.id || pass.crop.mask.sha256 !== selected[index].mask.sha256 || pass.crop.settings.contextPadding !== faceContextPadding(request, selected[index].box) || pass.crop.settings.denoise !== request.denoise)) throw new Error('The saved face order, mask or refinement settings are inconsistent.');
     const sourceFilename = `source-images/${saved.source.id}/${saved.source.normalizedStoredSeparately ? 'image.png' : 'original.png'}`;
     const maskFilenames = Object.fromEntries(plan.passes.map(pass => [pass.crop.mask.id, `source-images/${pass.crop.mask.id}/mask.png`]));
     const resolved = { ...job.draft, prompt: context.dynamicPromptRecipe?.positive.resolved ?? job.draft.prompt, negativePrompt: context.dynamicPromptRecipe?.negative.resolved ?? job.draft.negativePrompt };

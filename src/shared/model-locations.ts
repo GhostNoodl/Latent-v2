@@ -1,5 +1,6 @@
 import type { ModelKind } from './types';
 export interface ModelLocationBinding {
+  deletedAt?: string;
   modelId: string;
   kind: ModelKind;
   relativePath: string;
@@ -37,7 +38,7 @@ export interface ModelLocationsSnapshot {
   externalRoots?: ExternalModelRoot[];
 }
 export interface CreateModelFolderRequest { kind: ModelKind; parent: string; name: string; }
-export interface MoveModelRequest { modelId: string; destinationFolder: string; expectedSha256: string; }
+export interface MoveModelRequest { filename?: string; modelId: string; destinationFolder: string; expectedSha256: string; }
 export interface ModelLocationsActions {
   createFolder(request: CreateModelFolderRequest): Promise<ModelLocationsSnapshot>;
   moveModel(request: MoveModelRequest): Promise<ModelLocationsSnapshot>;

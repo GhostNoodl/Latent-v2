@@ -15,7 +15,7 @@ const shaSchema = z.string().regex(/^[a-f0-9]{64}$/);
 const segmentSchema = z.string().min(1).max(120).refine(value => !/[<>:"/\\|?*\u0000-\u001f\u007f]/.test(value) && !/[. ]$/.test(value) && !/^\.{1,2}$/.test(value) && !/^(con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\.|$)/i.test(value), 'Use a folder or file name without reserved characters, device names, or trailing dots/spaces.');
 const relativeSchema = z.string().max(400).refine(value => !value || (value.split('/').length <= 12 && value.split('/').every(segment => segmentSchema.safeParse(segment).success)), 'Choose a relative private model path with at most 12 levels.');
 const modelPathSchema = relativeSchema.refine(value => value.toLowerCase().endsWith('.safetensors'), 'Choose a safetensors model.');
-const bindingSchema = z.object({ modelId: z.string().min(1).max(500), kind: kindSchema, relativePath: modelPathSchema, sha256: shaSchema, aliases: z.array(modelPathSchema).min(1).max(256), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime() }).strict();
+const bindingSchema = z.object({ deletedAt: z.iso.datetime().optional(), modelId: z.string().min(1).max(500), kind: kindSchema, relativePath: modelPathSchema, sha256: shaSchema, aliases: z.array(modelPathSchema).min(1).max(256), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime() }).strict();
 const identitySchema = z.object({ dev: z.string().regex(/^\d+$/), ino: z.string().regex(/^\d+$/), size: z.string().regex(/^\d+$/) }).strict();
 const journalSchema = z.object({ stage: z.enum(['prepared', 'committed']), source: modelPathSchema, destination: modelPathSchema, identity: identitySchema, before: bindingSchema.optional(), after: bindingSchema }).strict();
 const indexSchema = z.object({ schemaVersion: z.literal(1), bindings: z.array(bindingSchema).max(10000), pending: journalSchema.optional() }).strict();
@@ -106,7 +106,7 @@ export class ModelLocationService implements ModelLocationLookup {
     });
   }
   async moveModel(input: MoveModelRequest): Promise<ModelLocationsSnapshot> {
-    const request = z.object({ modelId: z.string().min(1).max(500), destinationFolder: relativeSchema, expectedSha256: shaSchema }).strict().parse(input);
+    const request = z.object({ modelId: z.string().min(1).max(500), filename: segmentSchema.refine(value => value.toLowerCase().endsWith('.safetensors')).optional(), destinationFolder: relativeSchema, expectedSha256: shaSchema }).strict().parse(input);
     return this.structural('moving a private model', async () => {
       const index = this.readyIndex();
       const model = this.models.assets.find(asset => asset.id === request.modelId);
@@ -115,12 +115,12 @@ export class ModelLocationService implements ModelLocationLookup {
       const before = index.bindings.find(binding => binding.modelId === model.id);
       const sourceRelative = modelPathSchema.parse(model.filename);
       if ((before && (!samePath(model.kind, before.relativePath, sourceRelative) || before.sha256 !== request.expectedSha256)) || (!before && model.id !== `${model.kind}:${sourceRelative}`)) throw new Error('The model identity no longer matches its current file. Refresh the library.');
-      const destinationRelative = modelPathSchema.parse([request.destinationFolder, path.posix.basename(sourceRelative)].filter(Boolean).join('/'));
+      const destinationRelative = modelPathSchema.parse([request.destinationFolder, request.filename ?? path.posix.basename(sourceRelative)].filter(Boolean).join('/'));
       if (samePath(model.kind, sourceRelative, destinationRelative)) throw new Error('This model is already in that folder.');
       await this.external.assertDestinationAvailable(model.kind, destinationRelative);
       if (index.bindings.some(binding => binding.modelId !== model.id && binding.kind === model.kind && binding.aliases.some(alias => samePath(model.kind, alias, destinationRelative)))) throw new Error('That destination name is reserved for another model and its saved recipes.');
       const source = await this.filePath(model.kind, sourceRelative);
-      const destination = path.join(await this.directory(model.kind, request.destinationFolder), path.posix.basename(sourceRelative));
+      const destination = path.join(await this.directory(model.kind, request.destinationFolder), path.posix.basename(destinationRelative));
       const release = await this.models.leaseFiles([source, destination]);
       try {
         if (await this.statIfPresent(destination)) throw new Error('A model already exists at the destination. No files were changed.');
@@ -152,6 +152,33 @@ export class ModelLocationService implements ModelLocationLookup {
           throw new Error(`The move was interrupted; its files are preserved for recovery. ${accessAdvice}Stop the backend and choose Recover interrupted move before retrying. ${error instanceof Error ? error.message : String(error)}`);
         }
         await this.readFolders(); return this.emit();
+      } finally { await release(); }
+    });
+  }
+  /** Only the main process supplies the OS recycle operation. External roots remain read-only. */
+  async deleteModel(input: { modelId: string; expectedSha256: string }, recycle: (filename: string) => Promise<void>): Promise<ModelLocationsSnapshot> {
+    const request = z.object({modelId: z.string().min(1).max(500), expectedSha256: shaSchema}).strict().parse(input);
+    return this.structural('removing a private model', async () => {
+      const index = this.readyIndex(), model = this.models.assets.find(asset => asset.id === request.modelId);
+      if (!model || model.id.startsWith('external:')) throw new Error('Only models stored in this studio can be deleted. Disconnect an external folder instead.');
+      if (model.sha256 !== request.expectedSha256) throw new Error('The model changed. Refresh and review it before deleting.');
+      const before = index.bindings.find(binding => binding.modelId === model.id);
+      const relative = modelPathSchema.parse(model.filename);
+      if (before ? !samePath(model.kind, before.relativePath, relative) || before.sha256 !== request.expectedSha256 : model.id !== `${model.kind}:${relative}`) throw new Error('The model location changed. Refresh before deleting.');
+      const filename = await this.filePath(model.kind, relative), release = await this.models.leaseFiles([filename]);
+      try {
+        const stat = await this.statIfPresent(filename);
+        const verified = stat ? await this.verifiedFile(filename, request.expectedSha256) : undefined;
+        if (verified) { if (verified.nlink !== 1n) throw new Error('Linked model files are preserved. Remove the link outside Latent.'); }
+        const now = new Date().toISOString();
+        const after: ModelLocationBinding = {...before, modelId:model.id, kind:model.kind, relativePath:relative, sha256:request.expectedSha256, aliases:before?.aliases ?? [relative], createdAt:before?.createdAt ?? now, updatedAt:now, deletedAt:now};
+        await this.options.assertChangesAllowed();
+        // Record removal intent first. A crash before recycling leaves the actual file visible;
+        // a crash after recycling cannot resurrect a missing card on the next refresh.
+        this.write({...index, bindings:this.replaceBinding(index.bindings, after)});
+        try { if (stat) { await this.filePath(model.kind, relative); const current = await fsp.lstat(filename, {bigint:true}); if (!verified || !sameIdentity(current, identity(verified)) || current.mtimeNs !== verified.mtimeNs || current.ctimeNs !== verified.ctimeNs || current.nlink !== 1n || current.isSymbolicLink()) throw new Error('The file changed before removal. Refresh and try again.'); await recycle(filename); } }
+        catch (error) { this.write(index); throw error; }
+        return this.emit();
       } finally { await release(); }
     });
   }

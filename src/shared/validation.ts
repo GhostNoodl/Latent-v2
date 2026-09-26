@@ -9,6 +9,10 @@ import { ipAdapterPlanSchema, ipAdapterSettingsSchema } from './ipadapter-types'
 import { faceRefinementRequestSchema, faceRefinementPlanSchema } from './face-detailer-types';
 const advancedDimension = z.number().int().min(1).max(4096);
 export const draftSchema = z.object({
+  modelSampling: z.object({prediction:z.enum(['eps','v_prediction','lcm','x0']),zeroTerminalSnr:z.boolean()}).strict().optional(),
+  autoFace: z.object({profile:z.enum(['illustrated','anime','photographic']),strength:z.number().finite().min(.05).max(.8),classic:z.boolean().optional(),applyLoras:z.boolean().optional(),steps:z.number().int().min(1).max(100).optional(),cfg:z.number().min(0).max(30).optional(),sampler:z.enum(SAMPLERS as [string,...string[]]).optional(),scheduler:z.enum(SCHEDULERS as [string,...string[]]).optional()}).strict().optional(),
+  autoFaceParentRecordId: z.string().regex(/^[a-f0-9]{32}$/).optional(),
+  enhance: z.object({standard:z.boolean().optional(),method:z.literal('image').optional(),parentRecordId:z.string().regex(/^[a-f0-9]{32}$/)}).strict().optional(),
   faceDetailer: z.object({ request: faceRefinementRequestSchema, frozen: faceRefinementPlanSchema.optional() }).strict().optional(),
   ipAdapter: z.object({ settings: ipAdapterSettingsSchema, frozen: ipAdapterPlanSchema.optional() }).strict().optional(),
   regionalPrompts: z.object({ settings: regionalPromptSettingsSchema, frozen: regionalPromptPlanSchema.optional() }).strict().optional(),
@@ -17,7 +21,7 @@ export const draftSchema = z.object({
   controlNet: controlNetSettingsSchema.optional(),
   dynamicPrompts: dynamicPromptAuthoringSchema.optional(),
   upscale: z.object({ mode: z.enum(['resize', 'learned']), width: advancedDimension, height: advancedDimension, resize: z.enum(['stretch', 'center-crop']) }).strict().optional(),
-  hiresFix: z.object({ workflowVersion: z.enum(['sdxl-hires-latent@1', 'sdxl-hires-latent@2']).optional(), method: z.enum(['latent', 'image']), interpolation: z.enum(['nearest-exact', 'bilinear', 'area', 'bicubic']).optional(), width: advancedDimension.min(64).multipleOf(8), height: advancedDimension.min(64).multipleOf(8), steps: z.number().int().min(1).max(100), cfg: z.number().min(0).max(30), sampler: z.enum(SAMPLERS as [string, ...string[]]), scheduler: z.enum(SCHEDULERS as [string, ...string[]]), denoise: z.number().min(0).max(1), seed: z.string().refine(value => value === 'random' || (/^\d+$/.test(value) && BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER))) }).strict().refine(value => value.workflowVersion === undefined || value.method === 'latent', 'A latent hires version cannot be used for image refinement.').optional(),
+  hiresFix: z.object({ classic: z.boolean().optional(), workflowVersion: z.enum(['sdxl-hires-latent@1', 'sdxl-hires-latent@2']).optional(), scaleFactor: z.number().min(1.01).max(4).optional(), method: z.enum(['latent', 'image']), interpolation: z.enum(['nearest-exact', 'bilinear', 'area', 'bicubic']).optional(), width: advancedDimension.min(64).multipleOf(8), height: advancedDimension.min(64).multipleOf(8), steps: z.number().int().min(1).max(100), cfg: z.number().min(0).max(30), sampler: z.enum(SAMPLERS as [string, ...string[]]), scheduler: z.enum(SCHEDULERS as [string, ...string[]]), denoise: z.number().min(0).max(1), seed: z.string().refine(value => value === 'random' || (/^\d+$/.test(value) && BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER))) }).strict().refine(value => value.workflowVersion === undefined || value.method === 'latent', 'A latent hires version cannot be used for image refinement.').optional(),
   imageInput: z.object({ cropPlan: cropInpaintPlanSchema.optional(), crop: cropInpaintSettingsSchema.optional(), mode: z.enum(['img2img', 'inpaint']), sourceId: z.string().regex(/^src_[a-f0-9-]{36}$/), sourceSha256: z.string().regex(/^[a-f0-9]{64}$/), maskId: z.string().regex(/^mask_[a-f0-9-]{36}$/).optional(), maskSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(), denoise: z.number().min(0).max(1), resize: z.enum(['stretch', 'center-crop']) }).strict().optional(),
   family: z.enum(['sdxl', 'illustrious']), checkpointId: z.string().max(500),
   prompt: z.string().max(16000), negativePrompt: z.string().max(16000),
@@ -26,14 +30,16 @@ export const draftSchema = z.object({
   sampler: z.enum(SAMPLERS as [string, ...string[]]), scheduler: z.enum(SCHEDULERS as [string, ...string[]]),
   seed: z.string().refine(value => value === 'random' || (/^\d+$/.test(value) && BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER)), 'Use random or an integer seed between 0 and 9007199254740991.'),
   batchSize: z.number().int().min(1).max(4), autoTriggers: z.boolean(),
-  triggerResolutionVersion: z.enum(['legacy@1', 'punctuation@2']).optional(),
+  triggerResolutionVersion: z.enum(['legacy@1', 'punctuation@2', 'visible@3']).optional(),
   loras: z.array(z.object({ modelId: z.string().min(1).max(500), weight: z.number().min(-2).max(2), clipWeight: z.number().min(-2).max(2) }).strict()).max(8),
+  promptTriggerSpans: z.array(z.object({start:z.number().int().min(0).max(16000),text:z.string().min(1).max(404),word:z.string().min(1).max(200)}).strict()).max(400).optional(),
   triggerWords: z.record(z.string().max(500), z.array(z.string().max(200)).max(50)).refine(value => Object.keys(value).length <= 9).optional(),
   assetHashes: z.record(z.string().max(500), z.string().regex(/^[a-f0-9]{64}$/i)).refine(value => Object.keys(value).length <= 9).optional(),
 }).strict();
 export const settingsSchema = z.object({
   showGenerationPreview: z.boolean(),
-  theme: z.enum(['system', 'dark', 'light']), accent: z.enum(['iris', 'sea-glass', 'rose']),
+  theme: z.enum(['system', 'dark', 'light']), accent: z.enum(['iris', 'sea-glass', 'rose', 'sky', 'amber', 'peach', 'mint', 'lilac']),
+  sizePresets: z.array(z.object({ name: z.string().trim().min(1).max(30), width: z.number().int().min(256).max(2048).multipleOf(8), height: z.number().int().min(256).max(2048).multipleOf(8) }).strict()).min(1).max(16).refine(items => new Set(items.map(item => item.name.toLowerCase())).size === items.length, 'Use a different name for each size preset.').optional(),
   rememberPositivePrompt: z.boolean(), rememberNegativePrompt: z.boolean(),
   civitaiAutoMetadata: z.boolean().default(false), civitaiDisplayMetadata: z.boolean().default(true), desktopNotifications: z.boolean().default(false), notifyGeneration: z.boolean(), notifyDownload: z.boolean(), notifyError: z.boolean(),
   backendAutoStart: z.boolean(), deviceMode: z.enum(['auto', 'lowvram', 'cpu']),

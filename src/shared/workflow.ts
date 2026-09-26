@@ -2,7 +2,7 @@ import type { ComfyWorkflow, GenerationDraft, ModelAsset } from './types';
 import { draftSchema } from './validation';
 export const WORKFLOW_VERSION = 'sdxl-txt2img@1';
 export function automaticTriggerWords(draft: GenerationDraft, models: ModelAsset[]): string[] {
-  if (!draft.autoTriggers) return [];
+  if (!draft.autoTriggers || draft.triggerResolutionVersion === 'visible@3') return [];
   const manual = draft.prompt.toLocaleLowerCase();
   const triggers = draft.loras.flatMap(selected => draft.triggerWords?.[selected.modelId] ?? models.find(model => model.id === selected.modelId)?.triggers ?? []);
   const seen = new Set<string>();
@@ -58,7 +58,19 @@ export function buildWorkflow(draft: GenerationDraft, models: ModelAsset[], actu
     workflow[node] = { class_type: 'LoraLoader', inputs: { model, clip, lora_name: lora.filename, strength_model: draft.loras[index].weight, strength_clip: draft.loras[index].clipWeight } };
     model = [node, 0]; clip = [node, 1];
   });
+  if (draft.modelSampling) {
+    workflow['49'] = {class_type:'ModelSamplingDiscrete',inputs:{model,sampling:draft.modelSampling.prediction,zsnr:draft.modelSampling.zeroTerminalSnr}};
+    model = ['49',0];
+  }
   workflow['5'].inputs.model = model;
   workflow['2'].inputs.clip = clip; workflow['3'].inputs.clip = clip;
   return workflow;
+}
+
+/** Validate the optional sampling wrapper, then expose the original chain to strict baseline checks. */
+export function samplingValidationGraph(graph: ComfyWorkflow, draft: GenerationDraft): ComfyWorkflow {
+ if (!draft.modelSampling) return graph;
+ const node=graph['49'], model=node?.inputs.model;
+ if(node?.class_type!=='ModelSamplingDiscrete'||node.inputs.sampling!==draft.modelSampling.prediction||node.inputs.zsnr!==draft.modelSampling.zeroTerminalSnr||Object.keys(node.inputs).sort().join()!=='model,sampling,zsnr'||!Array.isArray(model)||model.length!==2||typeof model[0]!=='string'||model[1]!==0||JSON.stringify(graph['5']?.inputs.model)!==JSON.stringify(['49',0]))throw Error('The model sampling override differs from this draft.');
+ const copy=structuredClone(graph);copy['5'].inputs.model=model;delete copy['49'];return copy;
 }

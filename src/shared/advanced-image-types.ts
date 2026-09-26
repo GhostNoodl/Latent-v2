@@ -24,6 +24,8 @@ export interface UpscalerStatus {
 export interface UpscaleSettings { mode: 'resize' | 'learned'; width: number; height: number; resize: 'stretch' | 'center-crop'; }
 export interface UpscaleWorkflowInput { sourceFilename: string; sourceWidth: number; sourceHeight: number; jobId: string; settings: UpscaleSettings; }
 export interface HiresFixSettings {
+  classic?: boolean;
+  scaleFactor?: number;
   workflowVersion?: 'sdxl-hires-latent@1' | 'sdxl-hires-latent@2';
   method: 'latent' | 'image';
   interpolation?: 'nearest-exact' | 'bilinear' | 'area' | 'bicubic';

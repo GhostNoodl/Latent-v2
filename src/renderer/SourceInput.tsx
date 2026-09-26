@@ -67,16 +67,16 @@ export function SourceInput({ snapshot, draft, onChange, selected, run }: Source
     onChange({ imageInput: { ...latest, cropPlan: undefined, mode: 'inpaint', maskId: saved.id, maskSha256: saved.sha256 } });
   }
 
-  return <section className="source-input" aria-label="Source image">
-    <div className="source-input-heading"><h3><FileImage size={15} />Source image</h3>{input && <button type="button" className="icon-button" aria-label="Return to text to image" title="Return to text to image" disabled={busy} onClick={() => onChange({ imageInput: undefined, upscale: undefined })}><X size={14} /></button>}</div>
+  return <section className="source-input" aria-label="Source image"><details open={Boolean(input)}><summary>Source image</summary>
+    <div className="source-input-heading">{input && <button type="button" className="icon-button" aria-label="Return to text to image" title="Return to text to image" disabled={busy} onClick={() => onChange({ imageInput: undefined, upscale: undefined })}><X size={14} /></button>}</div>
     <div className="source-import-actions"><button type="button" className="soft-button" disabled={busy} onClick={() => { void importSource(); }}>{busy ? <LoaderCircle size={14} className="spin" /> : <Plus size={14} />}Import image</button><button type="button" disabled={busy || !selected} title={selected ? `Use ${selected.filename}` : 'Select a saved image in history first'} onClick={() => { void importSource(true); }}><ImagePlus size={14} />Use preview</button></div>
     {sources.length > 0 && <div><label>Saved sources</label><div className="source-thumbnail-list">{sources.map(item => <button type="button" key={item.id} disabled={busy} aria-pressed={input?.sourceId === item.id} onClick={() => chooseSource(item)} title={`${item.name} · ${item.normalized.width} × ${item.normalized.height}`}><img loading="lazy" src={`latent-asset://source/${item.id}`} alt={item.name} /><span>{item.name}</span><small>{item.normalized.width} × {item.normalized.height}</small></button>)}</div></div>}
     {error && <p className="inline-error" role="alert">{error}</p>}
-    {!input && <p className="source-input-help">PNG, JPEG, or WebP. Importing adds a private copy and keeps your original.</p>}
+    {!input && <p className="source-input-help">PNG, JPEG or WebP</p>}
     {input && <>
       {!source || sourceChanged ? <p className="inline-error" role="alert">{sourceChanged ? 'This source differs from the saved recipe. Choose a source deliberately to replace it.' : 'The source for this recipe is missing. Choose or import its source before generating.'}</p> : <div className="source-input-preview"><img key={`${source.id}:${source.normalized.sha256}:${previewAttempt}`} src={`latent-asset://source/${encodeURIComponent(source.id)}`} alt={`Source: ${source.name}`} onLoad={() => setImageFailed(false)} onError={() => setImageFailed(true)} /><div><strong>{source.name}</strong><span>{source.normalized.width} × {source.normalized.height}</span></div></div>}
       {imageFailed && <><p className="inline-error" role="alert">The source preview could not be loaded. Retry after restoring its original file, or import a new source if the file has changed.</p><button type="button" className="soft-button" onClick={() => setPreviewAttempt(value => value + 1)}>Retry source preview</button></>}
-      {draft.upscale ? <p className="source-input-help">This source will {draft.upscale.resize === 'center-crop' ? 'be center-cropped' : 'stretch'} to {draft.upscale.width} × {draft.upscale.height}. Choose the enlargement method and size below.</p> : <>
+      {draft.upscale ? <p className="source-input-help">This source will {draft.upscale.resize === 'center-crop' ? 'be center-cropped' : 'stretch'} to {draft.upscale.width} × {draft.upscale.height}. Choose the enlargement method and size above.</p> : <>
       <div className="source-mode" aria-label="Image workflow"><button type="button" aria-pressed={input.mode === 'img2img'} onClick={() => changeInput({ mode: 'img2img' })}>Image to image</button><button type="button" aria-pressed={input.mode === 'inpaint'} onClick={() => changeInput({ mode: 'inpaint' })}>Inpaint</button></div>
       <Field label={`Change strength · ${Math.round(input.denoise * 100)}%`} hint={input.mode === 'inpaint' && (!input.crop || input.crop.mode === 'replace') ? 'Replacement clears the selected content first. Higher strength allows a fresh replacement; low nonzero strength can leave a flat patch. Zero keeps the source unchanged.' : 'Lower values keep more of the source. Higher values allow larger changes.'}><input type="range" min={0} max={1} step={0.01} value={input.denoise} onChange={event => changeInput({ denoise: Number(event.target.value) })} /></Field>
       {!input.crop && <><Field label="Fit source to output"><select value={input.resize} onChange={event => changeInput({ resize: event.target.value as 'stretch' | 'center-crop' })}><option value="center-crop">Center crop</option><option value="stretch">Stretch to fit</option></select></Field><p className="source-input-help">Source{input.mode === 'inpaint' ? ' and mask' : ''} will {input.resize === 'center-crop' ? 'be center-cropped' : 'stretch'} to {draft.width} × {draft.height}. Imported dimensions do not change the output size.</p></>}
@@ -90,6 +90,7 @@ export function SourceInput({ snapshot, draft, onChange, selected, run }: Source
       </div>}
       </>}
     </>}
+    </details>
     {editor && <MaskEditor source={editor.source} mask={editor.mask} segmentationStatus={snapshot.segmentation} onSaved={savedMask} onClose={() => setEditor(undefined)} run={run} />}
   </section>;
 }

@@ -1,0 +1,9 @@
+import { useState } from 'react';
+import type { GenerationRecord } from '../shared/types';
+import { enhancementSize } from '../shared/enhancement';
+import { Field, Modal, Notice } from './ui';
+export function EnhanceDialog({record,onClose,onPrepare}:{record:GenerationRecord;onClose():void;onPrepare(scale:number,strength:number):Promise<void>}) {
+ const [scale,setScale]=useState(1.5),[strength,setStrength]=useState(.3),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ let size;let sizeError='';try{size=enhancementSize(record.width,record.height,scale);}catch(e){sizeError=e instanceof Error?e.message:String(e);}
+ return <Modal title="Enhance image" onClose={()=>{if(!busy)onClose();}}><p>Add detail with a new diffusion pass. Your original image stays in the library.</p><Field label="Size"><select value={scale} disabled={busy} onChange={e=>setScale(Number(e.target.value))}>{[1,1.25,1.5,2].map(value=><option value={value} key={value}>{value}×</option>)}</select></Field>{size&&<p>{record.width} × {record.height} → <strong>{size.width} × {size.height}</strong><span className="muted small"> · up to 2048 pixels per side</span></p>}<Field label="Refinement strength" hint="Lower preserves more of the original. Higher changes more detail."><input type="number" min={0.05} max={.8} step={.05} disabled={busy} value={strength} onChange={e=>setStrength(Number(e.target.value))}/></Field><p className="small">Review the prompt and models in Create, then Generate. Images without a saved checkpoint use your current Create model selection.</p>{(error||sizeError)&&<Notice error>{error||sizeError}</Notice>}<button disabled={busy||!!sizeError||!Number.isFinite(strength)||strength<.05||strength>.8} className="primary" onClick={async()=>{setBusy(true);setError('');try{await onPrepare(scale,strength);}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}}}>{busy?'Preparing…':'Prepare enhancement'}</button></Modal>;
+}

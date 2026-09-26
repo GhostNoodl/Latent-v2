@@ -57,6 +57,8 @@ export interface CivitaiModel {
 }
 export interface CivitaiSearchRequest {
   includeMature?: boolean;
+  /** Exact discovery label; does not imply generation support. */
+  baseModel?: string;
   query?: string;
   username?: string;
   tag?: string;

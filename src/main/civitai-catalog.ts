@@ -1,3 +1,5 @@
+import { civitaiWorkflowIssue as sharedWorkflowIssue } from '../shared/civitai-discovery';
+import { availableModelFilename } from '../shared/model-names';
 import { z } from 'zod';
 import type { AppPaths, CivitaiProvenance, ModelAsset } from '../shared/types';
 import type { CivitaiModel, CivitaiSearchRequest, CivitaiVersion } from '../shared/civitai-types';
@@ -17,11 +19,7 @@ const storedSchema = z.object({ version: z.literal(1), ciphertext: z.string().mi
 const KEY_STATE = 'civitai.encrypted-api-key.v1';
 
 export function civitaiWorkflowIssue(model: CivitaiModel, version: CivitaiVersion): string | null {
-  if (version.family === 'unknown') return 'This version has an unknown or unsupported base family.';
-  if (!['SDXL 1.0', 'Illustrious'].includes(version.baseModel)) return `${version.baseModel} requires a different generation workflow. It is not enabled in Create yet.`;
-  if (model.kind === 'checkpoint' && version.baseModelType !== 'Standard') return 'Only checkpoints explicitly marked Standard can be downloaded into the current Create workflow.';
-  if (model.kind === 'lora' && version.baseModelType && version.baseModelType !== 'Standard') return 'This LoRA targets a different checkpoint workflow.';
-  return null;
+  return sharedWorkflowIssue(model, version);
 }
 
 export class CivitaiCatalog {
@@ -135,9 +133,8 @@ export class CivitaiCatalog {
         this.store.saveModelMetadata(existing.id, { ...metadata, civitai: provenance });
         await this.models.refresh(); return this.models.assets.find(asset => asset.id === existing.id)!;
       }
-      const prefix = `civitai_${model.id}_${version.id}_${file.id}_`;
-      const stem = file.name.replace(/\.safetensors$/i, '').replace(/[^\w .()-]+/g, '_').replace(/[. ]+$/g, '').slice(0, 180 - prefix.length - '.safetensors'.length) || 'model';
-      const filename = `${prefix}${stem}.safetensors`;
+      const occupied = [...this.models.assets.filter(asset => asset.kind === model.kind).map(asset => asset.filename), ...(this.models.locationBindings().filter(binding => binding.kind === model.kind).flatMap(binding => binding.aliases))];
+      const filename = availableModelFilename(file.name, file.sha256, occupied);
       await this.models.download({ url: file.downloadUrl, filename, kind: model.kind, family: version.family as 'sdxl' | 'illustrious', sha256: file.sha256, triggers: version.trainedWords, sourceUrl: version.sourceUrl, civitai: provenance }, { signal, headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : undefined });
       const installed = this.models.assets.find(asset => asset.kind === model.kind && asset.filename === filename && asset.sha256 === file.sha256);
       if (!installed) throw new Error('The downloaded file did not appear in the verified model library. Refresh and retry.');

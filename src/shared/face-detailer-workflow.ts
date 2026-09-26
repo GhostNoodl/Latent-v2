@@ -11,8 +11,13 @@ export interface FaceRefinementOutput { nodeId: string; role: 'face-pass' | 'fin
 export function buildFaceRefinementWorkflow(baseline: ComfyWorkflow, draft: GenerationDraft, input: FaceRefinementWorkflowInput) {
   const plan = faceRefinementPlanSchema.parse(input.plan);
   if (draft.width !== 512 || draft.height !== 512 || draft.batchSize !== 1 || draft.imageInput || draft.hiresFix || draft.upscale || draft.controlNet || draft.qwenEdit || draft.regionalPrompts?.settings.enabled || 'ipAdapter' in draft && draft.ipAdapter) throw new Error('Face refinement requires baseline SDXL/Illustrious, batch 1, 512 square working size, and no other advanced image transform.');
+  if (baseline['4']?.inputs.width !== draft.width || baseline['4']?.inputs.height !== draft.height) throw new Error('The baseline dimensions do not match the face draft.');
   // Reuse the existing strict baseline and private filename validation for every mask.
-  for (const pass of plan.passes) augmentCropInpaintWorkflow(baseline, draft, { sourceFilename: input.sourceFilename, maskFilename: input.maskFilenames[pass.crop.mask.id], plan: pass.crop });
+  for (const pass of plan.passes) {
+    const workingDraft = {...draft,width:pass.crop.working.width,height:pass.crop.working.height};
+    const validationBase = structuredClone(baseline); validationBase['4'].inputs.width=workingDraft.width; validationBase['4'].inputs.height=workingDraft.height;
+    augmentCropInpaintWorkflow(validationBase, workingDraft, { sourceFilename: input.sourceFilename, maskFilename: input.maskFilenames[pass.crop.mask.id], plan: pass.crop });
+  }
   const graph = structuredClone(baseline); const sampling = structuredClone(graph['5'].inputs); const prefix = String(graph['7'].inputs.filename_prefix);
   delete graph['4']; delete graph['5']; delete graph['6']; delete graph['7'];
   let next = Math.max(7, ...Object.keys(graph).map(Number)) + 1;
@@ -21,15 +26,23 @@ export function buildFaceRefinementWorkflow(baseline: ComfyWorkflow, draft: Gene
   const loaded = add('LoadImage', { image: input.sourceFilename }); let previous: Link = [loaded, 0]; const outputs: FaceRefinementOutput[] = [];
   for (const [passIndex, pass] of plan.passes.entries()) {
     const c = pass.crop;
+    const scale = Math.min(c.working.width / c.crop.width, c.working.height / c.crop.height);
+    const content = plan.classic ? {width:Math.max(1,Math.round(c.crop.width*scale)),height:Math.max(1,Math.round(c.crop.height*scale))} : {width:512,height:512};
     if (c.settings.denoise > 0) {
       const mask = add('LoadImageMask', { image: input.maskFilenames[c.mask.id], channel: 'red' });
       const crop = add('ImageCrop', { image: previous, ...c.crop }); const cropMask = add('CropMask', { mask: [mask, 0], ...c.crop });
-      const image = add('ImageScale', { image: [crop, 0], upscale_method: 'lanczos', width: 512, height: 512, crop: 'disabled' });
-      const maskImage = add('MaskToImage', { mask: [cropMask, 0] }); const maskScaled = add('ImageScale', { image: [maskImage, 0], upscale_method: 'bilinear', width: 512, height: 512, crop: 'disabled' });
+      let image = add('ImageScale', { image: [crop, 0], upscale_method: 'lanczos', ...content, crop: 'disabled' });
+      const maskImage = add('MaskToImage', { mask: [cropMask, 0] }); let maskScaled = add('ImageScale', { image: [maskImage, 0], upscale_method: 'bilinear', ...content, crop: 'disabled' });
+      if (plan.classic) {
+        const canvas = add('EmptyImage', {width:c.working.width,height:c.working.height,batch_size:1,color:0});
+        image = add('ImageCompositeMasked', {destination:[canvas,0],source:[image,0],x:0,y:0,resize_source:false});
+        maskScaled = add('ImageCompositeMasked', {destination:[canvas,0],source:[maskScaled,0],x:0,y:0,resize_source:false});
+      }
       const workingMask = add('ImageToMask', { image: [maskScaled, 0], channel: 'red' }); const encoded = add('VAEEncode', { pixels: [image, 0], vae: ['1', 2] });
       const latent = add('SetLatentNoiseMask', { samples: [encoded, 0], mask: [workingMask, 0] }); const sampler = add('KSampler', { ...sampling, latent_image: [latent, 0], seed: Number(pass.seed), denoise: c.settings.denoise });
       const decoded = add('VAEDecode', { samples: [sampler, 0], vae: ['1', 2] });
-      const returned = add('ImageScale', { image: [decoded, 0], upscale_method: 'lanczos', width: c.crop.width, height: c.crop.height, crop: 'disabled' });
+      const unpadded = plan.classic ? add('ImageCrop', {image:[decoded,0],x:0,y:0,...content}) : decoded;
+      const returned = add('ImageScale', { image: [unpadded, 0], upscale_method: 'lanczos', width: c.crop.width, height: c.crop.height, crop: 'disabled' });
       const composite = add('ImageCompositeMasked', { destination: previous, source: [returned, 0], x: c.crop.x, y: c.crop.y, resize_source: false, mask: [cropMask, 0] }); previous = [composite, 0];
     }
     const alpha = add('JoinImageWithAlpha', { image: previous, alpha: [loaded, 1] }); const final = passIndex === plan.passes.length - 1;
@@ -42,7 +55,7 @@ export function buildFaceRefinementWorkflow(baseline: ComfyWorkflow, draft: Gene
     if (!final) previous = [add('SplitImageWithAlpha', { image: [nodeId, 0] }), 0];
   }
   if (plan.passes.every(pass => pass.crop.settings.denoise === 0)) {
-    for (const [id, node] of Object.entries(graph)) if (['CheckpointLoaderSimple', 'LoraLoader', 'CLIPTextEncode'].includes(node.class_type)) delete graph[id];
+    for (const [id, node] of Object.entries(graph)) if (['CheckpointLoaderSimple', 'LoraLoader', 'CLIPTextEncode', 'ModelSamplingDiscrete'].includes(node.class_type)) delete graph[id];
   }
   return { workflow: graph, workflowVersion: 'sdxl-face-refinement@1' as const, plan, outputs };
 }

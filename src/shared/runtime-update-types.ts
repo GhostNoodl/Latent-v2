@@ -3,7 +3,7 @@ export const runtimeUpdateSettingsSchema = z.object({ autoCheck: z.boolean(), au
 export type RuntimeUpdateSettings = z.infer<typeof runtimeUpdateSettingsSchema>;
 export const DEFAULT_RUNTIME_UPDATE_SETTINGS: RuntimeUpdateSettings = { autoCheck: true, autoApply: true, intervalHours: 24 };
 export interface ReviewedRuntimeSet {
-  id: string; sequence: number; label: string; releasedAt: string; channel: 'reviewed';
+  optional?: boolean; id: string; sequence: number; label: string; releasedAt: string; channel: 'reviewed';
   backend: { version: string; commit: string; archiveSha256: string; archiveBytes: number; archiveUrl: string };
   pythonVersion: string; packages: Array<{ name: string; version: string }>;
   /** Optional, indivisible package sets; every installed version must match. */

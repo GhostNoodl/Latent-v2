@@ -1042,6 +1042,254 @@
     {
       "from": "docs/public/native-source-inputs.json",
       "to": "docs/public/native-source-inputs.json"
+    },
+    {
+      "from": "src/renderer/SizePresets.tsx",
+      "to": "src/renderer/SizePresets.tsx"
+    },
+    {
+      "from": "src/renderer/PreviewMenu.tsx",
+      "to": "src/renderer/PreviewMenu.tsx"
+    },
+    {
+      "from": "src/renderer/useDismissiblePanel.ts",
+      "to": "src/renderer/useDismissiblePanel.ts"
+    },
+    {
+      "from": "tests/create-update.test.tsx",
+      "to": "tests/create-update.test.tsx"
+    },
+    {
+      "from": "docs/UPDATE-0.2.md",
+      "to": "docs/UPDATE-0.2.md"
+    },
+    {
+      "from": "src/shared/model-names.ts",
+      "to": "src/shared/model-names.ts"
+    },
+    {
+      "from": "src/main/model-maintenance.ts",
+      "to": "src/main/model-maintenance.ts"
+    },
+    {
+      "from": "src/renderer/SetupProgress.tsx",
+      "to": "src/renderer/SetupProgress.tsx"
+    },
+    {
+      "from": "tests/model-file-management.test.ts",
+      "to": "tests/model-file-management.test.ts"
+    },
+    {
+      "from": "tests/model-management-ui.test.tsx",
+      "to": "tests/model-management-ui.test.tsx"
+    },
+    {
+      "from": "tests/model-maintenance.test.ts",
+      "to": "tests/model-maintenance.test.ts"
+    },
+    {
+      "from": "src/shared/civitai-discovery.ts",
+      "to": "src/shared/civitai-discovery.ts"
+    },
+    {
+      "from": "src/renderer/CivitaiGallery.tsx",
+      "to": "src/renderer/CivitaiGallery.tsx"
+    },
+    {
+      "from": "tests/civitai-gallery.test.tsx",
+      "to": "tests/civitai-gallery.test.tsx"
+    },
+    {
+      "from": "src/shared/visible-triggers.ts",
+      "to": "src/shared/visible-triggers.ts"
+    },
+    {
+      "from": "src/renderer/LoraTriggerChoices.tsx",
+      "to": "src/renderer/LoraTriggerChoices.tsx"
+    },
+    {
+      "from": "tests/visible-triggers.test.ts",
+      "to": "tests/visible-triggers.test.ts"
+    },
+    {
+      "from": "tests/lora-trigger-choices.test.tsx",
+      "to": "tests/lora-trigger-choices.test.tsx"
+    },
+    {
+      "from": "src/shared/enhancement.ts",
+      "to": "src/shared/enhancement.ts"
+    },
+    {
+      "from": "src/renderer/EnhanceDialog.tsx",
+      "to": "src/renderer/EnhanceDialog.tsx"
+    },
+    {
+      "from": "tests/enhancement.test.ts",
+      "to": "tests/enhancement.test.ts"
+    },
+    {
+      "from": "tests/enhance-dialog.test.tsx",
+      "to": "tests/enhance-dialog.test.tsx"
+    },
+    {
+      "from": "src/main/automatic-faces.ts",
+      "to": "src/main/automatic-faces.ts"
+    },
+    {
+      "from": "src/renderer/AutomaticFaceControls.tsx",
+      "to": "src/renderer/AutomaticFaceControls.tsx"
+    },
+    {
+      "from": "tests/automatic-faces.test.ts",
+      "to": "tests/automatic-faces.test.ts"
+    },
+    {
+      "from": "tests/automatic-face-controls.test.tsx",
+      "to": "tests/automatic-face-controls.test.tsx"
+    },
+    {
+      "from": "src/shared/wildcard-packs.ts",
+      "to": "src/shared/wildcard-packs.ts"
+    },
+    {
+      "from": "src/renderer/WildcardPacks.tsx",
+      "to": "src/renderer/WildcardPacks.tsx"
+    },
+    {
+      "from": "tests/wildcard-packs.test.ts",
+      "to": "tests/wildcard-packs.test.ts"
+    },
+    {
+      "from": "tests/wildcard-packs-ui.test.tsx",
+      "to": "tests/wildcard-packs-ui.test.tsx"
+    },
+    {
+      "from": "docs/WILDCARD-PACKS.md",
+      "to": "docs/WILDCARD-PACKS.md"
+    },
+    {
+      "from": "src/shared/app-update-types.ts",
+      "to": "src/shared/app-update-types.ts"
+    },
+    {
+      "from": "src/main/app-updates.ts",
+      "to": "src/main/app-updates.ts"
+    },
+    {
+      "from": "src/renderer/AppUpdates.tsx",
+      "to": "src/renderer/AppUpdates.tsx"
+    },
+    {
+      "from": "tests/app-updates.test.ts",
+      "to": "tests/app-updates.test.ts"
+    },
+    {
+      "from": "tests/app-updates-ui.test.tsx",
+      "to": "tests/app-updates-ui.test.tsx"
+    },
+    {
+      "from": "docs/APP-UPDATES.md",
+      "to": "docs/APP-UPDATES.md"
+    },
+    {
+      "from": "src/shared/qwen-gguf-release.ts",
+      "to": "src/shared/qwen-gguf-release.ts"
+    },
+    {
+      "from": "src/main/qwen-gguf-runtime.ts",
+      "to": "src/main/qwen-gguf-runtime.ts"
+    },
+    {
+      "from": "tests/qwen-compact.test.ts",
+      "to": "tests/qwen-compact.test.ts"
+    },
+    {
+      "from": "docs/QWEN-COMPACT.md",
+      "to": "docs/QWEN-COMPACT.md"
+    },
+    {
+      "from": "tests/qwen-compact-runtime.test.ts",
+      "to": "tests/qwen-compact-runtime.test.ts"
+    },
+    {
+      "from": "src/shared/tag-autocomplete.ts",
+      "to": "src/shared/tag-autocomplete.ts"
+    },
+    {
+      "from": "src/renderer/TagPrompt.tsx",
+      "to": "src/renderer/TagPrompt.tsx"
+    },
+    {
+      "from": "src/renderer/tag-search.ts",
+      "to": "src/renderer/tag-search.ts"
+    },
+    {
+      "from": "src/renderer/tag-search.worker.ts",
+      "to": "src/renderer/tag-search.worker.ts"
+    },
+    {
+      "from": "src/renderer/tag-prompt.css",
+      "to": "src/renderer/tag-prompt.css"
+    },
+    {
+      "from": "src/renderer/tag-data/e621.csv",
+      "to": "src/renderer/tag-data/e621.csv"
+    },
+    {
+      "from": "src/renderer/tag-data/danbooru.csv",
+      "to": "src/renderer/tag-data/danbooru.csv"
+    },
+    {
+      "from": "tests/tag-autocomplete.test.ts",
+      "to": "tests/tag-autocomplete.test.ts"
+    },
+    {
+      "from": "tests/tag-prompt-dom.test.tsx",
+      "to": "tests/tag-prompt-dom.test.tsx"
+    },
+    {
+      "from": "licenses/TAG-AUTOCOMPLETE-MIT.txt",
+      "to": "licenses/TAG-AUTOCOMPLETE-MIT.txt"
+    },
+    {
+      "from": "docs/TAG-AUTOCOMPLETE.md",
+      "to": "docs/TAG-AUTOCOMPLETE.md"
+    },
+    {
+      "from": "docs/QWEN-IMAGE-STATION.md",
+      "to": "docs/QWEN-IMAGE-STATION.md"
+    },
+    {
+      "from": "src/main/qwen21-gguf-runtime.ts",
+      "to": "src/main/qwen21-gguf-runtime.ts"
+    },
+    {
+      "from": "src/main/qwen21-runtime-packages.ts",
+      "to": "src/main/qwen21-runtime-packages.ts"
+    },
+    {
+      "from": "src/shared/qwen21-gguf-release.ts",
+      "to": "src/shared/qwen21-gguf-release.ts"
+    },
+    {
+      "from": "src/shared/qwen21-release.ts",
+      "to": "src/shared/qwen21-release.ts"
+    },
+    {
+      "from": "src/shared/qwen21-workflow.ts",
+      "to": "src/shared/qwen21-workflow.ts"
+    },
+    {
+      "from": "tests/qwen-station-dom.test.tsx",
+      "to": "tests/qwen-station-dom.test.tsx"
+    },
+    {
+      "from": "tests/qwen21-gguf.test.ts",
+      "to": "tests/qwen21-gguf.test.ts"
+    },
+    {
+      "from": "tests/qwen21.test.ts",
+      "to": "tests/qwen21.test.ts"
     }
   ]
 }
