@@ -81,16 +81,16 @@ export class RuntimeUpdateService {
     await downloadAssistantAsset({ filename, url: set.backend.archiveUrl, sha256: set.backend.archiveSha256, bytes: set.backend.archiveBytes }, this.files.downloads, signal, (received, total, verifying) => this.update({ message: verifying ? 'Verifying the reviewed source archive…' : 'Downloading the reviewed source archive…', progress: received / total * 30 }));
     return { filename: target, manifest: reviewedArchiveManifest(target, set) };
   }
-  stage(kind: 'update' | 'refresh' = 'update'): Promise<RuntimeUpdateStage> { return this.prepareStage(kind, false); }
+  stage(kind: 'update' | 'refresh' = 'update', targetSetId?: string): Promise<RuntimeUpdateStage> { return this.prepareStage(kind, false, targetSetId); }
   /** Explicit repair preparation only; never changes the active interpreter. */
   prepareEnvironmentRepair(): Promise<RuntimeUpdateStage> { return this.prepareStage('refresh', true); }
-  private prepareStage(kind: 'update' | 'refresh', repairEnvironment: boolean): Promise<RuntimeUpdateStage> {
+  private prepareStage(kind: 'update' | 'refresh', repairEnvironment: boolean, targetSetId?: string): Promise<RuntimeUpdateStage> {
     return this.action('staging', kind === 'refresh' ? 'refresh' : 'stage', async signal => {
       // A hard exit may skip catch/finally. Persist the retry barrier before any
       // preparation work; successful staging clears it below.
       this.store.setState('runtime-updates.automatic-paused', true);
       if (!['update', 'refresh'].includes(kind)) throw new Error('Choose a reviewed update or a same-version runtime refresh.'); const saved = await this.load(); if (this.current.recoveryRequired) throw new Error('Recover the interrupted runtime transaction before staging another set.');
-      const baseline = reviewedRuntimeSet(saved.current.setId); const target = kind === 'refresh' ? baseline : latestReviewedRuntimeSet(); if (kind === 'update' && target.sequence <= baseline.sequence) throw new Error('No newer reviewed runtime set is available. A verified refresh can reinstall the current set.');
+      const baseline = reviewedRuntimeSet(saved.current.setId); const target = kind === 'refresh' ? baseline : targetSetId ? reviewedRuntimeSet(targetSetId) : latestReviewedRuntimeSet(); if (kind === 'update' && target.sequence <= baseline.sequence) throw new Error('No newer reviewed runtime set is available. A verified refresh can reinstall the current set.');
       this.update({ message: 'Checking the active private Python/package environment…' });
       if (repairEnvironment) {
         let mismatch = false;

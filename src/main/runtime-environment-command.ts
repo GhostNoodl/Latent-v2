@@ -9,7 +9,9 @@ import type { EnvironmentCommand } from './runtime-environments';
 export const runEnvironmentCommand: EnvironmentCommand = async (executable, args, paths, signal) => {
   validateRuntimePaths(paths); await safeUpdatePath(paths.root, executable, false); signal.throwIfAborted();
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(executable, args, { cwd: paths.runtime, env: runtimeEnvironment(paths), windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    // Keep large GPU-wheel extraction bounded, including on many-core desktops.
+    const env = { ...runtimeEnvironment(paths), UV_CONCURRENT_INSTALLS: '1', UV_CONCURRENT_BUILDS: '1', UV_CONCURRENT_DOWNLOADS: '2' };
+    const child = spawn(executable, args, { cwd: paths.runtime, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let output = ''; let timedOut = false; let stopping = false;
     const stop = () => {
       if (stopping || !child.pid || child.exitCode !== null) return;

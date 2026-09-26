@@ -13,6 +13,7 @@ export const qwenEditorSettingsSchema = z.object({
 export const qwenConversationDraftSchema = z.object({
   id: z.uuid(), title: text(80).min(1), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime(), branchId: z.uuid(),
   source: z.object({ id: z.string().regex(/^src_[a-f0-9-]{36}$/), sha256: z.string().regex(/^[a-f0-9]{64}$/), parentRecordId: recordId.optional() }).strict().optional(),
+  operation: z.enum(['edit', 'create']).optional(), transparent: z.boolean().optional(), references: qwenEditJobRequestSchema.shape.references,
   selectedRecordId: recordId.optional(), instruction: text(4000), negativePrompt: text(4000), settings: qwenEditorSettingsSchema,
   frozenRecipe: z.object({ assetHashes: qwenEditJobRequestSchema.shape.assetHashes.unwrap(), workflowVersion: qwenEditWorkflowVersionSchema, reusedRecordId: recordId }).strict().optional(),
 }).strict();

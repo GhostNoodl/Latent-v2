@@ -1,3 +1,5 @@
+import { QWEN21_RUNTIME_PACKAGES } from './qwen21-runtime-packages';
+import { QWEN21_SET_ID, QWEN21_RUNTIME } from '../shared/qwen21-release';
 import { QWEN_GGUF_RELEASE } from '../shared/qwen-gguf-release';
 import { RUNTIME_RELEASE } from './runtime-config';
 import { IPADAPTER_RELEASE } from '../shared/ipadapter-release';
@@ -30,9 +32,17 @@ export const REVIEWED_RUNTIME_CHANNEL: readonly ReviewedRuntimeSet[] = [{
   optionalCustomNodes: CURRENT_RUNTIME_SET.optionalCustomNodes.filter(node => node.directory !== QWEN_GGUF_RELEASE.directory),
   workflowVersions: CURRENT_RUNTIME_SET.workflowVersions.filter(version => version !== 'qwen-image-edit-2511-gguf-q4ks@1'),
   notes: 'Legacy tagged origin reviewed September 7: exact dependencies, core capabilities and an SDXL reference passed. App-controlled upgrade, rollback, busy automatic activation and interrupted-switch recovery now have scoped evidence; affected-workflow acceptance remains incomplete. Not a fresh-install default or complete advanced-workflow support claim on 0.33.',
-}, CURRENT_RUNTIME_SET];
+}, CURRENT_RUNTIME_SET, {
+  ...CURRENT_RUNTIME_SET, optional: true, id: QWEN21_SET_ID, sequence: 2, label: 'ComfyUI 0.37.0 · Qwen Image Station', releasedAt: '2026-09-21T00:00:00.000Z',
+  backend: { version: '0.37.0', commit: QWEN21_RUNTIME.comfySourceCommit, archiveSha256: 'a3f463cfd33b5fcc2c854bf3d2f3a7ca2235e9b5de7875729ee32412f7e0abb9', archiveBytes: 13203022, archiveUrl: `https://codeload.github.com/Comfy-Org/ComfyUI/zip/${QWEN21_RUNTIME.comfySourceCommit}` },
+  packages: QWEN21_RUNTIME_PACKAGES,
+  optionalCustomNodes: CURRENT_RUNTIME_SET.optionalCustomNodes,
+  workflowVersions: [...CURRENT_RUNTIME_SET.workflowVersions, 'qwen-image-2.1@1', 'qwen-image-2.1-gguf-q4km@1'],
+  mandatoryNodes: [...CURRENT_RUNTIME_SET.mandatoryNodes, 'TextEncodeQwenImage21', 'QwenImage21Cache'],
+  notes: 'Qwen 2.1 creation and editing. Prepared in an independent environment with rollback; existing Lightning and SDXL workflows retained.',
+}];
 export function reviewedRuntimeSet(id: string): ReviewedRuntimeSet { const value = REVIEWED_RUNTIME_CHANNEL.find(item => item.id === id); if (!value) throw new Error('This runtime set is not part of the app’s reviewed channel.'); return structuredClone(value); }
-export function latestReviewedRuntimeSet(): ReviewedRuntimeSet { return structuredClone([...REVIEWED_RUNTIME_CHANNEL].sort((a, b) => b.sequence - a.sequence)[0]); }
+export function latestReviewedRuntimeSet(): ReviewedRuntimeSet { return structuredClone(REVIEWED_RUNTIME_CHANNEL.filter(item => !item.optional).sort((a, b) => b.sequence - a.sequence)[0]); }
 export function reviewedInstalledRuntime(marker: { comfyCommit?: string; sourceSha256?: string; updateSetId?: string }): ReviewedRuntimeSet | undefined {
   const value = REVIEWED_RUNTIME_CHANNEL.find(item => (!marker.updateSetId || marker.updateSetId === item.id) && item.backend.commit === marker.comfyCommit && item.backend.archiveSha256 === marker.sourceSha256); return value ? structuredClone(value) : undefined;
 }

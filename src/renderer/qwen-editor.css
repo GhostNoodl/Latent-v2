@@ -82,3 +82,7 @@
   .qwen-runtime { flex-direction: column; }
   .qwen-runtime .button-row { max-width: none; justify-content: flex-start; }
 }
+
+.qwen-station { padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.qwen-station .qwen-workspace { height: max(520px, calc(100dvh - 400px)); }
+.qwen-station .qwen-viewer img { background: repeating-conic-gradient(#7772 0% 25%, transparent 0% 50%) 0/20px 20px; }

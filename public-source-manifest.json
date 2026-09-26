@@ -1254,6 +1254,42 @@
     {
       "from": "docs/TAG-AUTOCOMPLETE.md",
       "to": "docs/TAG-AUTOCOMPLETE.md"
+    },
+    {
+      "from": "docs/QWEN-IMAGE-STATION.md",
+      "to": "docs/QWEN-IMAGE-STATION.md"
+    },
+    {
+      "from": "src/main/qwen21-gguf-runtime.ts",
+      "to": "src/main/qwen21-gguf-runtime.ts"
+    },
+    {
+      "from": "src/main/qwen21-runtime-packages.ts",
+      "to": "src/main/qwen21-runtime-packages.ts"
+    },
+    {
+      "from": "src/shared/qwen21-gguf-release.ts",
+      "to": "src/shared/qwen21-gguf-release.ts"
+    },
+    {
+      "from": "src/shared/qwen21-release.ts",
+      "to": "src/shared/qwen21-release.ts"
+    },
+    {
+      "from": "src/shared/qwen21-workflow.ts",
+      "to": "src/shared/qwen21-workflow.ts"
+    },
+    {
+      "from": "tests/qwen-station-dom.test.tsx",
+      "to": "tests/qwen-station-dom.test.tsx"
+    },
+    {
+      "from": "tests/qwen21-gguf.test.ts",
+      "to": "tests/qwen21-gguf.test.ts"
+    },
+    {
+      "from": "tests/qwen21.test.ts",
+      "to": "tests/qwen21.test.ts"
     }
   ]
 }

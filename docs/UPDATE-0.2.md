@@ -210,3 +210,13 @@ has a separate verified receipt so four-step replay remains available.
 - Create prompts now offer local e621 and Danbooru tag and alias suggestions.
 - Choose either dictionary, both, or Off; insert with Tab, Enter, or a click.
 - Prompt weights and surrounding tags are preserved. No search queries leave the app.
+
+### Qwen Image Station
+
+- New Qwen sidebar workspace for creation, editing, transparent backgrounds and
+  a second reference image.
+- Choose Qwen Image 2.1 or the existing Lightning profiles from the station and
+  existing Edit with Qwen entry points.
+- Opt-in engine setup prepares a separate environment and retains rollback;
+  saved results retain exact model and reference identities.
+- See [setup and usage](QWEN-IMAGE-STATION.md).

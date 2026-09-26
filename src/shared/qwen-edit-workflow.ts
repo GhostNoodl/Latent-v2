@@ -1,9 +1,11 @@
+import { buildQwen21Workflow, validateQwen21Bundle, validateQwen21Capabilities } from './qwen21-workflow';
 import type { ComfyWorkflow } from './types';
 import { QWEN_GGUF_RELEASE } from './qwen-gguf-release';
-import { QWEN_LIGHTNING8_IDENTITY, qwenProfileSteps, QWEN_COMPACT_DIFFUSION, isFastQwenProfile, QWEN_EDIT_IDENTITIES, qwenEditSettingsSchema, qwenEditWorkflowVersionSchema, type QwenEditBundle, type QwenEditProfile, type QwenEditWorkflowInput, type QwenEditWorkflowPlan } from './qwen-edit-types';
+import { isQwen21Profile, QWEN_LIGHTNING8_IDENTITY, qwenProfileSteps, QWEN_COMPACT_DIFFUSION, isFastQwenProfile, QWEN_EDIT_IDENTITIES, qwenEditSettingsSchema, qwenEditWorkflowVersionSchema, type QwenEditBundle, type QwenEditProfile, type QwenEditWorkflowInput, type QwenEditWorkflowPlan } from './qwen-edit-types';
 import { qwenInferenceSize } from './qwen-edit-canvas';
 
 export function validateQwenEditBundle(bundle: QwenEditBundle, profile: QwenEditProfile = bundle?.profile) {
+  if (isQwen21Profile(profile)) { validateQwen21Bundle(bundle); return; }
   const compact = profile === 'compact';
   if (!bundle || bundle.id !== (compact ? 'qwen-edit-2511-gguf-q4ks' : 'qwen-edit-2511-native-int8') || bundle.profile !== profile || !['base', 'fast', 'compact', 'lightning8'].includes(profile) || bundle.runtime?.route !== (compact ? 'gguf-q4ks' : 'native-int8-convrot') || bundle.runtime.comfySourceCommit !== '12d5279438bfefc058a269eae805ceab6047777f' || bundle.runtime.comfyVersion !== '0.34.0' || bundle.runtime.torchVersion !== '2.11.0+cu130' || bundle.runtime.comfyKitchenVersion !== '0.2.31' || !Array.isArray(bundle.runtime.customNodes) || JSON.stringify(bundle.runtime.customNodes) !== JSON.stringify(compact ? [QWEN_GGUF_RELEASE.revision] : []) || bundle.runtime.cpuTextEncoder !== true) throw new Error('Verify the selected Qwen edit bundle and runtime before editing.');
   let bytes = 0;
@@ -22,10 +24,13 @@ function sourceFilename(value: string) {
 
 /** Native one-image 2511 recipe. Its input pixels must be resolved and rehashed by the job service. */
 export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: QwenEditBundle): QwenEditWorkflowPlan {
+  if (isQwen21Profile(input.settings.profile)) return buildQwen21Workflow(input, bundle);
+  if (input.operation === 'create' || input.transparent || input.references?.length) throw new Error('Creation, transparency and additional references require Qwen Image 2.1.');
+  if (!input.source || !input.sourceFilename) throw new Error('Choose an input image before editing.');
   const parsed = qwenEditSettingsSchema.parse(input.settings); validateQwenEditBundle(bundle, parsed.profile);
   const settings = { ...parsed, steps: parsed.steps ?? qwenProfileSteps(parsed.profile), guidance: parsed.guidance ?? (isFastQwenProfile(parsed.profile) ? 1 : 4) };
   const workflowVersion = qwenEditWorkflowVersionSchema.parse(input.workflowVersion ?? (parsed.profile === 'compact' ? 'qwen-image-edit-2511-gguf-q4ks@1' : 'qwen-image-edit-2511-int8@2'));
-  if ((parsed.profile === 'compact') !== (workflowVersion === 'qwen-image-edit-2511-gguf-q4ks@1')) throw new Error('The Qwen model route does not match this recorded recipe.');
+  if (workflowVersion.startsWith('qwen-image-2.1') || (parsed.profile === 'compact') !== (workflowVersion === 'qwen-image-edit-2511-gguf-q4ks@1')) throw new Error('The Qwen model route does not match this recorded recipe.');
   const aligned = workflowVersion !== 'qwen-image-edit-2511-int8@1';
   const native = aligned ? qwenInferenceSize(settings.width, settings.height) : { width: settings.width, height: settings.height };
   const source = input.source; const size = source?.normalized; const filename = sourceFilename(input.sourceFilename);
@@ -58,6 +63,7 @@ export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: Qwen
 
 /** Read-only preflight using fresh /object_info; model enums must include the registered private paths. */
 export function validateQwenEditCapabilities(objects: Record<string, any>, bundle: QwenEditBundle) {
+  if (isQwen21Profile(bundle.profile)) { validateQwen21Capabilities(objects, bundle); return; }
   validateQwenEditBundle(bundle);
   const fields: Record<string, Record<string, string>> = {
     VAEEncode: { pixels: 'IMAGE', vae: 'VAE' }, VAEDecode: { samples: 'LATENT', vae: 'VAE' },

@@ -1,5 +1,6 @@
+import { QWEN21_SET_ID } from '../shared/qwen21-release';
 import { AppUpdateService } from './app-updates';
-import { qwenEditProfileSchema } from '../shared/qwen-edit-types';
+import { isQwen21Profile, qwenEditProfileSchema } from '../shared/qwen-edit-types';
 import { withPausedModelEngine } from './model-maintenance';
 import { setupStorageBlockers, setupHardwareBlockers, type SetupCapability, type SetupPreflight } from '../shared/setup';
 import { inspectHardware as inspectSetupHardware } from './hardware-profile-probe';
@@ -361,7 +362,7 @@ async function initialize() {
     cancelIPAdapterSetup: async () => ipAdapter.cancel(),
     getQwenConversation: async () => { const saved = store.getState('qwen.conversation', null); return saved ? qwenConversationSchema.parse(saved) : null; },
     saveQwenConversation: async value => { store.setState('qwen.conversation', qwenConversationSchema.parse(value)); },
-    setupQwenEdit: async (profile, repair) => { const selected = qwenEditProfileSchema.parse(profile); const requested = z.boolean().optional().parse(repair) ?? false; if (selected === 'compact') await changeModelFiles(async () => { await qwenEdit.setup(selected, requested); }); else if (requested) await jobs.withRuntimeMaintenance(async () => { await backendActivity.assertIdle('repair Qwen assets'); if (backend.hasOwnedProcess()) throw new Error('Stop the image engine before repairing Qwen assets.'); await qwenEdit.setup(selected, true); }, { allowRetainedJobs: false }); else await qwenEdit.setup(selected); },
+    setupQwenEdit: async (profile, repair) => { const selected = qwenEditProfileSchema.parse(profile); const requested = z.boolean().optional().parse(repair) ?? false; if (isQwen21Profile(selected)) { await runtimeUpdates.check(); if (runtimeUpdates.status().current?.setId !== QWEN21_SET_ID) { await runtimeUpdates.stage('update', QWEN21_SET_ID); await runtimeCoordinator.activateAndRecover(() => runtimeUpdates.activate(), () => runtimeUpdates.recover()); } } if (selected === 'compact') await changeModelFiles(async () => { await qwenEdit.setup(selected, requested); }); else if (requested) await jobs.withRuntimeMaintenance(async () => { await backendActivity.assertIdle('repair Qwen assets'); if (backend.hasOwnedProcess()) throw new Error('Stop the image engine before repairing Qwen assets.'); await qwenEdit.setup(selected, true); }, { allowRetainedJobs: false }); else await qwenEdit.setup(selected); },
     cancelQwenEditSetup: async () => { qwenEdit.cancel(); },
     enqueueQwenEdit: async request => models.library.withShared('queuing an image edit', async () => { assertModelLocationsReady(); return jobs.enqueueQwenEdit(request); }),
     chooseExternalModelRoot: async input => {
