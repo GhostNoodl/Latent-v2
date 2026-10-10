@@ -1,3 +1,4 @@
+import { beginSetupActivity } from './setup-activity';
 import fs from 'node:fs';
 import path from 'node:path';
 import net from 'node:net';
@@ -169,6 +170,8 @@ export class ManagedBackend {
   private async download(url: string, filename: string, expectedSha256: string, from: number, to: number): Promise<string> {
     const target = path.join(this.paths.cache, 'runtime', 'downloads', filename);
     if (fs.existsSync(target) && await sha256File(target) === expectedSha256) return target;
+    const activity=beginSetupActivity(filename,url,target);
+    try {
     this.checkCancelled();
     const partial = `${target}.partial`;
     const response = await fetch(url, { signal: AbortSignal.any([this.abort!.signal, AbortSignal.timeout(20 * 60_000)]) });
@@ -185,7 +188,7 @@ export class ManagedBackend {
         await file.writeFile(chunk);
         received += chunk.byteLength;
         if (Date.now() - lastUpdate > 250) {
-          lastUpdate = Date.now();
+          lastUpdate = Date.now();activity.progress('Downloading '+filename,total?received/total*100:undefined);
           this.publish({ installProgress: total ? from + Math.min(1, received / total) * (to - from) : from, setupDownload: {filename, receivedBytes: received, totalBytes: total, phase: 'downloading'} });
         }
       }
@@ -196,7 +199,8 @@ export class ManagedBackend {
     this.checkCancelled();
     await fs.promises.rename(partial, target);
     this.publish({ installProgress: to, setupDownload: undefined });
-    return target;
+    activity.finish('completed','Downloaded and verified.');return target;
+    }catch(error){activity.finish(this.abort?.signal.aborted?'cancelled':'failed',errorMessage(error));throw error;}
   }
 
   private async installUv(): Promise<string> {
@@ -272,7 +276,9 @@ export class ManagedBackend {
 
   private async command(executable: string, args: string[], timeoutMs = 30 * 60_000): Promise<string> {
     this.checkCancelled();
-    return new Promise((resolve, reject) => {
+    const activity=beginSetupActivity(args.includes('install')?'Python / package installation':'Python setup check',args.filter(a=>a.startsWith('https://')).join(' · ')||'Managed Python tools (see tool output)',this.paths.runtime);
+    activity.note('Tool: '+executable+'; arguments: '+args.join(' '));
+    try {const result=await new Promise<string>((resolve, reject) => {
       const child = spawn(executable, args, { cwd: this.paths.runtime, env: runtimeEnvironment(this.paths), windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
       this.installer = child;
       let output = '';
@@ -284,7 +290,7 @@ export class ManagedBackend {
           reject(new Error(`Runtime command timed out and its owned process could not be stopped: ${errorMessage(error)}`));
         });
       }, timeoutMs);
-      const collect = (data: Buffer) => { const text = data.toString('utf8'); output = `${output}${text}`.slice(-64 * 1024); this.log(text); };
+      const collect = (data: Buffer) => { const text = data.toString('utf8'); output = `${output}${text}`.slice(-64 * 1024); this.log(text);activity.note(output); };
       child.stdout?.on('data', collect);
       child.stderr?.on('data', collect);
       child.once('error', (error) => { clearTimeout(timeout); if (this.installer === child) this.installer = undefined; reject(error); });
@@ -296,7 +302,8 @@ export class ManagedBackend {
         else if (code !== 0) reject(new RuntimeCommandFailure(path.basename(executable), code, output));
         else resolve(output);
       });
-    });
+    });activity.finish('completed','Python setup operation completed.');return result;
+    }catch(error){activity.finish(this.abort?.signal.aborted?'cancelled':'failed',errorMessage(error));throw error;}
   }
 
   private async installPackages(uv: string, args: string[]): Promise<string> {

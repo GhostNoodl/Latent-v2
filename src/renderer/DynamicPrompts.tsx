@@ -1,9 +1,9 @@
 import { WildcardPacks } from './WildcardPacks';
-import { stageWildcardPack } from '../shared/wildcard-packs';
+import { stageWildcardPack, cleanSpeciesPreset } from '../shared/wildcard-packs';
 import { useEffect, useRef, useState } from 'react';
 import { BookOpen, Check, Dices, Eye, LockKeyhole, Plus, Save, Trash2 } from 'lucide-react';
-import { createWildcardSnapshot, prepareDynamicPromptDraft, type DynamicPromptAuthoring, type DynamicPromptDraft, type PreparedDynamicPrompt, type WildcardSnapshot } from '../shared/dynamic-prompt-recipe';
-import { Busy, Field, Modal, Notice, Toggle } from './ui';
+import { usesDynamicPrompts, createWildcardSnapshot, prepareDynamicPromptDraft, type DynamicPromptAuthoring, type DynamicPromptDraft, type PreparedDynamicPrompt, type WildcardSnapshot } from '../shared/dynamic-prompt-recipe';
+import { Busy, Field, Modal, Notice } from './ui';
 import './dynamic-prompts.css';
 
 export interface DynamicPromptsProps {
@@ -11,6 +11,7 @@ export interface DynamicPromptsProps {
   wildcards: WildcardSnapshot;
   /** A concrete seed already allocated by the composer, when Random is in use. */
   previewSeed?: string;
+  onApplyPrompt?(prompt: string): void;
   onChange(value: DynamicPromptAuthoring): void;
   /** Clear the freeze and allocate a new seed to request a new variation. */
   onReroll(): void;
@@ -19,7 +20,7 @@ export interface DynamicPromptsProps {
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
 
 export function DynamicPrompts({ draft, wildcards, previewSeed, onChange, onReroll, onSaveWildcards }: DynamicPromptsProps) {
-  const enabled = draft.dynamicPrompts?.enabled ?? false;
+  const enabled = usesDynamicPrompts(draft);
   const frozen = draft.dynamicPrompts?.frozen;
   const concreteSeed = previewSeed ?? (draft.seed !== 'random' ? draft.seed : undefined);
   const [showPreview, setShowPreview] = useState(false);
@@ -65,7 +66,7 @@ export function DynamicPrompts({ draft, wildcards, previewSeed, onChange, onRero
   }, [enabled, frozen, draft.prompt, draft.negativePrompt, concreteSeed, wildcards.revision, showPreview]);
   function openEditor() {
     if (cannotEdit()) return;
-    const copy = structuredClone(wildcards.entries); const first = Object.keys(copy).sort()[0] ?? '';
+    const copy = cleanSpeciesPreset(wildcards.entries); const first = Object.keys(copy).sort()[0] ?? '';
     baseline.current = JSON.stringify(copy); setCloseWarning(false);
     setEntries(copy); setSelectedTag(first); setEntryText(first ? copy[first].join('\n') : ''); setNewTag(''); setEditorError(''); setEditorOpen(true);
   }
@@ -120,7 +121,7 @@ export function DynamicPrompts({ draft, wildcards, previewSeed, onChange, onRero
   }
 
   return <section className={`dynamic-prompts ${enabled ? 'enabled' : ''}`} aria-label="Prompt variations">
-    <div className="dynamic-heading"><Toggle label="Prompt variations" checked={enabled} onChange={value => { if (!closingRef.current) onChange({ enabled: value }); }} /><button type="button" className="text-button" disabled={saving || closing} onClick={openEditor}><BookOpen size={13} />Wildcards <span className="badge">{Object.keys(wildcards.entries).length}</span></button></div>
+    <div className="dynamic-heading"><span>Wildcards expand automatically · type <code>__</code> in a prompt</span><button type="button" className="text-button" disabled={saving || closing} onClick={openEditor}><BookOpen size={13} />Saved lists <span className="badge">{Object.keys(wildcards.entries).length}</span></button></div>
     {enabled ? <>
       <p className="muted small">Use <code>{'{sunny|misty}'}</code> for a choice or <code>__weather__</code> for a named wildcard. Escape literal braces with <code>\{'{'}</code> and <code>\{'}'}</code>.</p>
       {frozen && <Notice><div className="dynamic-frozen"><LockKeyhole size={15} /><div><strong>Saved variations are frozen</strong><p>These exact words will be reused, even if the image seed or your wildcard list changes. Editing either prompt clears the freeze.</p><button type="button" className="text-button" disabled={closing} onClick={() => { if (!closingRef.current) onReroll(); }}><Dices size={13} />Regenerate variations</button></div></div></Notice>}
@@ -129,7 +130,7 @@ export function DynamicPrompts({ draft, wildcards, previewSeed, onChange, onRero
       {showPreview && previewBusy && <p className="dynamic-loading"><Busy active />Resolving variations…</p>}
       {showPreview && previewError && <Notice error>{previewError}</Notice>}
       {showPreview && preview && <div className="dynamic-preview"><div><h4>Expanded positive prompt</h4><pre>{preview.prompt || '(empty)'}</pre></div><div><h4>Expanded negative prompt</h4><pre>{preview.negativePrompt || '(empty)'}</pre></div><details><summary>Choice trace · {preview.recipe!.positive.choices.length + preview.recipe!.negative.choices.length} selections</summary>{(['positive', 'negative'] as const).map(side => <div key={side}><h4>{side === 'positive' ? 'Positive' : 'Negative'}</h4>{preview.recipe![side].choices.length ? <ol>{preview.recipe![side].choices.map((choice, index) => <li key={index}><strong>{choice.kind === 'wildcard' ? `__${choice.tag}__` : 'Inline choice'}</strong> · option {choice.selectedIndex + 1}<code>{choice.resolvedValue || '(empty)'}</code><small>{choice.source}:{choice.start}–{choice.end}</small></li>)}</ol> : <p className="muted small">No choices in this prompt.</p>}</div>)}</details><p className="muted small"><Check size={12} />{preview.reusedFrozen ? 'Exact saved expansion.' : `Uses image seed ${concreteSeed}.`} Choices and the wildcard snapshot are saved with generated images.</p></div>}
-    </> : <p className="muted small">Off: prompts are sent literally, including braces and double underscores.</p>}
+    </> : <p className="muted small">Type __ to pick a wildcard. Click its chip below the prompt to choose what it can include.</p>}
     <div className="wildcard-catalog" aria-label="Available wildcards">{Object.keys(wildcards.entries).length ? Object.keys(wildcards.entries).sort().map(name => <button type="button" key={name} title={wildcards.entries[name].slice(0, 4).join(', ')} onClick={() => { if (!closingRef.current) { openEditor(); } }}><code>__{name}__</code><small> {wildcards.entries[name].length} entries</small></button>) : <p className="muted small">No wildcards saved yet. Open Wildcards to create reusable lists such as __weather__.</p>}</div>
     {editorOpen && <Modal title="Named wildcards" onClose={requestClose}><div className="wildcard-editor"><p className="muted small">Keep reusable lists here, then reference them as <code>__name__</code>. Saved image recipes retain the list they originally used.</p><WildcardPacks disabled={saving || closing} onAdd={addPack}/><div className="wildcard-add"><Field label="New wildcard name"><input value={newTag} maxLength={128} onChange={event => { if (!cannotEdit()) setNewTag(event.target.value); }} placeholder="weather" disabled={saving || closing} /></Field><button type="button" onClick={addTag} disabled={saving || closing || !newTag.trim()}><Plus size={15} />Add</button></div>{Object.keys(entries).length > 0 ? <><Field label="Wildcard"><select value={selectedTag} disabled={saving || closing} onChange={event => selectTag(event.target.value)}>{Object.keys(entries).sort().map(tag => <option value={tag} key={tag}>{`__${tag}__`}</option>)}</select></Field><Field label="Entries · one per line" hint="Entries may use choices or another wildcard. Empty lines are ignored; use {|} for an empty option."><textarea rows={9} maxLength={262144} value={entryText} onChange={event => { if (!cannotEdit()) setEntryText(event.target.value); }} disabled={saving || closing} placeholder={'sunny afternoon\n{misty|rainy} morning\nmoonlit night'} /></Field><button className="text-button" type="button" onClick={deleteTag} disabled={saving || closing}><Trash2 size={13} />Remove this wildcard</button></> : <p className="muted small">No named wildcards yet. Add a name and a few entries to begin.</p>}{editorError && <Notice error>{editorError}</Notice>}{closeWarning && <Notice><strong>Unsaved wildcard changes</strong><p>Save your lists, keep editing, or discard these edits.</p><div className="button-row"><button type="button" disabled={saving || closing} onClick={() => setCloseWarning(false)}>Keep editing</button><button type="button" disabled={saving || closing} onClick={discard}>Discard changes</button></div></Notice>}<p className="muted small">Wildcard lists are saved explicitly. Prompt-memory switches apply to the compositor, while saved wildcard lists and image recipes remain available.</p><div className="button-row"><button type="button" className="primary" disabled={saving || closing} onClick={() => void save()}><Busy active={saving} />{!saving && <Save size={15} />}Save wildcard lists</button><button type="button" disabled={saving || closing} onClick={requestClose}>Cancel</button></div></div></Modal>}
   </section>;

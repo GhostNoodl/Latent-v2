@@ -1,6 +1,7 @@
+import { isLoraFamilyCompatible } from '../shared/types';
 import { cleanModelStem } from '../shared/model-names';
 import { useEffect, useState } from 'react';
-import { Boxes, Image, Layers } from 'lucide-react';
+import { Boxes, Image, Layers, Folder } from 'lucide-react';
 import type { AppSnapshot, ModelAsset } from '../shared/types';
 import { LocalModelMetadata } from './LocalModelMetadata';
 import { Modal } from './ui';
@@ -20,14 +21,20 @@ export function ModelPicker({ snapshot, kind, selectedIds, family, onChoose, onC
   const [contextModel, setContextModel] = useState<ModelAsset>();
   const [query, setQuery] = useState('');
   const [collection, setCollection] = useState('');
-  const collections = snapshot.collections.collections.filter(item => item.kind === 'model');
+  const collections = snapshot.collections.collections.filter(item => item.kind === 'model').sort((a,b)=>a.name.localeCompare(b.name));
+  useEffect(()=>{if(collection && !snapshot.collections.collections.some(item=>item.kind==='model' && item.id===collection))setCollection('');},[collection,snapshot.collections]);
+  const inventory = snapshot.models.filter(model=>model.kind===kind);
+  const count = (ids?: string[]) => inventory.filter(model=>!ids || ids.includes(model.id)).length;
   const members = collections.find(item => item.id === collection)?.memberIds;
   const models = snapshot.models.filter(model => model.kind === kind && (!members || members.includes(model.id)) && `${modelDisplayName(model, snapshot.settings.civitaiDisplayMetadata !== false)} ${model.name} ${model.family} ${model.triggers.join(' ')}`.toLowerCase().includes(query.toLowerCase()));
   return <Modal title={kind === 'checkpoint' ? 'Choose a checkpoint' : 'Add a LoRA'} onClose={onClose}>
-    <div className="picker-filters"><input autoFocus aria-label="Search model cards" placeholder="Name, family or trigger…" value={query} onChange={event => setQuery(event.target.value)} /><select aria-label="Model collection" value={collection} onChange={event => setCollection(event.target.value)}><option value="">All collections</option>{collections.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
-    <div className="visual-model-grid">{models.map(model => <button type="button" className="visual-model-card" key={model.id} onContextMenu={event=>{event.preventDefault();setContextModel(model);}} onKeyDown={event=>{if(event.key==='ContextMenu'||event.shiftKey&&event.key==='F10'){event.preventDefault();setContextModel(model);}}} aria-pressed={selectedIds.includes(model.id)} disabled={model.status !== 'ready' || kind === 'lora' && (model.family !== family || selectedIds.includes(model.id))} onClick={() => onChoose(model)}>
-      <ModelArtwork model={model} showCivitai={snapshot.settings.civitaiDisplayMetadata !== false} history={snapshot.history} /><strong>{modelDisplayName(model, snapshot.settings.civitaiDisplayMetadata !== false)}</strong><small><Boxes size={12} /> {model.family} · {(model.bytes / 1e9).toFixed(1)} GB</small><small>{model.status !== 'ready' ? 'Missing file' : kind === 'lora' && model.family !== family ? 'Different checkpoint family' : model.triggers.slice(0, 3).join(', ') || (model.kind === 'lora' ? 'LoRA' : 'Checkpoint')}</small>
-    </button>)}</div>{!models.length && <p>No matching installed models. Import models or visit Discover.</p>}
+    <div className="model-picker-layout">
+    <nav className="picker-folders" aria-label="Model folders"><h4>Folders</h4><button type="button" className="folder-target" aria-pressed={!collection} onClick={()=>setCollection('')}><span>All {kind==='lora'?'LoRAs':'checkpoints'}</span><span>{count()}</span></button>{collections.map(item=><button key={item.id} type="button" className="folder-target" aria-pressed={collection===item.id} onClick={()=>setCollection(item.id)}><Folder size={15}/><span className="folder-name" title={item.name}>{item.name}</span><span>{count(item.memberIds)}</span></button>)}</nav>
+    <div className="model-picker-results"><div className="picker-filters"><input autoFocus aria-label="Search model cards" placeholder="Name, family or trigger…" value={query} onChange={event => setQuery(event.target.value)} /></div>
+    <div className="visual-model-grid">{models.map(model => <button type="button" className="visual-model-card" key={model.id} onContextMenu={event=>{event.preventDefault();setContextModel(model);}} onKeyDown={event=>{if(event.key==='ContextMenu'||event.shiftKey&&event.key==='F10'){event.preventDefault();setContextModel(model);}}} aria-pressed={selectedIds.includes(model.id)} disabled={model.status !== 'ready' || kind === 'lora' && (!isLoraFamilyCompatible(model.family, family) || selectedIds.includes(model.id))} onClick={() => onChoose(model)}>
+      <ModelArtwork model={model} showCivitai={snapshot.settings.civitaiDisplayMetadata !== false} history={snapshot.history} /><strong>{modelDisplayName(model, snapshot.settings.civitaiDisplayMetadata !== false)}</strong><small><Boxes size={12} /> {model.family} · {(model.bytes / 1e9).toFixed(1)} GB</small><small>{model.status !== 'ready' ? 'Missing file' : kind === 'lora' && !isLoraFamilyCompatible(model.family, family) ? 'Different checkpoint family' : model.triggers.slice(0, 3).join(', ') || (model.kind === 'lora' ? 'LoRA' : 'Checkpoint')}</small>
+    </button>)}</div>{!models.length && <p>No matches in this folder. Try another folder or clear your search.</p>}
+    </div></div>
     {contextModel && <LocalModelMetadata onUpdated={onUpdated} model={contextModel} onClose={()=>setContextModel(undefined)} />}
   </Modal>;
 }

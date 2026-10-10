@@ -1,19 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { tagToken, insertTag, parseTagCsv, searchTags } from '../src/shared/tag-autocomplete';
+import { tagToken, insertTag, parseTagCsv, searchTags, createTagSearch } from '../src/shared/tag-autocomplete';
 
 describe('offline tag autocomplete', () => {
   it('replaces only the tag at the caret, including unfinished weighted tags', () => {
     const value = 'solo, (blue_ey:1.2), outdoors';
     const token = tagToken(value, 14)!;
     expect(token.query).toBe('blue_ey');
-    expect(insertTag(value, token, 'blue_eyes').value).toBe('solo, (blue_eyes:1.2), outdoors');
-    expect(insertTag('solo, blue_ey', tagToken('solo, blue_ey', 13)!, 'blue_eyes')).toEqual({ value: 'solo, blue_eyes, ', caret: 17 });
+    expect(insertTag(value, token, 'blue_eyes').value).toBe('solo, (blue eyes:1.2), outdoors');
+    expect(insertTag('solo, blue_ey', tagToken('solo, blue_ey', 13)!, 'blue_eyes')).toEqual({ value: 'solo, blue eyes, ', caret: 17 });
   });
   it('preserves text after a middle-of-tag caret and escapes literal parentheses', () => {
     const value = 'solo, blue_eyes, outdoors';
-    expect(insertTag(value, tagToken(value, 9)!, 'brown_eyes').value).toBe('solo, brown_eyes, outdoors');
-    expect(insertTag('wolf', tagToken('wolf', 4)!, 'wolf_(species)').value).toBe('wolf\\_(species), '.replace('\\_', '_').replace('(species)', '\\(species\\)'));
+    expect(insertTag(value, tagToken(value, 9)!, 'brown_eyes').value).toBe('solo, brown eyes, outdoors');
+    expect(insertTag('wolf', tagToken('wolf', 4)!, 'wolf_(species)').value).toBe('wolf\\_(species), '.replace('\\_', ' ').replace('(species)', '\\(species\\)'));
     const literal = 'wolf\\(species\\)';
     expect(tagToken(literal, 4)?.end).toBe(literal.length);
   });
@@ -41,4 +41,10 @@ describe('offline tag autocomplete', () => {
       expect(searchTags(entries, 'wolf', source).length).toBeGreaterThan(0);
     }
   });
+});
+
+it('indexed lookup preserves full-search ranking and source metadata',()=>{
+ const entries=[...parseTagCsv(readFileSync('src/renderer/tag-data/e621.csv','utf8'),'e621'),...parseTagCsv(readFileSync('src/renderer/tag-data/danbooru.csv','utf8'),'danbooru')];
+ const indexed=createTagSearch(entries);
+ for(const query of ['blue','wolf','red panda','eyes','azure','fur','standing','arcanine','ight','__','zzzz'])for(const source of ['both','e621','danbooru'] as const)expect(indexed(query,source)).toEqual(searchTags(entries,query,source));
 });

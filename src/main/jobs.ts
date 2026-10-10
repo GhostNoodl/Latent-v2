@@ -19,7 +19,7 @@ import { augmentImageWorkflow } from '../shared/image-workflow';
 import { augmentHiresWorkflow, buildUpscaleWorkflow, restoreHiresSettings, validateHiresCapabilities } from '../shared/advanced-image-workflow';
 import type { AdvancedImageOutput, AdvancedImagePlan } from '../shared/advanced-image-types';
 import type { UpscalerService } from './upscaler';
-import { prepareDynamicPromptDraft } from '../shared/dynamic-prompt-recipe';
+import { usesDynamicPrompts, prepareDynamicPromptDraft } from '../shared/dynamic-prompt-recipe';
 import type { BackendActivityService } from './backend-activity';
 import { ownedGenerationPreview } from './shared-backend-preview';
 import { WildcardStore } from './wildcards';
@@ -195,8 +195,8 @@ export class JobService {
     const id = randomUUID(); const actualSeed = draft.seed === 'random' ? String(randomBytes(6).readUIntBE(0, 6)) : BigInt(draft.seed).toString();
     const context: ExecutionContext = { workflow: {}, loras: [], resolvedPrompt: draft.prompt, backendVersion: this.backend.status().version ?? 'unknown', appVersion: this.appVersion };
     if (!draft.upscale) {
-      const prepared = await prepareDynamicPromptDraft(draft, actualSeed, draft.dynamicPrompts?.enabled ? new WildcardStore(this.store, () => {}).snapshot() : undefined);
-      if (prepared.recipe) { draft.dynamicPrompts = { enabled: true, frozen: prepared.recipe }; context.dynamicPromptRecipe = prepared.recipe; }
+      const prepared = await prepareDynamicPromptDraft(draft, actualSeed, usesDynamicPrompts(draft) ? new WildcardStore(this.store, () => {}).snapshot() : undefined);
+      if (prepared.recipe) { draft.dynamicPrompts = { ...draft.dynamicPrompts, enabled: true, frozen: prepared.recipe }; context.dynamicPromptRecipe = prepared.recipe; }
       await this.models.refresh(); const { checkpoint, loras } = validateAssets(draft, this.models.assets);
       await this.models.verifyExternalModels?.([checkpoint.id, ...loras.map(asset => asset.id)]);
       draft.triggerWords = Object.fromEntries(loras.map(asset => [asset.id, draft.triggerWords?.[asset.id] ?? (draft.triggerResolutionVersion === 'visible@3' ? [] : asset.triggers)]));

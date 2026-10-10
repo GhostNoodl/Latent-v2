@@ -28,3 +28,21 @@
 .wildcard-starter-packs p { line-height: 1.7; margin: 8px 0; overflow-wrap: anywhere; }
 
 .wildcard-starter-packs .pack-entries { max-height: 150px; overflow-y: auto; padding-right: 6px; }
+.modal:has(.wildcard-mixer) { width:min(1050px,100%); }
+.wildcard-mixer-launch { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.wildcard-mixer-launch span { color:var(--muted); font-size:12px; }
+.wildcard-mixer-layout { display:grid; grid-template-columns:210px minmax(0,1fr); gap:20px; }
+.wildcard-mixer-layout nav { max-height:52vh; overflow:auto; }
+.wildcard-category { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+.wildcard-category button { flex:1; text-align:left; min-width:0; display:grid; padding:10px; }
+.wildcard-category button[aria-pressed=true] { background:var(--soft); border-color:var(--accent); }
+.wildcard-category small { color:var(--muted); }
+.wildcard-choice-panel { min-width:0; }
+.wildcard-choice-panel h3 { margin-top:0; }
+.wildcard-choice-panel > input { width:100%; margin:12px 0; }
+.wildcard-choice-panel code { overflow-wrap:anywhere; }
+.wildcard-choice-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(165px,1fr)); gap:6px; max-height:36vh; overflow:auto; margin-top:12px; }
+.wildcard-choice-grid label { display:flex; gap:8px; align-items:center; padding:9px; border:1px solid var(--border); border-radius:6px; overflow-wrap:anywhere; }
+.wildcard-choice-grid label:has(input:checked) { background:var(--soft); border-color:var(--accent); }
+.wildcard-mixer input[type=checkbox] { flex-shrink:0; accent-color:var(--accent); }
+@media(max-width:650px) { .wildcard-mixer-layout { grid-template-columns:1fr; } .wildcard-mixer-layout nav { max-height:180px; } }

@@ -1,3 +1,4 @@
+import { ModelFolders, MODEL_DRAG_TYPE } from './ModelFolders';
 import { LocalModelMetadata } from './LocalModelMetadata';
 import { ModelArtwork, modelDisplayName } from './ModelPicker';
 import { useEffect, useRef, useState } from 'react';
@@ -6,12 +7,15 @@ import type { AppSnapshot, ModelAsset, ModelDownloadRequest, ModelKind } from '.
 import type { CollectionActions, CollectionSnapshot } from '../shared/collections-types';
 import { Busy, Field, Modal, Notice, bytes, type RunAction } from './ui';
 import { ModelLocationsUI } from './ModelLocationsUI';
-import { CollectionMembershipButton, CollectionToolbar } from './Collections';
+import { CollectionMembershipButton } from './Collections';
 
 // Keep effect ownership stable even if the context bridge returns a new proxy on access.
 
 export function Models({ snapshot, receive, run, busy, onUse, collections, collectionActions, onCollectionChange }: { snapshot: AppSnapshot; receive: (snapshot: AppSnapshot) => void; run: RunAction; busy: Record<string, boolean>; onUse: (model: ModelAsset) => void; collections?: CollectionSnapshot; collectionActions?: CollectionActions; onCollectionChange?: (snapshot: CollectionSnapshot) => void }) {
   const [contextModel, setContextModel] = useState<ModelAsset>();
+  const [folderPending, setFolderPending] = useState(false);
+  const [folderError, setFolderError] = useState('');
+  const folderActive = useRef(false);
   const [kind, setKind] = useState<ModelKind>('checkpoint');
   const [query, setQuery] = useState('');
   const [collectionId, setCollectionId] = useState<string>();
@@ -25,6 +29,23 @@ export function Models({ snapshot, receive, run, busy, onUse, collections, colle
   const collection = collections?.collections.find(item => item.kind === 'model' && item.id === collectionId);
   const members = collection ? new Set(collection.memberIds) : undefined;
   const models = snapshot.models.filter(model => (!members || members.has(model.id)) && model.kind === kind && `${modelDisplayName(model, snapshot.settings.civitaiDisplayMetadata !== false)} ${model.name} ${model.filename} ${model.family} ${model.triggers.join(' ')}`.toLowerCase().includes(search));
+  const folders = (collections?.collections ?? []).filter(item => item.kind === 'model').sort((a,b) => a.name.localeCompare(b.name));
+  useEffect(() => { if (collectionId && !collections?.collections.some(item => item.id === collectionId)) setCollectionId(undefined); }, [collectionId, collections]);
+  async function folderMutation(task: () => Promise<void>): Promise<boolean> {
+    if (folderActive.current || !collectionActions || !onCollectionChange) return false;
+    folderActive.current = true; setFolderPending(true); setFolderError('');
+    try { await task(); return true; } catch (error) { setFolderError(error instanceof Error ? error.message : String(error)); return false; }
+    finally { folderActive.current = false; setFolderPending(false); }
+  }
+  async function moveToFolder(modelId: string, destination: string) {
+    if (!snapshot.models.some(model => model.id === modelId) || !folders.some(folder => folder.id === destination) || destination === collectionId) return;
+    const source = collectionId;
+    await folderMutation(async () => {
+      // Add first: if removing the old membership fails, the model remains in both folders.
+      onCollectionChange!(await collectionActions!.addMembers(destination, [modelId]));
+      if (source) onCollectionChange!(await collectionActions!.removeMembers(source, [modelId]));
+    });
+  }
   const familyName = (family: ModelAsset['family']) => family === 'unknown' ? 'Family not tagged' : family === 'sdxl' ? 'SDXL' : 'Illustrious';
   function edit(model: ModelAsset) { editorRevision.current++; setEditing(model); setEditedFamily(model.family); setEditedTriggers(model.triggers.join(', ')); }
   function closeEditor() { editorRevision.current++; setEditing(undefined); }
@@ -59,14 +80,22 @@ export function Models({ snapshot, receive, run, busy, onUse, collections, colle
     <Notice>Your models stay in this studio. Import a copy, browse Discover, or add files to <span className="inline-path">{snapshot.paths.models}</span> and refresh.</Notice>
     <label className="search-field"><Search size={17} /><input aria-label="Search models" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Find a ${kind === 'checkpoint' ? 'checkpoint' : 'LoRA'}…`} /></label>
 
-    {collections && collectionActions && onCollectionChange && <CollectionToolbar snapshot={collections} kind="model" selectedId={collectionId} onSelect={setCollectionId} actions={collectionActions} onChange={onCollectionChange} items={snapshot.models.map(model => ({ id: model.id, label: `${model.name} · ${model.kind === 'lora' ? 'LoRA' : 'checkpoint'}`, unavailable: model.status === 'missing' }))} />}
+    {folderError && <Notice error>{folderError}</Notice>}
+    <div className="model-folder-layout">
+    {collections && collectionActions && onCollectionChange && <ModelFolders error={folderError} folders={folders} selectedId={collectionId} pending={folderPending} total={snapshot.models.filter(model=>model.kind===kind).length} count={id=>snapshot.models.filter(model=>model.kind===kind && folders.find(folder=>folder.id===id)?.memberIds.includes(model.id)).length} onSelect={setCollectionId}
+      onCreate={name=>folderMutation(async()=>{ const result=await collectionActions.create('model',name); onCollectionChange(result); setCollectionId(result.collections.find(folder=>folder.kind==='model' && !collections.collections.some(old=>old.id===folder.id))?.id); })}
+      onRename={(id,name)=>folderMutation(async()=>onCollectionChange(await collectionActions.rename(id,name)))}
+      onRemove={id=>folderMutation(async()=>{onCollectionChange(await collectionActions.remove(id));if(collectionId===id)setCollectionId(undefined);})}
+      onDropModel={(modelId,id)=>{void moveToFolder(modelId,id);}} />}
+    <div className="model-folder-content">
     <div className="section-heading" style={{ marginBottom: 14 }}><h2>{collection ? collection.name : 'In your studio'}</h2><span className="muted small">{models.length} {kind === 'checkpoint' ? 'checkpoints' : 'LoRAs'}</span></div>
-    {models.length ? <div className="model-grid">{models.map(model => <article className="model-card" key={model.id} tabIndex={0} onContextMenu={event=>{event.preventDefault();setContextModel(model);}} onKeyDown={event=>{if(event.key==='ContextMenu'||event.shiftKey&&event.key==='F10'){event.preventDefault();setContextModel(model);}}}>
-      <ModelArtwork model={model} showCivitai={snapshot.settings.civitaiDisplayMetadata !== false} history={snapshot.history} /><div className="model-description"><h3>{modelDisplayName(model, snapshot.settings.civitaiDisplayMetadata !== false)}</h3>{snapshot.settings.civitaiDisplayMetadata !== false && model.civitai && <p className="muted small">{model.civitai.versionName}{model.civitai.creator && ` · by ${model.civitai.creator}`}</p>}<div className="model-badges"><span className="badge">{familyName(model.family)}</span><span>{bytes(model.bytes)}</span>{model.status === 'missing' && <span className="inline-error">File missing</span>}</div>{model.triggers.length > 0 && <p className="trigger-preview">Prompt prefixes: {model.triggers.join(', ')}</p>}<details className="model-management"><summary>Manage</summary><p className="model-filename">{model.filename}</p><button className="text-button" onClick={()=>setContextModel(model)}>Details / manage file</button><button className="text-button" onClick={() => edit(model)}><Pencil size={12} />Edit family / triggers</button>{collections && collectionActions && onCollectionChange && <CollectionMembershipButton snapshot={collections} kind="model" memberId={model.id} memberLabel={model.name} actions={collectionActions} onChange={onCollectionChange} />}
+    {models.length ? <div className="model-grid">{models.map(model => <article className="model-card" key={model.id} draggable={Boolean(collectionActions) && !folderPending} onDragStart={event=>{ if ((event.target as HTMLElement).closest('button,input,select,summary,a')) { event.preventDefault(); return; } event.dataTransfer.setData(MODEL_DRAG_TYPE,model.id); event.dataTransfer.effectAllowed='move'; }} tabIndex={0} onContextMenu={event=>{event.preventDefault();setContextModel(model);}} onKeyDown={event=>{if(event.key==='ContextMenu'||event.shiftKey&&event.key==='F10'){event.preventDefault();setContextModel(model);}}}>
+      <ModelArtwork model={model} showCivitai={snapshot.settings.civitaiDisplayMetadata !== false} history={snapshot.history} /><div className="model-description"><h3>{modelDisplayName(model, snapshot.settings.civitaiDisplayMetadata !== false)}</h3>{snapshot.settings.civitaiDisplayMetadata !== false && model.civitai && <p className="muted small">{model.civitai.versionName}{model.civitai.creator && ` · by ${model.civitai.creator}`}</p>}<div className="model-badges"><span className="badge">{familyName(model.family)}</span><span>{bytes(model.bytes)}</span>{model.status === 'missing' && <span className="inline-error">File missing</span>}</div>{model.triggers.length > 0 && <p className="trigger-preview">Prompt prefixes: {model.triggers.join(', ')}</p>}{collectionActions && <div className="model-folder-actions"><select aria-label={`Move ${model.name} to folder`} value="" disabled={folderPending || !folders.some(folder=>folder.id!==collectionId)} onChange={event=>{void moveToFolder(model.id,event.target.value);}}><option value="">{collectionId ? 'Move to folder…' : 'Add to folder…'}</option>{folders.filter(folder=>folder.id!==collectionId).map(folder=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select>{collectionId && <button type="button" disabled={folderPending} aria-label={`Remove ${model.name} from folder`} onClick={()=>{void folderMutation(async()=>onCollectionChange!(await collectionActions.removeMembers(collectionId,[model.id])));}}>Remove from folder</button>}</div>}<details className="model-management"><summary>Manage</summary><p className="model-filename">{model.filename}</p><button className="text-button" onClick={()=>setContextModel(model)}>Details / manage file</button><button className="text-button" onClick={() => edit(model)}><Pencil size={12} />Edit family / triggers</button>{collections && collectionActions && onCollectionChange && <CollectionMembershipButton snapshot={collections} kind="model" memberId={model.id} memberLabel={model.name} actions={collectionActions} onChange={onCollectionChange} />}
         {model.sourceUrl && <div className="button-row"><a className="text-button" href={model.sourceUrl} target="_blank" rel="noreferrer">Model source <ExternalLink size={11} /></a>{model.licenseUrl && <a className="text-button" href={model.licenseUrl} target="_blank" rel="noreferrer">License <ExternalLink size={11} /></a>}</div>}
       </details></div><button disabled={model.status !== 'ready'} onClick={() => onUse(model)}>Use<ArrowRight size={15} /></button>
     </article>)}</div> : <div className="page-empty"><span className="seed-mark"><Boxes size={28} /></span><h2>{query || collection ? 'No installed matches' : `No ${kind === 'checkpoint' ? 'checkpoints' : 'LoRAs'} installed yet`}</h2><p>{collection ? 'No models match this collection, type, and search. Try the other model type or choose All models.' : query ? 'Try another model name or clear your search.' : 'Import a model from your computer or find one in Discover.'}</p>{!query && !collection && <button disabled={busy.import} onClick={() => void run('import', async () => receive(await window.latent.importModels(kind)))}><FileInput size={16} />Import from your computer</button>}</div>}
 
+    </div></div>
     {contextModel && <LocalModelMetadata model={contextModel} onClose={()=>setContextModel(undefined)} onUpdated={receive} />}
     {editing && <Modal title={`Edit ${editing.name}`} onClose={closeEditor}>
       <form onSubmit={event => { event.preventDefault(); void saveMetadata(); }}>
