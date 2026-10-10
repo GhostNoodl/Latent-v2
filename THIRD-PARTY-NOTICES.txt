@@ -103,7 +103,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ========================================================================
 
-@img/sharp-win32-x64 0.35.4
+@img/sharp-win32-x64 0.35.5
 Declared license: Apache-2.0 AND LGPL-3.0-or-later
 Source: git+https://github.com/lovell/sharp.git
 
@@ -756,7 +756,7 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ========================================================================
 
-sharp 0.35.4
+sharp 0.35.5
 Declared license: Apache-2.0
 Source: git+https://github.com/lovell/sharp.git
 
@@ -1079,19 +1079,19 @@ Modification and reverse engineering for debugging such modifications are not
 restricted by Latent. Source and build instructions: https://github.com/lovell/sharp
 and https://github.com/lovell/sharp-libvips . Exact installed native versions:
 {
-  "aom": "3.14.1",
+  "aom": "3.15.1",
   "archive": "3.8.9",
-  "cairo": "1.18.4",
-  "cgif": "0.5.3",
+  "cairo": "1.18.6",
+  "cgif": "0.5.4",
   "exif": "0.6.26",
-  "expat": "2.8.3",
+  "expat": "2.8.5",
   "ffi": "3.8.0",
   "fontconfig": "2.18.3",
   "freetype": "2.14.3",
-  "fribidi": "1.0.16",
-  "glib": "2.89.4",
-  "harfbuzz": "14.3.1",
-  "heif": "1.23.2",
+  "fribidi": "1.0.17",
+  "glib": "2.90.0",
+  "harfbuzz": "14.5.0",
+  "heif": "1.23.5",
   "highway": "1.4.0",
   "imagequant": "2.4.1",
   "lcms": "2.19.1",
@@ -1100,12 +1100,12 @@ and https://github.com/lovell/sharp-libvips . Exact installed native versions:
   "pixman": "0.46.4",
   "png": "1.6.58",
   "proxy-libintl": "0.5",
-  "rsvg": "2.62.91",
+  "rsvg": "2.63.2",
   "tiff": "4.7.2",
   "uhdr": "2.0.2",
-  "vips": "8.18.6",
+  "vips": "8.18.7",
   "webp": "1.6.0",
-  "xml2": "2.15.3",
+  "xml2": "2.15.4",
   "zlib-ng": "2.3.3"
 }
 
@@ -1137,7 +1137,7 @@ used under the terms of the following licenses:
 | Library       | Used under the terms of                                                                                   |
 |---------------|-----------------------------------------------------------------------------------------------------------|
 | aom           | BSD 2-Clause + [Alliance for Open Media Patent License 1.0](https://aomedia.org/license/patent-license/)  |
-| cairo         | Mozilla Public License 2.0                                                                                |
+| cairo         | Mozilla Public License 1.1                                                                                |
 | cgif          | MIT License                                                                                               |
 | expat         | MIT License                                                                                               |
 | fontconfig    | [fontconfig License](https://gitlab.freedesktop.org/fontconfig/fontconfig/blob/main/COPYING) (BSD-like)   |

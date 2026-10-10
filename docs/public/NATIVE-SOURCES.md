@@ -1,15 +1,15 @@
 # Native source companion
 
-Publish `Latent-native-sources-sharp-0.35.4-libvips-8.18.6.zip` alongside the Windows installer and its checksums. It contains 387 source archives and build inputs, each recorded with origin, byte size and SHA-256 in `SOURCE-MANIFEST.json`. These upstream components retain their own licenses; Latent remains MIT licensed.
+Publish `Latent-native-sources-sharp-0.35.5-libvips-8.18.7.zip` alongside the Windows installer and its checksums. It contains 394 source archives and build inputs, each recorded with origin, byte size and SHA-256 in `SOURCE-MANIFEST.json`. These upstream components retain their own licenses; Latent remains MIT licensed.
 
 ## Contents and provenance
 
 - All 28 native library versions in the installed Sharp Windows inventory, verified against the upstream recipe checksums.
-- All 350 registry packages in librsvg 2.62.91's Cargo.lock, including optional and development dependencies as a conservative superset.
+- All 357 registry packages in librsvg 2.63.2's Cargo.lock, including optional and development dependencies as a conservative superset.
 - GLib's gvdb subproject at its exact wrap-file commit. The web build's included `glib-2-without-gregex.patch` removes PCRE/GRegex; sysprof, docs and tests are disabled. Libffi, proxy-libintl and zlib-ng are already included in the native library set.
-- Rust nightly 2026-06-05 source with standard library and vendored dependencies, LLVM 22.1.7 (including compiler-rt/libc++), mingw-w64 and llvm-mingw build inputs.
-- libvips Windows recipes and patches at `09cfccf20b91b441fbe97fa7a7ed8a597e55e830`, and MXE recipes at candidate commit `d973945bb92c7783d5afa41bb2b8d2e1a04eaba3`.
-- Sharp 0.35.4 source at `7f1a0a22cc285fe180766f4935d50b55af6e8432`, and the exact `@img/sharp-libvips-dev` 1.3.3 package containing the separately compiled wrapper sources and headers. That package also passed its npm SHA-512 integrity check.
+- Rust nightly 2026-09-24 source with standard library and vendored dependencies, LLVM 23.1.2 (including compiler-rt/libc++), mingw-w64 and llvm-mingw build inputs.
+- libvips Windows recipes and patches at `ef19ca09af2453d127453d677c849ccb37cf5694`, and MXE recipes at candidate commit `c36160b231e66e1cbe032ed54aef7617e8b259da`.
+- Sharp 0.35.5 source at `51a990faa26ade5586a4934ac9673c98d8893326`, and the exact `@img/sharp-libvips-dev` 1.3.4 package containing the separately compiled wrapper sources and headers. That package also passed its npm SHA-512 integrity check.
 
 The installed main `libvips-42.dll` matches the official libvips static web release byte-for-byte. Sharp builds its C++ wrapper separately using `src/binding.gyp`; the differently named C++ DLL in the upstream libvips binary release is not an interchangeable proof of an exact match. See `native-source-provenance.json` for the binary hashes.
 

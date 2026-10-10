@@ -1013,13 +1013,13 @@
     },
     {
       "path": "package.json",
-      "bytes": 4116,
-      "sha256": "d8d272adff8d22dba89a4b37329249d669aa9c117d0ca42ae08d5f7a3d6f013b"
+      "bytes": 4115,
+      "sha256": "bd2b6f47376db579ec47f3887dbdf57596d024f518dcbba3c783b22229500615"
     },
     {
       "path": "package-lock.json",
-      "bytes": 239342,
-      "sha256": "bd7d77fa77a4293ccd2c2febf72467d0c98b7bbe3694769b0a1c7bfa2448288f"
+      "bytes": 239341,
+      "sha256": "7e960613f4bdf12e3d4bdb981190e30ec059001569afe6aa2099c5ee966608eb"
     },
     {
       "path": "tsconfig.json",
@@ -1049,7 +1049,7 @@
     {
       "path": "scripts/packaging-resources.mjs",
       "bytes": 18845,
-      "sha256": "34bbbea5cfa1ca795b6fc179fd750c3711a198354af5e0ff14c4b08a9c157e64"
+      "sha256": "0574f50c87152b5ac8eb27ce0b4e9184f1539496e1a0f2d08b343db285706e60"
     },
     {
       "path": "scripts/packaging-hooks.cjs",
@@ -1243,8 +1243,8 @@
     },
     {
       "path": "THIRD-PARTY-NOTICES.txt",
-      "bytes": 103824,
-      "sha256": "183389772275af7f0924f6f49bf5976fd14ce7c6bd503a5d847f63dfa6e24e91"
+      "bytes": 103823,
+      "sha256": "167fa2c67a25f9836ab80808557f9313606235be6e7e689981b03c1a904670f7"
     },
     {
       "path": "README-WINDOWS.txt",
@@ -1268,13 +1268,13 @@
     },
     {
       "path": "docs/public/NATIVE-SOURCES.md",
-      "bytes": 4845,
-      "sha256": "05f13a8e6da359eee4c5e4437b70fa71d569dc6db8f3a8012d284e71e7638d91"
+      "bytes": 4844,
+      "sha256": "ffacde55bd2a34e22ddfc4b1493045c261a9e3afe87086e5ac1c918a4448be3b"
     },
     {
       "path": "docs/public/native-source-provenance.json",
-      "bytes": 3378,
-      "sha256": "b478ad16d9a282efb507d0cd0210101d778653d71ad34fd6e283ad2ab1231d0b"
+      "bytes": 3166,
+      "sha256": "435bc30f85219530b6eb770dbe25b4518ba358b31e7ded2db3d40ebfce50d1c0"
     },
     {
       "path": "scripts/native-source-bundle.py",
@@ -1283,8 +1283,8 @@
     },
     {
       "path": "docs/public/native-source-inputs.json",
-      "bytes": 134295,
-      "sha256": "e4a3ded4fadae29341f12fdffaa8d15eda84078482848de115c95402b6dd411b"
+      "bytes": 140069,
+      "sha256": "6b7513f2547ced11e3164201678dd44197dcd14ee5bccbf5511a6e5a05d852f7"
     },
     {
       "path": "src/renderer/SizePresets.tsx",
