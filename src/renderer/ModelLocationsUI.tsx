@@ -63,8 +63,8 @@ export function ModelLocationsUI({ snapshot, models, actions, onChange }: ModelL
     if (await execute('Verifying model bytes and moving the private file…', () => actions.moveModel({ modelId: model.id, destinationFolder: availableDestination, expectedSha256: model.sha256! }), `${model.name} moved. Saved recipes and collection membership still refer to the same model.`)) { setSelectedId(''); setFolder(availableDestination); setPage(0); }
   };
   return <>
-    <button type="button" className="model-locations-open" onClick={() => { setError(''); setSuccess(''); setOpen(true); }}><Folder size={15} />Model folders{snapshot.recoveryRequired && <span>Recovery needed</span>}</button>
-    {open && <Modal title="Model folders" onClose={close}><div className="model-locations">
+    <button type="button" className="model-locations-open" onClick={() => { setError(''); setSuccess(''); setOpen(true); }}><Folder size={15} />Disk folders{snapshot.recoveryRequired && <span>Recovery needed</span>}</button>
+    {open && <Modal title="Folders on disk" onClose={close}><div className="model-locations">
       <p className="model-locations-explanation">Organize checkpoint and LoRA files inside this studio. Moving a model keeps its saved recipes, metadata, and collections connected to the same bytes.</p>
       <Notice>Stop the generation engine and finish or cancel queued jobs before changing folders or reusable-directory registrations.</Notice>
       {snapshot.changeBlockedReason && <Notice>{snapshot.changeBlockedReason}</Notice>}

@@ -1,3 +1,4 @@
+import { beginSetupActivity } from './setup-activity';
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
@@ -25,8 +26,11 @@ async function regularFile(filename: string, allowLinks = false) {
 }
 
 export async function downloadAssistantAsset(asset: AssistantAsset, directory: string, signal: AbortSignal, progress: (received: number, total: number, verifying: boolean) => void): Promise<string> {
-  try { return await downloadPinnedAsset(asset, directory, signal, progress); }
+  const activity=beginSetupActivity(asset.filename,asset.url,path.join(directory,asset.filename));
+  activity.note('Checking the local file; downloading if missing or incomplete. Expected SHA-256: '+asset.sha256);
+  try { const result=await downloadPinnedAsset(asset, directory, signal, (received,total,verifying)=>{activity.progress(verifying?'Verifying file checksum':'Downloading '+asset.filename, total?received/total*100:undefined);progress(received,total,verifying);});activity.finish('completed','File available and verified.');return result; }
   catch (error) {
+    activity.finish(signal.aborted?'cancelled':'failed',error instanceof Error?error.message:String(error));
     if ((error as NodeJS.ErrnoException | null)?.code === 'ENOSPC') throw Object.assign(new Error('Not enough disk space to finish dependency setup. Existing assets and any partial download were retained. Free disk space, then retry setup.', { cause: error }), { code: 'ENOSPC' });
     throw error;
   }

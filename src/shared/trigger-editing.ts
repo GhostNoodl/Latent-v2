@@ -1,6 +1,6 @@
 import type { GenerationDraft, ModelAsset } from './types';
 import { automaticTriggerWords } from './workflow';
-import { prepareDynamicPromptDraft, type WildcardSnapshot } from './dynamic-prompt-recipe';
+import { usesDynamicPrompts, prepareDynamicPromptDraft, type WildcardSnapshot } from './dynamic-prompt-recipe';
 import { draftSchema } from './validation';
 
 // Trigger metadata is literal text even when the authored prompt uses variations.
@@ -14,7 +14,7 @@ export async function editTriggersAsPromptText(
 ): Promise<{ draft: GenerationDraft; addedTriggers: string[] }> {
   if (!input.autoTriggers) throw new Error('Turn automatic trigger words on before moving them into your prompt.');
   const draft = structuredClone(input);
-  const dynamic = draft.dynamicPrompts?.enabled;
+  const dynamic = usesDynamicPrompts(draft);
   const variationSeed = draft.dynamicPrompts?.frozen?.resolutionSeed ?? (draft.seed === 'random' ? allocatedSeed : draft.seed);
   if (dynamic && !variationSeed) throw new Error('Choose a concrete variation seed before editing automatic triggers.');
   const prepared = dynamic ? await prepareDynamicPromptDraft(draft, variationSeed!, wildcards) : undefined;

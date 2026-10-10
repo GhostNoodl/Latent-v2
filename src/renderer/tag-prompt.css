@@ -1,5 +1,7 @@
 .tag-prompt { position: relative; min-width: 0; }
 .tag-prompt textarea { width: 100%; }
+/* Chips can wrap independently without bottom-aligning the opposite prompt. */
+.studio .workspace .prompt-workspace .tag-prompt { align-self: start; }
 .tag-prompt-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; margin-top: 3px; }
 .tag-prompt-tools label { display: flex; align-items: center; gap: 6px; margin-bottom: 0; }
 .tag-prompt-tools select { width: auto; padding: 2px 22px 2px 6px; font-size: 11px; min-height: 24px; }
@@ -12,3 +14,6 @@
 .tag-suggestions li[aria-selected=true], .tag-suggestions li:hover { background: var(--soft, #49365d); }
 .tag-suggestions li span { min-width: 0; overflow-wrap: anywhere; }
 .tag-suggestions li small { display: block; font-size: 10px; opacity: .8; }
+.wildcard-active-chips { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
+.wildcard-active-chips > span { display:flex; border:1px solid var(--border); border-radius:7px; background:var(--soft); }
+.wildcard-active-chips button { font-size:11px; padding:4px 7px; min-height:28px; }

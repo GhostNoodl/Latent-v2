@@ -1290,6 +1290,42 @@
     {
       "from": "tests/qwen21.test.ts",
       "to": "tests/qwen21.test.ts"
+    },
+    {
+      "from": "src/renderer/ModelFolders.tsx",
+      "to": "src/renderer/ModelFolders.tsx"
+    },
+    {
+      "from": "tests/model-folders.test.tsx",
+      "to": "tests/model-folders.test.tsx"
+    },
+    {
+      "from": "src/shared/wildcard-mixer.ts",
+      "to": "src/shared/wildcard-mixer.ts"
+    },
+    {
+      "from": "src/renderer/WildcardMixer.tsx",
+      "to": "src/renderer/WildcardMixer.tsx"
+    },
+    {
+      "from": "tests/wildcard-mixer.test.tsx",
+      "to": "tests/wildcard-mixer.test.tsx"
+    },
+    {
+      "from": "src/main/setup-activity.ts",
+      "to": "src/main/setup-activity.ts"
+    },
+    {
+      "from": "src/shared/setup-activity.ts",
+      "to": "src/shared/setup-activity.ts"
+    },
+    {
+      "from": "src/renderer/SetupActivityPanel.tsx",
+      "to": "src/renderer/SetupActivityPanel.tsx"
+    },
+    {
+      "from": "tests/setup-activity.test.ts",
+      "to": "tests/setup-activity.test.ts"
     }
   ]
 }

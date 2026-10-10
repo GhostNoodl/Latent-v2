@@ -1,3 +1,4 @@
+import { isLoraFamilyCompatible } from './types';
 import type { ComfyWorkflow, GenerationDraft, ModelAsset } from './types';
 import { draftSchema } from './validation';
 export const WORKFLOW_VERSION = 'sdxl-txt2img@1';
@@ -33,7 +34,7 @@ export function validateAssets(draft: GenerationDraft, models: ModelAsset[]): { 
   const loras = draft.loras.map(selected => {
     const asset = models.find(model => model.id === selected.modelId && model.kind === 'lora' && model.status === 'ready');
     if (!asset) throw new Error('A selected LoRA is missing. Restore it or remove it from the draft.');
-    if (asset.family !== draft.family) throw new Error(`The LoRA ${asset.name} does not match this model family.`);
+    if (!isLoraFamilyCompatible(asset.family, draft.family)) throw new Error(`The LoRA ${asset.name} does not match this model family.`);
     return asset;
   });
   for (const asset of [checkpoint, ...loras]) if (draft.assetHashes?.[asset.id] && draft.assetHashes[asset.id] !== asset.sha256) throw new Error(`${asset.name} has different model bytes from this image. Restore the original file or deliberately select a replacement.`);

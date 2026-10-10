@@ -1,3 +1,4 @@
+import { configureSetupActivity, setupActivitySnapshot } from './setup-activity';
 import { QWEN21_SET_ID } from '../shared/qwen21-release';
 import { AppUpdateService } from './app-updates';
 import { isQwen21Profile, qwenEditProfileSchema } from '../shared/qwen-edit-types';
@@ -135,7 +136,7 @@ function videoStatus(): AppSnapshot['video'] {
   return localVideoAvailability(videoDrafts.status(), videoAssets.status(), backend.status().state, backend.getRuntimeIdentity());
 }
 function snapshot(): AppSnapshot {
-  return { dismissedActivity: store.getState('activity.dismissed', { queue: [], notifications: [] }), notifications: store.getState('notifications', []), video: videoStatus(), backendActivity: backendActivity.status(), hardwareProfiles: hardwareProfiles.status(), faceDetailer: faceDetailer.status(), appUpdates: appUpdates?.status(), runtimeUpdates: runtimeUpdateSnapshot(), ipAdapter: ipAdapter.status(), qwenEdit: qwenEdit.status(), modelLocations: modelLocations.snapshot(), collections: collections.snapshot(), controlNet: controlNet.status(), upscaler: upscaler.status(), wildcards: wildcards.snapshot(), backend: backend.status(), assistant: assistant.status(), segmentation: segmentation.status(), sourceImages: sources.list(), models: models.assets, history: store.records(), previewSelectedRecordId: store.previewSelectionId(), jobs: jobs.jobs(), settings: store.settings(), draft, presets: store.presets(), paths, hardware, downloads: models.downloads };
+  return { setupActivity: setupActivitySnapshot(), dismissedActivity: store.getState('activity.dismissed', { queue: [], notifications: [] }), notifications: store.getState('notifications', []), video: videoStatus(), backendActivity: backendActivity.status(), hardwareProfiles: hardwareProfiles.status(), faceDetailer: faceDetailer.status(), appUpdates: appUpdates?.status(), runtimeUpdates: runtimeUpdateSnapshot(), ipAdapter: ipAdapter.status(), qwenEdit: qwenEdit.status(), modelLocations: modelLocations.snapshot(), collections: collections.snapshot(), controlNet: controlNet.status(), upscaler: upscaler.status(), wildcards: wildcards.snapshot(), backend: backend.status(), assistant: assistant.status(), segmentation: segmentation.status(), sourceImages: sources.list(), models: models.assets, history: store.records(), previewSelectedRecordId: store.previewSelectionId(), jobs: jobs.jobs(), settings: store.settings(), draft, presets: store.presets(), paths, hardware, downloads: models.downloads };
 }
 function runtimeUpdateSnapshot() {
   const status = runtimeUpdates.status(); const problem = runtimeCoordinator.recoveryProblem();
@@ -235,6 +236,7 @@ async function inventoryHardware() {
   } catch { /* The studio remains usable on machines without NVIDIA tooling. */ }
 }
 async function initialize() {
+  configureSetupActivity(paths.logs, broadcast);
   store = new StudioStore(paths.database); draft = store.draft();
   models = new ModelService(paths, store, broadcast);
   assistant = new PromptAssistant(paths, store, broadcast);

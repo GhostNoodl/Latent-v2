@@ -132,3 +132,45 @@ it('validates sampling overrides without accepting a changed prediction mode',as
  expect(samplingValidationGraph(graph,draft)['49']).toBeUndefined();expect(graph['49']).toBeDefined();
  graph['49'].inputs.sampling='eps';expect(()=>samplingValidationGraph(graph,draft)).toThrow('sampling override');
 });
+
+it.each([['illustrious','sdxl'],['sdxl','illustrious']] as const)('loads a %s checkpoint with a %s LoRA', async (family,loraFamily)=>{
+ const {buildWorkflow}=await import('../src/shared/workflow');
+ const checkpoint={id:'checkpoint',kind:'checkpoint',family,filename:'base.safetensors',status:'ready',sha256:'a'.repeat(64),triggers:[]} as any;
+ const lora={id:'lora',name:'Pixel Art XL',kind:'lora',family:loraFamily,filename:'pixel.safetensors',status:'ready',sha256:'b'.repeat(64),triggers:[]} as any;
+ const draft={...DEFAULT_DRAFT,family,checkpointId:'checkpoint',loras:[{modelId:'lora',weight:0.7,clipWeight:0.8}]};
+ const graph=buildWorkflow(draft,[checkpoint,lora],'42','compatibility');
+ expect(Object.values(graph).find(node=>node.class_type==='LoraLoader')?.inputs).toMatchObject({lora_name:'pixel.safetensors',strength_model:0.7,strength_clip:0.8});
+ expect(()=>buildWorkflow(draft,[checkpoint,{...lora,family:'unknown'}],'42','unknown')).toThrow('family');
+ expect(()=>buildWorkflow(draft,[checkpoint,{...lora,status:'missing'}],'42','missing')).toThrow('missing');
+});
+
+it('allows an SDXL LoRA in the Illustrious picker while blocking unknown, missing and selected assets',async()=>{
+ vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true);
+ const {ModelPicker}=await import('../src/renderer/ModelPicker');
+ const base={id:'pixel',name:'Pixel Art XL',kind:'lora',family:'sdxl',status:'ready',bytes:200000000,triggers:[]} as any;
+ const snapshot={models:[base,{...base,id:'unknown',name:'Unknown',family:'unknown'},{...base,id:'missing',name:'Missing',status:'missing'},{...base,id:'selected',name:'Selected'}],history:[],collections:{collections:[]},settings:{civitaiDisplayMetadata:false}} as any;
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host);const choose=vi.fn();
+ try{
+ await act(async()=>root.render(<ModelPicker snapshot={snapshot} kind="lora" family="illustrious" selectedIds={['selected']} onChoose={choose} onClose={()=>{}}/>));
+ const cards=[...document.querySelectorAll<HTMLButtonElement>('.visual-model-card')];
+ const pixel=cards.find(b=>b.textContent?.includes('Pixel Art XL'))!;
+ expect(pixel.disabled).toBe(false);await act(async()=>pixel.click());expect(choose).toHaveBeenCalledWith(base);
+ for(const name of ['Unknown','Missing','Selected'])expect(cards.find(b=>b.textContent?.includes(name))?.disabled).toBe(true);
+ }finally{await act(async()=>root.unmount());host.remove();vi.unstubAllGlobals();}
+});
+
+it.each(['lora','checkpoint'] as const)('filters the Create %s picker with folder buttons',async kind=>{
+ vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true);
+ const {ModelPicker}=await import('../src/renderer/ModelPicker');
+ const model={id:'m',name:'Example',kind,family:'sdxl',status:'ready',bytes:100,triggers:[]} as any;
+ const snapshot={models:[model,{...model,id:'other',name:'Other',kind:kind==='lora'?'checkpoint':'lora'}],history:[],settings:{civitaiDisplayMetadata:false},collections:{collections:[{id:'styles',kind:'model',name:'Styles',memberIds:['m']},{id:'empty',kind:'model',name:'Empty',memberIds:[]}]}} as any;
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
+ const folder=(name:string)=>[...host.querySelectorAll<HTMLButtonElement>('.picker-folders button')].find(b=>b.textContent?.includes(name))!;
+ try{await act(async()=>root.render(<ModelPicker snapshot={snapshot} kind={kind} family="illustrious" selectedIds={[]} onChoose={()=>{}} onClose={()=>{}}/>));
+ expect(folder('Styles').textContent).toBe('Styles1');
+ await act(async()=>folder('Empty').click());expect(host.querySelectorAll('.visual-model-card')).toHaveLength(0);
+ await act(async()=>folder('Styles').click());expect(host.querySelectorAll('.visual-model-card')).toHaveLength(1);
+ expect(folder('Styles').getAttribute('aria-pressed')).toBe('true');
+ await act(async()=>folder('All ').click());expect(host.querySelectorAll('.visual-model-card')).toHaveLength(1);
+ }finally{await act(async()=>root.unmount());host.remove();vi.unstubAllGlobals();}
+});

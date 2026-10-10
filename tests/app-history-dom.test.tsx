@@ -53,7 +53,7 @@ describe('generation completion selection', () => {
   it('selects and remembers a newly completed image without changing its recipe', async () => {
     const completed = record('c'.repeat(32), 'New completed image');
     await act(async () => { snapshotReceiver({...snapshot,history:[completed,...snapshot.history]}); });
-    expect(preview(completed.draft.prompt).getAttribute('aria-pressed')).toBe('true');
+    expect(preview(completed.resolvedPrompt).getAttribute('aria-pressed')).toBe('true');
     await closeAndCancel();
     expect(savedSelection).toBe(completed.id);
     expect(savedDraft.prompt).toBe(authored().prompt);
@@ -154,7 +154,7 @@ describe('Create history, draft and asynchronous acceptance', () => {
     await click(button('Create')); await act(async () => { host.querySelector('#prompt')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true })); }); expect(api.queueGeneration).toHaveBeenCalledOnce();
   });
   it('previews without editing the composer and explicitly restores all ordinary values with full Undo', async () => {
-    const original = normalized(savedDraft), records = structuredClone(snapshot.history); await click(preview(second.draft.prompt)); expect(host.querySelector<HTMLTextAreaElement>('#prompt')!.value).toBe(authored().prompt); expect(api.saveDraft).not.toHaveBeenCalled(); expect(savedSelection).toBe(second.id);
+    const original = normalized(savedDraft), records = structuredClone(snapshot.history); await click(preview(second.resolvedPrompt)); expect(host.querySelector<HTMLTextAreaElement>('#prompt')!.value).toBe(authored().prompt); expect(api.saveDraft).not.toHaveBeenCalled(); expect(savedSelection).toBe(second.id);
     await click(button('Reuse parameters')); await closeAndCancel();
     expect(normalized(savedDraft)).toEqual(normalized({ ...second.draft, seed: second.actualSeed, triggerWords: { [lora.id]: lora.triggers }, assetHashes: { [checkpoint.id]: checkpoint.sha256, [lora.id]: lora.sha256 } })); expect(api.queueGeneration).not.toHaveBeenCalled();
     await click(button('Undo restore')); await closeAndCancel(); expect(normalized(savedDraft)).toEqual(original); expect(savedSelection).toBe(second.id); expect(snapshot.history).toEqual(records);
@@ -172,17 +172,17 @@ describe('Create history, draft and asynchronous acceptance', () => {
   });
   it('keeps a deliberately selected history image when delayed queue acceptance completes', async () => {
     const wait = gate(); const original = api.queueGeneration!; api.queueGeneration = vi.fn(async draft => { await wait.promise; return original(draft); });
-    await click(button('Generate image')); expect(api.queueGeneration).toHaveBeenCalledOnce(); await click(preview(second.draft.prompt));
+    await click(button('Generate image')); expect(api.queueGeneration).toHaveBeenCalledOnce(); await click(preview(second.resolvedPrompt));
     const job = await original(authored()); snapshot = { ...snapshot, jobs: [{ ...job, status: 'running', queueState: 'running', previewUrl: 'data:image/png;base64,fixture' }] };
     await act(async () => { snapshotReceiver(snapshot); wait.release(); });
-    expect(button('View live preview')).toBeDefined(); expect(savedSelection).toBe(second.id); expect(preview(second.draft.prompt).getAttribute('aria-pressed')).toBe('true');
+    expect(button('View live preview')).toBeDefined(); expect(savedSelection).toBe(second.id); expect(preview(second.resolvedPrompt).getAttribute('aria-pressed')).toBe('true');
   });
   it('drains composer edits and a newer selection made while close is waiting on preview persistence', async () => {
     const firstSave = gate(), secondSave = gate(); const original = api.savePreviewSelection!;
     api.savePreviewSelection = vi.fn(async id => { await (id === second.id ? firstSave.promise : secondSave.promise); await original(id); });
-    await click(preview(second.draft.prompt)); let acknowledged = false, closing!: Promise<void[]>;
+    await click(preview(second.resolvedPrompt)); let acknowledged = false, closing!: Promise<void[]>;
     await act(async () => { closing = Promise.all([...closeHandlers].map(handler => handler())).then(result => { acknowledged = true; return result; }); });
-    await prompt('Edit during preview saving'); await click(preview(first.draft.prompt)); await act(async () => { firstSave.release(); });
+    await prompt('Edit during preview saving'); await click(preview(first.resolvedPrompt)); await act(async () => { firstSave.release(); });
     expect(acknowledged).toBe(false); await act(async () => { secondSave.release(); await closing; });
     expect(savedSelection).toBe(first.id); expect(savedDraft.prompt).toBe('Edit during preview saving');
   });
@@ -207,9 +207,9 @@ describe('Create history, draft and asynchronous acceptance', () => {
   });
   it('ignores draft and selection mutations after close acknowledgement and permits them after cancellation', async () => {
     await act(async () => { await Promise.all([...closeHandlers].map(handler => handler())); });
-    await prompt('Late edit'); await click(preview(second.draft.prompt)); await click(button('Generate image'));
+    await prompt('Late edit'); await click(preview(second.resolvedPrompt)); await click(button('Generate image'));
     expect(host.querySelector<HTMLTextAreaElement>('#prompt')!.value).toBe(authored().prompt); expect(savedSelection).toBe(first.id); expect(api.queueGeneration).not.toHaveBeenCalled();
-    await act(async () => { closeCancelledHandlers.forEach(handler => handler()); }); await prompt('Edit after cancelling close'); await click(preview(second.draft.prompt)); await closeAndCancel();
+    await act(async () => { closeCancelledHandlers.forEach(handler => handler()); }); await prompt('Edit after cancelling close'); await click(preview(second.resolvedPrompt)); await closeAndCancel();
     expect(savedDraft.prompt).toBe('Edit after cancelling close'); expect(savedSelection).toBe(second.id);
   });
   it('preserves Undo when restore and Undo are clicked after close acknowledgement', async () => {
@@ -227,11 +227,11 @@ describe('Create history, draft and asynchronous acceptance', () => {
     expect(normalized(savedDraft)).toEqual(normalized(authored())); expect(host.querySelector('[aria-label="Return to text to image"]')).toBeNull();
   });
   it('reopens the saved composer and explicit preview independently after reuse and a later edit', async () => {
-    await click(preview(second.draft.prompt)); await click(button('Reuse parameters')); await prompt('Continue this recipe later'); await click(preview(first.draft.prompt)); await closeAndCancel();
+    await click(preview(second.resolvedPrompt)); await click(button('Reuse parameters')); await prompt('Continue this recipe later'); await click(preview(first.resolvedPrompt)); await closeAndCancel();
     const before = normalized(savedDraft); snapshot = { ...snapshot, draft: structuredClone(savedDraft), previewSelectedRecordId: savedSelection };
     await act(async () => { root.unmount(); }); root = createRoot(host); await render(); await closeAndCancel();
     expect(normalized(savedDraft)).toEqual(before); expect(savedDraft.seed).toBe(second.actualSeed); expect(host.querySelector<HTMLTextAreaElement>('#prompt')!.value).toBe('Continue this recipe later');
-    expect(preview(first.draft.prompt).getAttribute('aria-pressed')).toBe('true'); expect(api.queueGeneration).not.toHaveBeenCalled();
+    expect(preview(first.resolvedPrompt).getAttribute('aria-pressed')).toBe('true'); expect(api.queueGeneration).not.toHaveBeenCalled();
   });
   it('clears optional source settings on ordinary reuse and restores the complete missing-source recipe with Undo', async () => {
     await act(async () => { root.unmount(); }); root = createRoot(host);
@@ -247,15 +247,15 @@ describe('Create history, draft and asynchronous acceptance', () => {
     expect(api.queueGeneration).not.toHaveBeenCalled(); expect(host.textContent).toContain('Restore the missing model files'); await closeAndCancel(); expect(savedDraft.checkpointId).toBe(checkpoint.id);
   });
   it('preserves the draft and earlier Undo when conflicting hires metadata prevents reuse or variation', async () => {
-    await click(preview(second.draft.prompt)); await click(button('Reuse parameters')); await closeAndCancel();
+    await click(preview(second.resolvedPrompt)); await click(button('Reuse parameters')); await closeAndCancel();
     const before = normalized(savedDraft);
     first.draft.hiresFix = { method: 'latent', workflowVersion: 'sdxl-hires-latent@2', width: 1536, height: 1536, steps: 16, cfg: 5, sampler: 'euler', scheduler: 'normal', denoise: 0.35, seed: '42' };
     first.advancedImage = { workflowVersion: 'sdxl-hires-image@1' } as NonNullable<GenerationRecord['advancedImage']>;
     await act(async () => { snapshotReceiver({ ...snapshot }); });
-    await click(preview(first.draft.prompt)); await click(button('Reuse parameters'));
+    await click(preview(first.resolvedPrompt)); await click(button('Reuse parameters'));
     expect(host.textContent).toContain('Could not restore these parameters');
     await closeAndCancel(); expect(normalized(savedDraft)).toEqual(before);
-    await act(async () => { preview(first.draft.prompt).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true })); });
+    await act(async () => { preview(first.resolvedPrompt).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true })); });
     await click(button('Make a variation')); await closeAndCancel();
     expect(normalized(savedDraft)).toEqual(before); expect(api.queueGeneration).not.toHaveBeenCalled();
     await click(button('Undo restore')); await closeAndCancel(); expect(normalized(savedDraft)).toEqual(normalized(authored()));
@@ -288,9 +288,9 @@ describe('Create history, draft and asynchronous acceptance', () => {
   });
 
   it('keeps the earlier Undo when a saved LoRA lacks trigger metadata', async () => {
-    await click(preview(second.draft.prompt)); await click(button('Reuse parameters')); await closeAndCancel(); const before = normalized(savedDraft);
+    await click(preview(second.resolvedPrompt)); await click(button('Reuse parameters')); await closeAndCancel(); const before = normalized(savedDraft);
     Reflect.deleteProperty(first.loras[0], 'triggers');
-    await act(async () => { snapshotReceiver({ ...snapshot }); }); await click(preview(first.draft.prompt)); await click(button('Reuse parameters')); await closeAndCancel();
+    await act(async () => { snapshotReceiver({ ...snapshot }); }); await click(preview(first.resolvedPrompt)); await click(button('Reuse parameters')); await closeAndCancel();
     expect(host.textContent).toContain('The saved LoRA trigger metadata is incomplete'); const details = host.querySelector<HTMLElement>('[aria-label="Error details"]')!; expect(details.tabIndex).toBe(0); details.focus(); expect(document.activeElement).toBe(details); expect(normalized(savedDraft)).toEqual(before);
     await click(button('Undo restore')); await closeAndCancel(); expect(normalized(savedDraft)).toEqual(normalized(authored())); expect(api.queueGeneration).not.toHaveBeenCalled();
   });
@@ -312,4 +312,16 @@ it('one-click source failures leave the draft intact and allow retry',async()=>{
  api.useOutputAsSource=vi.fn().mockRejectedValue(new Error('Original image is missing.'));
  await click(button('Upscale & refine'));expect(api.queueGeneration).not.toHaveBeenCalled();expect(host.textContent).toContain('Original image is missing');expect(button('Upscale & refine').disabled).toBe(false);
  expect(host.querySelector<HTMLTextAreaElement>('#prompt')!.value).toBe(authored().prompt);
+});
+it('shows the saved wildcard result in history and preview while retaining its authored template',async()=>{
+ const template='portrait, __species__';
+ const prepared=await prepareDynamicPromptDraft({prompt:template,negativePrompt:'',dynamicPrompts:{enabled:true,selections:{species:['wolf']}}},'42');
+ first.draft.prompt=template;first.draft.dynamicPrompts={enabled:true,frozen:prepared.recipe};first.dynamicPromptRecipe=prepared.recipe;first.resolvedPrompt=prepared.prompt;
+ await act(async()=>snapshotReceiver({...snapshot}));
+ const card=host.querySelector<HTMLButtonElement>('.history-preview')!;
+ expect(card.title).toBe('portrait, wolf');
+ expect(card.querySelector('.history-title')?.textContent).toContain('portrait, wolf');
+ expect(host.querySelector('.preview-caption p')?.textContent).toBe('portrait, wolf');
+ expect(host.querySelector('.preview-caption p')?.getAttribute('title')).toBe('portrait, wolf');
+ expect(first.draft.prompt).toBe(template);
 });

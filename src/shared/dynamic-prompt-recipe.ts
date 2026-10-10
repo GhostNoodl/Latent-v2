@@ -1,5 +1,6 @@
+import { WILDCARD_PACKS } from './wildcard-packs';
 import { z } from 'zod';
-import { DYNAMIC_PROMPT_LIMITS, DYNAMIC_PROMPT_VERSION, DynamicPromptError, resolveDynamicPrompt, validateWildcardDictionary, type DynamicPromptChoice } from './dynamic-prompts';
+import { DYNAMIC_PROMPT_LIMITS, DYNAMIC_PROMPT_VERSION, DynamicPromptError, parseDynamicPrompt, resolveDynamicPrompt, validateWildcardDictionary, type DynamicPromptChoice } from './dynamic-prompts';
 
 export interface WildcardSnapshot { revision: string; entries: Record<string, string[]>; }
 export interface DynamicPromptPart { authored: string; resolved: string; seed: string; choices: DynamicPromptChoice[]; }
@@ -11,7 +12,7 @@ export interface DynamicPromptRecipe {
   negative: DynamicPromptPart;
   wildcards: WildcardSnapshot;
 }
-export interface DynamicPromptAuthoring { enabled: boolean; frozen?: DynamicPromptRecipe; }
+export interface DynamicPromptAuthoring { enabled: boolean; selections?: Record<string,string[]>; frozen?: DynamicPromptRecipe; }
 export interface DynamicPromptDraft { prompt: string; negativePrompt: string; dynamicPrompts?: DynamicPromptAuthoring; }
 export interface PreparedDynamicPrompt { prompt: string; negativePrompt: string; recipe?: DynamicPromptRecipe; reusedFrozen: boolean; }
 const promptText = z.string().max(DYNAMIC_PROMPT_LIMITS.input);
@@ -26,7 +27,7 @@ export const wildcardSnapshotSchema: z.ZodType<WildcardSnapshot> = z.object({ re
 const choiceSchema: z.ZodType<DynamicPromptChoice> = z.object({ kind: z.enum(['choice', 'wildcard']), source: z.string().max(180), start: z.number().int().min(0).max(16_000), end: z.number().int().min(0).max(16_000), tag: z.string().max(128).optional(), selectedIndex: z.number().int().min(0).max(1023), selectedValue: promptText, resolvedValue: z.string().max(DYNAMIC_PROMPT_LIMITS.output) }).strict().refine(value => value.end >= value.start, 'Choice source span is invalid.');
 const partSchema: z.ZodType<DynamicPromptPart> = z.object({ authored: promptText, resolved: z.string().max(DYNAMIC_PROMPT_LIMITS.output), seed: z.string().max(DYNAMIC_PROMPT_LIMITS.seed), choices: z.array(choiceSchema).max(DYNAMIC_PROMPT_LIMITS.expansions) }).strict();
 export const dynamicPromptRecipeSchema: z.ZodType<DynamicPromptRecipe> = z.object({ version: z.literal(DYNAMIC_PROMPT_VERSION), seedPolicy: z.literal('actual-seed-domains-v1'), resolutionSeed: concreteSeed, positive: partSchema, negative: partSchema, wildcards: wildcardSnapshotSchema }).strict();
-export const dynamicPromptAuthoringSchema: z.ZodType<DynamicPromptAuthoring> = z.object({ enabled: z.boolean(), frozen: dynamicPromptRecipeSchema.optional() }).strict();
+export const dynamicPromptAuthoringSchema: z.ZodType<DynamicPromptAuthoring> = z.object({ enabled: z.boolean(), selections: wildcardEntriesSchema.optional(), frozen: dynamicPromptRecipeSchema.optional() }).strict();
 
 /** A stable content identity; entry order matters, dictionary-key order does not. */
 export async function createWildcardSnapshot(input: Record<string, string[]>): Promise<WildcardSnapshot> {
@@ -57,9 +58,9 @@ function resolveRecipe(draft: DynamicPromptDraft, actualSeed: string, wildcards:
 
 /** Call after choosing actualSeed, before creating a queued job. No draft mutation. */
 export async function prepareDynamicPromptDraft(draft: DynamicPromptDraft, actualSeed: string, currentWildcards: WildcardSnapshot = EMPTY_WILDCARD_SNAPSHOT): Promise<PreparedDynamicPrompt> {
-  // Legacy literal braces and __tokens__ remain untouched while disabled.
-  if (!draft.dynamicPrompts?.enabled) return { prompt: draft.prompt, negativePrompt: draft.negativePrompt, reusedFrozen: false };
-  const options = dynamicPromptAuthoringSchema.parse(draft.dynamicPrompts);
+  // Named wildcards work immediately; explicit enablement still supports inline choices.
+  if (!usesDynamicPrompts(draft)) return { prompt: draft.prompt, negativePrompt: draft.negativePrompt, reusedFrozen: false };
+  const options = dynamicPromptAuthoringSchema.parse(draft.dynamicPrompts ?? {enabled:true});
   let recipe: DynamicPromptRecipe;
   if (options.frozen) {
     const frozen = options.frozen;
@@ -69,7 +70,7 @@ export async function prepareDynamicPromptDraft(draft: DynamicPromptDraft, actua
     if (canonicalJson(expected) !== canonicalJson(frozen)) throw new Error('The saved prompt variation trace is inconsistent. Restore the original recipe or regenerate variations.');
     recipe = structuredClone(frozen);
   } else {
-    concreteSeed.parse(actualSeed); const snapshot = await verifySnapshot(currentWildcards);
+    concreteSeed.parse(actualSeed); const snapshot = await createWildcardSnapshot(resolveWildcardEntries(draft, (await verifySnapshot(currentWildcards)).entries));
     recipe = resolveRecipe(draft, actualSeed, snapshot);
   }
   return { prompt: recipe.positive.resolved, negativePrompt: recipe.negative.resolved, recipe, reusedFrozen: !!options.frozen };
@@ -78,13 +79,39 @@ export async function prepareDynamicPromptDraft(draft: DynamicPromptDraft, actua
 /** Call from the root draft-change path; image seed changes alone preserve a freeze. */
 export function invalidateDynamicPromptFreeze<T extends DynamicPromptDraft>(previous: T, next: T, reroll = false): T {
   if (!next.dynamicPrompts?.frozen || (!reroll && previous.prompt === next.prompt && previous.negativePrompt === next.negativePrompt && previous.dynamicPrompts?.enabled === next.dynamicPrompts.enabled)) return next;
-  return { ...next, dynamicPrompts: { enabled: next.dynamicPrompts.enabled } };
+  return { ...next, dynamicPrompts: { enabled: next.dynamicPrompts.enabled, selections: next.dynamicPrompts.selections } };
 }
 export function restoreDynamicPromptRecipe<T extends DynamicPromptDraft>(draft: T, input: DynamicPromptRecipe): T {
   const recipe = dynamicPromptRecipeSchema.parse(input);
-  return { ...draft, prompt: recipe.positive.authored, negativePrompt: recipe.negative.authored, dynamicPrompts: { enabled: true, frozen: structuredClone(recipe) } };
+  return { ...draft, prompt: recipe.positive.authored, negativePrompt: recipe.negative.authored, dynamicPrompts: { enabled: true, selections: structuredClone(recipe.wildcards.entries), frozen: structuredClone(recipe) } };
 }
 /** Compositor memory preferences do not redact intentionally saved records/presets. */
 export function redactDynamicPromptDraft<T extends DynamicPromptDraft>(draft: T, rememberPositive: boolean, rememberNegative: boolean): T {
   return { ...draft, prompt: rememberPositive ? draft.prompt : '', negativePrompt: rememberNegative ? draft.negativePrompt : '', ...(draft.dynamicPrompts ? { dynamicPrompts: rememberPositive && rememberNegative ? structuredClone(draft.dynamicPrompts) : { enabled: draft.dynamicPrompts.enabled } } : {}) };
+}
+
+export function usesDynamicPrompts(draft: DynamicPromptDraft): boolean {
+ return /(?<!\\)\{[^{}]*\|/.test(draft.prompt+'\n'+draft.negativePrompt) || !!draft.dynamicPrompts?.enabled || /(?<!\\)__[A-Za-z0-9][A-Za-z0-9_./-]*__/.test(draft.prompt+'\n'+draft.negativePrompt);
+}
+export function wildcardCatalog(saved: Record<string,string[]> = {}): Record<string,string[]> {
+ const entries=Object.fromEntries(WILDCARD_PACKS.map(p=>[p.id,[...(saved['starter_'+p.id]??p.entries)]]));
+ return {...entries,...saved};
+}
+export function resolveWildcardEntries(draft: DynamicPromptDraft, saved:Record<string,string[]>):Record<string,string[]> {
+ const catalog=wildcardCatalog(saved);
+ const overrides=draft.dynamicPrompts?.selections??{};
+ const result:Record<string,string[]>={};
+ const visit=(text:string)=>{
+  const walk=(nodes:ReturnType<typeof parseDynamicPrompt>['nodes'])=>{
+   for(const node of nodes) {
+    if(node.kind==='choice')for(const option of node.options)walk(option.nodes);
+    if(node.kind!=='wildcard'||Object.hasOwn(result,node.tag))continue;
+    const canonical=node.tag.startsWith('starter_')?node.tag.slice(8):node.tag;
+    const values=overrides[node.tag]??overrides[canonical]??catalog[node.tag]??catalog[canonical];
+    if(!values)continue;
+    result[node.tag]=[...values];for(const value of values)visit(value);
+   }
+  };walk(parseDynamicPrompt(text).nodes);
+ };
+ visit(draft.prompt);visit(draft.negativePrompt);return result;
 }

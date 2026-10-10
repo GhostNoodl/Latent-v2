@@ -27,7 +27,7 @@ export function tagToken(value: string, caret: number, selectionEnd = caret): Ta
 
 export function insertTag(value: string, token: TagToken, name: string) {
   // Literal tag parentheses must not become Comfy prompt emphasis syntax.
-  const text = name.replace(/[()]/g, '\\$&');
+  const text = name.replaceAll('_', ' ').replace(/[()]/g, '\\$&');
   let tail = value.slice(token.end);
   let caret = token.start + text.length;
   if (!tail.trim()) { tail = ', '; caret += 2; }
@@ -62,4 +62,26 @@ export function searchTags(entries: TagEntry[], query: string, source: TagSource
     else matches.set(entry.name, { name: entry.name, count: entry.count, sources: [entry.source], alias, rank: score });
   }
   return [...matches.values()].sort((a, b) => a.rank - b.rank || b.count - a.count || a.name.localeCompare(b.name)).slice(0, limit).map(({ rank: _, ...entry }) => entry);
+}
+
+/** Narrow common prefix/word searches before falling back to substring matching. */
+export function createTagSearch(entries: TagEntry[]) {
+ const byName=new Map<string,TagEntry[]>();
+ for(const entry of entries)byName.set(entry.name,[...(byName.get(entry.name)??[]),entry]);
+ const buckets=new Map<string,Set<TagEntry>>();
+ for(const entry of entries)for(const text of [entry.name,...entry.aliases])for(const word of text.toLowerCase().split('_')) {
+  if(word.length<2)continue;const key=word.slice(0,2);
+  let bucket=buckets.get(key);if(!bucket){bucket=new Set();buckets.set(key,bucket);}for(const sibling of byName.get(entry.name)!)bucket.add(sibling);
+ }
+ return (query:string,source:TagSource,limit=12)=>{
+  const q=query.trim().toLowerCase().replace(/\s+/g,'_');
+  if(source==='off'||q.length<2||q.length>80)return [];
+  const subset=[...(buckets.get(q.slice(0,2))??[])];
+  const fast=searchTags(subset,q,source,limit);
+  // Substring candidates can outrank alias-only substring matches, so fall back
+  // unless the full page consists of exact/prefix/word-prefix matches.
+  const wordMatch=(text:string)=>text===q||text.startsWith(q)||text.includes('_'+q);
+  if(fast.length===limit&&fast.every(item=>wordMatch(item.name)||!!item.alias&&wordMatch(item.alias)))return fast;
+  return searchTags(entries,q,source,limit);
+ };
 }

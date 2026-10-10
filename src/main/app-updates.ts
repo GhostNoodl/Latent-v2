@@ -1,3 +1,4 @@
+import { beginSetupActivity } from './setup-activity';
 import fs from 'node:fs/promises';
 import { createHash,randomUUID } from 'node:crypto';
 import path from 'node:path';
@@ -15,7 +16,8 @@ export class AppUpdateService {
  settings(input:Partial<AppUpdateSettings>){const next=appUpdateSettingsSchema.parse({...this.value.settings,...appUpdateSettingsSchema.partial().parse(input)});if(!next.checkAutomatically){next.downloadAutomatically=false;next.installWhenIdle=false;}if(!next.downloadAutomatically)next.installWhenIdle=false;if(input.installWhenIdle===true)this.postponed=undefined;this.store.setState('app-updates.settings',next);this.update({settings:next,installRequested:false});}
  private async run(state:'checking'|'downloading',operation:(signal:AbortSignal)=>Promise<void>){
   if(this.disposed||this.task)throw Error('Wait for the current update operation to finish.');const controller=new AbortController();this.abort=controller;this.update({state,message:state==='checking'?'Checking for updates…':'Downloading update…',progress:undefined,installRequested:false});
-  this.task=operation(controller.signal).catch(error=>{this.update({state:'error',message:controller.signal.aborted?'Update cancelled. Your installed app is unchanged.':describe(error),progress:undefined});throw error;}).finally(()=>{this.task=undefined;this.abort=undefined;});await this.task;
+  const activity=state==='downloading'&&this.value.release?beginSetupActivity('Latent installer '+this.value.release.version,this.value.release.url,path.join(this.root,'app-updates',this.value.release.name)):undefined;
+  this.task=operation(controller.signal).then(()=>{activity?.finish('completed','Installer downloaded and verified.');}).catch(error=>{activity?.finish(controller.signal.aborted?'cancelled':'failed',describe(error));this.update({state:'error',message:controller.signal.aborted?'Update cancelled. Your installed app is unchanged.':describe(error),progress:undefined});throw error;}).finally(()=>{this.task=undefined;this.abort=undefined;});await this.task;
  }
  private async response(url:string,signal:AbortSignal){
   for(let hop=0;hop<5;hop++){

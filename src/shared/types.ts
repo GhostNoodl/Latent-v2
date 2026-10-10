@@ -27,6 +27,10 @@ import type { HardwareProfilesStatus, HardwareRecommendationReport, HardwareProf
 export interface FaceDetailerRecipe { plan: FaceRefinementPlan; detection: FaceDetectionReceipt; source: SourceImageAsset; outputs: FaceRefinementOutput[]; }
 export interface CivitaiProvenance { creator?: string; description?: string; trainedWords?: string[]; previewUrl?: string; fetchedAt?: string; modelId: number; versionId: number; fileId: number; modelName: string; versionName: string; baseModel: string; sourceUrl: string; permissions: CivitaiPermissions; }
 export type ModelFamily = 'sdxl' | 'illustrious';
+/** Both supported families share the SDXL LoRA architecture; unknown families remain blocked. */
+export function isLoraFamilyCompatible(loraFamily: string | undefined, checkpointFamily: string | undefined): boolean {
+  return ['sdxl', 'illustrious'].includes(loraFamily ?? '') && ['sdxl', 'illustrious'].includes(checkpointFamily ?? '');
+}
 export type ModelKind = 'checkpoint' | 'lora';
 export interface ModelProvenance { repository: string; revision: string; licenseName: string; version?: string; baseModel?: string; }
 export interface ModelAsset {
@@ -199,6 +203,7 @@ export interface DownloadStatus {
 }
 export interface ModelDownloadRequest { url: string; filename: string; kind: ModelKind; family: ModelFamily; sha256?: string; triggers?: string[]; sourceUrl?: string; licenseUrl?: string; provenance?: ModelProvenance; civitai?: CivitaiProvenance; }
 export interface AppSnapshot {
+  setupActivity?: import('./setup-activity').SetupActivity[];
   appUpdates?: AppUpdateStatus;
   dismissedActivity?: { queue: string[]; notifications: string[] };
   notifications?: Array<{ id: string; title: string; body: string; at: string; preference: 'notifyGeneration' | 'notifyError' | 'notifyDownload' }>;
