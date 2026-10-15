@@ -34,7 +34,8 @@ export function containedPath(root: string, target: string): string {
 /** Reject existing links/junctions that would redirect a managed write into another installation. */
 export function validateRuntimePaths(paths: AppPaths): void {
   const root = path.resolve(paths.root);
-  if (!path.isAbsolute(paths.root) || root === path.parse(root).root) throw new Error('A dedicated absolute storage directory is required.');
+  if (!path.isAbsolute(paths.root) || root === path.parse(root).root)
+    throw new Error('A dedicated absolute storage directory is required.');
   for (const [key, target] of Object.entries(paths)) {
     if (key === 'root') continue;
     const boundary = storageBoundary(paths, target);
@@ -42,7 +43,8 @@ export function validateRuntimePaths(paths: AppPaths): void {
     let current = path.resolve(target);
     while (true) {
       try {
-        if (fs.lstatSync(current).isSymbolicLink()) throw new Error(`Managed storage cannot use a junction or symbolic link: ${current}`);
+        if (fs.lstatSync(current).isSymbolicLink())
+          throw new Error(`Managed storage cannot use a junction or symbolic link: ${current}`);
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
       }
@@ -55,13 +57,31 @@ export function validateRuntimePaths(paths: AppPaths): void {
 export function runtimeEnvironment(paths: AppPaths, inherited: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
   // Do not inherit another venv, Python search path, uv/pip configuration, or model credentials.
-  for (const key of ['SystemRoot', 'SYSTEMROOT', 'WINDIR', 'SystemDrive', 'COMSPEC', 'PATHEXT', 'NUMBER_OF_PROCESSORS', 'PROCESSOR_ARCHITECTURE', 'OS', 'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY']) {
+  for (const key of [
+    'SystemRoot',
+    'SYSTEMROOT',
+    'WINDIR',
+    'SystemDrive',
+    'COMSPEC',
+    'PATHEXT',
+    'NUMBER_OF_PROCESSORS',
+    'PROCESSOR_ARCHITECTURE',
+    'OS',
+    'HTTP_PROXY',
+    'HTTPS_PROXY',
+    'NO_PROXY',
+  ]) {
     if (inherited[key]) env[key] = inherited[key];
   }
   const runtimeCache = path.join(paths.cache, 'runtime');
   const runtimeHome = path.join(runtimeCache, 'home');
   const systemRoot = env.SystemRoot ?? env.SYSTEMROOT ?? env.WINDIR ?? 'C:\\Windows';
-  env.PATH = [path.dirname(paths.python), path.join(paths.runtime, 'tools'), path.join(systemRoot, 'System32'), systemRoot].join(path.delimiter);
+  env.PATH = [
+    path.dirname(paths.python),
+    path.join(paths.runtime, 'tools'),
+    path.join(systemRoot, 'System32'),
+    systemRoot,
+  ].join(path.delimiter);
   env.HOME = runtimeHome;
   env.USERPROFILE = runtimeHome;
   env.APPDATA = path.join(runtimeHome, 'AppData', 'Roaming');
@@ -95,17 +115,31 @@ export function runtimeEnvironment(paths: AppPaths, inherited: NodeJS.ProcessEnv
 export function backendArguments(paths: AppPaths, port: number, settings?: Pick<AppSettings, 'deviceMode'>): string[] {
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid managed backend port.');
   const args = [
-    '-s', path.join(paths.runtime, 'comfy-launcher.py'),
-    '--listen', '127.0.0.1', '--port', String(port),
-    '--base-directory', paths.root,
-    '--extra-model-paths-config', path.join(paths.runtime, 'extra-model-paths.yaml'),
-    '--input-directory', paths.inputs,
-    '--output-directory', paths.outputs,
-    '--temp-directory', paths.temp,
-    '--user-directory', paths.user,
-    '--database-url', `sqlite:///${path.join(paths.user, 'comfyui.db').replaceAll('\\', '/')}`,
-    '--disable-auto-launch', '--disable-api-nodes',
-    '--preview-method', 'latent2rgb', '--log-stdout',
+    '-s',
+    path.join(paths.runtime, 'comfy-launcher.py'),
+    '--listen',
+    '127.0.0.1',
+    '--port',
+    String(port),
+    '--base-directory',
+    paths.root,
+    '--extra-model-paths-config',
+    path.join(paths.runtime, 'extra-model-paths.yaml'),
+    '--input-directory',
+    paths.inputs,
+    '--output-directory',
+    paths.outputs,
+    '--temp-directory',
+    paths.temp,
+    '--user-directory',
+    paths.user,
+    '--database-url',
+    `sqlite:///${path.join(paths.user, 'comfyui.db').replaceAll('\\', '/')}`,
+    '--disable-auto-launch',
+    '--disable-api-nodes',
+    '--preview-method',
+    'latent2rgb',
+    '--log-stdout',
   ];
   if (settings?.deviceMode === 'cpu') args.push('--cpu');
   if (settings?.deviceMode === 'lowvram') args.push('--lowvram', '--disable-dynamic-vram');
@@ -117,11 +151,21 @@ export function modelPathsYaml(paths: AppPaths, externalRoots: readonly BackendM
   const scalar = (value: string) => JSON.stringify(value.replaceAll('\\', '/'));
   if (externalRoots.length > 32) throw new Error('Too many reusable model directory mappings.');
   const ids = new Set<string>();
-  const mappings = externalRoots.map(root => {
-    if (!/^root_[a-f0-9-]{36}$/.test(root.id) || ids.has(root.id) || !['checkpoint', 'lora'].includes(root.kind) || !path.isAbsolute(root.path) || /[\r\n\u0000]/.test(root.path) || root.path.length > 2000) throw new Error('Invalid approved model directory mapping.');
-    ids.add(root.id);
-    return `latentv2_external_${root.id}:\n  is_default: false\n  ${root.kind === 'checkpoint' ? 'checkpoints' : 'loras'}: ${scalar(root.path)}\n`;
-  }).join('');
+  const mappings = externalRoots
+    .map(root => {
+      if (
+        !/^root_[a-f0-9-]{36}$/.test(root.id) ||
+        ids.has(root.id) ||
+        !['checkpoint', 'lora'].includes(root.kind) ||
+        !path.isAbsolute(root.path) ||
+        /[\r\n\u0000]/.test(root.path) ||
+        root.path.length > 2000
+      )
+        throw new Error('Invalid approved model directory mapping.');
+      ids.add(root.id);
+      return `latentv2_external_${root.id}:\n  is_default: false\n  ${root.kind === 'checkpoint' ? 'checkpoints' : 'loras'}: ${scalar(root.path)}\n`;
+    })
+    .join('');
   return `latentv2:\n  base_path: ${scalar(paths.models)}\n  is_default: true\n  checkpoints: checkpoints\n  loras: loras\n  vae: vae\n  embeddings: embeddings\n  controlnet: controlnet\n  upscale_models: upscale_models\n  diffusion_models: diffusion_models\n  text_encoders: text_encoders\n  clip_vision: clip_vision\nlatentv2_qwen_loras:\n  base_path: ${scalar(paths.models)}\n  is_default: false\n  loras: qwen-edit-loras\nlatentv2_video_loras:\n  base_path: ${scalar(paths.models)}\n  is_default: false\n  loras: video-loras\n${mappings}`;
 }
 

@@ -5,15 +5,22 @@ const KEY = 'video-editor-sessions@1';
 export class VideoConversationService {
   constructor(private store: Pick<StudioStore, 'getState' | 'setState' | 'settings'>) {}
   get(): VideoConversation | null {
-    const saved = this.store.getState<unknown>(KEY, null); if (saved === null) return null;
+    const saved = this.store.getState<unknown>(KEY, null);
+    if (saved === null) return null;
     return this.remembered(videoConversationSchema.parse(saved));
   }
-  save(value: VideoConversation): void { this.store.setState(KEY, this.remembered(videoConversationSchema.parse(value))); }
+  save(value: VideoConversation): void {
+    this.store.setState(KEY, this.remembered(videoConversationSchema.parse(value)));
+  }
   applyPromptMemoryPolicy(): void {
     if (this.store.settings().rememberPositivePrompt) return;
-    const saved = this.get(); if (saved) this.save(saved); new VideoDraftService(this.store).applyPromptMemoryPolicy();
+    const saved = this.get();
+    if (saved) this.save(saved);
+    new VideoDraftService(this.store).applyPromptMemoryPolicy();
   }
   private remembered(value: VideoConversation): VideoConversation {
-    const result = structuredClone(value); if (!this.store.settings().rememberPositivePrompt) for (const session of result.sessions) session.draft.prompt = ''; return result;
+    const result = structuredClone(value);
+    if (!this.store.settings().rememberPositivePrompt) for (const session of result.sessions) session.draft.prompt = '';
+    return result;
   }
 }

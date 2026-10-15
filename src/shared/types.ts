@@ -1,7 +1,20 @@
 import type { AppUpdateSettings, AppUpdateStatus } from './app-update-types';
-import type { AssistantConversation, AssistantStatus, AssistantSuggestion, AssistantSuggestionRequest } from './assistant-types';
+import type {
+  AssistantConversation,
+  AssistantStatus,
+  AssistantSuggestion,
+  AssistantSuggestionRequest,
+} from './assistant-types';
 import type { SourceImageAsset, SourceImageInventory, SourceMaskAsset, SourceMaskSaveOptions } from './source-types';
-import type { CivitaiDownloadRequest, CivitaiModel, CivitaiPermissions, CivitaiReadResult, CivitaiSearchPage, CivitaiSearchRequest, CivitaiSettings } from './civitai-types';
+import type {
+  CivitaiDownloadRequest,
+  CivitaiModel,
+  CivitaiPermissions,
+  CivitaiReadResult,
+  CivitaiSearchPage,
+  CivitaiSearchRequest,
+  CivitaiSettings,
+} from './civitai-types';
 import type { SegmentationRequest, SegmentationStatus, SegmentationSuggestion } from './segmentation-types';
 import type { AdvancedImagePlan, HiresFixSettings, UpscaleSettings, UpscalerStatus } from './advanced-image-types';
 import type { DynamicPromptAuthoring, DynamicPromptRecipe, WildcardSnapshot } from './dynamic-prompt-recipe';
@@ -15,7 +28,12 @@ import type { QwenConversationStore } from './qwen-conversation';
 import type { RegionalPromptPlan, RegionalPromptSettings } from './regional-prompt-types';
 import type { IPAdapterPlan, IPAdapterSettings, IPAdapterStatus } from './ipadapter-types';
 import type { RuntimeUpdateSettings, RuntimeUpdateStatus } from './runtime-update-types';
-import type { FaceDetectionReceipt, FaceDetectionRequest, FaceDetailerStatus, FaceRefinementRequest } from './face-detailer-types';
+import type {
+  FaceDetectionReceipt,
+  FaceDetectionRequest,
+  FaceDetailerStatus,
+  FaceRefinementRequest,
+} from './face-detailer-types';
 import type { FaceRefinementPlan, FaceRefinementOutput } from './face-detailer-workflow';
 import type { DownloadStorageSnapshot, PackageStorageSnapshot, StorageOverviewSnapshot } from './storage-types';
 import type { BackendActivitySnapshot, SubmittedJobQueueState } from './backend-activity-types';
@@ -23,16 +41,46 @@ import type { VideoAvailability, VideoDraft, VideoHistoryRecord, VideoPlan } fro
 import type { VideoAssetBundle } from './video-assets';
 import type { VideoConversation } from './video-conversation';
 import type { ModelTransferRecovery, ModelTransferRetryRequest } from './model-transfer-types';
-import type { HardwareProfilesStatus, HardwareRecommendationReport, HardwareProfileApplication, HardwareOomAdvice } from './hardware-profile-types';
-export interface FaceDetailerRecipe { plan: FaceRefinementPlan; detection: FaceDetectionReceipt; source: SourceImageAsset; outputs: FaceRefinementOutput[]; }
-export interface CivitaiProvenance { creator?: string; description?: string; trainedWords?: string[]; previewUrl?: string; fetchedAt?: string; modelId: number; versionId: number; fileId: number; modelName: string; versionName: string; baseModel: string; sourceUrl: string; permissions: CivitaiPermissions; }
+import type {
+  HardwareProfilesStatus,
+  HardwareRecommendationReport,
+  HardwareProfileApplication,
+  HardwareOomAdvice,
+} from './hardware-profile-types';
+export interface FaceDetailerRecipe {
+  plan: FaceRefinementPlan;
+  detection: FaceDetectionReceipt;
+  source: SourceImageAsset;
+  outputs: FaceRefinementOutput[];
+}
+export interface CivitaiProvenance {
+  creator?: string;
+  description?: string;
+  trainedWords?: string[];
+  previewUrl?: string;
+  fetchedAt?: string;
+  modelId: number;
+  versionId: number;
+  fileId: number;
+  modelName: string;
+  versionName: string;
+  baseModel: string;
+  sourceUrl: string;
+  permissions: CivitaiPermissions;
+}
 export type ModelFamily = 'sdxl' | 'illustrious';
 /** Both supported families share the SDXL LoRA architecture; unknown families remain blocked. */
 export function isLoraFamilyCompatible(loraFamily: string | undefined, checkpointFamily: string | undefined): boolean {
   return ['sdxl', 'illustrious'].includes(loraFamily ?? '') && ['sdxl', 'illustrious'].includes(checkpointFamily ?? '');
 }
 export type ModelKind = 'checkpoint' | 'lora';
-export interface ModelProvenance { repository: string; revision: string; licenseName: string; version?: string; baseModel?: string; }
+export interface ModelProvenance {
+  repository: string;
+  revision: string;
+  licenseName: string;
+  version?: string;
+  baseModel?: string;
+}
 export interface ModelAsset {
   civitai?: CivitaiProvenance;
   id: string;
@@ -48,9 +96,22 @@ export interface ModelAsset {
   provenance?: ModelProvenance;
   status: 'ready' | 'missing';
 }
-export interface LoraSelection { modelId: string; weight: number; clipWeight: number; }
+export interface LoraSelection {
+  modelId: string;
+  weight: number;
+  clipWeight: number;
+}
 export interface GenerationDraft {
-  autoFace?: { profile: 'illustrated' | 'anime' | 'photographic'; strength: number; classic?: boolean; applyLoras?: boolean; steps?: number; cfg?: number; sampler?: string; scheduler?: string };
+  autoFace?: {
+    profile: 'illustrated' | 'anime' | 'photographic';
+    strength: number;
+    classic?: boolean;
+    applyLoras?: boolean;
+    steps?: number;
+    cfg?: number;
+    sampler?: string;
+    scheduler?: string;
+  };
   autoFaceParentRecordId?: string;
   enhance?: { parentRecordId: string; standard?: boolean; method?: 'image' };
   faceDetailer?: { request: FaceRefinementRequest; frozen?: FaceRefinementPlan };
@@ -62,7 +123,17 @@ export interface GenerationDraft {
   dynamicPrompts?: DynamicPromptAuthoring;
   hiresFix?: HiresFixSettings;
   upscale?: UpscaleSettings;
-  imageInput?: { mode: 'img2img' | 'inpaint'; sourceId: string; sourceSha256: string; maskId?: string; maskSha256?: string; denoise: number; resize: 'stretch' | 'center-crop'; crop?: CropInpaintSettings; cropPlan?: CropInpaintPlan };
+  imageInput?: {
+    mode: 'img2img' | 'inpaint';
+    sourceId: string;
+    sourceSha256: string;
+    maskId?: string;
+    maskSha256?: string;
+    denoise: number;
+    resize: 'stretch' | 'center-crop';
+    crop?: CropInpaintSettings;
+    cropPlan?: CropInpaintPlan;
+  };
   family: ModelFamily;
   checkpointId: string;
   prompt: string;
@@ -83,9 +154,14 @@ export interface GenerationDraft {
   triggerWords?: Record<string, string[]>;
   assetHashes?: Record<string, string>;
 }
-export interface Preset { id: string; name: string; draft: GenerationDraft; }
+export interface Preset {
+  id: string;
+  name: string;
+  draft: GenerationDraft;
+}
 export interface AppSettings {
-  civitaiAutoMetadata?: boolean; civitaiDisplayMetadata?: boolean;
+  civitaiAutoMetadata?: boolean;
+  civitaiDisplayMetadata?: boolean;
   showGenerationPreview: boolean;
   theme: 'system' | 'dark' | 'light';
   accent: 'iris' | 'sea-glass' | 'rose' | 'sky' | 'amber' | 'peach' | 'mint' | 'lilac';
@@ -147,14 +223,26 @@ export interface QueueJobBase {
   outputIds: string[];
   previewUrl?: string;
 }
-export interface GenerationJob extends QueueJobBase { kind?: 'image'; draft: GenerationDraft; autoFaceFinished?: boolean; autoFaceResults?: Record<string, { state: 'queued' | 'skipped' | 'failed'; jobId?: string; message?: string }>; }
+export interface GenerationJob extends QueueJobBase {
+  kind?: 'image';
+  draft: GenerationDraft;
+  autoFaceFinished?: boolean;
+  autoFaceResults?: Record<string, { state: 'queued' | 'skipped' | 'failed'; jobId?: string; message?: string }>;
+}
 export interface VideoJob extends QueueJobBase {
-  kind: 'video'; video: VideoDraft; frames: number; durationSeconds: number;
+  kind: 'video';
+  video: VideoDraft;
+  frames: number;
+  durationSeconds: number;
   finalization?: 'pending' | 'failed';
 }
 export type StudioJob = GenerationJob | VideoJob;
-export function isImageJob(job: StudioJob): job is GenerationJob { return job.kind !== 'video'; }
-export function isVideoJob(job: StudioJob): job is VideoJob { return job.kind === 'video'; }
+export function isImageJob(job: StudioJob): job is GenerationJob {
+  return job.kind !== 'video';
+}
+export function isVideoJob(job: StudioJob): job is VideoJob {
+  return job.kind === 'video';
+}
 export interface GenerationRecord {
   faceDetailer?: FaceDetailerRecipe;
   facePass?: { index: number; faceId: string; seed: string; parentRecordId?: string; parentOutputNodeId?: string };
@@ -201,12 +289,29 @@ export interface DownloadStatus {
   totalBytes: number;
   error?: string;
 }
-export interface ModelDownloadRequest { url: string; filename: string; kind: ModelKind; family: ModelFamily; sha256?: string; triggers?: string[]; sourceUrl?: string; licenseUrl?: string; provenance?: ModelProvenance; civitai?: CivitaiProvenance; }
+export interface ModelDownloadRequest {
+  url: string;
+  filename: string;
+  kind: ModelKind;
+  family: ModelFamily;
+  sha256?: string;
+  triggers?: string[];
+  sourceUrl?: string;
+  licenseUrl?: string;
+  provenance?: ModelProvenance;
+  civitai?: CivitaiProvenance;
+}
 export interface AppSnapshot {
   setupActivity?: import('./setup-activity').SetupActivity[];
   appUpdates?: AppUpdateStatus;
   dismissedActivity?: { queue: string[]; notifications: string[] };
-  notifications?: Array<{ id: string; title: string; body: string; at: string; preference: 'notifyGeneration' | 'notifyError' | 'notifyDownload' }>;
+  notifications?: Array<{
+    id: string;
+    title: string;
+    body: string;
+    at: string;
+    preference: 'notifyGeneration' | 'notifyError' | 'notifyDownload';
+  }>;
   video: VideoAvailability;
   backendActivity: BackendActivitySnapshot;
   hardwareProfiles: HardwareProfilesStatus;
@@ -235,7 +340,10 @@ export interface AppSnapshot {
   downloads: DownloadStatus[];
 }
 export type ComfyInput = string | number | boolean | [string, number];
-export type ComfyWorkflow = Record<string, { class_type: string; inputs: Record<string, ComfyInput>; _meta?: { title: string } }>;
+export type ComfyWorkflow = Record<
+  string,
+  { class_type: string; inputs: Record<string, ComfyInput>; _meta?: { title: string } }
+>;
 export interface LatentAPI {
   saveAppUpdateSettings(settings: Partial<AppUpdateSettings>): Promise<void>;
   checkAppUpdates(): Promise<void>;
@@ -264,7 +372,11 @@ export interface LatentAPI {
   revealStorageDestination(id: string): Promise<void>;
   refreshHardwareProfiles(): Promise<HardwareProfilesStatus>;
   recommendHardwareProfiles(draft: GenerationDraft): Promise<HardwareRecommendationReport>;
-  applyHardwareProfile(request: { reportId: string; profileId: string; draft: GenerationDraft }): Promise<HardwareProfileApplication>;
+  applyHardwareProfile(request: {
+    reportId: string;
+    profileId: string;
+    draft: GenerationDraft;
+  }): Promise<HardwareProfileApplication>;
   applyHardwareBackendRecommendation(reportId: string): Promise<AppSnapshot>;
   getJobMemoryAdvice(jobId: string): Promise<HardwareOomAdvice>;
   setupFaceDetailer(repair?: boolean): Promise<void>;
@@ -360,4 +472,8 @@ export interface LatentAPI {
   onBeforeClose(listener: () => Promise<void>): () => void;
   onCloseCancelled(listener: () => void): () => void;
 }
-declare global { interface Window { latent: LatentAPI; } }
+declare global {
+  interface Window {
+    latent: LatentAPI;
+  }
+}

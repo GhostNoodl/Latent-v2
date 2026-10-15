@@ -28,4 +28,7 @@ export interface ModelTransferRecovery {
   warnings: string[];
   preparing?: string[];
 }
-export interface ModelTransferRetryRequest { id: string; url?: string; }
+export interface ModelTransferRetryRequest {
+  id: string;
+  url?: string;
+}

@@ -1,12 +1,27 @@
 export type TagSource = 'both' | 'e621' | 'danbooru' | 'off';
-export interface TagEntry { name: string; aliases: string[]; count: number; source: 'e621' | 'danbooru' }
-export interface TagSuggestion { name: string; count: number; sources: string[]; alias?: string }
-export interface TagToken { start: number; end: number; query: string }
+export interface TagEntry {
+  name: string;
+  aliases: string[];
+  count: number;
+  source: 'e621' | 'danbooru';
+}
+export interface TagSuggestion {
+  name: string;
+  count: number;
+  sources: string[];
+  alias?: string;
+}
+export interface TagToken {
+  start: number;
+  end: number;
+  query: string;
+}
 
 /** Complete the comma-delimited tag at the caret, retaining prompt weights. */
 export function tagToken(value: string, caret: number, selectionEnd = caret): TagToken | undefined {
   if (caret !== selectionEnd) return;
-  let start = caret; let end = caret;
+  let start = caret;
+  let end = caret;
   while (start > 0 && !',\n'.includes(value[start - 1])) start--;
   while (end < value.length && !',\n'.includes(value[end])) end++;
   const segment = value.slice(start, end);
@@ -20,7 +35,12 @@ export function tagToken(value: string, caret: number, selectionEnd = caret): Ta
   }
   if (wrappers.length) end -= value.slice(start, end).match(/:[+-]?[\d.]+$/)?.[0].length ?? 0;
   if (caret < start || caret > end) return;
-  const query = value.slice(start, caret).replace(/\\([()])/g, '$1').trim().toLowerCase().replace(/\s+/g, '_');
+  const query = value
+    .slice(start, caret)
+    .replace(/\\([()])/g, '$1')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
   if (query.length < 2 || query.length > 80) return;
   return { start, end, query };
 }
@@ -30,8 +50,13 @@ export function insertTag(value: string, token: TagToken, name: string) {
   const text = name.replaceAll('_', ' ').replace(/[()]/g, '\\$&');
   let tail = value.slice(token.end);
   let caret = token.start + text.length;
-  if (!tail.trim()) { tail = ', '; caret += 2; }
-  else if (/^(?::[+-]?[\d.]+)?[)\]]+\s*$/.test(tail)) { tail = tail.trimEnd() + ', '; caret += tail.length; }
+  if (!tail.trim()) {
+    tail = ', ';
+    caret += 2;
+  } else if (/^(?::[+-]?[\d.]+)?[)\]]+\s*$/.test(tail)) {
+    tail = tail.trimEnd() + ', ';
+    caret += tail.length;
+  }
   return { value: value.slice(0, token.start) + text + tail, caret };
 }
 
@@ -51,37 +76,66 @@ export function searchTags(entries: TagEntry[], query: string, source: TagSource
   const q = query.trim().toLowerCase().replace(/\s+/g, '_');
   if (source === 'off' || q.length < 2 || q.length > 80) return [];
   const matches = new Map<string, TagSuggestion & { rank: number }>();
-  const rank = (value: string) => { const s = value.toLowerCase(); return s === q ? 0 : s.startsWith(q) ? 1 : s.includes('_' + q) ? 2 : s.includes(q) ? 3 : 9; };
+  const rank = (value: string) => {
+    const s = value.toLowerCase();
+    return s === q ? 0 : s.startsWith(q) ? 1 : s.includes('_' + q) ? 2 : s.includes(q) ? 3 : 9;
+  };
   for (const entry of entries) {
     if (source !== 'both' && source !== entry.source) continue;
-    let score = rank(entry.name); let alias: string | undefined;
-    for (const candidate of entry.aliases) { const r = rank(candidate) + 0.5; if (r < score) { score = r; alias = candidate; } }
+    let score = rank(entry.name);
+    let alias: string | undefined;
+    for (const candidate of entry.aliases) {
+      const r = rank(candidate) + 0.5;
+      if (r < score) {
+        score = r;
+        alias = candidate;
+      }
+    }
     if (score >= 9) continue;
     const prior = matches.get(entry.name);
-    if (prior) { prior.count = Math.max(prior.count, entry.count); if (!prior.sources.includes(entry.source)) prior.sources.push(entry.source); if (score < prior.rank) { prior.rank = score; prior.alias = alias; } }
-    else matches.set(entry.name, { name: entry.name, count: entry.count, sources: [entry.source], alias, rank: score });
+    if (prior) {
+      prior.count = Math.max(prior.count, entry.count);
+      if (!prior.sources.includes(entry.source)) prior.sources.push(entry.source);
+      if (score < prior.rank) {
+        prior.rank = score;
+        prior.alias = alias;
+      }
+    } else
+      matches.set(entry.name, { name: entry.name, count: entry.count, sources: [entry.source], alias, rank: score });
   }
-  return [...matches.values()].sort((a, b) => a.rank - b.rank || b.count - a.count || a.name.localeCompare(b.name)).slice(0, limit).map(({ rank: _, ...entry }) => entry);
+  return [...matches.values()]
+    .sort((a, b) => a.rank - b.rank || b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, limit)
+    .map(({ rank: _, ...entry }) => entry);
 }
 
 /** Narrow common prefix/word searches before falling back to substring matching. */
 export function createTagSearch(entries: TagEntry[]) {
- const byName=new Map<string,TagEntry[]>();
- for(const entry of entries)byName.set(entry.name,[...(byName.get(entry.name)??[]),entry]);
- const buckets=new Map<string,Set<TagEntry>>();
- for(const entry of entries)for(const text of [entry.name,...entry.aliases])for(const word of text.toLowerCase().split('_')) {
-  if(word.length<2)continue;const key=word.slice(0,2);
-  let bucket=buckets.get(key);if(!bucket){bucket=new Set();buckets.set(key,bucket);}for(const sibling of byName.get(entry.name)!)bucket.add(sibling);
- }
- return (query:string,source:TagSource,limit=12)=>{
-  const q=query.trim().toLowerCase().replace(/\s+/g,'_');
-  if(source==='off'||q.length<2||q.length>80)return [];
-  const subset=[...(buckets.get(q.slice(0,2))??[])];
-  const fast=searchTags(subset,q,source,limit);
-  // Substring candidates can outrank alias-only substring matches, so fall back
-  // unless the full page consists of exact/prefix/word-prefix matches.
-  const wordMatch=(text:string)=>text===q||text.startsWith(q)||text.includes('_'+q);
-  if(fast.length===limit&&fast.every(item=>wordMatch(item.name)||!!item.alias&&wordMatch(item.alias)))return fast;
-  return searchTags(entries,q,source,limit);
- };
+  const byName = new Map<string, TagEntry[]>();
+  for (const entry of entries) byName.set(entry.name, [...(byName.get(entry.name) ?? []), entry]);
+  const buckets = new Map<string, Set<TagEntry>>();
+  for (const entry of entries)
+    for (const text of [entry.name, ...entry.aliases])
+      for (const word of text.toLowerCase().split('_')) {
+        if (word.length < 2) continue;
+        const key = word.slice(0, 2);
+        let bucket = buckets.get(key);
+        if (!bucket) {
+          bucket = new Set();
+          buckets.set(key, bucket);
+        }
+        for (const sibling of byName.get(entry.name)!) bucket.add(sibling);
+      }
+  return (query: string, source: TagSource, limit = 12) => {
+    const q = query.trim().toLowerCase().replace(/\s+/g, '_');
+    if (source === 'off' || q.length < 2 || q.length > 80) return [];
+    const subset = [...(buckets.get(q.slice(0, 2)) ?? [])];
+    const fast = searchTags(subset, q, source, limit);
+    // Substring candidates can outrank alias-only substring matches, so fall back
+    // unless the full page consists of exact/prefix/word-prefix matches.
+    const wordMatch = (text: string) => text === q || text.startsWith(q) || text.includes('_' + q);
+    if (fast.length === limit && fast.every(item => wordMatch(item.name) || (!!item.alias && wordMatch(item.alias))))
+      return fast;
+    return searchTags(entries, q, source, limit);
+  };
 }

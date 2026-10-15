@@ -1,13 +1,24 @@
 /** Experimental import bounds, independent of supported generation dimensions. */
-export const SOURCE_IMAGE_LIMITS = Object.freeze({ maxDimension: 8192, maxPixels: 32 * 1024 * 1024, maxInputBytes: 64 * 1024 * 1024 });
+export const SOURCE_IMAGE_LIMITS = Object.freeze({
+  maxDimension: 8192,
+  maxPixels: 32 * 1024 * 1024,
+  maxInputBytes: 64 * 1024 * 1024,
+});
 export type SourceImageMimeType = 'image/png' | 'image/jpeg' | 'image/webp';
 export type SourceMaskEdit =
   | { kind: 'paint' | 'erase' | 'rectangle' | 'invert' | 'clear' | 'fill' }
   | { kind: 'sam'; proposalMaskId: string }
   | { kind: 'grow' | 'shrink'; radius: number; shape: 'square'; boundary: 'black'; algorithmVersion: 1 }
   | { kind: 'feather'; radius: number; sigma: number; boundary: 'clamp'; algorithmVersion: 1 };
-export interface SourceMaskSaveOptions { baseMaskId?: string | null; edits?: SourceMaskEdit[]; }
-export interface SourceMaskEditProvenance { version: 1; baseMaskId: string | null; edits: SourceMaskEdit[]; }
+export interface SourceMaskSaveOptions {
+  baseMaskId?: string | null;
+  edits?: SourceMaskEdit[];
+}
+export interface SourceMaskEditProvenance {
+  version: 1;
+  baseMaskId: string | null;
+  edits: SourceMaskEdit[];
+}
 
 export interface SourceImageIdentity {
   sha256: string;

@@ -9,7 +9,10 @@ const graph: ComfyWorkflow = {
 };
 describe('backend model filename binding', () => {
   it('uses exact advertised Windows filenames and preserves canonical recipes for repeated preflight', () => {
-    const objects = { CheckpointLoaderSimple: { input: { required: { ckpt_name: [['Portraits\\base.safetensors']] } } }, LoraLoader: { input: { required: { lora_name: ['COMBO', { options: ['Styles\\art.safetensors'] }] } } } };
+    const objects = {
+      CheckpointLoaderSimple: { input: { required: { ckpt_name: [['Portraits\\base.safetensors']] } } },
+      LoraLoader: { input: { required: { lora_name: ['COMBO', { options: ['Styles\\art.safetensors'] }] } } },
+    };
     const bound = bindModelPaths(graph, objects);
     expect(bound['1'].inputs.ckpt_name).toBe('Portraits\\base.safetensors');
     expect(bound['2'].inputs.lora_name).toBe('Styles\\art.safetensors');
@@ -19,11 +22,20 @@ describe('backend model filename binding', () => {
     expect(graph['2'].inputs.lora_name).toBe('Styles/art.safetensors');
   });
   it('rejects absent, ambiguous and case-different filenames instead of substituting another asset', () => {
-    for (const options of [[], ['Styles/other.safetensors'], ['styles/art.safetensors'], ['Styles/art.safetensors', 'Styles\\art.safetensors']]) {
-      expect(() => bindModelPaths(graph, { LoraLoader: { input: { required: { lora_name: [options] } } } })).toThrow('unambiguous');
+    for (const options of [
+      [],
+      ['Styles/other.safetensors'],
+      ['styles/art.safetensors'],
+      ['Styles/art.safetensors', 'Styles\\art.safetensors'],
+    ]) {
+      expect(() => bindModelPaths(graph, { LoraLoader: { input: { required: { lora_name: [options] } } } })).toThrow(
+        'unambiguous',
+      );
     }
   });
   it('keeps exact POSIX choices and never normalizes arbitrary enum values', () => {
-    expect(bindModelPaths(graph, { LoraLoader: { input: { required: { lora_name: [['Styles/art.safetensors']] } } } })).toEqual(graph);
+    expect(
+      bindModelPaths(graph, { LoraLoader: { input: { required: { lora_name: [['Styles/art.safetensors']] } } } }),
+    ).toEqual(graph);
   });
 });
