@@ -2,12 +2,35 @@ import { expect, it, vi } from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, generateKeyPairSync } from 'node:crypto';
 import { AppUpdateService } from '../src/main/app-updates';
 import { parseAppRelease, newerVersion, APP_RELEASE_API } from '../src/shared/app-update-types';
+import { releaseSigningMessage } from '../src/shared/app-release-signing';
+import { releaseSigningMessage as scriptSigningMessage, signInstaller } from '../scripts/release-signing.mjs';
+import { verifyReleaseSignature } from '../src/main/app-update-signature';
 const bytes = Buffer.from('MZ test installer fixture - never executed');
+const installerName = 'Latent-v2-0.2.0-Setup-x64-unsigned.exe';
+const keyPair = () => {
+  const pair = generateKeyPairSync('ed25519');
+  return {
+    pem: pair.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+    raw: Buffer.from(pair.publicKey.export({ format: 'jwk' }).x!, 'base64url').toString('base64'),
+  };
+};
+const publisher = keyPair();
+async function signatureFor(pem = publisher.pem) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'latent-sign-test-'));
+  try {
+    await fs.writeFile(path.join(dir, installerName), bytes);
+    return await signInstaller(path.join(dir, installerName), pem);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+}
+const signature = await signatureFor();
+const isSignature = (url: string) => url.endsWith('.sig');
 function release() {
-  const name = 'Latent-v2-0.2.0-Setup-x64-unsigned.exe';
+  const name = installerName;
   return {
     tag_name: 'v0.2.0',
     draft: false,
@@ -19,17 +42,28 @@ function release() {
         digest: 'sha256:' + createHash('sha256').update(bytes).digest('hex'),
         browser_download_url: 'https://github.com/GhostNoodl/Latent-v2/releases/download/v0.2.0/' + name,
       },
+      {
+        name: name + '.sig',
+        size: 89,
+        digest: null as string | null,
+        browser_download_url: 'https://github.com/GhostNoodl/Latent-v2/releases/download/v0.2.0/' + name + '.sig',
+      },
     ],
   };
 }
 async function fixture(
   run: (service: AppUpdateService, root: string, request: ReturnType<typeof vi.fn>) => Promise<void>,
   supported = true,
+  keys: readonly string[] = [publisher.raw],
 ) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'latent-update-test-'));
   const values = new Map<string, unknown>();
   const request = vi.fn(async (url: string, _init?: RequestInit) =>
-    url === APP_RELEASE_API ? Response.json(release()) : new Response(bytes),
+    url === APP_RELEASE_API
+      ? Response.json(release())
+      : isSignature(url)
+        ? new Response(signature + '\n')
+        : new Response(bytes),
   );
   const service = new AppUpdateService(
     root,
@@ -43,6 +77,7 @@ async function fixture(
     supported,
     () => {},
     request as unknown as typeof fetch,
+    keys,
   );
   try {
     await run(service, root, request);
@@ -92,7 +127,8 @@ it('rejects altered cached installers before installation and allows a fresh ver
     expect(s.status().installRequested).toBe(false);
     await s.download();
     expect(s.status().state).toBe('ready');
-    expect(request).toHaveBeenCalledTimes(3);
+    // Release feed + signature at check time, then one installer download each time.
+    expect(request).toHaveBeenCalledTimes(4);
   }));
 it('rejects incomplete or corrupt downloads without a ready installer or leftover partial', () =>
   fixture(async (s, root, request) => {
@@ -138,12 +174,12 @@ it('postpones automatic installation without immediately requesting it again', (
 it('honors preferences revoked during an in-flight automatic check', () =>
   fixture(async (s, _root, request) => {
     s.settings({ checkAutomatically: true, downloadAutomatically: true, installWhenIdle: true });
-    request.mockImplementation(async () => {
+    request.mockImplementation(async (url: string) => {
       s.settings({ checkAutomatically: false });
-      return Response.json(release());
+      return isSignature(url) ? new Response(signature) : Response.json(release());
     });
     await s.automatic();
-    expect(request).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledTimes(2);
     expect(s.status().state).toBe('available');
     expect(s.status().installRequested).toBe(false);
   }));
@@ -177,3 +213,43 @@ it('cancels an in-flight download and leaves no executable ready', () =>
     expect(s.status().installRequested).toBe(false);
     expect(await fs.readdir(path.join(root, 'app-updates'))).toEqual([]);
   }));
+
+it('requires a signature asset that sits next to the installer', () => {
+  const unsigned = release();
+  unsigned.assets.pop();
+  expect(() => parseAppRelease(unsigned, '0.1.1')).toThrow('not signed');
+  const moved = release();
+  moved.assets[1].browser_download_url = 'https://github.com/GhostNoodl/Latent-v2/releases/download/v0.1.0/x.sig';
+  expect(() => parseAppRelease(moved, '0.1.1')).toThrow('not signed');
+  expect(parseAppRelease(release(), '0.1.1')?.signatureUrl).toMatch(/Setup-x64-unsigned\.exe\.sig$/);
+});
+it('keeps the release script and the app agreeing on the signed message', () => {
+  const identity = { name: installerName, bytes: 42, sha256: 'a'.repeat(64) };
+  expect(scriptSigningMessage(identity)).toBe(releaseSigningMessage(identity));
+});
+it('offers no release signed by an unknown key, or when no key is configured', async () => {
+  const stranger = await signatureFor(keyPair().pem);
+  await fixture(async (s, _root, request) => {
+    request.mockImplementation(async (url: string) =>
+      url === APP_RELEASE_API ? Response.json(release()) : new Response(stranger),
+    );
+    await expect(s.check()).rejects.toThrow('trusted Latent v2 publisher');
+    expect(s.status().state).toBe('error');
+    expect(s.status().release).toBeUndefined();
+    await expect(s.download()).rejects.toThrow('Check for a newer release first');
+  });
+  await fixture(
+    async s => {
+      await expect(s.check()).rejects.toThrow('no release signing key');
+      expect(s.status().release).toBeUndefined();
+    },
+    true,
+    [],
+  );
+});
+it('rejects malformed signatures and keys', () => {
+  const identity = { name: installerName, bytes: bytes.length, sha256: 'b'.repeat(64) };
+  expect(() => verifyReleaseSignature(identity, 'not-a-signature', [publisher.raw])).toThrow('malformed');
+  expect(() => verifyReleaseSignature(identity, signature, ['short'])).toThrow('malformed');
+  expect(() => verifyReleaseSignature(identity, signature, [publisher.raw])).toThrow('trusted');
+});

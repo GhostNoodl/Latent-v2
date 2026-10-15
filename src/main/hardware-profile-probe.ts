@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
@@ -31,9 +32,21 @@ export function parseNvidiaInventory(csv: string): HardwareGpu[] {
   }
   return gpus.sort((a, b) => a.index - b.index);
 }
+/**
+ * Absolute nvidia-smi path on Windows. A bare name would let Windows' process search pick up
+ * a same-named file from the current directory before System32.
+ */
+export function nvidiaSmi(env: NodeJS.ProcessEnv = process.env, platform = process.platform) {
+  if (platform !== 'win32') return 'nvidia-smi';
+  const candidates = [
+    path.win32.join(env.SystemRoot ?? 'C:\\Windows', 'System32', 'nvidia-smi.exe'),
+    path.win32.join(env.ProgramFiles ?? 'C:\\Program Files', 'NVIDIA Corporation', 'NVSMI', 'nvidia-smi.exe'),
+  ];
+  return candidates.find(candidate => fs.existsSync(candidate)) ?? candidates[0];
+}
 export async function queryNvidiaInventory(): Promise<HardwareGpu[]> {
   const result = await execute(
-    'nvidia-smi',
+    nvidiaSmi(),
     ['--query-gpu=index,uuid,name,memory.total,driver_version', '--format=csv,noheader,nounits'],
     { windowsHide: true, timeout: 8000, maxBuffer: 32768 },
   );
@@ -167,7 +180,7 @@ export class HardwareTelemetryRecorder {
     private maxSamples = 20000,
     private readSample = async () => {
       const result = await execute(
-        'nvidia-smi',
+        nvidiaSmi(),
         ['--id=' + gpuUuid, '--query-gpu=memory.used,utilization.gpu', '--format=csv,noheader,nounits'],
         { windowsHide: true, timeout: 5000, maxBuffer: 8192 },
       );

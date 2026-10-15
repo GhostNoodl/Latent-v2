@@ -11,6 +11,8 @@ import {
   type AppUpdateStatus,
   type AppRelease,
 } from '../shared/app-update-types';
+import { APP_RELEASE_PUBLIC_KEYS, RELEASE_SIGNATURE_MAX_BYTES } from '../shared/app-release-signing';
+import { verifyReleaseSignature } from './app-update-signature';
 interface Store {
   getState<T>(key: string, fallback: T): T;
   setState(key: string, value: unknown): void;
@@ -31,6 +33,7 @@ export class AppUpdateService {
     supported: boolean,
     private changed: () => void,
     private request: typeof fetch = fetch,
+    private publicKeys: readonly string[] = APP_RELEASE_PUBLIC_KEYS,
   ) {
     const saved = appUpdateSettingsSchema.safeParse(
       store.getState('app-updates.settings', DEFAULT_APP_UPDATE_SETTINGS),
@@ -149,19 +152,33 @@ export class AppUpdateService {
     }
     throw Error('The update download redirected too many times.');
   }
+  private async text(url: string, signal: AbortSignal, limit: number, label: string) {
+    const response = await this.response(url, signal);
+    const chunks: Uint8Array[] = [];
+    let bytes = 0;
+    if (!response.body) throw Error(`Empty ${label} response.`);
+    for await (const chunk of response.body) {
+      bytes += chunk.length;
+      if (bytes > limit) throw Error(`The ${label} response is too large.`);
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks).toString('utf8');
+  }
   async check() {
     this.nextCheck = Date.now() + 24 * 60 * 60_000;
     await this.run('checking', async signal => {
-      const response = await this.response(APP_RELEASE_API, signal);
-      const chunks: Uint8Array[] = [];
-      let bytes = 0;
-      if (!response.body) throw Error('Empty release response.');
-      for await (const chunk of response.body) {
-        bytes += chunk.length;
-        if (bytes > 2 * 1024 * 1024) throw Error('The release response is too large.');
-        chunks.push(chunk);
-      }
-      const release = parseAppRelease(JSON.parse(Buffer.concat(chunks).toString('utf8')), this.value.currentVersion);
+      const release = parseAppRelease(
+        JSON.parse(await this.text(APP_RELEASE_API, signal, 2 * 1024 * 1024, 'release')),
+        this.value.currentVersion,
+      );
+      // Trust is decided before anything is downloaded: an unsigned or foreign-signed
+      // release is never offered, so it can never reach the installer launch path.
+      if (release)
+        verifyReleaseSignature(
+          release,
+          await this.text(release.signatureUrl, signal, RELEASE_SIGNATURE_MAX_BYTES, 'signature'),
+          this.publicKeys,
+        );
       this.file = undefined;
       this.update({
         release,

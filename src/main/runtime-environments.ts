@@ -152,6 +152,9 @@ export async function prepareRuntimeEnvironment(
     }
     signal.throwIfAborted();
     report('Installing the reviewed packages in the separate environment…');
+    // PyTorch is already installed from its own index (with --no-deps), and the installed
+    // build satisfies its exact +cu pin. Resolve everything else from PyPI only, so a
+    // same-named package on a second index can never be chosen (dependency confusion).
     await install([
       'pip',
       'install',
@@ -159,10 +162,6 @@ export async function prepareRuntimeEnvironment(
       location.paths.python,
       '--default-index',
       'https://pypi.org/simple',
-      '--index',
-      RUNTIME_RELEASE.torchIndex,
-      '--index-strategy',
-      'unsafe-best-match',
       '--constraint',
       pathToFileURL(location.requirements).href,
       '--requirements',

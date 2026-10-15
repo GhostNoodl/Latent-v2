@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { isNonPublicHost } from './network-hosts';
 import { cleanModelFilename } from '../shared/model-names';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
@@ -256,6 +257,8 @@ async function downloadResponse(url: string, headers: Record<string, string>, si
   let current = new URL(url);
   const forwarded = { ...headers };
   for (let redirects = 0; redirects <= 5; redirects++) {
+    if (isNonPublicHost(current.hostname))
+      throw new Error('Model downloads cannot target this computer or a private network address.');
     const response = await fetch(current.href, { headers: { ...forwarded }, signal, redirect: 'manual' });
     if (![301, 302, 303, 307, 308].includes(response.status)) return response;
     await response.body?.cancel();

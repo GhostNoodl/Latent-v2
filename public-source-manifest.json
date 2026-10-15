@@ -1346,6 +1346,38 @@
     {
       "from": ".gitattributes",
       "to": ".gitattributes"
+    },
+    {
+      "from": "scripts/release-signing.d.mts",
+      "to": "scripts/release-signing.d.mts"
+    },
+    {
+      "from": "scripts/release-signing.mjs",
+      "to": "scripts/release-signing.mjs"
+    },
+    {
+      "from": "src/main/app-update-signature.ts",
+      "to": "src/main/app-update-signature.ts"
+    },
+    {
+      "from": "src/main/desktop-log.ts",
+      "to": "src/main/desktop-log.ts"
+    },
+    {
+      "from": "src/main/network-hosts.ts",
+      "to": "src/main/network-hosts.ts"
+    },
+    {
+      "from": "src/shared/app-release-signing.ts",
+      "to": "src/shared/app-release-signing.ts"
+    },
+    {
+      "from": "tests/desktop-log.test.ts",
+      "to": "tests/desktop-log.test.ts"
+    },
+    {
+      "from": "tests/network-hosts.test.ts",
+      "to": "tests/network-hosts.test.ts"
     }
   ]
 }

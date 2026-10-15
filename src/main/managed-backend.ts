@@ -567,6 +567,9 @@ export class ManagedBackend {
         ...pins,
       ]);
       this.publish({ message: 'Installing the reviewed ComfyUI dependencies…', installProgress: 65 });
+      // PyTorch is already installed from its own index (with --no-deps), and the installed
+      // build satisfies its exact +cu pin. Resolve everything else from PyPI only, so a
+      // same-named package on a second index can never be chosen (dependency confusion).
       // uv splits constraint arguments on spaces (astral-sh/uv#12639), even
       // when passed as one argv entry. A file URL preserves the complete path.
       await this.installPackages(uv, [
@@ -576,10 +579,6 @@ export class ManagedBackend {
         this.paths.python,
         '--default-index',
         'https://pypi.org/simple',
-        '--index',
-        RUNTIME_RELEASE.torchIndex,
-        '--index-strategy',
-        'unsafe-best-match',
         '--constraint',
         pathToFileURL(constraints).href,
         '--requirements',
@@ -598,7 +597,8 @@ export class ManagedBackend {
       const verification = await this.command(
         this.paths.python,
         [
-          '-s',
+          '-I',
+          '-B',
           '-c',
           "import json,sys,torch,torchvision,torchaudio,importlib.metadata; print('LATENT_VERIFY='+json.dumps({'python':sys.version.split()[0], 'torch':torch.__version__, 'cuda':torch.cuda.is_available(), 'gpu':torch.cuda.get_device_name(0) if torch.cuda.is_available() else None, 'frontend':importlib.metadata.version('comfyui-frontend-package')}))",
         ],

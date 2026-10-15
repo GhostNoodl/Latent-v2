@@ -88,8 +88,8 @@
     },
     {
       "path": "src/main/hardware-profile-probe.ts",
-      "bytes": 9456,
-      "sha256": "d27d45832bc3bb807672a43f60e9a2f3e70408c08acad6ca2a7537f400058b98"
+      "bytes": 10098,
+      "sha256": "0f539460ee403b09255545b0f3ff8f8bc189fafe737cb9a2201b31f9c43a3562"
     },
     {
       "path": "src/main/hardware-profiles.ts",
@@ -113,13 +113,13 @@
     },
     {
       "path": "src/main/main.ts",
-      "bytes": 64178,
-      "sha256": "2ac6b96852d0dd7911de74140493e214946f351018940f79bad3cc300b79fa7c"
+      "bytes": 63612,
+      "sha256": "481b2864c98c0a0743b58285fa55eb93683fda40b6e3c5cc594d592dae55929d"
     },
     {
       "path": "src/main/managed-backend.ts",
-      "bytes": 36005,
-      "sha256": "0c9d7a26434b7be635467a5a1fc8c963f35f457130ca8bc1a9d6f7ec809a39bb"
+      "bytes": 36181,
+      "sha256": "66af5fdd13f85f41a7d0914c30fc83c0987e9243245e6a4ad1bc7dff4157ca2f"
     },
     {
       "path": "src/main/model-library-lease.ts",
@@ -148,8 +148,8 @@
     },
     {
       "path": "src/main/models.ts",
-      "bytes": 42237,
-      "sha256": "f100b97f9feeb025e6f308a76e0f976f246bbf71d5080879805a1d14da049205"
+      "bytes": 42431,
+      "sha256": "d4fd77b06d7585679302be4d30fe072b9ad1056e2b3df4110dcd5cc6fba9a311"
     },
     {
       "path": "src/main/paths.ts",
@@ -198,8 +198,8 @@
     },
     {
       "path": "src/main/runtime-archive.ts",
-      "bytes": 3610,
-      "sha256": "432944f710e0b4a998a39e3e551ebb02d6d24790d1249b9487a2e2e9efc84239"
+      "bytes": 3844,
+      "sha256": "f3b8c91d9d4f97bbfbe62873d6675157bd038bd9542fc0fb79a15cd35c2b1448"
     },
     {
       "path": "src/main/runtime-command-error.ts",
@@ -218,8 +218,8 @@
     },
     {
       "path": "src/main/runtime-environments.ts",
-      "bytes": 8429,
-      "sha256": "86c2b5fb8ad3978fa55cee72c2df26fca2ba2a0026e068e6d9665f5027a315fa"
+      "bytes": 8591,
+      "sha256": "20a4dbfd9e13283562ef674b953d74a1dcd3819f8dd97620e10086273f3bf660"
     },
     {
       "path": "src/main/runtime-identity.ts",
@@ -1013,8 +1013,8 @@
     },
     {
       "path": "package.json",
-      "bytes": 4269,
-      "sha256": "4bd69025129fdeaaa12f9d0208e4add29896b2412c19457f913e122b9afb5686"
+      "bytes": 4517,
+      "sha256": "44b3b46ca11b31847ceccc8284c2875929cbf30263659d996345929403580503"
     },
     {
       "path": "package-lock.json",
@@ -1178,8 +1178,8 @@
     },
     {
       "path": "tests/hardware-public.test.ts",
-      "bytes": 1688,
-      "sha256": "45f59b32515a145f5cdb9f4bb164ffe7cf17e93bac55d09e8bf73e2a376edca4"
+      "bytes": 2019,
+      "sha256": "b5e51a03a6c4ab1738cb509192c0f59f6ab9e25869f8a9de0cb1191c5d4b0e4c"
     },
     {
       "path": ".github/workflows/public-source.yml",
@@ -1443,13 +1443,13 @@
     },
     {
       "path": "src/shared/app-update-types.ts",
-      "bytes": 2949,
-      "sha256": "085f43b557967da9520cb1035f7a7b32fe4d076ad235660370d735dba32b1430"
+      "bytes": 3639,
+      "sha256": "2c45508c5c31ef39c6148fe6e36fa0ad27802fa2a10548eb7bf23892bd22da80"
     },
     {
       "path": "src/main/app-updates.ts",
-      "bytes": 12083,
-      "sha256": "8d121f8bc09b7aded82e6a499c1a5496290949e82da17ba93da5514bac3295a4"
+      "bytes": 12856,
+      "sha256": "e467e7316574af5252a0c99358b3139166bb5ac824a7d6542a7ed172298e16e1"
     },
     {
       "path": "src/renderer/AppUpdates.tsx",
@@ -1458,8 +1458,8 @@
     },
     {
       "path": "tests/app-updates.test.ts",
-      "bytes": 7459,
-      "sha256": "6d76e6e6345b6bf7aa4a56018fa9a306c98a3ead9e0f8a86abc0b8048e43b1d4"
+      "bytes": 11005,
+      "sha256": "d1e19f1d5ed2b96e85340b7f9276a59343c2b3cc0dbb170e7fd92fe99efc7740"
     },
     {
       "path": "tests/app-updates-ui.test.tsx",
@@ -1468,8 +1468,8 @@
     },
     {
       "path": "docs/APP-UPDATES.md",
-      "bytes": 4528,
-      "sha256": "7b9c95ed3b8441ff483fd3e96fb8b583ba84ae5fa159bc6a509f27059b91f47c"
+      "bytes": 5479,
+      "sha256": "976ec5e82e264751d65a9e81b5824a9c3990e6fcccbccd87dee7a270f0907491"
     },
     {
       "path": "src/shared/qwen-gguf-release.ts",
@@ -1665,6 +1665,46 @@
       "path": ".gitattributes",
       "bytes": 147,
       "sha256": "1aed5fd8c2f01ba32c349ccfc27c827e12620dff533deaa80ccd39843a976e40"
+    },
+    {
+      "path": "scripts/release-signing.d.mts",
+      "bytes": 195,
+      "sha256": "bed900c74cace0aa92aa57ceeedbfda2d3cf16da31420be164ca1c4fa6c27edb"
+    },
+    {
+      "path": "scripts/release-signing.mjs",
+      "bytes": 2534,
+      "sha256": "dcdc64e50580e151df3cf7c14644147ea65531961e5274c566e2b08c2922ac22"
+    },
+    {
+      "path": "src/main/app-update-signature.ts",
+      "bytes": 1434,
+      "sha256": "044f3401ff4a91eefd09ec0278b6c5d24557291aefbfff90cdfcd2e79fb4e329"
+    },
+    {
+      "path": "src/main/desktop-log.ts",
+      "bytes": 1318,
+      "sha256": "2f66a292cdb369c44369fe8ec3877e9e70c3a1fe057eb874f6fafa76fbc73927"
+    },
+    {
+      "path": "src/main/network-hosts.ts",
+      "bytes": 1474,
+      "sha256": "291cb1f24b77d7632127579de7d4f81f97a40905b4ee65869df735cc055f28cd"
+    },
+    {
+      "path": "src/shared/app-release-signing.ts",
+      "bytes": 829,
+      "sha256": "ed6b3d8c8dcd3a28261e773cc3843c70d9e8ab88bd623a75b04297c4c9ac0274"
+    },
+    {
+      "path": "tests/desktop-log.test.ts",
+      "bytes": 1351,
+      "sha256": "4fac00c0a95dbf5830c42c06ce363eee0d0c123b3cb052c5ee6b24d94dfb2e7a"
+    },
+    {
+      "path": "tests/network-hosts.test.ts",
+      "bytes": 822,
+      "sha256": "946762c400b19293982e010c8c9a466fa560de80bc76a61e26cf9d3c463a3684"
     }
   ],
   "privateHistoryIncluded": false

@@ -36,3 +36,9 @@ describe('anonymous benchmark configuration', () => {
     expect(environmentReasons(value, profile).join(' ')).toContain('runtime/dependency');
   });
 });
+
+it('resolves nvidia-smi to an absolute Windows path instead of a bare search name', async () => {
+  const { nvidiaSmi } = await import('../src/main/hardware-profile-probe');
+  expect(nvidiaSmi({ SystemRoot: 'D:\\Win' }, 'win32')).toBe('D:\\Win\\System32\\nvidia-smi.exe');
+  expect(nvidiaSmi({}, 'linux')).toBe('nvidia-smi');
+});

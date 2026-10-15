@@ -76,7 +76,10 @@ export async function extractRuntimeZip(archive: string, destination: string, pr
     if (entry.isDirectory) await fs.promises.mkdir(target, { recursive: true });
     else {
       await fs.promises.mkdir(path.dirname(target), { recursive: true });
-      await fs.promises.writeFile(target, entry.getData(), { flag: 'wx' });
+      const data = entry.getData();
+      // The space check trusted the declared size; never write more than was declared.
+      if (data.length !== entry.header.size) throw new Error('Runtime archive entry does not match its declared size.');
+      await fs.promises.writeFile(target, data, { flag: 'wx' });
     }
   }
 }

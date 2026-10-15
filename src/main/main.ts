@@ -1,4 +1,5 @@
 import { configureSetupActivity, setupActivitySnapshot } from './setup-activity';
+import { createDesktopLog } from './desktop-log';
 import { QWEN21_SET_ID } from '../shared/qwen21-release';
 import { AppUpdateService } from './app-updates';
 import { isQwen21Profile, qwenEditProfileSchema } from '../shared/qwen-edit-types';
@@ -9,7 +10,7 @@ import {
   type SetupCapability,
   type SetupPreflight,
 } from '../shared/setup';
-import { inspectHardware as inspectSetupHardware } from './hardware-profile-probe';
+import { inspectHardware as inspectSetupHardware, nvidiaSmi } from './hardware-profile-probe';
 import { storageBoundary, copyStorageLocation } from './storage-locations';
 import { reviewedRuntimeSet } from './reviewed-runtime-channel';
 import {
@@ -107,6 +108,7 @@ const paths = (() => {
     process.exit(1);
   }
 })();
+const desktopLog = createDesktopLog(paths.logs);
 app.setPath('userData', path.join(paths.root, 'desktop'));
 app.setPath('sessionData', path.join(paths.root, 'desktop', 'session'));
 app.setAppUserModelId('studio.latent.v2');
@@ -184,12 +186,7 @@ const notifications = new DesktopNotifications({
     };
   },
   failed: error => {
-    void fs
-      .appendFile(
-        path.join(paths.logs, 'desktop.log'),
-        `${new Date().toISOString()} Notification delivery: ${errorMessage(error)}\n`,
-      )
-      .catch(() => undefined);
+    void desktopLog(`Notification delivery: ${errorMessage(error)}`);
   },
 });
 const indexFile = path.join(__dirname, '..', 'dist', 'index.html');
@@ -284,10 +281,7 @@ async function automaticRuntimeCheck() {
     await track(runtimeUpdates.automaticCheck());
   } catch (error) {
     automaticRuntimeRetryAfter = Date.now() + 15 * 60_000;
-    await fs.appendFile(
-      path.join(paths.logs, 'desktop.log'),
-      `${new Date().toISOString()} Automatic runtime check: ${errorMessage(error)}\n`,
-    );
+    void desktopLog(`Automatic runtime check: ${errorMessage(error)}`);
     notify('notifyError', 'Runtime update needs attention', errorMessage(error));
   } finally {
     automaticRuntimeCheckPending = false;
@@ -457,7 +451,7 @@ async function outputPath(id: string) {
 async function inventoryHardware() {
   try {
     const result = await promisify(execFile)(
-      'nvidia-smi',
+      nvidiaSmi(),
       ['--query-gpu=name,memory.total,driver_version', '--format=csv,noheader,nounits'],
       { windowsHide: true, timeout: 8000, maxBuffer: 16384 },
     );
@@ -1329,19 +1323,13 @@ async function initialize() {
   try {
     await modelLocations.initialize();
   } catch (error) {
-    await fs.appendFile(
-      path.join(paths.logs, 'desktop.log'),
-      `${new Date().toISOString()} Model folders need attention: ${errorMessage(error)}\n`,
-    );
+    void desktopLog(`Model folders need attention: ${errorMessage(error)}`);
   }
   // Recovery precedes JobService.start and every engine launch. Stored jobs stay intact.
   try {
     await runtimeCoordinator.recover(() => runtimeUpdates.recover());
   } catch (error) {
-    await fs.appendFile(
-      path.join(paths.logs, 'desktop.log'),
-      `${new Date().toISOString()} Runtime recovery needs attention: ${errorMessage(error)}\n`,
-    );
+    void desktopLog(`Runtime recovery needs attention: ${errorMessage(error)}`);
   }
   nativeTheme.themeSource = store.settings().theme;
   const windowIcon = app.isPackaged
@@ -1380,10 +1368,7 @@ async function initialize() {
       const link = new URL(url);
       if (link.protocol === 'https:' && !link.username && !link.password && known.includes(url))
         void shell.openExternal(url).catch(error => {
-          void fs.appendFile(
-            path.join(paths.logs, 'desktop.log'),
-            `${new Date().toISOString()} Could not open model information: ${errorMessage(error)}\n`,
-          );
+          void desktopLog(`Could not open model information: ${errorMessage(error)}`);
         });
     } catch {
       /* Unknown links remain blocked. */
@@ -1402,10 +1387,7 @@ async function initialize() {
     }
   });
   window.webContents.on('render-process-gone', (_event, details) => {
-    void fs.appendFile(
-      path.join(paths.logs, 'desktop.log'),
-      `${new Date().toISOString()} Renderer ended: ${details.reason}\n`,
-    );
+    void desktopLog(`Renderer ended: ${details.reason}`);
   });
   await window.loadURL(trustedUrl);
   window.show();
@@ -1432,7 +1414,7 @@ async function initialize() {
     (app.isPackaged || process.env.LATENT_NO_AUTOSTART !== '1')
   )
     void startEngine().catch(error => {
-      void fs.appendFile(path.join(paths.logs, 'desktop.log'), `${new Date().toISOString()} ${errorMessage(error)}\n`);
+      void desktopLog(`${errorMessage(error)}`);
     });
 }
 if (!app.requestSingleInstanceLock()) app.quit();

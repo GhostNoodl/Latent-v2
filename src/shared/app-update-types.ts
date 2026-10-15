@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { RELEASE_SIGNATURE_MAX_BYTES, RELEASE_SIGNATURE_SUFFIX } from './app-release-signing';
 export const appUpdateSettingsSchema = z
   .object({ checkAutomatically: z.boolean(), downloadAutomatically: z.boolean(), installWhenIdle: z.boolean() })
   .strict();
@@ -14,6 +15,8 @@ export interface AppRelease {
   name: string;
   bytes: number;
   sha256: string;
+  /** Detached Ed25519 signature published next to the installer. */
+  signatureUrl: string;
 }
 export interface AppUpdateStatus {
   currentVersion: string;
@@ -68,5 +71,15 @@ export function parseAppRelease(input: unknown, current: string): AppRelease | u
   const url = `https://github.com/GhostNoodl/Latent-v2/releases/download/${data.tag_name}/${name}`;
   if (asset.browser_download_url !== url || !/^sha256:[a-f0-9]{64}$/.test(asset.digest ?? ''))
     throw Error('The release installer is missing its verified download identity.');
-  return { version: v, url, name, bytes: asset.size, sha256: asset.digest!.slice(7) };
+  const signatureName = name + RELEASE_SIGNATURE_SUFFIX,
+    signatures = data.assets.filter(a => a.name === signatureName),
+    signatureUrl = `https://github.com/GhostNoodl/Latent-v2/releases/download/${data.tag_name}/${signatureName}`;
+  if (
+    signatures.length !== 1 ||
+    signatures[0].browser_download_url !== signatureUrl ||
+    signatures[0].size < 1 ||
+    signatures[0].size > RELEASE_SIGNATURE_MAX_BYTES
+  )
+    throw Error('This release is not signed by its publisher.');
+  return { version: v, url, name, bytes: asset.size, sha256: asset.digest!.slice(7), signatureUrl };
 }
