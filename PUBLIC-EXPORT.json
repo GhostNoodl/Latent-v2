@@ -128,8 +128,8 @@
     },
     {
       "path": "src/main/model-locations.ts",
-      "bytes": 27725,
-      "sha256": "2faa3721d96bd86aea21ab26ae9b42c6e1c04d1392ee82e3207acc3103b982d0"
+      "bytes": 27708,
+      "sha256": "a7d87843a40a66da872bc4319fcd679261680b5e2139aa754bc21a0970e2ca3f"
     },
     {
       "path": "src/main/model-transfer-actions.ts",
@@ -368,8 +368,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 106207,
-      "sha256": "d4f412979b95008f17d2eaddfe462a1faeda0afdc33a3190ea4d4662e081c7e3"
+      "bytes": 105284,
+      "sha256": "f656bb56de08bd7341787a33604b1e23e917ed8bd67a549747646592c824fc30"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -388,8 +388,8 @@
     },
     {
       "path": "src/renderer/CivitaiBrowser.tsx",
-      "bytes": 34238,
-      "sha256": "ab0b1f8926f49cab2d3b520e2c6bf42efaabe26088f8b3751914df1922465e1a"
+      "bytes": 34159,
+      "sha256": "6fea9c1cf3f600e7f7a8b57dac3af0a3838a9123d04625bd0735a266d2aee155"
     },
     {
       "path": "src/renderer/collections.css",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/DynamicPrompts.tsx",
-      "bytes": 17667,
-      "sha256": "3a96ec46089cd9cf6219afcf0f99d53092813410160db168c1b154841fdf0df6"
+      "bytes": 17644,
+      "sha256": "f13f39c3bf4bef7507278d5afc9d396e7d9785e5ba03a2de326dd470791be02e"
     },
     {
       "path": "src/renderer/face-detailer.css",
@@ -523,8 +523,8 @@
     },
     {
       "path": "src/renderer/Models.tsx",
-      "bytes": 19126,
-      "sha256": "71ce677e5b3571d341da91a2287d18f6e34245ed44cf78e468537e155e5b09b8"
+      "bytes": 19061,
+      "sha256": "5b81ece544f4712150e2e7a3676187173cb51a718ba43990392742f8ad1be3d3"
     },
     {
       "path": "src/renderer/ModelTransfers.tsx",
@@ -553,8 +553,8 @@
     },
     {
       "path": "src/renderer/queue-view.ts",
-      "bytes": 4809,
-      "sha256": "df8958edfe86f792525428ec7e4d9b32e8a766000e857c51f93412dfd27613ee"
+      "bytes": 4565,
+      "sha256": "c52e41a9f5f8d98c823d1983ad40af26241aeb836f66f478b0656092610f5c1b"
     },
     {
       "path": "src/renderer/qwen-editor.css",
@@ -563,8 +563,8 @@
     },
     {
       "path": "src/renderer/QwenEditor.tsx",
-      "bytes": 68807,
-      "sha256": "13f64957e755651fbb3c77117265b895644e7cc04ee3f830878717bc8300ffaa"
+      "bytes": 68813,
+      "sha256": "0be1768a71c2b24a46dffcd6ddb45c337c783eb29b58e209c71776099677ea67"
     },
     {
       "path": "src/renderer/RecipeExtras.tsx",
@@ -603,8 +603,8 @@
     },
     {
       "path": "src/renderer/SourceInput.tsx",
-      "bytes": 18177,
-      "sha256": "1a2ec5d1a4eefb0a98861b554d1c8da827ff702d03aee562e43ffe385d1f64de"
+      "bytes": 18166,
+      "sha256": "2ddc4e04b877dff4ba6e1e4c8a1848a8411a00aeb8a935381c50eb3b38da6fc9"
     },
     {
       "path": "src/renderer/storage-overview.css",
@@ -673,8 +673,8 @@
     },
     {
       "path": "src/renderer/VideoPlanner.tsx",
-      "bytes": 14952,
-      "sha256": "67f3456477d68a73fd7bcafc363b45a73e483ba195e47f75726e31ffd73885bf"
+      "bytes": 14937,
+      "sha256": "80fcbb98cc410f8c1c9288d4f95a7cbf88632eb4556d39de5f40f5f26393b6c3"
     },
     {
       "path": "src/renderer/VideoStudio.tsx",
@@ -903,8 +903,8 @@
     },
     {
       "path": "src/shared/trigger-editing.ts",
-      "bytes": 3227,
-      "sha256": "527f48872561252846c194958f5608b43ce459799e9161eae77c9e33d930c243"
+      "bytes": 3229,
+      "sha256": "eeedc7f49b9e0df8328b21f3f40252518f3c0d8742ce986ee2fa809cb25b704b"
     },
     {
       "path": "src/shared/trigger-resolution.ts",
@@ -1014,12 +1014,12 @@
     {
       "path": "package.json",
       "bytes": 4269,
-      "sha256": "82a2901010e40ea12b11bec2fdd3027e63489bf0998c30c1f29e876d5b0f00b4"
+      "sha256": "4bd69025129fdeaaa12f9d0208e4add29896b2412c19457f913e122b9afb5686"
     },
     {
       "path": "package-lock.json",
-      "bytes": 252658,
-      "sha256": "a2effd25e41ec35a1ce5e8fb7309403f9c545de88137ecded776a2805dec002a"
+      "bytes": 252660,
+      "sha256": "c53041682593b16f6c94e64622f5df1e924b43b132757e8f4f672489d1c0149e"
     },
     {
       "path": "tsconfig.json",
@@ -1103,8 +1103,8 @@
     },
     {
       "path": "tests/runtime-install-packages.test.ts",
-      "bytes": 8222,
-      "sha256": "02ef7865d6c85d4d02021fce22853a54d2c4c34b34d1f71b21e612f1a5e646bd"
+      "bytes": 8699,
+      "sha256": "f1fa38f8a66b0cb8d3f11a145d06d1c3ca1e6271d1ffd4fda924b1206de4eaf1"
     },
     {
       "path": "tests/runtime-command-error.test.ts",
@@ -1183,8 +1183,8 @@
     },
     {
       "path": ".github/workflows/public-source.yml",
-      "bytes": 1003,
-      "sha256": "448eb44926049cb73b221260d433eb0bbc70c64d7ae6390a1a75e7bc1dfc8471"
+      "bytes": 1082,
+      "sha256": "6be0a96a156d9baf400c5d85d48a820f5f9b6f5c50052b1ee3cca6171b19f043"
     },
     {
       "path": "scripts/check-public-boundary.mjs",
@@ -1244,7 +1244,7 @@
     {
       "path": "THIRD-PARTY-NOTICES.txt",
       "bytes": 103823,
-      "sha256": "167fa2c67a25f9836ab80808557f9313606235be6e7e689981b03c1a904670f7"
+      "sha256": "f4e581eef6072d366dd88737ed10b0152dd3a37898cbec8aa194a94c8616af0b"
     },
     {
       "path": "README-WINDOWS.txt",
@@ -1478,8 +1478,8 @@
     },
     {
       "path": "src/main/qwen-gguf-runtime.ts",
-      "bytes": 10461,
-      "sha256": "40157f3f2a806dfebdabc5ce1a4446cd95dfea452877a51c3099f6c96aa9c6c7"
+      "bytes": 10474,
+      "sha256": "af5980a5c0829ef48d581505bf0ee73e6c2dec93e7185834f204e9aef5f342df"
     },
     {
       "path": "tests/qwen-compact.test.ts",
@@ -1643,8 +1643,8 @@
     },
     {
       "path": ".oxlintrc.json",
-      "bytes": 529,
-      "sha256": "a9de64cf6e3c8df955ea3391cb7853a643eec0baa2fa7ba7a8ddd4cc04d10036"
+      "bytes": 828,
+      "sha256": "503507e82ef59b05866e931c4ad4b77c71d06d573f936eef14f676532d15a9b1"
     },
     {
       "path": ".prettierignore",
@@ -1655,6 +1655,16 @@
       "path": ".prettierrc.json",
       "bytes": 99,
       "sha256": "f3bb6c998ebcadfd7d985687cdf64b35c82ab1fe6de2d48b89d7ba136071d66a"
+    },
+    {
+      "path": ".git-blame-ignore-revs",
+      "bytes": 75,
+      "sha256": "e0f7b100953cfe9bc119d780fb0cd0b9bed8d69659ad4ae5b7b1f060e9378192"
+    },
+    {
+      "path": ".gitattributes",
+      "bytes": 147,
+      "sha256": "1aed5fd8c2f01ba32c349ccfc27c827e12620dff533deaa80ccd39843a976e40"
     }
   ],
   "privateHistoryIncluded": false

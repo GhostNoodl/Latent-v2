@@ -59,7 +59,8 @@ async function commandOnce(paths: AppPaths, executable: string, args: string[], 
       settled = true;
       clearTimeout(timer);
       signal?.removeEventListener('abort', abort);
-      e ? reject(e) : resolve(output);
+      if (e) reject(e);
+      else resolve(output);
     };
     const stop = (reason: string) => {
       failure = new Error(reason);

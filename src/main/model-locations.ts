@@ -220,7 +220,7 @@ export class ModelLocationService implements ModelLocationLookup {
   }
   async createFolder(input: CreateModelFolderRequest): Promise<ModelLocationsSnapshot> {
     const request = z.object({ kind: kindSchema, parent: relativeSchema, name: segmentSchema }).strict().parse(input);
-    const relative = relativeSchema.parse([request.parent, request.name].filter(Boolean).join('/'));
+    relativeSchema.parse([request.parent, request.name].filter(Boolean).join('/'));
     return this.structural('creating a private model folder', async () => {
       this.readyIndex();
       await this.readFolders();

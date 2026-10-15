@@ -1,14 +1,23 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "react", "react-hooks", "unicorn", "oxc", "import"],
+  "plugins": ["typescript", "react", "unicorn", "oxc", "import"],
   "categories": {
-    "correctness": "error",
-    "suspicious": "warn"
+    "correctness": "error"
   },
   "rules": {
-    "react-hooks/rules-of-hooks": "error",
-    "react-hooks/exhaustive-deps": "warn",
-    "react/react-in-jsx-scope": "off"
+    "eslint/no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "ignoreRestSiblings": true }
+    ],
+    "eslint/no-control-regex": "off",
+    "eslint/no-unsafe-finally": "warn",
+    "unicorn/no-useless-spread": "off",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/refs": "warn",
+    "react/set-state-in-effect": "warn",
+    "react/immutability": "warn",
+    "react/purity": "warn"
   },
   "env": {
     "builtin": true,

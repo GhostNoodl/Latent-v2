@@ -27,9 +27,6 @@ export function queueJobPresentation(job: StudioJob, foreignJobs = 0) {
           : job.status === 'queued' && foreignJobs
             ? 'Waiting for the engine'
             : job.status;
-  const dimensions = video
-    ? `${job.video.width} × ${job.video.height}`
-    : `${job.draft.upscale?.width ?? job.draft.hiresFix?.width ?? job.draft.width} × ${job.draft.upscale?.height ?? job.draft.hiresFix?.height ?? job.draft.height}`;
   const faceResults = !video ? Object.values(job.autoFaceResults ?? {}) : [];
   const faceSummary =
     !video && job.status === 'completed' && job.draft.autoFace

@@ -2,20 +2,8 @@ import { ModelFolders, MODEL_DRAG_TYPE } from './ModelFolders';
 import { LocalModelMetadata } from './LocalModelMetadata';
 import { ModelArtwork, modelDisplayName } from './ModelPicker';
 import { useEffect, useRef, useState } from 'react';
-import {
-  ArrowRight,
-  Boxes,
-  Check,
-  Download,
-  ExternalLink,
-  FileInput,
-  Pencil,
-  RefreshCw,
-  Save,
-  Search,
-  X,
-} from 'lucide-react';
-import type { AppSnapshot, ModelAsset, ModelDownloadRequest, ModelKind } from '../shared/types';
+import { ArrowRight, Boxes, ExternalLink, FileInput, Pencil, RefreshCw, Save, Search } from 'lucide-react';
+import type { AppSnapshot, ModelAsset, ModelKind } from '../shared/types';
 import type { CollectionActions, CollectionSnapshot } from '../shared/collections-types';
 import { Busy, Field, Modal, Notice, bytes, type RunAction } from './ui';
 import { ModelLocationsUI } from './ModelLocationsUI';

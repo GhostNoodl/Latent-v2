@@ -14,7 +14,11 @@ vi.mock('../src/main/runtime-update-probe', () => ({ verifyUpdateEnvironment: vi
 let paths: AppPaths;
 let backend: ManagedBackend;
 let command: ReturnType<typeof vi.fn>;
+const host = { platform: process.platform, arch: process.arch };
 beforeEach(() => {
+  // The installer only supports Windows x64; emulate that host so the suite runs on any CI runner.
+  Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+  Object.defineProperty(process, 'arch', { value: 'x64', configurable: true });
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'latent install pins '));
   paths = {
     root,
@@ -45,25 +49,25 @@ beforeEach(() => {
   vi.spyOn(internals, 'installUv').mockResolvedValue('fixture-uv');
   vi.spyOn(internals, 'installPython').mockResolvedValue();
   vi.spyOn(internals, 'installSource').mockResolvedValue();
-  command = vi
-    .spyOn(internals, 'command')
-    .mockImplementation(async executable =>
-      executable === paths.python
-        ? 'LATENT_VERIFY=' +
-          JSON.stringify({
-            python: RUNTIME_RELEASE.pythonVersion,
-            torch: RUNTIME_RELEASE.torchVersion,
-            cuda: true,
-            gpu: 'fixture GPU',
-          })
-        : '',
-    );
+  command = vi.spyOn(internals, 'command').mockImplementation(async executable =>
+    executable === paths.python
+      ? 'LATENT_VERIFY=' +
+        JSON.stringify({
+          python: RUNTIME_RELEASE.pythonVersion,
+          torch: RUNTIME_RELEASE.torchVersion,
+          cuda: true,
+          gpu: 'fixture GPU',
+        })
+      : '',
+  );
   vi.mocked(verifyUpdateEnvironment).mockReset().mockResolvedValue({});
 });
 afterEach(async () => {
   await backend.dispose();
   vi.restoreAllMocks();
   fs.rmSync(paths.root, { recursive: true, force: true });
+  Object.defineProperty(process, 'platform', { value: host.platform, configurable: true });
+  Object.defineProperty(process, 'arch', { value: host.arch, configurable: true });
 });
 
 it('installs every reviewed package, including transitive pins, and verifies before declaring success', async () => {

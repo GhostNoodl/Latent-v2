@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FileImage, ImagePlus, LoaderCircle, Paintbrush, Plus, X } from 'lucide-react';
+import { ImagePlus, LoaderCircle, Paintbrush, Plus, X } from 'lucide-react';
 import type { AppSnapshot, GenerationDraft, GenerationRecord } from '../shared/types';
 import type { SourceImageAsset, SourceMaskAsset } from '../shared/source-types';
 import { Field, type RunAction } from './ui';

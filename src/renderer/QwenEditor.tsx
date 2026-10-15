@@ -735,7 +735,7 @@ export function QwenEditor({
       true,
     );
   }
-  async function useRecord(record: GenerationRecord, branch = false) {
+  async function applyRecord(record: GenerationRecord, branch = false) {
     const id = record.qwenEdit?.lineage.conversationId;
     if (!canAddConversation(id) && !(getDraft() && !getDraft()!.source && !id)) {
       setError('Remove an unused editor draft before branching into this conversation. All versions are kept.');
@@ -1111,7 +1111,7 @@ export function QwenEditor({
                       record={selected}
                       locked={locked}
                       onUse={() => {
-                        void useRecord(selected);
+                        void applyRecord(selected);
                       }}
                     />
                   )}
@@ -1136,7 +1136,7 @@ export function QwenEditor({
                           type="button"
                           disabled={locked}
                           onClick={() => {
-                            void useRecord(selected);
+                            void applyRecord(selected);
                           }}
                         >
                           <ImagePlus size={14} />

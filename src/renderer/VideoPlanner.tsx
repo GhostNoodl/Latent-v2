@@ -35,7 +35,6 @@ export function VideoPlanner({
   busy = false,
   message,
   onChange,
-  onSaveDraft,
   onResetDraft,
   onImportSource,
   onOpenLicense,

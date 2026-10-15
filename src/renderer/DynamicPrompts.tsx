@@ -27,14 +27,7 @@ export interface DynamicPromptsProps {
 }
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-export function DynamicPrompts({
-  draft,
-  wildcards,
-  previewSeed,
-  onChange,
-  onReroll,
-  onSaveWildcards,
-}: DynamicPromptsProps) {
+export function DynamicPrompts({ draft, wildcards, previewSeed, onReroll, onSaveWildcards }: DynamicPromptsProps) {
   const enabled = usesDynamicPrompts(draft);
   const frozen = draft.dynamicPrompts?.frozen;
   const concreteSeed = previewSeed ?? (draft.seed !== 'random' ? draft.seed : undefined);

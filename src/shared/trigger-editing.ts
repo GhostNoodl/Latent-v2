@@ -46,7 +46,7 @@ export async function editTriggersAsPromptText(
 
 /** Explicitly release only this selected LoRA's saved trigger override. Model
  * byte pins, all other owners, authored text and frozen variations stay intact. */
-export function useCurrentModelTriggers(input: GenerationDraft, modelId: string): GenerationDraft {
+export function applyCurrentModelTriggers(input: GenerationDraft, modelId: string): GenerationDraft {
   if (!input.loras.some(lora => lora.modelId === modelId))
     throw new Error('Select this LoRA before changing its trigger words.');
   const draft = structuredClone(input);

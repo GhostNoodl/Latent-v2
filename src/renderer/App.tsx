@@ -29,7 +29,6 @@ import {
   ArrowUpRight,
   Boxes,
   Compass,
-  Check,
   ChevronDown,
   ChevronUp,
   CircleHelp,
@@ -38,7 +37,6 @@ import {
   Images,
   ListOrdered,
   Maximize,
-  Minus,
   Play,
   Plus,
   RefreshCw,
@@ -66,7 +64,7 @@ import {
 import { DEFAULT_DRAFT, SAMPLERS, SCHEDULERS } from '../shared/defaults';
 import { automaticTriggerWords, resolvePrompt } from '../shared/workflow';
 import { applyTriggerResolutionChange, restoreTriggerResolution } from '../shared/trigger-resolution';
-import { editTriggersAsPromptText, useCurrentModelTriggers } from '../shared/trigger-editing';
+import { editTriggersAsPromptText, applyCurrentModelTriggers } from '../shared/trigger-editing';
 import { selectedHistoryRecord } from '../shared/history-selection';
 import { PreviewSelectionSaver } from './preview-selection';
 import { draftSchema } from '../shared/validation';
@@ -190,12 +188,10 @@ export default function App() {
   const setQueueOpen = (open: boolean) =>
     setActivityPanel(previous => (open ? 'queue' : previous === 'queue' ? undefined : previous));
   const [queueHistoryLimit, setQueueHistoryLimit] = useState(5);
-  const [negativeOpen, setNegativeOpen] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [presetName, setPresetName] = useState('');
   const presetNameRevision = useRef(0);
   const [loraOpen, setLoraOpen] = useState(false);
-  const [loraSearch, setLoraSearch] = useState('');
   const [helpOpen, setHelpOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [compareRecord, setCompareRecord] = useState<GenerationRecord>();
@@ -232,7 +228,6 @@ export default function App() {
       if (draftRef.current.triggerResolutionVersion === 'visible@3' && !draftRef.current.autoTriggers)
         draftRef.current = reconcileVisibleTriggers(draftRef.current, { ...draftRef.current, autoTriggers: true });
       setDraft(draftRef.current);
-      setNegativeOpen(Boolean(next.draft.negativePrompt));
       setSelectedId(next.previewSelectedRecordId ?? undefined);
       if (next.previewSelectedRecordId) setViewLivePreview(false);
     }
@@ -392,7 +387,7 @@ export default function App() {
         // Finish an already submitted request, but stop preparation from submitting
         // after shutdown begins. Edits remain saveable until the final acknowledgement.
         await pendingGeneration.current.catch(() => undefined);
-        await Promise.all([...pendingUserWrites.current]);
+        await Promise.all(pendingUserWrites.current);
         let draftRevision: number, selectionRevision: number;
         do {
           draftRevision = revision.current;
@@ -513,7 +508,6 @@ export default function App() {
       if (closing.current) return;
       setPreviousDraft(copyDraft(draftRef.current));
       changeDraft(accepted);
-      setNegativeOpen(Boolean(accepted.negativePrompt));
       setNotice({ text: `${result.explanation} No image was queued.` });
     });
   }
@@ -613,7 +607,6 @@ export default function App() {
     }
     setPreviousDraft(copyDraft(draftRef.current));
     changeDraft(recipe);
-    setNegativeOpen(Boolean(record.draft.negativePrompt));
     selectPreview(record.id);
     setViewLivePreview(false);
     setZoom(0);
@@ -626,7 +619,6 @@ export default function App() {
   function undoRestore() {
     if (closing.current || !previousDraft) return;
     changeDraft(copyDraft(previousDraft));
-    setNegativeOpen(Boolean(previousDraft.negativePrompt));
     setPreviousDraft(undefined);
     setNotice({ text: 'Your previous draft is back.' });
   }
@@ -659,7 +651,7 @@ export default function App() {
   function resetLoraTriggers(modelId: string) {
     if (closing.current) return;
     setPreviousDraft(copyDraft(draftRef.current));
-    changeDraft(useCurrentModelTriggers(draftRef.current, modelId));
+    changeDraft(applyCurrentModelTriggers(draftRef.current, modelId));
     setNotice({
       text: 'This LoRA now uses its current model trigger words. Your prompt text is unchanged. Undo restores the previous draft.',
     });
@@ -694,8 +686,6 @@ export default function App() {
     );
 
   const models = snapshot.models;
-  const checkpoints = models.filter(model => model.kind === 'checkpoint');
-  const loras = models.filter(model => model.kind === 'lora');
   const historicalAssets = snapshot.history
     .flatMap(record => [record.checkpoint, ...record.loras])
     .filter(presentAsset);
@@ -757,12 +747,6 @@ export default function App() {
   const canvasAlt = livePreview
     ? `Live generation preview: ${runningJob.draft.prompt}`
     : (selected?.resolvedPrompt ?? selected?.draft.prompt) || 'Generated image';
-  const compatibleLoras = loras.filter(
-    model =>
-      model.status === 'ready' &&
-      !draft.loras.some(selection => selection.modelId === model.id) &&
-      `${model.name} ${model.triggers.join(' ')}`.toLowerCase().includes(loraSearch.toLowerCase()),
-  );
   const triggers = [
     ...new Set(
       draft.loras.flatMap(
@@ -2248,7 +2232,6 @@ export default function App() {
               prompt: suggestion.proposedDraft.prompt,
               negativePrompt: suggestion.proposedDraft.negativePrompt,
             });
-            setNegativeOpen(Boolean(suggestion.proposedDraft.negativePrompt));
             setNotice({ text: 'Suggested prompts applied. Your previous draft is available with Undo.' });
           }}
         />
@@ -2352,7 +2335,6 @@ export default function App() {
                       if (closing.current) return;
                       setPreviousDraft(copyDraft(draftRef.current));
                       changeDraft(copyDraft(preset.draft));
-                      setNegativeOpen(Boolean(preset.draft.negativePrompt));
                       setPresetsOpen(false);
                       setNotice({ text: `Loaded “${preset.name}”.` });
                     }}

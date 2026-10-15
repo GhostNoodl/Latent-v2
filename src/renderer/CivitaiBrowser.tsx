@@ -33,7 +33,6 @@ import type {
 import { Busy, Field, Notice, bytes } from './ui';
 import { actionErrorMessage } from '../shared/action-error';
 import { DownloadStorage } from './DownloadStorage';
-import { MODEL_DOWNLOAD_RESERVE_BYTES } from '../shared/model-download-space';
 import './civitai.css';
 
 const refreshDownloadStorage = () => window.latent.getModelDownloadStorage();
