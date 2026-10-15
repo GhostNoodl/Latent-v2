@@ -136,7 +136,7 @@ const api: LatentAPI = {
   revealOutput: id => invoke('revealOutput', id),
   openOutput: id => invoke('openOutput', id),
   onSnapshot: listener => {
-    const handler = (_event: Electron.IpcRendererEvent, snapshot: AppSnapshot) => listener(snapshot);
+    const handler = (_event: Electron.IpcRendererEvent, changes: Partial<AppSnapshot>) => listener(changes);
     ipcRenderer.on('latent:snapshot', handler);
     return () => ipcRenderer.removeListener('latent:snapshot', handler);
   },

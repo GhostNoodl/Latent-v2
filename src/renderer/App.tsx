@@ -203,12 +203,11 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [notice, previousDraft]);
 
-  const receive = useCallback((next: AppSnapshot) => {
+  const noteHistory = useCallback((history: AppSnapshot['history']) => {
     const known = previousImageIds.current;
-    previousImageIds.current = new Set(next.history.map(record => record.id));
-    setSnapshot(next);
+    previousImageIds.current = new Set(history.map(record => record.id));
     if (known) {
-      const newest = next.history.find(record => !known.has(record.id));
+      const newest = history.find(record => !known.has(record.id));
       if (newest) {
         setSelectedId(newest.id);
         setViewLivePreview(false);
@@ -221,7 +220,12 @@ export default function App() {
           );
       }
     }
-    if (!initialized.current) {
+  }, []);
+  const receive = useCallback(
+    (next: AppSnapshot) => {
+      noteHistory(next.history);
+      setSnapshot(next);
+      if (initialized.current) return;
       initialized.current = true;
       if (next.backend.state === 'not-installed') setSetupOpen(true);
       draftRef.current = copyDraft(next.draft);
@@ -230,8 +234,18 @@ export default function App() {
       setDraft(draftRef.current);
       setSelectedId(next.previewSelectedRecordId ?? undefined);
       if (next.previewSelectedRecordId) setViewLivePreview(false);
-    }
-  }, []);
+    },
+    [noteHistory],
+  );
+  /** Pushed updates carry only changed fields; untouched fields keep their identity. */
+  const receiveChanges = useCallback(
+    (changes: Partial<AppSnapshot>) => {
+      if (!initialized.current) return; // The initial full snapshot is still on its way.
+      if (changes.history) noteHistory(changes.history);
+      setSnapshot(current => (current ? { ...current, ...changes } : current));
+    },
+    [noteHistory],
+  );
   const connect = useCallback(async () => {
     setBootError('');
     if (!window.latent) {
@@ -247,10 +261,10 @@ export default function App() {
     }
   }, [receive]);
   useEffect(() => {
-    const unsubscribe = window.latent?.onSnapshot(receive);
+    const unsubscribe = window.latent?.onSnapshot(receiveChanges);
     void connect();
     return () => unsubscribe?.();
-  }, [connect, receive]);
+  }, [connect, receiveChanges]);
 
   const persist = useCallback((value: GenerationDraft, currentRevision: number) => {
     if (!draftSchema.safeParse(value).success) {

@@ -468,7 +468,8 @@ export interface LatentAPI {
   copyOutput(id: string): Promise<void>;
   revealOutput(id: string): Promise<void>;
   openOutput(id: string): Promise<void>;
-  onSnapshot(listener: (snapshot: AppSnapshot) => void): () => void;
+  /** Receives the top-level snapshot fields that changed since the last delivery. */
+  onSnapshot(listener: (changes: Partial<AppSnapshot>) => void): () => void;
   onBeforeClose(listener: () => Promise<void>): () => void;
   onCloseCancelled(listener: () => void): () => void;
 }

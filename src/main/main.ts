@@ -1,8 +1,13 @@
 import { configureSetupActivity, setupActivitySnapshot } from './setup-activity';
+import { ipcBlockedReason } from './ipc/gate';
+import { videoHandlers } from './ipc/video';
+import { storageHardwareHandlers } from './ipc/storage-hardware';
+import { updatesHandlers } from './ipc/updates';
+import { optionalToolsHandlers } from './ipc/optional-tools';
+import { libraryHandlers } from './ipc/library';
+import { assistantSourcesHandlers } from './ipc/assistant-sources';
 import { createDesktopLog } from './desktop-log';
-import { QWEN21_SET_ID } from '../shared/qwen21-release';
 import { AppUpdateService } from './app-updates';
-import { isQwen21Profile, qwenEditProfileSchema } from '../shared/qwen-edit-types';
 import { withPausedModelEngine } from './model-maintenance';
 import {
   setupStorageBlockers,
@@ -11,7 +16,7 @@ import {
   type SetupPreflight,
 } from '../shared/setup';
 import { inspectHardware as inspectSetupHardware, nvidiaSmi } from './hardware-profile-probe';
-import { storageBoundary, copyStorageLocation } from './storage-locations';
+import { copyStorageLocation } from './storage-locations';
 import { reviewedRuntimeSet } from './reviewed-runtime-channel';
 import {
   app,
@@ -36,7 +41,7 @@ import fs from 'node:fs/promises';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { containedPath, inside } from './paths';
 import { createStartupPaths } from './portable-studio';
@@ -57,7 +62,6 @@ import { ModelLocationService } from './model-locations';
 import { QwenEditAssetsService } from './qwen-edit-assets';
 import { FaceDetailerService } from './face-detailer';
 import { IPAdapterService } from './ipadapter';
-import { activateIPAdapterWhenIdle } from './ipadapter-lifecycle';
 import { RuntimeUpdateService } from './runtime-updates';
 import { RuntimeUpdateCoordinator } from './runtime-update-coordinator';
 import { StorageOverviewService } from './storage-overview';
@@ -69,7 +73,7 @@ import { modelTransferNeedsAttention } from './model-transfer-notifications';
 import { DesktopNotifications, type NotificationPreference } from './desktop-notifications';
 import { VideoConversationService } from './video-conversations';
 import { VideoDraftService } from './video-drafts';
-import { videoDraftSchema, VIDEO_AVAILABILITY } from '../shared/video-plan';
+import { VIDEO_AVAILABILITY } from '../shared/video-plan';
 import { videoFileResponse, VideoMediaInspector, packagedVideoInspectorPath } from './video-media';
 import { VideoHistoryService } from './video-history';
 import { VideoAssetsService } from './video-assets';
@@ -77,15 +81,8 @@ import { VideoPreflightService } from './video-preflight';
 import { localVideoAvailability } from './video-availability';
 import { VideoQueueService } from './video-queue';
 import { isVideoJob } from '../shared/types';
-import {
-  videoPlaybackFixtureFile,
-  videoPlaybackFixtureRecord,
-  VIDEO_PLAYBACK_FIXTURE_ID,
-} from './video-playback-fixture';
-import { runtimeUpdateSettingsSchema } from '../shared/runtime-update-types';
+import { videoPlaybackFixtureFile, VIDEO_PLAYBACK_FIXTURE_ID } from './video-playback-fixture';
 import { IPADAPTER_RELEASE } from '../shared/ipadapter-release';
-import { qwenConversationSchema } from '../shared/qwen-conversation';
-import { assistantConversationSchema } from '../shared/assistant-conversation';
 import { MODEL_CATALOG } from '../shared/model-catalog';
 import { draftSchema, settingsSchema } from '../shared/validation';
 import type { AppSnapshot, GenerationDraft, HardwareInfo, LatentAPI } from '../shared/types';
@@ -415,13 +412,39 @@ function startEngine(allowModelChange = false) {
     await backend.start();
   });
 }
+/** Serialized form of each top-level snapshot field as the renderer last received it. */
+const sentSnapshot = new Map<string, string | undefined>();
+function rememberSent(value: AppSnapshot) {
+  sentSnapshot.clear();
+  for (const [key, field] of Object.entries(value)) sentSnapshot.set(key, JSON.stringify(field));
+  return value;
+}
+/**
+ * Send only the top-level fields that changed since the renderer's last copy. A progress tick
+ * then carries `jobs`, not the whole history and model library, and unchanged fields keep their
+ * identity in React so the pages that read them do not re-render.
+ */
+function snapshotPatch(): Partial<AppSnapshot> | undefined {
+  const patch: Record<string, unknown> = {};
+  let changed = false;
+  for (const [key, field] of Object.entries(snapshot())) {
+    const serialized = JSON.stringify(field);
+    if (sentSnapshot.has(key) && sentSnapshot.get(key) === serialized) continue;
+    sentSnapshot.set(key, serialized);
+    patch[key] = field;
+    changed = true;
+  }
+  return changed ? (patch as Partial<AppSnapshot>) : undefined;
+}
 function broadcast() {
   scheduleRuntimeIdleCheck();
   if (closed || closing || broadcastTimer) return;
   broadcastTimer = setTimeout(() => {
     broadcastTimer = undefined;
-    if (window && !window.isDestroyed() && store && models && jobs && backend)
-      window.webContents.send('latent:snapshot', snapshot());
+    if (window && !window.isDestroyed() && store && models && jobs && backend) {
+      const patch = snapshotPatch();
+      if (patch) window.webContents.send('latent:snapshot', patch);
+    }
   }, 120);
 }
 function notify(preference: NotificationPreference, title: string, body: string) {
@@ -466,6 +489,118 @@ async function inventoryHardware() {
     /* The studio remains usable on machines without NVIDIA tooling. */
   }
 }
+const id = z.string().min(1).max(1000);
+export type StudioMethods = Omit<LatentAPI, 'onSnapshot' | 'onBeforeClose' | 'onCloseCancelled'>;
+/**
+ * What the per-domain IPC handlers in ./ipc may use. Getters keep late binding: services are
+ * created in initialize() and some values are reassigned while the app runs.
+ */
+function handlerContext() {
+  return {
+    get appUpdates() {
+      return appUpdates;
+    },
+    assertModelLocationsReady,
+    get assistant() {
+      return assistant;
+    },
+    get automaticRuntimeRetryAfter() {
+      return automaticRuntimeRetryAfter;
+    },
+    set automaticRuntimeRetryAfter(value: number) {
+      automaticRuntimeRetryAfter = value;
+    },
+    get backend() {
+      return backend;
+    },
+    get backendActivity() {
+      return backendActivity;
+    },
+    broadcast,
+    changeModelFiles,
+    get civitai() {
+      return civitai;
+    },
+    get collections() {
+      return collections;
+    },
+    get controlNet() {
+      return controlNet;
+    },
+    errorMessage,
+    get faceDetailer() {
+      return faceDetailer;
+    },
+    get hardwareProfiles() {
+      return hardwareProfiles;
+    },
+    id,
+    get ipAdapter() {
+      return ipAdapter;
+    },
+    get jobs() {
+      return jobs;
+    },
+    modelChangeBlockedReason,
+    get modelLocations() {
+      return modelLocations;
+    },
+    get models() {
+      return models;
+    },
+    notify,
+    outputPath,
+    paths,
+    get qwenEdit() {
+      return qwenEdit;
+    },
+    get runtimeCoordinator() {
+      return runtimeCoordinator;
+    },
+    runtimeUpdateSnapshot,
+    get runtimeUpdates() {
+      return runtimeUpdates;
+    },
+    scheduleRuntimeIdleCheck,
+    get segmentation() {
+      return segmentation;
+    },
+    snapshot,
+    get sources() {
+      return sources;
+    },
+    get storageOverview() {
+      return storageOverview;
+    },
+    get store() {
+      return store;
+    },
+    tickAppUpdates,
+    get upscaler() {
+      return upscaler;
+    },
+    get videoAssets() {
+      return videoAssets;
+    },
+    get videoConversations() {
+      return videoConversations;
+    },
+    get videoDrafts() {
+      return videoDrafts;
+    },
+    videoFixture,
+    get videoHistory() {
+      return videoHistory;
+    },
+    get wildcards() {
+      return wildcards;
+    },
+    get window() {
+      return window;
+    },
+  };
+}
+export type HandlerContext = ReturnType<typeof handlerContext>;
 async function initialize() {
   configureSetupActivity(paths.logs, broadcast);
   store = new StudioStore(paths.database);
@@ -632,7 +767,6 @@ async function initialize() {
     ));
   appUpdates = new AppUpdateService(paths.root, store, app.getVersion(), Boolean(installed), broadcast);
   appUpdateTimer = setInterval(() => void tickAppUpdates(), 30000);
-  const id = z.string().min(1).max(1000);
   let guidedSetupRunning = false;
   const preflightSetup = async (raw: SetupCapability): Promise<SetupPreflight> => {
     const capability = z.enum(['engine', 'images', 'edit', 'video']).parse(raw);
@@ -677,7 +811,7 @@ async function initialize() {
       storage,
     };
   };
-  const methods: Omit<LatentAPI, 'onSnapshot' | 'onBeforeClose' | 'onCloseCancelled'> = {
+  const methods: StudioMethods = {
     getSetupPreflight: preflightSetup,
     runGuidedSetup: async capability => {
       if (guidedSetupRunning) throw new Error('A setup operation is already running.');
@@ -713,353 +847,6 @@ async function initialize() {
     getModelTransferRecovery: async () => modelTransferActions.recovery(),
     retryModelTransfer: async request => modelTransferActions.retry(request),
     cancelModelTransfer: async transferId => modelTransferActions.cancel(transferId),
-    getVideoConversation: async () => videoConversations.get(),
-    saveVideoConversation: async value => videoConversations.save(value),
-    planVideoDraft: async input => {
-      const value = videoDraftSchema.parse(input);
-      return videoDrafts.plan(
-        value,
-        value.seed === 'random' ? String(randomBytes(6).readUIntBE(0, 6)) : value.seed,
-        async sourceId => (await sources.resolve(sourceId)).source,
-      );
-    },
-    getVideoPlaybackFixture: async () => videoPlaybackFixtureRecord(videoFixture),
-    getVideoHistory: async () => videoHistory.snapshot(),
-    setupVideoAssets: async profile => videoAssets.setup(z.enum(['base', 'turbo8', 'fused4']).parse(profile)),
-    verifyVideoAssets: async profile => videoAssets.verifyLocal(z.enum(['base', 'turbo8', 'fused4']).parse(profile)),
-    cancelVideoAssetSetup: async () => videoAssets.cancel(),
-    restoreVideoParameters: async value => videoHistory.restore(id.parse(value)),
-    revealVideo: async value => {
-      const recordId = id.parse(value);
-      if (recordId === VIDEO_PLAYBACK_FIXTURE_ID) {
-        await videoPlaybackFixtureRecord(videoFixture);
-        shell.showItemInFolder(videoFixture.filename);
-        return;
-      }
-      const file = await videoHistory.file(recordId);
-      await videoFileResponse(file, { method: 'HEAD', headers: new Headers(), signal: AbortSignal.timeout(15000) });
-      shell.showItemInFolder(await privateShellPath(storageBoundary(paths, file.filename), file.filename));
-    },
-    openVideoLicense: async () => {
-      await shell.openExternal(videoDrafts.status().licenseUrl);
-    },
-    getStorageOverview: async () => storageOverview.refresh(),
-    getModelDownloadStorage: async () => storageOverview.downloadCapacity(),
-    getPackageStorage: async packageId =>
-      storageOverview.packageStorage(
-        z
-          .string()
-          .regex(/^[a-z0-9-]{1,80}$/)
-          .parse(packageId),
-      ),
-    revealStorageDestination: async destinationId => {
-      const destination = await storageOverview.destination(
-        z
-          .string()
-          .regex(/^directory:[a-f0-9]{24}$/)
-          .parse(destinationId),
-      );
-      const error = await shell.openPath(await privateShellPath(storageBoundary(paths, destination), destination));
-      if (error) throw new Error(error);
-    },
-    refreshHardwareProfiles: async () => {
-      await hardwareProfiles.refresh();
-      return hardwareProfiles.status();
-    },
-    recommendHardwareProfiles: async value => hardwareProfiles.recommend(value),
-    applyHardwareProfile: async request => hardwareProfiles.apply(request),
-    applyHardwareBackendRecommendation: async reportId => {
-      const priorMode = store.settings().deviceMode;
-      const result = await hardwareProfiles.applyBackendRecommendation(z.uuid().parse(reportId));
-      if (store.settings().deviceMode !== priorMode)
-        throw new Error('The backend preference changed while it was being checked. Recommend again.');
-      store.saveSettings(result.settings);
-      hardwareProfiles.settingsChanged();
-      broadcast();
-      return snapshot();
-    },
-    getJobMemoryAdvice: async jobId => {
-      const job = jobs.jobs().find(value => value.id === id.parse(jobId));
-      if (!job || job.status !== 'failed')
-        throw new Error('Choose an existing failed generation to inspect its recovery advice.');
-      if (isVideoJob(job))
-        throw new Error(
-          'Video recovery details are shown in its queue row. Image memory recommendations do not apply to video.',
-        );
-      return hardwareProfiles.oomAdvice(job.error ?? '', job.draft);
-    },
-    setupFaceDetailer: async repair => faceDetailer.setup(z.boolean().optional().parse(repair) ?? false),
-    cancelFaceDetailerSetup: async () => faceDetailer.cancelSetup(),
-    detectFaces: async request => faceDetailer.detect(request),
-    cancelFaceDetection: async () => faceDetailer.cancelDetection(),
-    getFaceDetection: async id => faceDetailer.getDetection(id),
-    saveAppUpdateSettings: async value => {
-      appUpdates!.settings(value);
-    },
-    checkAppUpdates: async () => appUpdates!.check(),
-    downloadAppUpdate: async () => appUpdates!.download(),
-    installAppUpdate: async () => {
-      appUpdates!.requestInstall();
-      setTimeout(() => void tickAppUpdates(), 0);
-    },
-    cancelAppUpdate: async () => {
-      await appUpdates!.cancel();
-    },
-    getRuntimeUpdateStatus: async () => runtimeUpdateSnapshot(),
-    saveRuntimeUpdateSettings: async value => {
-      await runtimeUpdates.saveSettings(runtimeUpdateSettingsSchema.partial().parse(value));
-      automaticRuntimeRetryAfter = 0;
-      scheduleRuntimeIdleCheck();
-    },
-    checkRuntimeUpdates: async () => {
-      await runtimeUpdates.check();
-      automaticRuntimeRetryAfter = 0;
-    },
-    stageRuntimeUpdate: async kind => {
-      await runtimeUpdates.stage(z.enum(['update', 'refresh']).parse(kind));
-      automaticRuntimeRetryAfter = 0;
-    },
-    prepareRuntimeEnvironmentRepair: async () => {
-      if (!runtimeCoordinator.canPrepareEnvironmentRepair())
-        throw new Error(
-          'A verified environment mismatch without a pending transaction is required before preparing this repair.',
-        );
-      await runtimeUpdates.prepareEnvironmentRepair();
-      automaticRuntimeRetryAfter = 0;
-    },
-    activateRuntimeUpdate: async () => {
-      try {
-        await runtimeCoordinator.activateAndRecover(
-          () => runtimeUpdates.activate(),
-          () => runtimeUpdates.recover(),
-        );
-        automaticRuntimeRetryAfter = 0;
-      } finally {
-        broadcast();
-      }
-    },
-    rollbackRuntimeUpdate: async () => {
-      await runtimeUpdates.rollback();
-      automaticRuntimeRetryAfter = 0;
-    },
-    recoverRuntimeUpdate: async () => {
-      try {
-        await runtimeCoordinator.recover(() => runtimeUpdates.recover());
-        automaticRuntimeRetryAfter = 0;
-      } finally {
-        broadcast();
-      }
-    },
-    cancelRuntimeUpdate: async () => runtimeUpdates.cancel(),
-    getIPAdapterStatus: async () => ipAdapter.status(),
-    stageIPAdapter: async repair => {
-      const requested = z.boolean().optional().parse(repair) ?? false;
-      if (!requested) {
-        await ipAdapter.stage();
-        return;
-      }
-      await models.library.withExclusive('repairing reference tools', async () => {
-        assertModelLocationsReady();
-        if (backend.status().state !== 'stopped' || jobs.jobs().some(job => ['queued', 'running'].includes(job.status)))
-          throw new Error('Stop the image engine and finish or cancel its queue before repairing reference tools.');
-        await ipAdapter.stage(true);
-      });
-    },
-    activateIPAdapter: async () => {
-      await activateIPAdapterWhenIdle(models.library, backend, jobs, ipAdapter, assertModelLocationsReady);
-      broadcast();
-    },
-    cancelIPAdapterSetup: async () => ipAdapter.cancel(),
-    getQwenConversation: async () => {
-      const saved = store.getState('qwen.conversation', null);
-      return saved ? qwenConversationSchema.parse(saved) : null;
-    },
-    saveQwenConversation: async value => {
-      store.setState('qwen.conversation', qwenConversationSchema.parse(value));
-    },
-    setupQwenEdit: async (profile, repair) => {
-      const selected = qwenEditProfileSchema.parse(profile);
-      const requested = z.boolean().optional().parse(repair) ?? false;
-      if (isQwen21Profile(selected)) {
-        await runtimeUpdates.check();
-        if (runtimeUpdates.status().current?.setId !== QWEN21_SET_ID) {
-          await runtimeUpdates.stage('update', QWEN21_SET_ID);
-          await runtimeCoordinator.activateAndRecover(
-            () => runtimeUpdates.activate(),
-            () => runtimeUpdates.recover(),
-          );
-        }
-      }
-      if (selected === 'compact')
-        await changeModelFiles(async () => {
-          await qwenEdit.setup(selected, requested);
-        });
-      else if (requested)
-        await jobs.withRuntimeMaintenance(
-          async () => {
-            await backendActivity.assertIdle('repair Qwen assets');
-            if (backend.hasOwnedProcess()) throw new Error('Stop the image engine before repairing Qwen assets.');
-            await qwenEdit.setup(selected, true);
-          },
-          { allowRetainedJobs: false },
-        );
-      else await qwenEdit.setup(selected);
-    },
-    cancelQwenEditSetup: async () => {
-      qwenEdit.cancel();
-    },
-    enqueueQwenEdit: async request =>
-      models.library.withShared('queuing an image edit', async () => {
-        assertModelLocationsReady();
-        return jobs.enqueueQwenEdit(request);
-      }),
-    chooseExternalModelRoot: async input => {
-      const kind = z.enum(['checkpoint', 'lora']).parse(input);
-      const blocked = modelChangeBlockedReason();
-      if (blocked) throw new Error(blocked);
-      const result = await dialog.showOpenDialog(window!, {
-        title: `Use an existing ${kind === 'lora' ? 'LoRA' : 'checkpoint'} folder read-only`,
-        properties: ['openDirectory'],
-      });
-      if (result.canceled || !result.filePaths[0]) return null;
-      await changeModelFiles(() => modelLocations.registerExternalRoot(kind, result.filePaths[0]));
-      void civitai.autoMetadata();
-      broadcast();
-      return modelLocations.snapshot();
-    },
-    unregisterExternalModelRoot: async rootId => {
-      await changeModelFiles(() => modelLocations.unregisterExternalRoot(id.parse(rootId)));
-      void civitai.autoMetadata();
-      broadcast();
-      return modelLocations.snapshot();
-    },
-    createModelFolder: async request => {
-      await changeModelFiles(() => modelLocations.createFolder(request));
-      void civitai.autoMetadata();
-      broadcast();
-      return modelLocations.snapshot();
-    },
-    deleteModel: async request => {
-      await changeModelFiles(() => modelLocations.deleteModel(request, filename => shell.trashItem(filename)));
-      broadcast();
-      return snapshot();
-    },
-    moveModel: async request => {
-      await changeModelFiles(() => modelLocations.moveModel(request));
-      void civitai.autoMetadata();
-      broadcast();
-      return modelLocations.snapshot();
-    },
-    recoverModelLocations: async () => {
-      await changeModelFiles(() => modelLocations.recover());
-      void civitai.autoMetadata();
-      broadcast();
-      return modelLocations.snapshot();
-    },
-    createCollection: async (kind, name) => collections.create(kind, name),
-    renameCollection: async (collectionId, name) => collections.rename(collectionId, name),
-    removeCollection: async collectionId => collections.remove(collectionId),
-    addCollectionMembers: async (collectionId, memberIds) => collections.addMembers(collectionId, memberIds),
-    removeCollectionMembers: async (collectionId, memberIds) => collections.removeMembers(collectionId, memberIds),
-    setupControlNet: async repair => {
-      const requested = z.boolean().optional().parse(repair) ?? false;
-      if (requested)
-        await jobs.withRuntimeMaintenance(
-          async () => {
-            await backendActivity.assertIdle('repair Canny ControlNet');
-            await controlNet.setup(true);
-          },
-          { allowRetainedJobs: false },
-        );
-      else await controlNet.setup();
-    },
-    cancelControlNet: async () => controlNet.cancel(),
-    saveWildcards: entries => wildcards.save(entries),
-    setupUpscaler: async repair => {
-      const requested = z.boolean().optional().parse(repair) ?? false;
-      if (requested)
-        await jobs.withRuntimeMaintenance(
-          async () => {
-            await backendActivity.assertIdle('repair the illustration upscaler');
-            await upscaler.setup(true);
-          },
-          { allowRetainedJobs: false },
-        );
-      else await upscaler.setup();
-    },
-    cancelUpscaler: async () => upscaler.cancel(),
-    fetchModelCivitaiMetadata: async modelId => {
-      await civitai.fetchLocalMetadata(z.string().max(1000).parse(modelId));
-      return snapshot();
-    },
-    civitaiSearch: async request => civitai.search(request),
-    civitaiDetail: async modelId => civitai.detail(modelId),
-    civitaiDownload: async request => {
-      try {
-        const asset = await civitai.download(request);
-        notify('notifyDownload', 'Model ready', asset.name);
-        void civitai.autoMetadata();
-        return asset;
-      } catch (error) {
-        if (modelTransferNeedsAttention(error))
-          notify('notifyError', 'Model download needs attention', errorMessage(error));
-        throw error;
-      }
-    },
-    cancelCivitai: async () => civitai.cancel(),
-    getCivitaiSettings: async () => civitai.settings(),
-    setCivitaiKey: async value => {
-      civitai.setApiKey(value);
-    },
-    openCivitaiModel: async (modelId, versionId) => {
-      const url = new URL(`https://civitai.com/models/${z.number().int().positive().parse(modelId)}`);
-      if (versionId !== undefined)
-        url.searchParams.set('modelVersionId', String(z.number().int().positive().parse(versionId)));
-      await shell.openExternal(url.href);
-    },
-    setupSegmentation: async repair => segmentation.setup(z.boolean().optional().parse(repair) ?? false),
-    startSegmentation: async () => segmentation.start(),
-    stopSegmentation: async () => segmentation.stop(),
-    suggestMask: async request => segmentation.suggest(request),
-    cancelSegmentation: async () => segmentation.cancel(),
-    importSourceImage: async () => {
-      const result = await dialog.showOpenDialog(window!, {
-        title: 'Choose a source image',
-        properties: ['openFile'],
-        filters: [{ name: 'Still images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }],
-      });
-      if (result.canceled || !result.filePaths[0]) return null;
-      const source = await sources.importFile(result.filePaths[0]);
-      broadcast();
-      return source;
-    },
-    useOutputAsSource: async recordId => {
-      const source = await sources.importFile(await outputPath(id.parse(recordId)), recordId);
-      broadcast();
-      return source;
-    },
-    saveSourceMask: async (sourceId, bytes, options) => {
-      const mask = await sources.saveMask(id.parse(sourceId), bytes, options);
-      broadcast();
-      return mask;
-    },
-    setupAssistant: async repair => assistant.setup(z.boolean().optional().parse(repair) ?? false),
-    startAssistant: async () => assistant.start(),
-    stopAssistant: async () => assistant.stop(),
-    suggestPrompt: async request => assistant.suggest(request),
-    cancelAssistant: async () => assistant.cancel(),
-    getAssistantConversation: async target => {
-      const scope = z.enum(['image', 'video']).optional().parse(target);
-      const saved = store.getState(scope === 'video' ? 'assistant.video.conversation' : 'assistant.conversation', null);
-      return saved ? assistantConversationSchema.parse(saved) : null;
-    },
-    saveAssistantConversation: async (value, target) => {
-      const scope = z.enum(['image', 'video']).optional().parse(target);
-      store.setState(
-        scope === 'video' ? 'assistant.video.conversation' : 'assistant.conversation',
-        assistantConversationSchema.parse(value),
-      );
-    },
     copyText: value => copyStudioText(value, clipboard),
     dismissActivity: async (scope, keys) => {
       const kind = z.enum(['queue', 'notifications']).parse(scope);
@@ -1075,7 +862,7 @@ async function initialize() {
       broadcast();
       return snapshot();
     },
-    getSnapshot: async () => snapshot(),
+    getSnapshot: async () => rememberSent(snapshot()),
     changeStorageLocation: async requestedKind => {
       const kind = z.enum(['models', 'outputs']).parse(requestedKind);
       if (
@@ -1237,6 +1024,12 @@ async function initialize() {
       const error = await shell.openPath(await privateShellPath(paths.outputs, await outputPath(id.parse(recordId))));
       if (error) throw new Error(error);
     },
+    ...videoHandlers(handlerContext()),
+    ...storageHardwareHandlers(handlerContext()),
+    ...updatesHandlers(handlerContext()),
+    ...optionalToolsHandlers(handlerContext()),
+    ...libraryHandlers(handlerContext()),
+    ...assistantSourcesHandlers(handlerContext()),
   };
   for (const [method, handler] of Object.entries(methods))
     ipcMain.handle(`latent:${method}`, (event, ...args: unknown[]) => {
@@ -1247,26 +1040,8 @@ async function initialize() {
         !trusted(event.senderFrame.url)
       )
         throw new Error('This request did not come from the studio window.');
-      if (closing) throw new Error('The studio is closing.');
-      if (appInstallClosing && !/^(get|save)/.test(method))
-        throw new Error('The studio is saving and closing to install an update.');
-      if (
-        (storageChanging || storageRestartPending) &&
-        !/^(get|cancel|stop)/.test(method) &&
-        ![
-          'saveDraft',
-          'saveVideoConversation',
-          'saveQwenConversation',
-          'saveAssistantConversation',
-          'savePreviewSelection',
-          'copyText',
-        ].includes(method)
-      )
-        throw new Error(
-          storageRestartPending
-            ? 'Storage was copied. Restart the studio before changing models or generating again.'
-            : 'Storage is being changed. Wait for copying and restart to finish.',
-        );
+      const blocked = ipcBlockedReason(method, { closing, appInstallClosing, storageChanging, storageRestartPending });
+      if (blocked) throw new Error(blocked);
       return track(Promise.resolve().then(() => (handler as (...values: unknown[]) => unknown)(...args)));
     });
   ipcMain.handle('latent:flush-complete', (event, nonce, error) => {

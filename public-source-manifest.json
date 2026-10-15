@@ -1390,6 +1390,38 @@
     {
       "from": "tests/graph-builder.test.ts",
       "to": "tests/graph-builder.test.ts"
+    },
+    {
+      "from": "src/main/ipc/assistant-sources.ts",
+      "to": "src/main/ipc/assistant-sources.ts"
+    },
+    {
+      "from": "src/main/ipc/gate.ts",
+      "to": "src/main/ipc/gate.ts"
+    },
+    {
+      "from": "src/main/ipc/library.ts",
+      "to": "src/main/ipc/library.ts"
+    },
+    {
+      "from": "src/main/ipc/optional-tools.ts",
+      "to": "src/main/ipc/optional-tools.ts"
+    },
+    {
+      "from": "src/main/ipc/storage-hardware.ts",
+      "to": "src/main/ipc/storage-hardware.ts"
+    },
+    {
+      "from": "src/main/ipc/updates.ts",
+      "to": "src/main/ipc/updates.ts"
+    },
+    {
+      "from": "src/main/ipc/video.ts",
+      "to": "src/main/ipc/video.ts"
+    },
+    {
+      "from": "tests/ipc-gate.test.ts",
+      "to": "tests/ipc-gate.test.ts"
     }
   ]
 }
