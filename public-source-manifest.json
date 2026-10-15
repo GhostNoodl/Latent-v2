@@ -1422,6 +1422,14 @@
     {
       "from": "tests/ipc-gate.test.ts",
       "to": "tests/ipc-gate.test.ts"
+    },
+    {
+      "from": "src/renderer/ErrorBoundary.tsx",
+      "to": "src/renderer/ErrorBoundary.tsx"
+    },
+    {
+      "from": "tests/modal-dom.test.tsx",
+      "to": "tests/modal-dom.test.tsx"
     }
   ]
 }

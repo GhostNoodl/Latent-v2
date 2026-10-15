@@ -2124,3 +2124,29 @@ strong {
   padding: 10px 0;
   margin: 0;
 }
+
+.view-error {
+  margin: 24px;
+  padding: 20px 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  max-width: 720px;
+}
+.view-error h2 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+.view-error pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+  color: var(--muted);
+  max-height: 160px;
+  overflow: auto;
+}
+.view-error-actions {
+  display: flex;
+  gap: 8px;
+}

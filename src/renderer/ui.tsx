@@ -89,6 +89,12 @@ export function Notice({ children, error = false }: { children: ReactNode; error
     </div>
   );
 }
+/** Open dialogs, in opening order. Only the innermost, most recent one owns the keyboard. */
+const openModals: HTMLElement[] = [];
+function isTopModal(node: HTMLElement) {
+  const innermost = openModals.filter(item => !openModals.some(other => other !== item && item.contains(other)));
+  return innermost[innermost.length - 1] === node;
+}
 export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLElement>(null);
   const opener = useRef(document.activeElement as HTMLElement | null);
@@ -101,9 +107,10 @@ export function Modal({ title, children, onClose }: { title: string; children: R
       'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), summary, a[href], [tabindex="0"]';
     if (!node.contains(document.activeElement)) node.querySelector<HTMLElement>('input, select, textarea')?.focus();
     if (!node.contains(document.activeElement)) node.querySelector<HTMLElement>(selector)?.focus();
+    openModals.push(node);
     const keydown = (event: KeyboardEvent) => {
       // Let text composition and child controls handle their own keyboard action.
-      if (event.isComposing || event.defaultPrevented) return;
+      if (event.isComposing || event.defaultPrevented || !isTopModal(node)) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         closeRef.current();
@@ -128,6 +135,7 @@ export function Modal({ title, children, onClose }: { title: string; children: R
     document.addEventListener('keydown', keydown);
     return () => {
       document.removeEventListener('keydown', keydown);
+      openModals.splice(openModals.indexOf(node), 1);
       if (opener.current?.isConnected) opener.current.focus();
     };
   }, []);
