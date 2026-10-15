@@ -1,4 +1,5 @@
 import type { ComfyWorkflow, GenerationDraft } from './types';
+import { nodeAllocator } from './graph-builder';
 import { faceRefinementPlanSchema, type FaceRefinementPlan } from './face-detailer-types';
 export { faceRefinementPlanSchema, type FaceRefinementPlan } from './face-detailer-types';
 import { augmentCropInpaintWorkflow } from './crop-inpaint-workflow';
@@ -64,12 +65,7 @@ export function buildFaceRefinementWorkflow(
   delete graph['5'];
   delete graph['6'];
   delete graph['7'];
-  let next = Math.max(7, ...Object.keys(graph).map(Number)) + 1;
-  const add = (class_type: string, inputs: ComfyWorkflow[string]['inputs']) => {
-    const id = String(next++);
-    graph[id] = { class_type, inputs };
-    return id;
-  };
+  const add = nodeAllocator(graph, 7);
   type Link = [string, number];
   const loaded = add('LoadImage', { image: input.sourceFilename });
   let previous: Link = [loaded, 0];

@@ -1,4 +1,5 @@
 import { samplingValidationGraph } from './workflow';
+import { nodeAllocator } from './graph-builder';
 import type { ComfyWorkflow, GenerationDraft } from './types';
 import { draftSchema } from './validation';
 import { cropInpaintPlanSchema, type CropInpaintPlan, type CropInpaintWorkflowResult } from './crop-inpaint-types';
@@ -108,12 +109,7 @@ export function augmentCropInpaintWorkflow(
   const maskFilename = filename(requested.maskFilename);
   validateBase(workflow, draft);
   const graph = structuredClone(workflow);
-  let next = Math.max(...Object.keys(graph).map(Number)) + 1;
-  const add = (class_type: string, inputs: ComfyWorkflow[string]['inputs']) => {
-    const id = String(next++);
-    graph[id] = { class_type, inputs };
-    return id;
-  };
+  const add = nodeAllocator(graph);
   const loaded = add('LoadImage', { image: sourceFilename });
   let result: Link = [loaded, 0];
   if (plan.settings.denoise > 0) {

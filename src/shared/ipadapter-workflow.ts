@@ -1,4 +1,5 @@
 import { samplingValidationGraph } from './workflow';
+import { nodeAllocator } from './graph-builder';
 import type { ComfyWorkflow, GenerationDraft } from './types';
 import type { SourceImageAsset } from './source-types';
 import { draftSchema } from './validation';
@@ -138,12 +139,7 @@ export function augmentIPAdapterWorkflow(
   const weightType = ({ balanced: 'linear', style: 'style transfer', composition: 'composition' } as const)[
     settings.mode
   ];
-  let next = Math.max(...Object.keys(graph).map(Number)) + 1;
-  const add = (class_type: string, inputs: ComfyWorkflow[string]['inputs']) => {
-    const id = String(next++);
-    graph[id] = { class_type, inputs };
-    return id;
-  };
+  const add = nodeAllocator(graph);
   let adapterNodeId: string | undefined;
   if (settings.weight > 0) {
     const loaded = add('LoadImage', { image: filename });

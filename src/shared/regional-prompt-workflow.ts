@@ -1,4 +1,5 @@
 import { samplingValidationGraph } from './workflow';
+import { nodeAllocator } from './graph-builder';
 import type { ComfyWorkflow, GenerationDraft } from './types';
 import { draftSchema } from './validation';
 import {
@@ -208,12 +209,7 @@ export async function augmentRegionalPromptWorkflow(
       'The frozen regional recipe differs from its prompts, order, geometry, masks or model chain. Restore its original recipe or deliberately start a new layout.',
     );
   const graph = structuredClone(workflow);
-  let next = Math.max(...Object.keys(graph).map(Number)) + 1;
-  const add = (class_type: string, inputs: ComfyWorkflow[string]['inputs']) => {
-    const id = String(next++);
-    graph[id] = { class_type, inputs };
-    return id;
-  };
+  const add = nodeAllocator(graph);
   const conditioning: Record<'positive' | 'negative', [string, number]> = { positive: ['2', 0], negative: ['3', 0] };
   for (let index = 0; index < regions.length; index++) {
     const region = regions[index];

@@ -1,4 +1,5 @@
 import type { ComfyWorkflow, GenerationDraft } from './types';
+import { nodeAllocator } from './graph-builder';
 import type { SourceImageAsset } from './source-types';
 import {
   controlNetSettingsSchema,
@@ -92,20 +93,7 @@ export function augmentControlNetWorkflow(
     )
       throw new Error('The graph has an invalid conditioning or VAE link.');
   const graph = structuredClone(workflow);
-  let next =
-    Math.max(
-      7,
-      ...Object.keys(graph)
-        .filter(id => /^\d+$/.test(id))
-        .map(Number),
-    ) + 1;
-  if (!Number.isSafeInteger(next)) throw new Error('Workflow node identifiers are invalid.');
-  const add = (class_type: string, inputs: ComfyWorkflow[string]['inputs']) => {
-    while (graph[String(next)]) next++;
-    const id = String(next++);
-    graph[id] = { class_type, inputs };
-    return id;
-  };
+  const add = nodeAllocator(graph, 7);
   const loaded = add('LoadImage', { image: sourceFilename });
   const resized = add('ImageScale', {
     image: [loaded, 0],

@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import WebSocket from 'ws';
+import { historyOutcome, type HistoryEntry } from './comfy-history';
 import { PNG } from 'pngjs';
 import { preserveCropPixels, encodePreservedCrop } from './crop-output';
 import type {
@@ -103,10 +104,6 @@ interface ExecutionContext {
   startedAt?: number;
   cancelRequested?: boolean;
 }
-interface HistoryEntry {
-  outputs?: Record<string, { images?: Array<{ filename: string; subfolder: string; type: string }> }>;
-  status?: { status_str?: string; completed?: boolean; messages?: Array<[string, { exception_message?: string }]> };
-}
 interface QueueResponse {
   queue_running: unknown[][];
   queue_pending: unknown[][];
@@ -132,6 +129,9 @@ export class JobService {
   private order: string[];
   private socket?: WebSocket;
   private socketUrl?: string;
+  private socketFailures = 0;
+  private socketRetryAt = 0;
+  private progressSavedAt = new Map<string, number>();
   private timer?: NodeJS.Timeout;
   private polling = false;
   private preparing = 0;
@@ -237,7 +237,21 @@ export class JobService {
     job.updatedAt = new Date().toISOString();
     const { previewUrl: _, ...durable } = job;
     this.store.saveJob(durable);
+    this.progressSavedAt.set(job.id, Date.now());
     this.changed();
+  }
+  /**
+   * Sampler progress arrives many times a second. The UI sees every step, but the row is
+   * written at most once a second: history polling, not this value, decides the outcome.
+   */
+  private saveProgress(job: StudioJob) {
+    if (Date.now() - (this.progressSavedAt.get(job.id) ?? 0) >= 1000) this.save(job);
+    else this.changed();
+  }
+  /** ComfyUI's job cancel endpoint handles both a running and a still-pending prompt. */
+  private async cancelPrompt(promptId: string | undefined) {
+    // Without a prompt id nothing was submitted; cancelRequested already blocks submission.
+    if (promptId) await this.request(`/api/jobs/${encodeURIComponent(promptId)}/cancel`, {});
   }
   private accept(job: StudioJob, context: ExecutionContext | VideoQueueContext) {
     const order = [...this.order, job.id];
@@ -893,7 +907,7 @@ export class JobService {
       this.save(job);
       return;
     }
-    await this.request(`/api/jobs/${job.promptId}/cancel`, {});
+    await this.cancelPrompt(job.promptId);
     if (job.status !== 'running' || (isVideoJob(job) && job.finalization)) return;
     job.error = 'Cancelling…';
     this.save(job);
@@ -913,16 +927,45 @@ export class JobService {
       (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)
     )
       return;
+    if (this.socketUrl === base && Date.now() < this.socketRetryAt) return;
     this.socket?.terminate();
     this.socketUrl = base;
     const ws = new WebSocket(`${base.replace(/^http/, 'ws')}/ws?clientId=${this.clientId}`, {
       maxPayload: 8 * 1024 * 1024,
     });
     this.socket = ws;
+    let heartbeat: NodeJS.Timeout | undefined;
+    // 'error' is always followed by 'close', which owns the retry; history polling keeps
+    // jobs moving while the live channel is down.
     ws.on('error', () => {});
     ws.on('open', () => {
-      if (!this.disposed && this.socket === ws)
-        ws.send(JSON.stringify({ type: 'feature_flags', data: { supports_preview_metadata: true } }));
+      if (this.disposed || this.socket !== ws) return;
+      this.socketFailures = 0;
+      ws.send(JSON.stringify({ type: 'feature_flags', data: { supports_preview_metadata: true } }));
+      // A silent half-open connection would otherwise look healthy forever.
+      let alive = true;
+      ws.on('pong', () => {
+        alive = true;
+      });
+      heartbeat = setInterval(() => {
+        if (!alive) return ws.terminate();
+        alive = false;
+        ws.ping();
+      }, 15_000);
+      heartbeat.unref?.();
+    });
+    ws.on('close', () => {
+      clearInterval(heartbeat);
+      if (this.socket !== ws) return;
+      this.socket = undefined;
+      this.socketFailures++;
+      this.socketRetryAt = Date.now() + Math.min(30_000, 1000 * 2 ** Math.min(this.socketFailures - 1, 5));
+      if (this.disposed) return;
+      // Live progress is unknown until the channel returns; polling still finishes the job.
+      for (const job of this.items.filter(item => item.status === 'running' && item.queueState === 'running')) {
+        job.queueState = 'unknown';
+        this.changed();
+      }
     });
     ws.on('message', (data, binary) => {
       if (this.disposed || this.socket !== ws) return;
@@ -948,11 +991,12 @@ export class JobService {
           job.progressMax =
             Number(event.data.max) ||
             (isVideoJob(job) ? this.videoContext(job).prepared.contract.plan.sampling.steps : job.draft.steps);
-          this.save(job);
+          this.saveProgress(job);
         }
         if (event.type === 'executing') {
           const node = typeof event.data.node === 'string' ? event.data.node : undefined;
-          if (job.currentNode !== node) {
+          const nodeChanged = job.currentNode !== node;
+          if (nodeChanged) {
             job.progress = 0;
             job.progressMax = 0;
           }
@@ -975,7 +1019,9 @@ export class JobService {
             const context = this.context(job.id);
             job.phase = generationPhase(context.workflow, node, context.advancedImage, context.faceDetailer?.plan);
           }
-          this.save(job);
+          // A node change is a phase change worth keeping; within a node only progress moves.
+          if (nodeChanged) this.save(job);
+          else this.saveProgress(job);
         }
         if (['execution_success', 'execution_error', 'execution_interrupted'].includes(event.type)) void this.tick();
       } catch {
@@ -1152,7 +1198,9 @@ export class JobService {
         throw new Error('The reviewed upscaler changed after this job was queued.');
     }
     const objects =
-      await this.request<Record<string, { input?: { required?: Record<string, unknown[]> } }>>('/object_info');
+      await this.request<
+        Record<string, { input?: { required?: Record<string, unknown[]>; optional?: Record<string, unknown[]> } }>
+      >('/object_info');
     if (context.qwenEdit) {
       if (!this.qwenEditAssets) throw new Error('The reviewed Qwen edit asset service is unavailable.');
       const expected = this.frozenQwenPlan(job, context);
@@ -1193,7 +1241,9 @@ export class JobService {
       if (!objects[node.class_type])
         throw new Error(`The engine does not provide the required ${node.class_type} node.`);
       for (const [name, value] of Object.entries(node.inputs)) {
-        const definition = objects[node.class_type].input?.required?.[name];
+        // ComfyUI validates optional dropdowns too; check them here for a clearer message.
+        const definition =
+          objects[node.class_type].input?.required?.[name] ?? objects[node.class_type].input?.optional?.[name];
         const allowed =
           definition?.[0] === 'COMBO'
             ? (definition?.[1] as { options?: unknown[] } | undefined)?.options
@@ -1490,11 +1540,8 @@ export class JobService {
     const entry = history[job.promptId];
     if (entry) {
       this.missingSince.delete(job.id);
-      const failed =
-        entry.status?.status_str === 'error' || entry.status?.messages?.some(([kind]) => kind === 'execution_error');
-      const interrupted = entry.status?.messages?.some(([kind]) => kind === 'execution_interrupted');
-      if (!entry.status?.completed && !failed && !interrupted) return;
-      const error = entry.status?.messages?.find(([kind]) => kind === 'execution_error')?.[1].exception_message;
+      const { failed, interrupted, error, finished } = historyOutcome(entry);
+      if (!finished) return;
       const terminal = interrupted || context.cancelRequested ? 'cancelled' : failed ? 'failed' : 'completed';
       try {
         let outputs: unknown = entry.outputs ?? {};
@@ -1529,7 +1576,7 @@ export class JobService {
         this.save(job);
       }
       this.missingSince.delete(job.id);
-      if (this.videoContext(job).cancelRequested) await this.request(`/api/jobs/${job.promptId}/cancel`, {});
+      if (this.videoContext(job).cancelRequested) await this.cancelPrompt(job.promptId);
       return;
     }
     const since = this.missingSince.get(job.id) ?? Date.now();
@@ -1645,9 +1692,8 @@ export class JobService {
         this.completed(job);
         return;
       }
-      const error = entry.status?.messages?.find(([type]) => type === 'execution_error')?.[1].exception_message;
-      const interrupted = entry.status?.messages?.some(([type]) => type === 'execution_interrupted');
-      if (entry.status?.completed || entry.status?.status_str === 'error' || error || interrupted) {
+      const { error, interrupted, finished } = historyOutcome(entry);
+      if (finished) {
         const missingMap = Boolean(controlOutput && !context.controlNet?.map);
         job.status =
           interrupted || context.cancelRequested
@@ -1680,7 +1726,7 @@ export class JobService {
         this.save(job);
       }
       this.missingSince.delete(job.id);
-      if (context.cancelRequested) await this.request(`/api/jobs/${job.promptId}/cancel`, {});
+      if (context.cancelRequested) await this.cancelPrompt(job.promptId);
       return;
     }
     const since = this.missingSince.get(job.id) ?? Date.now();

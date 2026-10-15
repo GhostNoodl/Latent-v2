@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { nodeAllocator } from './graph-builder';
 import type { ComfyWorkflow, GenerationDraft } from './types';
 import type {
   AdvancedImageOutput,
@@ -147,22 +148,7 @@ function resolvedSeed(value: string) {
     throw new Error('Resolve and save the sampling seed before compiling this workflow.');
   return BigInt(value).toString();
 }
-function allocator(graph: ComfyWorkflow) {
-  let next =
-    Math.max(
-      7,
-      ...Object.keys(graph)
-        .filter(id => /^\d+$/.test(id))
-        .map(Number),
-    ) + 1;
-  if (!Number.isSafeInteger(next)) throw new Error('Workflow node identifiers are invalid.');
-  return (class_type: string, inputs: ComfyWorkflow[string]['inputs']) => {
-    while (graph[String(next)]) next += 1;
-    const id = String(next++);
-    graph[id] = { class_type, inputs };
-    return id;
-  };
-}
+const allocator = (graph: ComfyWorkflow) => nodeAllocator(graph, 7);
 function plan(
   workflow: ComfyWorkflow,
   workflowVersion: string,

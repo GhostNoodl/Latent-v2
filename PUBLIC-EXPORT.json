@@ -108,8 +108,8 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 109674,
-      "sha256": "837b4e89f9a7fcb65e1d2ab4a492f282ee074af70d926be25fb4af101c04cbe6"
+      "bytes": 111364,
+      "sha256": "1980f86ac9931908898f264eddd5f32d5feca73000ae7d7f5bbbcd820bcca195"
     },
     {
       "path": "src/main/main.ts",
@@ -693,8 +693,8 @@
     },
     {
       "path": "src/shared/advanced-image-workflow.ts",
-      "bytes": 19300,
-      "sha256": "f4ab8fe86299be2cbdd917fae55c06da9fc543454eb1c050d56ff45ac5f4d9fb"
+      "bytes": 18932,
+      "sha256": "e79001317549f081d7b084a3bc32c10071306b88fe6e820cb2d09f2aa1dbe9b9"
     },
     {
       "path": "src/shared/assistant-conversation.ts",
@@ -728,8 +728,8 @@
     },
     {
       "path": "src/shared/controlnet-workflow.ts",
-      "bytes": 8536,
-      "sha256": "7f1bace22ad6ca34bae9f106608168422aad397b3653687941ced00e16a534f0"
+      "bytes": 8181,
+      "sha256": "193f2abdc36c6fdfedc65147c45f34b03d72ebdbf00612aa9e26c6ed8787909f"
     },
     {
       "path": "src/shared/crop-inpaint-geometry.ts",
@@ -743,8 +743,8 @@
     },
     {
       "path": "src/shared/crop-inpaint-workflow.ts",
-      "bytes": 10574,
-      "sha256": "c503479dfb69cbbc394307ff4164aeffe083c472c200b7b32ce54f653ca7d80d"
+      "bytes": 10425,
+      "sha256": "77132c1b48ca4357eb58c5c8682dbc0ac7638bf0fd7709df58ffeae16b9edc53"
     },
     {
       "path": "src/shared/defaults.ts",
@@ -773,8 +773,8 @@
     },
     {
       "path": "src/shared/face-detailer-workflow.ts",
-      "bytes": 8273,
-      "sha256": "4988272b8c30965c10d677d8c5923abe8ead6b5bf94f5c5d1168eb1a33722704"
+      "bytes": 8124,
+      "sha256": "e50da06b4f83d7acbfc78d07628d77f274ffd52590babc53e9cb412ab8d908f7"
     },
     {
       "path": "src/shared/generation-phase.ts",
@@ -798,8 +798,8 @@
     },
     {
       "path": "src/shared/image-workflow.ts",
-      "bytes": 4957,
-      "sha256": "9370795d8234c4aa8fe5ac2dd85366148bbfeb13df4e1ba8a660618b5dd1933c"
+      "bytes": 4569,
+      "sha256": "c099be5fc8a01fa884463567b05db99372f4698a6642d5d224b5aa334176e3e8"
     },
     {
       "path": "src/shared/ipadapter-release.ts",
@@ -813,8 +813,8 @@
     },
     {
       "path": "src/shared/ipadapter-workflow.ts",
-      "bytes": 9873,
-      "sha256": "03ef6d982ca56df2514d9cf65f68c082af2735d838372bbcd4af76b073093491"
+      "bytes": 9724,
+      "sha256": "a9f88658cff01d1f8822aaabacba17f2f6bfc10f086c234c55d606a06d269848"
     },
     {
       "path": "src/shared/model-catalog.ts",
@@ -868,8 +868,8 @@
     },
     {
       "path": "src/shared/regional-prompt-workflow.ts",
-      "bytes": 10818,
-      "sha256": "215423ba167b562f4ebd63e7ff9e20238a5c8eded1ff2efff18cc992cf5361dc"
+      "bytes": 10669,
+      "sha256": "903fe192027e1f7b0395b092488d98e2644f88c3560f2af855cf94c5d0b17c1e"
     },
     {
       "path": "src/shared/runtime-identity.ts",
@@ -1705,6 +1705,21 @@
       "path": "tests/network-hosts.test.ts",
       "bytes": 822,
       "sha256": "946762c400b19293982e010c8c9a466fa560de80bc76a61e26cf9d3c463a3684"
+    },
+    {
+      "path": "src/main/comfy-history.ts",
+      "bytes": 1233,
+      "sha256": "779d5e833f33147aad9d7a81256503fe288ce87277c09c174ecc7af5559b8e37"
+    },
+    {
+      "path": "src/shared/graph-builder.ts",
+      "bytes": 846,
+      "sha256": "cbf9421615122a8484d81f4401e26cca8e549797738d07e91e548e97b91dac9b"
+    },
+    {
+      "path": "tests/graph-builder.test.ts",
+      "bytes": 1876,
+      "sha256": "dfd0eaca6f4093d2a0c7780ca6390ec1d2aec790bdc95e461ff6383604e34a73"
     }
   ],
   "privateHistoryIncluded": false

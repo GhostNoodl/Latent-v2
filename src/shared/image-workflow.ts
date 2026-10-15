@@ -1,4 +1,5 @@
 import type { ComfyWorkflow, GenerationDraft } from './types';
+import { nodeAllocator } from './graph-builder';
 import { draftSchema } from './validation';
 
 export interface ImageWorkflowInputs {
@@ -64,20 +65,7 @@ export function augmentImageWorkflow(
   if (JSON.stringify(workflow['6'].inputs.vae) !== JSON.stringify(['1', 2]))
     throw new Error('The image decoder must use the checkpoint VAE.');
   const result = structuredClone(workflow);
-  let next =
-    Math.max(
-      7,
-      ...Object.keys(result)
-        .filter(id => /^\d+$/.test(id))
-        .map(Number),
-    ) + 1;
-  if (!Number.isSafeInteger(next)) throw new Error('The workflow node identifiers are invalid.');
-  const add = (class_type: string, nodeInputs: ComfyWorkflow[string]['inputs']): string => {
-    while (result[String(next)]) next += 1;
-    const id = String(next++);
-    result[id] = { class_type, inputs: nodeInputs };
-    return id;
-  };
+  const add = nodeAllocator(result, 7);
   const loaded = add('LoadImage', { image: sourceFilename });
   const crop = inputs.resize === 'center-crop' ? 'center' : 'disabled';
   const scaled = add('ImageScale', {

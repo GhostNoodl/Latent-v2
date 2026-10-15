@@ -1378,6 +1378,18 @@
     {
       "from": "tests/network-hosts.test.ts",
       "to": "tests/network-hosts.test.ts"
+    },
+    {
+      "from": "src/main/comfy-history.ts",
+      "to": "src/main/comfy-history.ts"
+    },
+    {
+      "from": "src/shared/graph-builder.ts",
+      "to": "src/shared/graph-builder.ts"
+    },
+    {
+      "from": "tests/graph-builder.test.ts",
+      "to": "tests/graph-builder.test.ts"
     }
   ]
 }
