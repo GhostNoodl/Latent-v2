@@ -10,7 +10,10 @@ export interface ModelLocationBinding {
   createdAt: string;
   updatedAt: string;
 }
-export interface ModelFolder { kind: ModelKind; relativePath: string; }
+export interface ModelFolder {
+  kind: ModelKind;
+  relativePath: string;
+}
 export interface ExternalModelRoot {
   id: string;
   kind: ModelKind;
@@ -22,10 +25,19 @@ export interface ExternalModelRoot {
   error?: string;
 }
 /** Main-owned launch configuration; never accept these paths from renderer IPC. */
-export interface BackendModelRoot { id: string; kind: ModelKind; path: string; }
+export interface BackendModelRoot {
+  id: string;
+  kind: ModelKind;
+  path: string;
+}
 export interface ExternalModelFile {
-  id: string; rootId: string; kind: ModelKind; filename: string;
-  sha256: string; bytes: number; status: 'ready' | 'missing';
+  id: string;
+  rootId: string;
+  kind: ModelKind;
+  filename: string;
+  sha256: string;
+  bytes: number;
+  status: 'ready' | 'missing';
   header?: Record<string, string>;
 }
 export interface ModelLocationsSnapshot {
@@ -37,8 +49,17 @@ export interface ModelLocationsSnapshot {
   error?: string;
   externalRoots?: ExternalModelRoot[];
 }
-export interface CreateModelFolderRequest { kind: ModelKind; parent: string; name: string; }
-export interface MoveModelRequest { filename?: string; modelId: string; destinationFolder: string; expectedSha256: string; }
+export interface CreateModelFolderRequest {
+  kind: ModelKind;
+  parent: string;
+  name: string;
+}
+export interface MoveModelRequest {
+  filename?: string;
+  modelId: string;
+  destinationFolder: string;
+  expectedSha256: string;
+}
 export interface ModelLocationsActions {
   createFolder(request: CreateModelFolderRequest): Promise<ModelLocationsSnapshot>;
   moveModel(request: MoveModelRequest): Promise<ModelLocationsSnapshot>;

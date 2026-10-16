@@ -25,18 +25,26 @@ export const ASSISTANT_RELEASE = {
   inputTokens: 3200,
 } as const;
 
-export const assistantRequestSchema = z.object({
-  target: z.enum(['image', 'video']).optional(), videoContext: videoDraftSchema.optional(),
-  instruction: z.string().trim().min(1).max(6000),
-  draft: draftSchema,
-  history: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(6000) }).strict()).max(100).optional(),
-}).strict();
+export const assistantRequestSchema = z
+  .object({
+    target: z.enum(['image', 'video']).optional(),
+    videoContext: videoDraftSchema.optional(),
+    instruction: z.string().trim().min(1).max(6000),
+    draft: draftSchema,
+    history: z
+      .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(6000) }).strict())
+      .max(100)
+      .optional(),
+  })
+  .strict();
 
-export const assistantOutputSchema = z.object({
-  explanation: z.string().trim().min(1).max(1200),
-  prompt: z.string().trim().min(1).max(6000),
-  negativePrompt: z.string().max(6000),
-}).strict();
+export const assistantOutputSchema = z
+  .object({
+    explanation: z.string().trim().min(1).max(1200),
+    prompt: z.string().trim().min(1).max(6000),
+    negativePrompt: z.string().max(6000),
+  })
+  .strict();
 
 export const ASSISTANT_JSON_SCHEMA = {
   type: 'object',
@@ -55,15 +63,36 @@ const VIDEO_SYSTEM_MESSAGE = `You are Latent's local prompt-writing assistant fo
 export function assistantMessages(request: AssistantSuggestionRequest, history = request.history?.slice(-8) ?? []) {
   return [
     { role: 'system', content: request.target === 'video' ? VIDEO_SYSTEM_MESSAGE : SYSTEM_MESSAGE },
-    ...history.map((turn) => ({ role: turn.role, content: turn.content })),
-    { role: 'user', content: JSON.stringify({ instruction: request.instruction, target: request.target ?? 'image', ...(request.target === 'video' ? { mode: request.videoContext?.mode, durationSeconds: request.videoContext?.requestedDurationSeconds, audio: request.videoContext?.audio } : { family: request.draft.family }), currentPrompt: request.draft.prompt, currentNegativePrompt: request.draft.negativePrompt }) },
+    ...history.map(turn => ({ role: turn.role, content: turn.content })),
+    {
+      role: 'user',
+      content: JSON.stringify({
+        instruction: request.instruction,
+        target: request.target ?? 'image',
+        ...(request.target === 'video'
+          ? {
+              mode: request.videoContext?.mode,
+              durationSeconds: request.videoContext?.requestedDurationSeconds,
+              audio: request.videoContext?.audio,
+            }
+          : { family: request.draft.family }),
+        currentPrompt: request.draft.prompt,
+        currentNegativePrompt: request.draft.negativePrompt,
+      }),
+    },
   ];
 }
 
-export function validatedAssistantPatch(raw: unknown, original: GenerationDraft): { explanation: string; proposedDraft: GenerationDraft } {
+export function validatedAssistantPatch(
+  raw: unknown,
+  original: GenerationDraft,
+): { explanation: string; proposedDraft: GenerationDraft } {
   const output = assistantOutputSchema.parse(raw);
   const copy = structuredClone(draftSchema.parse(original));
-  return { explanation: output.explanation, proposedDraft: { ...copy, prompt: output.prompt, negativePrompt: output.negativePrompt } };
+  return {
+    explanation: output.explanation,
+    proposedDraft: { ...copy, prompt: output.prompt, negativePrompt: output.negativePrompt },
+  };
 }
 
 export function assistantPaths(paths: AppPaths) {
@@ -83,14 +112,40 @@ export function assistantPaths(paths: AppPaths) {
 
 export function assistantArguments(model: string, port: number): string[] {
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid local assistant port.');
-  return ['--model', model, '--alias', ASSISTANT_RELEASE.alias, '--host', '127.0.0.1', '--port', String(port),
-    '--ctx-size', String(ASSISTANT_RELEASE.contextTokens), '--parallel', '1', '--n-gpu-layers', '0',
-    '--threads', String(Math.max(1, Math.min(8, os.availableParallelism()))), '--threads-batch', String(Math.max(1, Math.min(8, os.availableParallelism()))),
-    '--jinja', '--reasoning', 'off', '--timeout', '180'];
+  return [
+    '--model',
+    model,
+    '--alias',
+    ASSISTANT_RELEASE.alias,
+    '--host',
+    '127.0.0.1',
+    '--port',
+    String(port),
+    '--ctx-size',
+    String(ASSISTANT_RELEASE.contextTokens),
+    '--parallel',
+    '1',
+    '--n-gpu-layers',
+    '0',
+    '--threads',
+    String(Math.max(1, Math.min(8, os.availableParallelism()))),
+    '--threads-batch',
+    String(Math.max(1, Math.min(8, os.availableParallelism()))),
+    '--jinja',
+    '--reasoning',
+    'off',
+    '--timeout',
+    '180',
+  ];
 }
 
 export function assistantEnvironment(paths: AppPaths, token: string): NodeJS.ProcessEnv {
-  return { ...runtimeEnvironment(paths), ELECTRON_RUN_AS_NODE: '1', LATENT_ASSISTANT_OWNER_PID: String(process.pid), LLAMA_API_KEY: token };
+  return {
+    ...runtimeEnvironment(paths),
+    ELECTRON_RUN_AS_NODE: '1',
+    LATENT_ASSISTANT_OWNER_PID: String(process.pid),
+    LLAMA_API_KEY: token,
+  };
 }
 
 /** Separate Node owner process also works when the packaged executable is Electron. */

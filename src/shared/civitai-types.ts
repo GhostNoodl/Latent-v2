@@ -1,6 +1,12 @@
 import type { ModelFamily, ModelKind } from './types';
-export interface CivitaiDownloadRequest { modelId: number; versionId: number; fileId: number; }
-export interface CivitaiSettings { hasApiKey: boolean; }
+export interface CivitaiDownloadRequest {
+  modelId: number;
+  versionId: number;
+  fileId: number;
+}
+export interface CivitaiSettings {
+  hasApiKey: boolean;
+}
 
 export interface CivitaiPermissions {
   allowNoCredit: boolean | null;
@@ -23,7 +29,11 @@ export interface CivitaiFile {
   primary: boolean;
   safeTensor: boolean;
 }
-export interface CivitaiPreview { url: string; width: number | null; height: number | null; }
+export interface CivitaiPreview {
+  url: string;
+  width: number | null;
+  height: number | null;
+}
 export interface CivitaiVersion {
   id: number;
   modelId: number;
@@ -69,7 +79,10 @@ export interface CivitaiSearchRequest {
   limit?: number;
   sort?: 'Most Downloaded' | 'Highest Rated' | 'Newest';
 }
-export interface CivitaiSearchPage { items: CivitaiModel[]; nextCursor: string | null; }
+export interface CivitaiSearchPage {
+  items: CivitaiModel[];
+  nextCursor: string | null;
+}
 export interface CivitaiReadResult<T> {
   data: T;
   fetchedAt: string;

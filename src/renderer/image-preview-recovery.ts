@@ -7,5 +7,7 @@ export function reportPreviewRecovery(src: string) {
 
 export function subscribePreviewRecovery(listener: (src: string) => void) {
   listeners.add(listener);
-  return () => { listeners.delete(listener); };
+  return () => {
+    listeners.delete(listener);
+  };
 }

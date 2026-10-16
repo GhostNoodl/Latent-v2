@@ -891,7 +891,7 @@
       "exceptions": [
         {
           "category": "user-profile-path",
-          "sha256": "d99824422c3b2b5a1fbc4ddf49e360f4ec62568c34fb1e8c4f15d8810376b434",
+          "sha256": "ee91d6283c505eefb2575e7b0b6a49ba7230700e1ab23869bdfe6eb82f2384a6",
           "reason": "Reviewed synthetic Example User path / user:secret@example.com rejection fixture; not a personal credential."
         }
       ]
@@ -926,7 +926,7 @@
       "exceptions": [
         {
           "category": "credential-url",
-          "sha256": "4c1a6bc8cbcace548cd47806f92f6b2c9fe9912056f651482d2201c2a33f2e6c",
+          "sha256": "722ac536695ca4540afa2a7dc94944f27b126ee606f494daa6330c88a88d4371",
           "reason": "Reviewed synthetic Example User path / user:secret@example.com rejection fixture; not a personal credential."
         }
       ]
@@ -1326,6 +1326,110 @@
     {
       "from": "tests/setup-activity.test.ts",
       "to": "tests/setup-activity.test.ts"
+    },
+    {
+      "from": ".oxlintrc.json",
+      "to": ".oxlintrc.json"
+    },
+    {
+      "from": ".prettierignore",
+      "to": ".prettierignore"
+    },
+    {
+      "from": ".prettierrc.json",
+      "to": ".prettierrc.json"
+    },
+    {
+      "from": ".git-blame-ignore-revs",
+      "to": ".git-blame-ignore-revs"
+    },
+    {
+      "from": ".gitattributes",
+      "to": ".gitattributes"
+    },
+    {
+      "from": "scripts/release-signing.d.mts",
+      "to": "scripts/release-signing.d.mts"
+    },
+    {
+      "from": "scripts/release-signing.mjs",
+      "to": "scripts/release-signing.mjs"
+    },
+    {
+      "from": "src/main/app-update-signature.ts",
+      "to": "src/main/app-update-signature.ts"
+    },
+    {
+      "from": "src/main/desktop-log.ts",
+      "to": "src/main/desktop-log.ts"
+    },
+    {
+      "from": "src/main/network-hosts.ts",
+      "to": "src/main/network-hosts.ts"
+    },
+    {
+      "from": "src/shared/app-release-signing.ts",
+      "to": "src/shared/app-release-signing.ts"
+    },
+    {
+      "from": "tests/desktop-log.test.ts",
+      "to": "tests/desktop-log.test.ts"
+    },
+    {
+      "from": "tests/network-hosts.test.ts",
+      "to": "tests/network-hosts.test.ts"
+    },
+    {
+      "from": "src/main/comfy-history.ts",
+      "to": "src/main/comfy-history.ts"
+    },
+    {
+      "from": "src/shared/graph-builder.ts",
+      "to": "src/shared/graph-builder.ts"
+    },
+    {
+      "from": "tests/graph-builder.test.ts",
+      "to": "tests/graph-builder.test.ts"
+    },
+    {
+      "from": "src/main/ipc/assistant-sources.ts",
+      "to": "src/main/ipc/assistant-sources.ts"
+    },
+    {
+      "from": "src/main/ipc/gate.ts",
+      "to": "src/main/ipc/gate.ts"
+    },
+    {
+      "from": "src/main/ipc/library.ts",
+      "to": "src/main/ipc/library.ts"
+    },
+    {
+      "from": "src/main/ipc/optional-tools.ts",
+      "to": "src/main/ipc/optional-tools.ts"
+    },
+    {
+      "from": "src/main/ipc/storage-hardware.ts",
+      "to": "src/main/ipc/storage-hardware.ts"
+    },
+    {
+      "from": "src/main/ipc/updates.ts",
+      "to": "src/main/ipc/updates.ts"
+    },
+    {
+      "from": "src/main/ipc/video.ts",
+      "to": "src/main/ipc/video.ts"
+    },
+    {
+      "from": "tests/ipc-gate.test.ts",
+      "to": "tests/ipc-gate.test.ts"
+    },
+    {
+      "from": "src/renderer/ErrorBoundary.tsx",
+      "to": "src/renderer/ErrorBoundary.tsx"
+    },
+    {
+      "from": "tests/modal-dom.test.tsx",
+      "to": "tests/modal-dom.test.tsx"
     }
   ]
 }

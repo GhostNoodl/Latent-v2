@@ -1,12 +1,17 @@
 import type { BackendStatus } from './types';
 
-export interface OwnedBackendPrompt { jobId: string; promptId: string; }
+export interface OwnedBackendPrompt {
+  jobId: string;
+  promptId: string;
+}
 export interface BackendActivitySnapshot {
   state: 'not-checked' | 'checking' | 'ready' | 'offline' | 'unknown';
   message: string;
   observedAt?: string;
-  totalRunning?: number; totalPending?: number;
-  foreignRunning?: number; foreignPending?: number;
+  totalRunning?: number;
+  totalPending?: number;
+  foreignRunning?: number;
+  foreignPending?: number;
   owned: Array<OwnedBackendPrompt & { state: 'running' | 'pending' | 'absent' }>;
 }
 export interface BackendActivityHooks {

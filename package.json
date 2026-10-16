@@ -21,14 +21,17 @@
     "public:test": "node --test scripts/check-public-boundary.mjs",
     "package:installer": "node scripts/package-windows.mjs --installer",
     "notices": "node scripts/third-party-notices.mjs",
-    "notices:check": "node scripts/third-party-notices.mjs --check"
+    "notices:check": "node scripts/third-party-notices.mjs --check",
+    "lint": "oxlint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "adm-zip": "0.6.1",
     "lucide-react": "1.41.0",
     "pngjs": "^7.0.0",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "react": "19.2.9",
+    "react-dom": "19.2.9",
     "sharp": "0.35.5",
     "ws": "^8.18.0",
     "zod": "^4.3.0"
@@ -41,10 +44,12 @@
     "@types/react-dom": "^19.0.0",
     "@types/ws": "^8.5.0",
     "@vitejs/plugin-react": "6.1.1",
-    "electron": "44.2.0",
+    "electron": "44.7.2",
     "electron-builder": "26.15.3",
     "esbuild": "^0.28.1",
     "jsdom": "30.0.1",
+    "oxlint": "1.86.0",
+    "prettier": "3.9.9",
     "typescript": "7.0.2",
     "vite": "8.2.2",
     "vitest": "5.0.0"
@@ -84,6 +89,13 @@
       "node_modules/sharp/**/*",
       "node_modules/@img/**/*"
     ],
+    "electronFuses": {
+      "runAsNode": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
     "win": {
       "icon": "resources/latent-icon.ico",
       "target": [

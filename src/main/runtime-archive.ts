@@ -9,7 +9,7 @@ export function sha256File(filename: string): Promise<string> {
     const hash = crypto.createHash('sha256');
     const stream = fs.createReadStream(filename);
     stream.on('error', reject);
-    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('data', chunk => hash.update(chunk));
     stream.on('end', () => resolve(hash.digest('hex')));
   });
 }
@@ -20,15 +20,20 @@ export async function extractRuntimeZip(archive: string, destination: string, pr
   const planned: { entry: (typeof entries)[number]; target: string }[] = [];
   const rejectLinkedAncestors = async (target: string) => {
     for (let cursor = path.resolve(target); ; cursor = path.dirname(cursor)) {
-      try { if ((await fs.promises.lstat(cursor)).isSymbolicLink()) throw new Error('Runtime extraction path contains a symbolic link or junction.'); }
-      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+      try {
+        if ((await fs.promises.lstat(cursor)).isSymbolicLink())
+          throw new Error('Runtime extraction path contains a symbolic link or junction.');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
       if (cursor === path.dirname(cursor)) break;
     }
   };
   let expandedBytes = 0;
   for (const entry of entries) {
     const archiveName = entry.entryName.replaceAll('\\', '/');
-    if (archiveName.startsWith('/') || archiveName.split('/').includes('..') || archiveName.includes(':')) throw new Error('Unsafe path in runtime archive.');
+    if (archiveName.startsWith('/') || archiveName.split('/').includes('..') || archiveName.includes(':'))
+      throw new Error('Unsafe path in runtime archive.');
     if (prefix && !archiveName.startsWith(prefix)) throw new Error('Unexpected root in runtime archive.');
     const name = prefix ? archiveName.slice(prefix.length) : archiveName;
     if (!name) continue;
@@ -36,7 +41,12 @@ export async function extractRuntimeZip(archive: string, destination: string, pr
     if (((entry.attr >>> 16) & 0xf000) === 0xa000) throw new Error('Runtime archive contains a symbolic link.');
     const target = containedPath(destination, path.join(destination, name));
     if (!entry.isDirectory) {
-      if (!Number.isSafeInteger(entry.header.size) || entry.header.size < 0 || !Number.isSafeInteger(expandedBytes + entry.header.size)) throw new Error('Runtime archive has an invalid expanded size.');
+      if (
+        !Number.isSafeInteger(entry.header.size) ||
+        entry.header.size < 0 ||
+        !Number.isSafeInteger(expandedBytes + entry.header.size)
+      )
+        throw new Error('Runtime archive has an invalid expanded size.');
       expandedBytes += entry.header.size;
     }
     planned.push({ entry, target });
@@ -48,7 +58,10 @@ export async function extractRuntimeZip(archive: string, destination: string, pr
     while (true) {
       try {
         const free = await fs.promises.statfs(volumePath);
-        if (free.bavail * free.bsize < expandedBytes + 256 * 1024 * 1024) throw new Error('Not enough free space to extract the setup archive. Free space and retry; the archive and existing installation are preserved.');
+        if (free.bavail * free.bsize < expandedBytes + 256 * 1024 * 1024)
+          throw new Error(
+            'Not enough free space to extract the setup archive. Free space and retry; the archive and existing installation are preserved.',
+          );
         break;
       } catch (error) {
         const parent = path.dirname(volumePath);
@@ -63,7 +76,10 @@ export async function extractRuntimeZip(archive: string, destination: string, pr
     if (entry.isDirectory) await fs.promises.mkdir(target, { recursive: true });
     else {
       await fs.promises.mkdir(path.dirname(target), { recursive: true });
-      await fs.promises.writeFile(target, entry.getData(), { flag: 'wx' });
+      const data = entry.getData();
+      // The space check trusted the declared size; never write more than was declared.
+      if (data.length !== entry.header.size) throw new Error('Runtime archive entry does not match its declared size.');
+      await fs.promises.writeFile(target, data, { flag: 'wx' });
     }
   }
 }

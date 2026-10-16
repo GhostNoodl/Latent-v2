@@ -11,9 +11,22 @@ export interface ReviewedUpscalerAsset {
   architecture: 'ESRGAN';
   status: 'ready';
   loaderPolicy: 'pinned-publisher-weights-only';
-  provenance: { repository: string; revision: string; version: string; sourceUrl: string; licenseName: 'BSD-3-Clause'; licenseUrl: string };
+  provenance: {
+    repository: string;
+    revision: string;
+    version: string;
+    sourceUrl: string;
+    licenseName: 'BSD-3-Clause';
+    licenseUrl: string;
+  };
   verifiedAt: string;
-  validation: { pythonVersion: string; torchVersion: string; spandrelVersion: string; parameters: number; device: 'cpu' };
+  validation: {
+    pythonVersion: string;
+    torchVersion: string;
+    spandrelVersion: string;
+    parameters: number;
+    device: 'cpu';
+  };
 }
 export interface UpscalerStatus {
   state: 'not-installed' | 'installing' | 'ready' | 'error';
@@ -21,8 +34,19 @@ export interface UpscalerStatus {
   installProgress?: number;
   asset?: ReviewedUpscalerAsset;
 }
-export interface UpscaleSettings { mode: 'resize' | 'learned'; width: number; height: number; resize: 'stretch' | 'center-crop'; }
-export interface UpscaleWorkflowInput { sourceFilename: string; sourceWidth: number; sourceHeight: number; jobId: string; settings: UpscaleSettings; }
+export interface UpscaleSettings {
+  mode: 'resize' | 'learned';
+  width: number;
+  height: number;
+  resize: 'stretch' | 'center-crop';
+}
+export interface UpscaleWorkflowInput {
+  sourceFilename: string;
+  sourceWidth: number;
+  sourceHeight: number;
+  jobId: string;
+  settings: UpscaleSettings;
+}
 export interface HiresFixSettings {
   classic?: boolean;
   scaleFactor?: number;
@@ -38,7 +62,14 @@ export interface HiresFixSettings {
   denoise: number;
   seed: string;
 }
-export interface AdvancedImageOutput { nodeId: string; role: 'base' | 'final'; width: number; height: number; batchSize: number; filenamePrefix: string; }
+export interface AdvancedImageOutput {
+  nodeId: string;
+  role: 'base' | 'final';
+  width: number;
+  height: number;
+  batchSize: number;
+  filenamePrefix: string;
+}
 export interface AdvancedSamplingPass {
   role: 'base' | 'refine';
   nodeId: string | null;

@@ -19,17 +19,36 @@ export function createPaths(root: string): AppPaths {
   }
   fs.mkdirSync(root, { recursive: true });
   if (fs.lstatSync(root).isSymbolicLink()) throw new Error('The studio folder cannot be a symbolic link.');
-  if (!fs.existsSync(marker)) fs.writeFileSync(marker, JSON.stringify({ application: 'latent-v2', schema: 1 }), { flag: 'wx' });
+  if (!fs.existsSync(marker))
+    fs.writeFileSync(marker, JSON.stringify({ application: 'latent-v2', schema: 1 }), { flag: 'wx' });
   const alternate = readStorageLocations(root);
   const runtime = path.join(root, 'runtime');
   const result: AppPaths = {
-    root, runtime, backend: path.join(runtime, 'ComfyUI'),
+    root,
+    runtime,
+    backend: path.join(runtime, 'ComfyUI'),
     python: path.join(runtime, 'venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python'),
-    models: alternate.models ?? path.join(root, 'models'), outputs: alternate.outputs ?? path.join(root, 'outputs'), inputs: path.join(root, 'inputs'),
-    temp: path.join(root, 'temp'), user: path.join(root, 'comfy-user'), cache: path.join(root, 'cache'),
-    logs: path.join(root, 'logs'), database: path.join(root, 'studio.sqlite'),
+    models: alternate.models ?? path.join(root, 'models'),
+    outputs: alternate.outputs ?? path.join(root, 'outputs'),
+    inputs: path.join(root, 'inputs'),
+    temp: path.join(root, 'temp'),
+    user: path.join(root, 'comfy-user'),
+    cache: path.join(root, 'cache'),
+    logs: path.join(root, 'logs'),
+    database: path.join(root, 'studio.sqlite'),
   };
-  for (const folder of [result.runtime, result.models, result.outputs, result.inputs, result.temp, result.user, result.cache, result.logs, path.join(result.models, 'checkpoints'), path.join(result.models, 'loras')]) {
+  for (const folder of [
+    result.runtime,
+    result.models,
+    result.outputs,
+    result.inputs,
+    result.temp,
+    result.user,
+    result.cache,
+    result.logs,
+    path.join(result.models, 'checkpoints'),
+    path.join(result.models, 'loras'),
+  ]) {
     fs.mkdirSync(folder, { recursive: true });
     if (fs.lstatSync(folder).isSymbolicLink()) throw new Error(`Studio directory cannot be a symbolic link: ${folder}`);
   }

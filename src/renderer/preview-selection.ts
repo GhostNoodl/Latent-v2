@@ -10,6 +10,9 @@ export class PreviewSelectionSaver {
   }
   async flush(): Promise<void> {
     let pending: Promise<void>;
-    do { pending = this.pending; await pending; } while (pending !== this.pending);
+    do {
+      pending = this.pending;
+      await pending;
+    } while (pending !== this.pending);
   }
 }

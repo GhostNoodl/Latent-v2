@@ -634,7 +634,7 @@ THE SOFTWARE.
 
 ========================================================================
 
-react 19.2.8
+react 19.2.9
 Declared license: MIT
 Source: https://github.com/react/react.git
 
@@ -666,7 +666,7 @@ SOFTWARE.
 
 ========================================================================
 
-react-dom 19.2.8
+react-dom 19.2.9
 Declared license: MIT
 Source: https://github.com/react/react.git
 
@@ -1043,7 +1043,7 @@ SOFTWARE.
 
 ========================================================================
 
-Electron 44.2.0
+Electron 44.7.2
 https://github.com/electron/electron
 Copyright (c) Electron contributors
 Copyright (c) 2013-2020 GitHub Inc.

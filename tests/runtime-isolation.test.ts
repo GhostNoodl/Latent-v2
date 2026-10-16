@@ -5,7 +5,15 @@ import path from 'node:path';
 import net from 'node:net';
 import AdmZip from 'adm-zip';
 import type { AppPaths } from '../src/shared/types';
-import { backendArguments, containedPath, launcherSource, modelPathsYaml, RUNTIME_RELEASE, runtimeEnvironment, validateRuntimePaths } from '../src/main/runtime-config';
+import {
+  backendArguments,
+  containedPath,
+  launcherSource,
+  modelPathsYaml,
+  RUNTIME_RELEASE,
+  runtimeEnvironment,
+  validateRuntimePaths,
+} from '../src/main/runtime-config';
 import { extractRuntimeZip, sha256File } from '../src/main/runtime-archive';
 import { isManagedSystemStats, ManagedBackend, reserveBackendPort } from '../src/main/managed-backend';
 
@@ -13,17 +21,37 @@ const roots: string[] = [];
 function fixture(): AppPaths {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'latent-runtime-test-'));
   roots.push(root);
-  return { root, runtime: path.join(root, 'runtime'), backend: path.join(root, 'runtime', 'ComfyUI'), python: path.join(root, 'runtime', 'venv', 'Scripts', 'python.exe'), models: path.join(root, 'models'), outputs: path.join(root, 'outputs'), inputs: path.join(root, 'inputs'), temp: path.join(root, 'temp'), user: path.join(root, 'user'), cache: path.join(root, 'cache'), logs: path.join(root, 'logs'), database: path.join(root, 'latent.db') };
+  return {
+    root,
+    runtime: path.join(root, 'runtime'),
+    backend: path.join(root, 'runtime', 'ComfyUI'),
+    python: path.join(root, 'runtime', 'venv', 'Scripts', 'python.exe'),
+    models: path.join(root, 'models'),
+    outputs: path.join(root, 'outputs'),
+    inputs: path.join(root, 'inputs'),
+    temp: path.join(root, 'temp'),
+    user: path.join(root, 'user'),
+    cache: path.join(root, 'cache'),
+    logs: path.join(root, 'logs'),
+    database: path.join(root, 'latent.db'),
+  };
 }
-afterEach(() => { for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true }); });
+afterEach(() => {
+  for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
+});
 
 describe('managed runtime isolation', () => {
   it('rejects an existing destination junction before writing outside the extraction tree', async () => {
-    const paths = fixture(); const stage = path.join(paths.root, 'stage'); const outside = path.join(paths.root, 'outside');
-    fs.mkdirSync(stage); fs.mkdirSync(outside);
+    const paths = fixture();
+    const stage = path.join(paths.root, 'stage');
+    const outside = path.join(paths.root, 'outside');
+    fs.mkdirSync(stage);
+    fs.mkdirSync(outside);
     fs.symlinkSync(outside, path.join(stage, 'linked'), process.platform === 'win32' ? 'junction' : 'dir');
-    const zip = new AdmZip(); zip.addFile('commit/linked/new.txt', Buffer.from('must not escape'));
-    const archive = path.join(paths.root, 'fixture.zip'); zip.writeZip(archive);
+    const zip = new AdmZip();
+    zip.addFile('commit/linked/new.txt', Buffer.from('must not escape'));
+    const archive = path.join(paths.root, 'fixture.zip');
+    zip.writeZip(archive);
     await expect(extractRuntimeZip(archive, stage, 'commit/')).rejects.toThrow(/link|junction/);
     expect(fs.readdirSync(outside)).toEqual([]);
   });
@@ -31,7 +59,9 @@ describe('managed runtime isolation', () => {
   it('rejects paths that could write into the existing installation or a sibling prefix', () => {
     const paths = fixture();
     expect(() => validateRuntimePaths(paths)).not.toThrow();
-    expect(() => validateRuntimePaths({ ...paths, models: path.join(paths.root, '..', 'old-ComfyUI', 'models') })).toThrow(/inside|outside/);
+    expect(() =>
+      validateRuntimePaths({ ...paths, models: path.join(paths.root, '..', 'old-ComfyUI', 'models') }),
+    ).toThrow(/inside|outside/);
     expect(() => containedPath(paths.root, `${paths.root}-other`)).toThrow(/inside/);
     expect(() => containedPath(paths.root, paths.root)).toThrow(/inside/);
   });
@@ -47,13 +77,30 @@ describe('managed runtime isolation', () => {
   it('does not inherit Python environments, model tokens, home caches, or package indexes', () => {
     const paths = fixture();
     const environment = runtimeEnvironment(paths, {
-      SystemRoot: 'C:\\Windows', PATH: 'C:\\existing-comfy\\python', PYTHONPATH: 'C:\\existing-comfy',
-      PYTHONHOME: 'C:\\existing-comfy', VIRTUAL_ENV: 'C:\\old-venv', UV_INDEX: 'https://unexpected.example',
-      PIP_EXTRA_INDEX_URL: 'https://unexpected.example', HF_TOKEN: 'not-a-real-token', HOME: 'C:\\old-home',
+      SystemRoot: 'C:\\Windows',
+      PATH: 'C:\\existing-comfy\\python',
+      PYTHONPATH: 'C:\\existing-comfy',
+      PYTHONHOME: 'C:\\existing-comfy',
+      VIRTUAL_ENV: 'C:\\old-venv',
+      UV_INDEX: 'https://unexpected.example',
+      PIP_EXTRA_INDEX_URL: 'https://unexpected.example',
+      HF_TOKEN: 'not-a-real-token',
+      HOME: 'C:\\old-home',
     });
-    for (const name of ['PYTHONPATH', 'PYTHONHOME', 'VIRTUAL_ENV', 'UV_INDEX', 'PIP_EXTRA_INDEX_URL', 'HF_TOKEN']) expect(environment[name]).toBeUndefined();
+    for (const name of ['PYTHONPATH', 'PYTHONHOME', 'VIRTUAL_ENV', 'UV_INDEX', 'PIP_EXTRA_INDEX_URL', 'HF_TOKEN'])
+      expect(environment[name]).toBeUndefined();
     expect(environment.PATH).not.toContain('existing-comfy');
-    for (const name of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'UV_PYTHON_INSTALL_DIR', 'UV_CACHE_DIR', 'HF_HOME', 'TORCH_HOME', 'CUDA_CACHE_PATH']) {
+    for (const name of [
+      'HOME',
+      'USERPROFILE',
+      'APPDATA',
+      'LOCALAPPDATA',
+      'UV_PYTHON_INSTALL_DIR',
+      'UV_CACHE_DIR',
+      'HF_HOME',
+      'TORCH_HOME',
+      'CUDA_CACHE_PATH',
+    ]) {
       expect(environment[name]?.startsWith(paths.root)).toBe(true);
     }
     expect(environment.PYTHONNOUSERSITE).toBe('1');
@@ -77,9 +124,14 @@ describe('managed runtime isolation', () => {
 
   it('does not mistake an existing external ComfyUI server for its managed process', () => {
     const paths = fixture();
-    const stats = { system: { comfyui_version: RUNTIME_RELEASE.comfyVersion, argv: [path.join(paths.backend, 'main.py')] }, devices: [] };
+    const stats = {
+      system: { comfyui_version: RUNTIME_RELEASE.comfyVersion, argv: [path.join(paths.backend, 'main.py')] },
+      devices: [],
+    };
     expect(isManagedSystemStats(stats, paths)).toBe(true);
-    expect(isManagedSystemStats({ ...stats, system: { ...stats.system, argv: ['C:\\existing-ComfyUI\\main.py'] } }, paths)).toBe(false);
+    expect(
+      isManagedSystemStats({ ...stats, system: { ...stats.system, argv: ['C:\\existing-ComfyUI\\main.py'] } }, paths),
+    ).toBe(false);
     expect(isManagedSystemStats({ system: {}, devices: [] }, paths)).toBe(false);
   });
 
@@ -87,8 +139,11 @@ describe('managed runtime isolation', () => {
     const port = await reserveBackendPort();
     expect(port).toBeGreaterThanOrEqual(1024);
     const server = net.createServer();
-    await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolve); });
-    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(port, '127.0.0.1', resolve);
+    });
+    await new Promise<void>((resolve, reject) => server.close(error => (error ? reject(error) : resolve())));
   });
 
   it('has a crash watchdog bound to its specific Electron owner', () => {
@@ -106,7 +161,10 @@ describe('installation state and archives', () => {
   it('does not mark an incomplete runtime installed and returns detached status snapshots', async () => {
     const paths = fixture();
     fs.mkdirSync(paths.runtime, { recursive: true });
-    fs.writeFileSync(path.join(paths.runtime, 'installed.json'), JSON.stringify({ ...RUNTIME_RELEASE, sourceSha256: RUNTIME_RELEASE.comfyArchiveSha256 }));
+    fs.writeFileSync(
+      path.join(paths.runtime, 'installed.json'),
+      JSON.stringify({ ...RUNTIME_RELEASE, sourceSha256: RUNTIME_RELEASE.comfyArchiveSha256 }),
+    );
     const backend = new ManagedBackend(paths, () => undefined);
     expect(backend.status().state).toBe('not-installed');
     const snapshot = backend.status();
@@ -124,7 +182,10 @@ describe('installation state and archives', () => {
     fs.mkdirSync(path.dirname(paths.python), { recursive: true });
     fs.writeFileSync(path.join(paths.backend, 'main.py'), '# test');
     fs.writeFileSync(paths.python, 'test');
-    fs.writeFileSync(path.join(paths.runtime, 'installed.json'), JSON.stringify({ ...RUNTIME_RELEASE, sourceSha256: RUNTIME_RELEASE.comfyArchiveSha256 }));
+    fs.writeFileSync(
+      path.join(paths.runtime, 'installed.json'),
+      JSON.stringify({ ...RUNTIME_RELEASE, sourceSha256: RUNTIME_RELEASE.comfyArchiveSha256 }),
+    );
     const backend = new ManagedBackend(paths, () => undefined);
     expect(backend.status().state).toBe('stopped');
     await backend.setup();
@@ -145,25 +206,45 @@ describe('installation state and archives', () => {
     expect(fs.readFileSync(path.join(stage, 'main.py'), 'utf8')).toContain('test');
     expect(await sha256File(archive)).toMatch(/^[a-f0-9]{64}$/);
     await expect(extractRuntimeZip(archive, stage, 'commit/')).rejects.toThrow();
-    await expect(extractRuntimeZip(archive, path.join(paths.root, 'other'), 'different/')).rejects.toThrow(/Unexpected root/);
+    await expect(extractRuntimeZip(archive, path.join(paths.root, 'other'), 'different/')).rejects.toThrow(
+      /Unexpected root/,
+    );
   });
 
   it('budgets expanded cached ZIP contents before writing and permits retry after freeing space', async () => {
-    const paths = fixture(); const archive = path.join(paths.root, 'compressed.zip'); const stage = path.join(paths.root, 'new', 'stage');
-    const payload = Buffer.alloc(4 * 1024 * 1024, 7); const zip = new AdmZip(); zip.addFile('commit/weights.bin', payload); zip.writeZip(archive);
-    const originalHash = await sha256File(archive); expect(fs.statSync(archive).size).toBeLessThan(payload.length / 100);
-    const capacity = vi.spyOn(fs.promises, 'statfs').mockResolvedValue({ bavail: 256 * 1024 * 1024 + payload.length - 1, bsize: 1 } as fs.StatsFs);
+    const paths = fixture();
+    const archive = path.join(paths.root, 'compressed.zip');
+    const stage = path.join(paths.root, 'new', 'stage');
+    const payload = Buffer.alloc(4 * 1024 * 1024, 7);
+    const zip = new AdmZip();
+    zip.addFile('commit/weights.bin', payload);
+    zip.writeZip(archive);
+    const originalHash = await sha256File(archive);
+    expect(fs.statSync(archive).size).toBeLessThan(payload.length / 100);
+    const capacity = vi
+      .spyOn(fs.promises, 'statfs')
+      .mockResolvedValue({ bavail: 256 * 1024 * 1024 + payload.length - 1, bsize: 1 } as fs.StatsFs);
     try {
       await expect(extractRuntimeZip(archive, stage, 'commit/')).rejects.toThrow('Not enough free space to extract');
-      expect(fs.existsSync(stage)).toBe(false); expect(await sha256File(archive)).toBe(originalHash);
-    } finally { capacity.mockRestore(); }
-    await extractRuntimeZip(archive, stage, 'commit/'); expect(fs.readFileSync(path.join(stage, 'weights.bin')).equals(payload)).toBe(true);
+      expect(fs.existsSync(stage)).toBe(false);
+      expect(await sha256File(archive)).toBe(originalHash);
+    } finally {
+      capacity.mockRestore();
+    }
+    await extractRuntimeZip(archive, stage, 'commit/');
+    expect(fs.readFileSync(path.join(stage, 'weights.bin')).equals(payload)).toBe(true);
     expect(await sha256File(archive)).toBe(originalHash);
   });
 
   it('validates later archive roots before extracting earlier valid entries', async () => {
-    const paths = fixture(); const archive = path.join(paths.root, 'mixed.zip'); const stage = path.join(paths.root, 'mixed-stage');
-    const zip = new AdmZip(); zip.addFile('commit/first.py', Buffer.from('valid')); zip.addFile('unexpected/last.py', Buffer.from('wrong root')); zip.writeZip(archive);
-    await expect(extractRuntimeZip(archive, stage, 'commit/')).rejects.toThrow('Unexpected root'); expect(fs.existsSync(stage)).toBe(false);
+    const paths = fixture();
+    const archive = path.join(paths.root, 'mixed.zip');
+    const stage = path.join(paths.root, 'mixed-stage');
+    const zip = new AdmZip();
+    zip.addFile('commit/first.py', Buffer.from('valid'));
+    zip.addFile('unexpected/last.py', Buffer.from('wrong root'));
+    zip.writeZip(archive);
+    await expect(extractRuntimeZip(archive, stage, 'commit/')).rejects.toThrow('Unexpected root');
+    expect(fs.existsSync(stage)).toBe(false);
   });
 });

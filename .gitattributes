@@ -1,0 +1,6 @@
+# Source files are formatted by Prettier with LF endings.
+*.ts text eol=lf
+*.tsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.css text eol=lf

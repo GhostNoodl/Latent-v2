@@ -8,6 +8,10 @@ Only the installed Windows x64 edition can install updates in place. Development
 
 The update source is the public [GhostNoodl/Latent-v2 release feed](https://api.github.com/repos/GhostNoodl/Latent-v2/releases/latest). Only a newer stable version with the exact `Latent-v2-VERSION-Setup-x64-unsigned.exe` asset is accepted. The installer must include a SHA-256 digest in [GitHub release asset metadata](https://docs.github.com/en/rest/releases/assets). Missing, private, unpublished or rate-limited feeds produce an error rather than a false up-to-date result. No credentials, prompts, model inventory or studio paths are sent.
 
+Each installer must also have a detached publisher signature, `Latent-v2-VERSION-Setup-x64-unsigned.exe.sig`, uploaded to the same release. The signature is Ed25519 over the installer's name, size and SHA-256. It is checked against the public keys compiled into the app (`src/shared/app-release-signing.ts`) before a release is offered. The GitHub digest alone only proves the bytes match what was uploaded, while the signature proves who published them. If no key is compiled in, or the signature is missing or from another key, the app offers no update.
+
+To set up signing once, run `node scripts/release-signing.mjs keygen <path outside the repo>`, back up the private key, and paste the printed public key into `APP_RELEASE_PUBLIC_KEYS`. For each release, run `node scripts/release-signing.mjs sign <installer.exe> <private key>` and upload the resulting `.sig` next to the installer.
+
 Downloads are bounded by advertised size, capped at 1 GiB, cancellable and checked against their digest. Redirects stay on an explicit GitHub release-host allowlist. Metadata is limited to 2 MiB. The private studio cache uses exclusive file creation and rejects linked files. Unchanged verified downloads can be reused; changed regular cached installers are preserved under an invalid suffix before a replacement is downloaded. Partial files created by failed transfers are removed. Space checks include both the temporary and final installer copies.
 
 ## Installation and user data
@@ -16,7 +20,7 @@ Save, close and install requests installation after pending operations, jobs, vi
 
 Postpone installation prevents another automatic request for that version in the current session. A manual installation request or explicitly enabling automatic installation again can resume it. After restart, saved automatic preferences apply again.
 
-The existing per-user NSIS configuration, application ID and user-data locations are unchanged. Updates do not migrate, remove or bundle user models and studio data. This remains unsigned distribution; the updater does not claim publisher code signing. Portable users continue replacing the portable application manually.
+The existing per-user NSIS configuration, application ID and user-data locations are unchanged. Updates do not migrate, remove or bundle user models and studio data. The installer itself is not Authenticode-signed, so Windows SmartScreen may still warn. The release signature protects the in-app update path only. Portable users continue replacing the portable application manually.
 
 ## Validation and remaining release proof
 

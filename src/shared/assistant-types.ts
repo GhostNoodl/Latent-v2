@@ -38,7 +38,13 @@ export interface AssistantSuggestion {
 
 export interface AssistantConversation {
   version: 1;
-  messages: Array<{ id: string; role: 'user' | 'assistant'; content: string; createdAt: string; suggestion?: AssistantSuggestion }>;
+  messages: Array<{
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    createdAt: string;
+    suggestion?: AssistantSuggestion;
+  }>;
   instruction: string;
   selectedSuggestionId?: string;
   appliedSuggestionId?: string;

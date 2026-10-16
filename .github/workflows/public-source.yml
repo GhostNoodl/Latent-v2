@@ -16,10 +16,12 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - name: Install the locked Electron runtime
         run: node node_modules/electron/install.js
       - run: npm run notices:check
+      - run: npm run format:check
+      - run: npm run lint
       - run: node --test scripts/check-windows-distribution.mjs
       - run: npm run public:check
       - run: npm audit --omit=dev --audit-level=moderate
