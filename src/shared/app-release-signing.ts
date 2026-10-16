@@ -5,7 +5,10 @@
  * More than one entry allows key rotation: the old key stays until every supported
  * version trusts the new one.
  */
-export const APP_RELEASE_PUBLIC_KEYS: readonly string[] = [];
+export const APP_RELEASE_PUBLIC_KEYS: readonly string[] = [
+  // Latent v2 release key, created 2026-10-16.
+  '2UOOmvgdQsW0dY9YF3wK8lHyPXcPiSB3YU3TS3971EE=',
+];
 
 /** The exact bytes a release signature covers: the installer's identity, not its full contents. */
 export function releaseSigningMessage(release: { name: string; bytes: number; sha256: string }) {

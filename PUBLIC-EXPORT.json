@@ -1693,8 +1693,8 @@
     },
     {
       "path": "src/shared/app-release-signing.ts",
-      "bytes": 829,
-      "sha256": "ed6b3d8c8dcd3a28261e773cc3843c70d9e8ab88bd623a75b04297c4c9ac0274"
+      "bytes": 928,
+      "sha256": "342e529bc1cad50898282cf0b7f8c730ea2e61f9732f207049499eb063c3a444"
     },
     {
       "path": "tests/desktop-log.test.ts",
