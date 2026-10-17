@@ -5,6 +5,7 @@ import type { KeyboardEvent } from 'react';
 import { ArrowUpRight, Check, Copy, Download, Play, RotateCcw, Square, Terminal } from 'lucide-react';
 import type { AppSettings, AppSnapshot } from '../shared/types';
 import { DEFAULT_SETTINGS } from '../shared/defaults';
+import { DEFAULT_IMAGE_VERSIONS } from '../shared/image-versions';
 import { Busy, Notice, Toggle, type RunAction } from './ui';
 import { RuntimeUpdates } from './RuntimeUpdates';
 import { StorageOverview } from './StorageOverview';
@@ -50,6 +51,7 @@ export function StudioSettings({
   hardwareActions: Omit<HardwareRecommendationsProps, 'status' | 'busy'>;
 }) {
   const { settings, backend, paths } = snapshot;
+  const imageVersions = settings.imageVersions ?? DEFAULT_IMAGE_VERSIONS;
   const settingsBusy = busy.settings || busy.hardware;
   const runtimeWorking =
     ['applying', 'rolling-back', 'recovering'].includes(snapshot.runtimeUpdates.state) ||
@@ -377,6 +379,47 @@ export function StudioSettings({
             />
           </fieldset>
         </div>
+        <div className="setting-line">
+          <div>
+            <h3>Image versions</h3>
+            <p>
+              Show an image and its hires fix and face fix as one card in the gallery, with the newest version on top.
+              Every version stays saved and you can still view or compare them from the card's ⋯ menu.
+            </p>
+          </div>
+          <fieldset disabled={settingsBusy}>
+            <Toggle
+              label="Group versions together"
+              checked={imageVersions.group}
+              onChange={group => update({ imageVersions: { ...imageVersions, group } })}
+            />
+          </fieldset>
+        </div>
+        {imageVersions.group && (
+          <div className="setting-line">
+            <div>
+              <h3>Also keep as separate cards</h3>
+              <p>Pick the earlier versions that should still get their own card next to the grouped one.</p>
+            </div>
+            <fieldset disabled={settingsBusy} className="setting-toggles">
+              <Toggle
+                label="Original"
+                checked={imageVersions.showOriginal}
+                onChange={showOriginal => update({ imageVersions: { ...imageVersions, showOriginal } })}
+              />
+              <Toggle
+                label="Hires fix"
+                checked={imageVersions.showRefined}
+                onChange={showRefined => update({ imageVersions: { ...imageVersions, showRefined } })}
+              />
+              <Toggle
+                label="Face fix steps"
+                checked={imageVersions.showFaceSteps}
+                onChange={showFaceSteps => update({ imageVersions: { ...imageVersions, showFaceSteps } })}
+              />
+            </fieldset>
+          </div>
+        )}
         <div className="setting-line">
           <div>
             <h3>Remember prompts</h3>

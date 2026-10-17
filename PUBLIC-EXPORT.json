@@ -368,8 +368,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 109548,
-      "sha256": "178201b76e0dfaf8bea0118cce09139cb461a91ec0e45481e5a2190e2c3f2cea"
+      "bytes": 111804,
+      "sha256": "a512000cac74122bb802fd4236c81fb94bcd26844637c5fe07e4737c28286885"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -458,8 +458,8 @@
     },
     {
       "path": "src/renderer/History.tsx",
-      "bytes": 26851,
-      "sha256": "be7e6a64b58cddbfd58ded3befe93312f5f193ad10d14b88f954d89cb8598a14"
+      "bytes": 31170,
+      "sha256": "100b85122330e6b374ede394b2c02e0eca7796b8a24fad78b53f11a5a1396541"
     },
     {
       "path": "src/renderer/image-preview-recovery.ts",
@@ -588,8 +588,8 @@
     },
     {
       "path": "src/renderer/Settings.tsx",
-      "bytes": 19923,
-      "sha256": "df627d3d946c8310ba0e0077f201d4c1ac8350f9397b9a480081531c8a152a56"
+      "bytes": 21821,
+      "sha256": "d5f45401d3c6080e56fb473b59a961066321d12be83b5ac69e91f381b8498e93"
     },
     {
       "path": "src/renderer/SharedBackendActivity.tsx",
@@ -628,8 +628,8 @@
     },
     {
       "path": "src/renderer/styles.css",
-      "bytes": 38022,
-      "sha256": "44e66cc9a76d22ad8792468410dfdf879115363b9b51488ca1af6c349cf6c1d6"
+      "bytes": 38669,
+      "sha256": "ef1f0825b85f7c8ca91205c9e8cbce2bc40f66553e91970ca7bcd2fffbbc2c79"
     },
     {
       "path": "src/renderer/ui.tsx",
@@ -748,8 +748,8 @@
     },
     {
       "path": "src/shared/defaults.ts",
-      "bytes": 2186,
-      "sha256": "51c41577390fc3736b9777b849ded9666a2ff38ce5c7118d114a5f3e6ddd10d3"
+      "bytes": 2283,
+      "sha256": "18b9c529852e6e1e3f31955cd2bec6321db86084e7dea1514a7f34225764473f"
     },
     {
       "path": "src/shared/dynamic-prompt-recipe.ts",
@@ -795,6 +795,11 @@
       "path": "src/shared/history-selection.ts",
       "bytes": 817,
       "sha256": "35dbf09dc831324fe9e11689ece6d364180aebc5064824cdb6959d40be1d86b2"
+    },
+    {
+      "path": "src/shared/image-versions.ts",
+      "bytes": 5313,
+      "sha256": "da8ccad2ce162abc51e421c5e3bc1d48c3471dfa3b03535961df256c673b7039"
     },
     {
       "path": "src/shared/image-workflow.ts",
@@ -913,13 +918,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 19373,
-      "sha256": "60115206b5ebbe646fa1b3ec68a285a2656553cf6f0d684a3dbf181416d5a824"
+      "bytes": 19605,
+      "sha256": "f9db65b2ad44f1df52b3470a4bd9c5366ffc80b0c49d2892d18b97fcd45c2168"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 10614,
-      "sha256": "68a8fd9a5806dbd17625032ee5bc99f4e43a44afd6992ade408d170f9a917037"
+      "bytes": 10905,
+      "sha256": "997527fe41cb5221b084105b03a8bf44b6e6fa954d86b2d89e2f4aba48591bb9"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1250,6 +1255,11 @@
       "path": "tests/app-history-dom.test.tsx",
       "bytes": 40909,
       "sha256": "de45f43543dcab27f94e3e421d41cccdc450c6ad979869a13d6cd034a942cd22"
+    },
+    {
+      "path": "tests/image-versions.test.tsx",
+      "bytes": 5691,
+      "sha256": "fc73e716a70aea6c973e07e51109374919220325b64b4f69c7f053dbe888815b"
     },
     {
       "path": "scripts/third-party-notices.mjs",
