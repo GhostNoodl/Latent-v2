@@ -112,7 +112,11 @@ export function runtimeEnvironment(paths: AppPaths, inherited: NodeJS.ProcessEnv
   return env;
 }
 
-export function backendArguments(paths: AppPaths, port: number, settings?: Pick<AppSettings, 'deviceMode'>): string[] {
+export function backendArguments(
+  paths: AppPaths,
+  port: number,
+  settings?: Pick<AppSettings, 'deviceMode' | 'fastMath'>,
+): string[] {
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid managed backend port.');
   const args = [
     '-s',
@@ -143,6 +147,8 @@ export function backendArguments(paths: AppPaths, port: number, settings?: Pick<
   ];
   if (settings?.deviceMode === 'cpu') args.push('--cpu');
   if (settings?.deviceMode === 'lowvram') args.push('--lowvram', '--disable-dynamic-vram');
+  // fp16 accumulation (RTX 20+) and fp8 matmul (RTX 40+) speed up sampling; unsupported GPUs ignore them.
+  if (settings?.fastMath && settings.deviceMode !== 'cpu') args.push('--fast', 'fp16_accumulation', 'fp8_matrix_mult');
   return args;
 }
 

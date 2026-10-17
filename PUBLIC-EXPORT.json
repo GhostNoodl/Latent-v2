@@ -108,13 +108,13 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 111364,
-      "sha256": "1980f86ac9931908898f264eddd5f32d5feca73000ae7d7f5bbbcd820bcca195"
+      "bytes": 112278,
+      "sha256": "9c71469097bc6db19d7ee58077f66e57aedb0fc4b1e16e760499b929e0e81a5c"
     },
     {
       "path": "src/main/main.ts",
-      "bytes": 51341,
-      "sha256": "43084517920870dcc0425dd7db3d7efc7f3ebfeff1dd9ecba48ec74a6801f58e"
+      "bytes": 51333,
+      "sha256": "f4b1311ba5255ff7215cb3883f302cbafb96b1c9d0cdb881ed01070eb020e24e"
     },
     {
       "path": "src/main/managed-backend.ts",
@@ -208,8 +208,8 @@
     },
     {
       "path": "src/main/runtime-config.ts",
-      "bytes": 10228,
-      "sha256": "53555b7c7f7e95d8eba8ee6b5bbf87db13a1d6510067ec46ece9ab07c5bb5b36"
+      "bytes": 10477,
+      "sha256": "0d0f1a3b93e835e68f94c547bac2531b82bea45894eab9b8a8fe855cdd93f638"
     },
     {
       "path": "src/main/runtime-environment-command.ts",
@@ -223,8 +223,8 @@
     },
     {
       "path": "src/main/runtime-identity.ts",
-      "bytes": 16795,
-      "sha256": "0873ca3f620ab784c8394e775e964ffeb95a3c6c9483c5cc0c76e8652a836507"
+      "bytes": 16930,
+      "sha256": "085cfa4146957e4b146ec6a02495013993229a3b78d60621ea7573aa10fc4fee"
     },
     {
       "path": "src/main/runtime-origin-033-packages.ts",
@@ -298,8 +298,8 @@
     },
     {
       "path": "src/main/store.ts",
-      "bytes": 11379,
-      "sha256": "3e9cbf8251bf97f79ce0d2915ea2d99b889b93f191c49bda2c5eac9300ff512e"
+      "bytes": 11387,
+      "sha256": "1c0fe2d60c273a8cd8372396779954bfd5e441960f2ca62013497e1f7a0fbab2"
     },
     {
       "path": "src/main/upscaler.ts",
@@ -568,8 +568,8 @@
     },
     {
       "path": "src/renderer/RecipeExtras.tsx",
-      "bytes": 14446,
-      "sha256": "9c59aad89f313a70f8eebad85a4758785f7a5e14c7e36603d3e5b1429d6200f6"
+      "bytes": 14534,
+      "sha256": "0c5a55bae87083e0d2c7336737cda62aeb0e8763ccfaddb611044538e0e8a840"
     },
     {
       "path": "src/renderer/regional-prompts.css",
@@ -588,8 +588,8 @@
     },
     {
       "path": "src/renderer/Settings.tsx",
-      "bytes": 18601,
-      "sha256": "6e0e4c0915e969346f1eb006a6b2bf9256d17908c232a5590e1139d10dd24fb4"
+      "bytes": 19216,
+      "sha256": "ca89476b0c4c2f5fb647fc6481b9bdebbcd75555c4ba022f1991b71efd24549d"
     },
     {
       "path": "src/renderer/SharedBackendActivity.tsx",
@@ -748,8 +748,8 @@
     },
     {
       "path": "src/shared/defaults.ts",
-      "bytes": 2143,
-      "sha256": "f3a481015253b142301dd91934cd8c5e5f3cbf3ba1f65ac61cd598d8480c209e"
+      "bytes": 2162,
+      "sha256": "a86b733fd2c86b4222986f7a0daac7b136cb3ac0cd77028a172e082e7e53fbc8"
     },
     {
       "path": "src/shared/dynamic-prompt-recipe.ts",
@@ -873,8 +873,8 @@
     },
     {
       "path": "src/shared/runtime-identity.ts",
-      "bytes": 2669,
-      "sha256": "4da2c16447eabfa041f3f260bb84cdf5b9d39b3a0962e34d2de37db36c53162a"
+      "bytes": 2707,
+      "sha256": "0203295accb9b91c91552fc70dc1058d0ee8dcd033b2adf37acd96f56faf9119"
     },
     {
       "path": "src/shared/runtime-update-capabilities.ts",
@@ -913,13 +913,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 19126,
-      "sha256": "19e5fcfc584710baff891782788d31e19302e36bc40e64547120ca49e70203a2"
+      "bytes": 19240,
+      "sha256": "559723d5ce8c981e2ab5ebd9049a4cd07c18b89a8c4b738040ed2dcfb1befcc3"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 10070,
-      "sha256": "415a71e05f391bb8fff679176e61a984bb7f5b4f6b170114c44805ae160e452c"
+      "bytes": 10567,
+      "sha256": "c24417bcbec37de950ebd5b120e9120f07da9ab1790b087ec037f204ed9e5787"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1083,8 +1083,8 @@
     },
     {
       "path": "tests/runtime-isolation.test.ts",
-      "bytes": 10951,
-      "sha256": "98317590b4e5bb70c9c2e6821ece335fa064ff885cc07f82c2d9c1fdbd975260"
+      "bytes": 11629,
+      "sha256": "7d9ad3e627b42b3343c51d1fb1a5a3177fcdf7d0e8f1460100c25cd3c49fe80d"
     },
     {
       "path": "tests/runtime-update-storage.test.ts",
@@ -1100,6 +1100,11 @@
       "path": "tests/store-paths.test.ts",
       "bytes": 4988,
       "sha256": "335c3052322b6ef32f4dc2397e0a0cb242a842ed1b801390626938045a3ddddb"
+    },
+    {
+      "path": "tests/settings-patch.test.ts",
+      "bytes": 608,
+      "sha256": "909a9928bf863f0d81670e024ed25b35e27bd1c434ba07818463417e5e45dab3"
     },
     {
       "path": "tests/runtime-install-packages.test.ts",
@@ -1142,9 +1147,14 @@
       "sha256": "f56062eb3195b5184b1e40e470eaf2c3147c8944121d17574b51a04acefd238a"
     },
     {
+      "path": "tests/job-queue-wake.test.ts",
+      "bytes": 1546,
+      "sha256": "6f52438e3805ba17c345a7c5495fca17e23547cd79cbc932b03467a21288203d"
+    },
+    {
       "path": "tests/runtime-identity.test.ts",
-      "bytes": 10711,
-      "sha256": "722ac536695ca4540afa2a7dc94944f27b126ee606f494daa6330c88a88d4371"
+      "bytes": 11026,
+      "sha256": "789df8e5ef1fb865d6a5ceb21977f8053cb9d2826c0edc4351f2a408695deb6f"
     },
     {
       "path": "tests/runtime-environments.test.ts",

@@ -39,6 +39,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   notifyError: true,
   backendAutoStart: true,
   deviceMode: 'auto',
+  fastMath: false,
 };
 export const SAMPLERS = [
   'euler',

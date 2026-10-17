@@ -174,6 +174,8 @@ export interface AppSettings {
   notifyError: boolean;
   backendAutoStart: boolean;
   deviceMode: 'auto' | 'lowvram' | 'cpu';
+  /** Opt-in reduced-precision NVIDIA math (`--fast`); results may differ very slightly. */
+  fastMath?: boolean;
 }
 export interface AppPaths {
   root: string;

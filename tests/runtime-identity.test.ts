@@ -58,6 +58,15 @@ describe('observed runtime identity', () => {
     expect(first.data.packages.map(item => item.name)).toEqual(['torch', 'zod-fixture']);
     expect(first.data.customNodes[0].name).toBe('my-node');
     expect(first.data.launch.deviceMode).toBe('lowvram');
+    expect(first.data.launch).not.toHaveProperty('fastMath');
+    const turbo = await captureRuntimeIdentity(
+      paths,
+      { deviceMode: 'lowvram', fastMath: true },
+      undefined,
+      actualProbe,
+    );
+    expect(turbo.data.launch.fastMath).toBe(true);
+    expect(turbo.sha256).not.toBe(first.sha256);
     const second = await captureRuntimeIdentity(paths, { deviceMode: 'lowvram' }, undefined, async () => ({
       ...(await actualProbe()),
       packages: (await actualProbe()).packages.reverse(),

@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { isDeepStrictEqual } from 'node:util';
 import { DEFAULT_DRAFT, DEFAULT_SETTINGS } from '../shared/defaults';
-import { draftSchema, settingsSchema } from '../shared/validation';
+import { draftSchema, parseSettingsPatch, settingsSchema } from '../shared/validation';
 import type { AppSettings, GenerationDraft, StudioJob, GenerationRecord, Preset } from '../shared/types';
 import { redactDynamicPromptDraft } from '../shared/dynamic-prompt-recipe';
 import { restoreTriggerResolution } from '../shared/trigger-resolution';
@@ -47,7 +47,7 @@ export class StudioStore {
     return settingsSchema.parse({ ...DEFAULT_SETTINGS, ...this.getState('settings', {}) });
   }
   saveSettings(patch: Partial<AppSettings>): AppSettings {
-    const settings = settingsSchema.parse({ ...this.settings(), ...settingsSchema.partial().parse(patch) });
+    const settings = settingsSchema.parse({ ...this.settings(), ...parseSettingsPatch(patch) });
     this.setState('settings', settings);
     this.saveDraft(this.draft());
     return settings;

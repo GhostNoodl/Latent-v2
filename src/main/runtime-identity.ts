@@ -299,7 +299,7 @@ async function persistContent(root: string, value: unknown, maximum: number, sig
 /** Fixed private observation only; injected probe is a test seam, never an IPC input. */
 export async function captureRuntimeIdentity(
   paths: AppPaths,
-  settings: Pick<AppSettings, 'deviceMode'>,
+  settings: Pick<AppSettings, 'deviceMode' | 'fastMath'>,
   signal?: AbortSignal,
   probe = probeRuntimePython,
 ): Promise<RuntimeIdentitySnapshot> {
@@ -314,7 +314,7 @@ export async function captureRuntimeIdentity(
 
 async function captureObservedIdentity(
   paths: AppPaths,
-  settings: Pick<AppSettings, 'deviceMode'>,
+  settings: Pick<AppSettings, 'deviceMode' | 'fastMath'>,
   signal: AbortSignal,
   probe: typeof probeRuntimePython,
 ): Promise<RuntimeIdentitySnapshot> {
@@ -396,7 +396,10 @@ async function captureObservedIdentity(
       baseline,
     },
     customNodes,
-    launch: { deviceMode: settings.deviceMode },
+    launch: {
+      deviceMode: settings.deviceMode,
+      ...(settings.fastMath && settings.deviceMode !== 'cpu' ? { fastMath: true as const } : {}),
+    },
     inventoryPolicy: 'runtime-source-v1',
   });
   const sha256 = await persistContent(destination, data, MAX_IDENTITY_BYTES - 256, signal);

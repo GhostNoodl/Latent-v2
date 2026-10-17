@@ -280,6 +280,7 @@ export function RecipeExtras({ record }: { record: GenerationRecord }) {
                   {record.runtimeIdentity.data.comfy.observedVersion ?? 'Version unavailable'} ·{' '}
                   {record.runtimeIdentity.data.packages.length} packages ·{' '}
                   {record.runtimeIdentity.data.launch.deviceMode}
+                  {record.runtimeIdentity.data.launch.fastMath ? ' · Turbo math' : ''}
                 </dd>
               </>
             )}
