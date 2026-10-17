@@ -6,8 +6,9 @@
  * version trusts the new one.
  */
 export const APP_RELEASE_PUBLIC_KEYS: readonly string[] = [
-  // Latent v2 release key, created 2026-10-16.
-  '2UOOmvgdQsW0dY9YF3wK8lHyPXcPiSB3YU3TS3971EE=',
+  // Latent v2 release key, created 2026-10-17. Replaces the 2026-10-16 key, whose private half was lost
+  // before it signed any release.
+  'vdwqvyb9av1+d5jtIFPepDxJpflC4+DabTG8Tinx5pY=',
 ];
 
 /** The exact bytes a release signature covers: the installer's identity, not its full contents. */

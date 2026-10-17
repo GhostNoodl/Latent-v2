@@ -6,7 +6,11 @@ import { createHash, generateKeyPairSync } from 'node:crypto';
 import { AppUpdateService } from '../src/main/app-updates';
 import { parseAppRelease, newerVersion, APP_RELEASE_API } from '../src/shared/app-update-types';
 import { releaseSigningMessage } from '../src/shared/app-release-signing';
-import { releaseSigningMessage as scriptSigningMessage, signInstaller } from '../scripts/release-signing.mjs';
+import {
+  rawPublicKey,
+  releaseSigningMessage as scriptSigningMessage,
+  signInstaller,
+} from '../scripts/release-signing.mjs';
 import { verifyReleaseSignature } from '../src/main/app-update-signature';
 const bytes = Buffer.from('MZ test installer fixture - never executed');
 const installerName = 'Latent-v2-0.2.0-Setup-x64-unsigned.exe';
@@ -252,4 +256,8 @@ it('rejects malformed signatures and keys', () => {
   expect(() => verifyReleaseSignature(identity, 'not-a-signature', [publisher.raw])).toThrow('malformed');
   expect(() => verifyReleaseSignature(identity, signature, ['short'])).toThrow('malformed');
   expect(() => verifyReleaseSignature(identity, signature, [publisher.raw])).toThrow('trusted');
+});
+
+it('derives the same raw public key the keygen prints, so CI can confirm a key is trusted', () => {
+  expect(rawPublicKey(publisher.pem)).toBe(publisher.raw);
 });
