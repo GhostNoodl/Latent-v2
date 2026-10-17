@@ -1466,6 +1466,30 @@
     {
       "from": "tests/modal-dom.test.tsx",
       "to": "tests/modal-dom.test.tsx"
+    },
+    {
+      "from": "src/main/telegram-bot.ts",
+      "to": "src/main/telegram-bot.ts"
+    },
+    {
+      "from": "src/shared/telegram-types.ts",
+      "to": "src/shared/telegram-types.ts"
+    },
+    {
+      "from": "src/renderer/TelegramRemote.tsx",
+      "to": "src/renderer/TelegramRemote.tsx"
+    },
+    {
+      "from": "tests/telegram-bot.test.ts",
+      "to": "tests/telegram-bot.test.ts"
+    },
+    {
+      "from": "src/main/telegram-controls.ts",
+      "to": "src/main/telegram-controls.ts"
+    },
+    {
+      "from": "tests/telegram-controls.test.ts",
+      "to": "tests/telegram-controls.test.ts"
     }
   ]
 }
