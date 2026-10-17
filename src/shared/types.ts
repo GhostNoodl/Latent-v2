@@ -178,6 +178,8 @@ export interface AppSettings {
   fastMath?: boolean;
   /** Global SageAttention (`--use-sage-attention`) when the reviewed optional packages are installed. */
   sageAttention?: boolean;
+  /** Show an image's original, hires fix and face fix as one gallery card; the flags keep stages as their own tiles too. */
+  imageVersions?: { group: boolean; showOriginal: boolean; showRefined: boolean; showFaceSteps: boolean };
 }
 export interface AppPaths {
   root: string;

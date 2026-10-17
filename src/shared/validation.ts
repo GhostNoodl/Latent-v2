@@ -200,6 +200,15 @@ export const settingsSchema = z
     deviceMode: z.enum(['auto', 'lowvram', 'cpu']),
     fastMath: z.boolean().default(false),
     sageAttention: z.boolean().default(false),
+    imageVersions: z
+      .object({
+        group: z.boolean(),
+        showOriginal: z.boolean(),
+        showRefined: z.boolean(),
+        showFaceSteps: z.boolean(),
+      })
+      .strict()
+      .default({ group: true, showOriginal: false, showRefined: false, showFaceSteps: false }),
   })
   .strict();
 /** Zod applies field defaults inside .partial(), which would silently reset settings the patch never named. */

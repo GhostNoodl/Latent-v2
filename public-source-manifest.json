@@ -638,6 +638,10 @@
       "to": "src/shared/history-selection.ts"
     },
     {
+      "from": "src/shared/image-versions.ts",
+      "to": "src/shared/image-versions.ts"
+    },
+    {
       "from": "src/shared/image-workflow.ts",
       "to": "src/shared/image-workflow.ts"
     },
@@ -1014,6 +1018,10 @@
     {
       "from": "tests/app-history-dom.test.tsx",
       "to": "tests/app-history-dom.test.tsx"
+    },
+    {
+      "from": "tests/image-versions.test.tsx",
+      "to": "tests/image-versions.test.tsx"
     },
     {
       "from": "scripts/third-party-notices.mjs",

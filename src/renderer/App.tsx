@@ -68,6 +68,7 @@ import { automaticTriggerWords, resolvePrompt } from '../shared/workflow';
 import { applyTriggerResolutionChange, restoreTriggerResolution } from '../shared/trigger-resolution';
 import { editTriggersAsPromptText, applyCurrentModelTriggers } from '../shared/trigger-editing';
 import { selectedHistoryRecord } from '../shared/history-selection';
+import { DEFAULT_IMAGE_VERSIONS, groupImageVersions, imageVersionLabel } from '../shared/image-versions';
 import { PreviewSelectionSaver } from './preview-selection';
 import { draftSchema } from '../shared/validation';
 import { History } from './History';
@@ -206,6 +207,11 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [compareRecord, setCompareRecord] = useState<GenerationRecord>();
+  const [compareAgainst, setCompareAgainst] = useState<GenerationRecord>();
+  const compare = (record: GenerationRecord, against?: GenerationRecord) => {
+    setCompareAgainst(against);
+    setCompareRecord(record);
+  };
   const [faceEditor, setFaceEditor] = useState<{ record?: GenerationRecord }>();
   const [qwenEditor, setQwenEditor] = useState<{ record?: GenerationRecord; mode?: 'preview' | 'reuse' }>();
   useEffect(() => {
@@ -725,28 +731,39 @@ export default function App() {
   const comparisonBase = compareRecord?.baseRecordId
     ? snapshot.history.find(record => record.id === compareRecord.baseRecordId)
     : undefined;
-  const comparisonBefore = compareRecord?.faceDetailer
+  const selectedVersions = selected
+    ? groupImageVersions(snapshot.history).find(group => group.versions.includes(selected))
+    : undefined;
+  const imageVersions = snapshot.settings.imageVersions ?? DEFAULT_IMAGE_VERSIONS;
+  const comparisonBefore = compareAgainst
     ? {
-        url: `latent-asset://source/${compareRecord.faceDetailer.source.id}`,
-        label: 'Original face source',
-        width: compareRecord.faceDetailer.source.normalized.width,
-        height: compareRecord.faceDetailer.source.normalized.height,
+        url: compareAgainst.imageUrl,
+        label: imageVersionLabel(compareAgainst),
+        width: compareAgainst.width,
+        height: compareAgainst.height,
       }
-    : comparisonBase
+    : compareRecord?.faceDetailer
       ? {
-          url: comparisonBase.imageUrl,
-          label: 'Base image',
-          width: comparisonBase.width,
-          height: comparisonBase.height,
+          url: `latent-asset://source/${compareRecord.faceDetailer.source.id}`,
+          label: 'Original face source',
+          width: compareRecord.faceDetailer.source.normalized.width,
+          height: compareRecord.faceDetailer.source.normalized.height,
         }
-      : compareRecord?.imageInput?.source
+      : comparisonBase
         ? {
-            url: `latent-asset://source/${compareRecord.imageInput.source.id}`,
-            label: 'Source image',
-            width: compareRecord.imageInput.source.normalized.width,
-            height: compareRecord.imageInput.source.normalized.height,
+            url: comparisonBase.imageUrl,
+            label: 'Base image',
+            width: comparisonBase.width,
+            height: comparisonBase.height,
           }
-        : undefined;
+        : compareRecord?.imageInput?.source
+          ? {
+              url: `latent-asset://source/${compareRecord.imageInput.source.id}`,
+              label: 'Source image',
+              width: compareRecord.imageInput.source.normalized.width,
+              height: compareRecord.imageInput.source.normalized.height,
+            }
+          : undefined;
   const activeJobs = snapshot.jobs.filter(queueJobActive);
   const queueItems = snapshot.jobs.filter(
     job => queueJobActive(job) || !snapshot.dismissedActivity?.queue.includes(queueClearKey(job)),
@@ -1843,7 +1860,7 @@ export default function App() {
                         {(selected.resolvedPrompt ?? selected.draft.prompt) || 'Untitled image'}
                       </p>
                       {(selected.faceDetailer?.source || selected.imageInput?.source || selected.baseRecordId) && (
-                        <button className="text-button" onClick={() => setCompareRecord(selected)}>
+                        <button className="text-button" onClick={() => compare(selected)}>
                           Compare
                         </button>
                       )}
@@ -1851,6 +1868,31 @@ export default function App() {
                         <RotateCcw size={13} />
                         Reuse parameters
                       </button>
+                    </div>
+                  )}
+                  {selected && !livePreview && selectedVersions && selectedVersions.versions.length > 1 && (
+                    <div className="preview-versions" role="group" aria-label="Versions of this image">
+                      <span className="muted">Versions</span>
+                      {selectedVersions.versions.map(version => (
+                        <button
+                          key={version.id}
+                          type="button"
+                          className="text-button"
+                          aria-pressed={version.id === selected.id}
+                          onClick={() => selectImage(version)}
+                        >
+                          {imageVersionLabel(version)}
+                        </button>
+                      ))}
+                      {selectedVersions.versions[0].id !== selected.id && (
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() => compare(selected, selectedVersions.versions[0])}
+                        >
+                          Compare with original
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1863,7 +1905,8 @@ export default function App() {
                     selectedId={selected?.id}
                     onSelect={selectImage}
                     onReuse={restore}
-                    onCompare={setCompareRecord}
+                    onCompare={compare}
+                    imageVersions={imageVersions}
                     run={run}
                   />
                 </aside>
@@ -1885,7 +1928,8 @@ export default function App() {
                   selectedId={selected?.id}
                   onSelect={selectImage}
                   onReuse={restore}
-                  onCompare={setCompareRecord}
+                  onCompare={compare}
+                  imageVersions={imageVersions}
                   run={run}
                 />
               </div>
@@ -1993,16 +2037,21 @@ export default function App() {
           }}
           sourceFittingSize={compareRecord.qwenEdit?.plan.canvas?.sourceFitting}
           alignment={
-            compareRecord.faceDetailer || compareRecord.cropInpaint
-              ? 'same-canvas'
-              : comparisonBase
-                ? 'stretch'
-                : (compareRecord.qwenEdit?.plan.settings.resize ??
-                  compareRecord.draft.upscale?.resize ??
-                  compareRecord.draft.imageInput?.resize ??
-                  'stretch')
+            compareAgainst
+              ? 'stretch'
+              : compareRecord.faceDetailer || compareRecord.cropInpaint
+                ? 'same-canvas'
+                : comparisonBase
+                  ? 'stretch'
+                  : (compareRecord.qwenEdit?.plan.settings.resize ??
+                    compareRecord.draft.upscale?.resize ??
+                    compareRecord.draft.imageInput?.resize ??
+                    'stretch')
           }
-          onClose={() => setCompareRecord(undefined)}
+          onClose={() => {
+            setCompareRecord(undefined);
+            setCompareAgainst(undefined);
+          }}
         />
       )}
       {previewMenu && (
