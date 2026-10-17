@@ -216,7 +216,8 @@ export default function App() {
 
   const noteHistory = useCallback((history: AppSnapshot['history']) => {
     const known = previousImageIds.current;
-    previousImageIds.current = new Set(history.map(record => record.id));
+    // Keep ids that left the list (deleted files), so restoring one is not mistaken for a new image.
+    previousImageIds.current = new Set([...(known ?? []), ...history.map(record => record.id)]);
     if (known) {
       const newest = history.find(record => !known.has(record.id));
       if (newest) {

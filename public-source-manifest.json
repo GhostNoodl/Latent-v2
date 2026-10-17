@@ -1108,6 +1108,14 @@
       "to": "tests/model-maintenance.test.ts"
     },
     {
+      "from": "src/main/missing-outputs.ts",
+      "to": "src/main/missing-outputs.ts"
+    },
+    {
+      "from": "tests/missing-outputs.test.ts",
+      "to": "tests/missing-outputs.test.ts"
+    },
+    {
       "from": "src/shared/civitai-discovery.ts",
       "to": "src/shared/civitai-discovery.ts"
     },
