@@ -119,6 +119,30 @@ describe('managed runtime isolation', () => {
     expect(backendArguments(paths, 19023, { deviceMode: 'cpu' })).toContain('--cpu');
     expect(backendArguments(paths, 19023, { deviceMode: 'lowvram' })).toContain('--disable-dynamic-vram');
     expect(() => backendArguments(paths, 0)).toThrow();
+  });
+
+  it('enables reduced-precision GPU math only when Turbo math is chosen', () => {
+    const paths = fixture();
+    expect(backendArguments(paths, 19023, { deviceMode: 'auto' })).not.toContain('--fast');
+    const turbo = backendArguments(paths, 19023, { deviceMode: 'auto', fastMath: true });
+    expect(turbo.slice(turbo.indexOf('--fast'), turbo.indexOf('--fast') + 3)).toEqual([
+      '--fast',
+      'fp16_accumulation',
+      'fp8_matrix_mult',
+    ]);
+    expect(backendArguments(paths, 19023, { deviceMode: 'lowvram', fastMath: true })).toContain('--fast');
+    expect(backendArguments(paths, 19023, { deviceMode: 'cpu', fastMath: true })).not.toContain('--fast');
+  });
+
+  it('uses SageAttention only when the recorded launch enables it on a GPU', () => {
+    const paths = fixture();
+    expect(backendArguments(paths, 19023, { deviceMode: 'auto' })).not.toContain('--use-sage-attention');
+    expect(backendArguments(paths, 19023, { deviceMode: 'auto', sageAttention: true })).toContain(
+      '--use-sage-attention',
+    );
+    expect(backendArguments(paths, 19023, { deviceMode: 'cpu', sageAttention: true })).not.toContain(
+      '--use-sage-attention',
+    );
     expect(modelPathsYaml(paths)).toContain(JSON.stringify(paths.models.replaceAll('\\', '/')));
   });
 

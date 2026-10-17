@@ -1,7 +1,7 @@
 import { QWEN21_RUNTIME_PACKAGES } from './qwen21-runtime-packages';
 import { QWEN21_SET_ID, QWEN21_RUNTIME } from '../shared/qwen21-release';
 import { QWEN_GGUF_RELEASE } from '../shared/qwen-gguf-release';
-import { RUNTIME_RELEASE } from './runtime-config';
+import { RUNTIME_RELEASE, SAGE_ATTENTION_PACKAGES } from './runtime-config';
 import { IPADAPTER_RELEASE } from '../shared/ipadapter-release';
 import type { ReviewedRuntimeSet } from '../shared/runtime-update-types';
 import { RUNTIME_ORIGIN_033_PACKAGES } from './runtime-origin-033-packages';
@@ -24,10 +24,7 @@ const CURRENT_RUNTIME_SET: ReviewedRuntimeSet = {
   pythonVersion: RUNTIME_RELEASE.pythonVersion,
   packages: REVIEWED_RUNTIME_PACKAGES,
   optionalPackageSets: [
-    [
-      { name: 'sageattention', version: '2.2.0+cu130torch2.10.0andhigher.post6' },
-      { name: 'triton-windows', version: '3.6.0.post26' },
-    ],
+    SAGE_ATTENTION_PACKAGES.map(pin => ({ ...pin })),
     [{ name: 'gguf', version: QWEN_GGUF_RELEASE.packageVersion }],
   ],
   // Measured environments are below 4 GiB: three copies plus 1 GiB workspace.

@@ -84,7 +84,7 @@ import { isVideoJob } from '../shared/types';
 import { videoPlaybackFixtureFile, VIDEO_PLAYBACK_FIXTURE_ID } from './video-playback-fixture';
 import { IPADAPTER_RELEASE } from '../shared/ipadapter-release';
 import { MODEL_CATALOG } from '../shared/model-catalog';
-import { draftSchema, settingsSchema } from '../shared/validation';
+import { draftSchema, parseSettingsPatch } from '../shared/validation';
 import type { AppSnapshot, GenerationDraft, HardwareInfo, LatentAPI } from '../shared/types';
 
 protocol.registerSchemesAsPrivileged([
@@ -904,7 +904,7 @@ async function initialize() {
     },
     updateSettings: async patch => {
       const priorMode = store.settings().deviceMode;
-      const settings = store.saveSettings(settingsSchema.partial().parse(patch));
+      const settings = store.saveSettings(parseSettingsPatch(patch));
       if (settings.deviceMode !== priorMode) hardwareProfiles.settingsChanged();
       videoConversations.applyPromptMemoryPolicy();
       nativeTheme.themeSource = settings.theme;

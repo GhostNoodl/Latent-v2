@@ -58,6 +58,40 @@ describe('observed runtime identity', () => {
     expect(first.data.packages.map(item => item.name)).toEqual(['torch', 'zod-fixture']);
     expect(first.data.customNodes[0].name).toBe('my-node');
     expect(first.data.launch.deviceMode).toBe('lowvram');
+    expect(first.data.launch).not.toHaveProperty('fastMath');
+    const turbo = await captureRuntimeIdentity(
+      paths,
+      { deviceMode: 'lowvram', fastMath: true },
+      undefined,
+      actualProbe,
+    );
+    expect(turbo.data.launch.fastMath).toBe(true);
+    expect(turbo.sha256).not.toBe(first.sha256);
+    // SageAttention is recorded only when its reviewed packages are actually installed.
+    const missing = await captureRuntimeIdentity(
+      paths,
+      { deviceMode: 'auto', sageAttention: true },
+      undefined,
+      actualProbe,
+    );
+    expect(missing.data.launch).not.toHaveProperty('sageAttention');
+    const sage = await captureRuntimeIdentity(
+      paths,
+      { deviceMode: 'auto', sageAttention: true },
+      undefined,
+      async () => {
+        const probe = await actualProbe();
+        return {
+          ...probe,
+          packages: [
+            ...probe.packages,
+            { name: 'sageattention', version: '2.2.0+cu130torch2.10.0andhigher.post6' },
+            { name: 'triton_windows', version: '3.6.0.post26' },
+          ],
+        };
+      },
+    );
+    expect(sage.data.launch.sageAttention).toBe(true);
     const second = await captureRuntimeIdentity(paths, { deviceMode: 'lowvram' }, undefined, async () => ({
       ...(await actualProbe()),
       packages: (await actualProbe()).packages.reverse(),

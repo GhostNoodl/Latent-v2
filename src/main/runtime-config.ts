@@ -21,6 +21,19 @@ export const RUNTIME_RELEASE = {
   torchIndex: 'https://download.pytorch.org/whl/cu130',
 } as const;
 
+/** Optional reviewed attention packages, installed separately into the private engine. */
+export const SAGE_ATTENTION_PACKAGES = [
+  { name: 'sageattention', version: '2.2.0+cu130torch2.10.0andhigher.post6' },
+  { name: 'triton-windows', version: '3.6.0.post26' },
+] as const;
+
+/** True only when every reviewed SageAttention package is installed at its exact version. */
+export function hasSageAttention(packages: readonly { name: string; version: string }[]): boolean {
+  const normalize = (name: string) => name.toLowerCase().replace(/[-_.]+/g, '-');
+  const installed = new Map(packages.map(item => [normalize(item.name), item.version]));
+  return SAGE_ATTENTION_PACKAGES.every(pin => installed.get(pin.name) === pin.version);
+}
+
 export function containedPath(root: string, target: string): string {
   const base = path.resolve(root);
   const resolved = path.resolve(target);
@@ -112,7 +125,11 @@ export function runtimeEnvironment(paths: AppPaths, inherited: NodeJS.ProcessEnv
   return env;
 }
 
-export function backendArguments(paths: AppPaths, port: number, settings?: Pick<AppSettings, 'deviceMode'>): string[] {
+export function backendArguments(
+  paths: AppPaths,
+  port: number,
+  settings?: Pick<AppSettings, 'deviceMode' | 'fastMath' | 'sageAttention'>,
+): string[] {
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid managed backend port.');
   const args = [
     '-s',
@@ -143,6 +160,10 @@ export function backendArguments(paths: AppPaths, port: number, settings?: Pick<
   ];
   if (settings?.deviceMode === 'cpu') args.push('--cpu');
   if (settings?.deviceMode === 'lowvram') args.push('--lowvram', '--disable-dynamic-vram');
+  // fp16 accumulation (RTX 20+) and fp8 matmul (RTX 40+) speed up sampling; unsupported GPUs ignore them.
+  if (settings?.fastMath && settings.deviceMode !== 'cpu') args.push('--fast', 'fp16_accumulation', 'fp8_matrix_mult');
+  // Callers pass the recorded launch identity, which enables this only when the reviewed packages are installed.
+  if (settings?.sageAttention && settings.deviceMode !== 'cpu') args.push('--use-sage-attention');
   return args;
 }
 

@@ -134,6 +134,8 @@ export class JobService {
   private progressSavedAt = new Map<string, number>();
   private timer?: NodeJS.Timeout;
   private polling = false;
+  /** A wake that arrived mid-tick; the tick re-runs as soon as it finishes instead of waiting for the timer. */
+  private tickAgain = false;
   private preparing = 0;
   private maintenance = false;
   private disposed = false;
@@ -171,6 +173,11 @@ export class JobService {
   start() {
     if (!this.timer) this.timer = setInterval(() => void this.tick(), 1000);
     void this.tick();
+  }
+  /** Tick now, or straight after the tick in flight, so the GPU never idles waiting for the timer. */
+  private kick() {
+    if (this.polling) this.tickAgain = true;
+    else void this.tick();
   }
   isProcessing() {
     return this.polling || this.preparing > 0;
@@ -984,6 +991,9 @@ export class JobService {
           return;
         }
         const event = JSON.parse(data.toString());
+        // Comfy stores history before announcing the emptied queue, so this is the
+        // earliest moment the finished job can be collected and the next one sent.
+        if (event.type === 'status' && event.data?.status?.exec_info?.queue_remaining === 0) this.kick();
         if (event.data?.prompt_id !== job.promptId) return;
         if (event.type === 'progress') {
           job.queueState = 'running';
@@ -1023,7 +1033,7 @@ export class JobService {
           if (nodeChanged) this.save(job);
           else this.saveProgress(job);
         }
-        if (['execution_success', 'execution_error', 'execution_interrupted'].includes(event.type)) void this.tick();
+        if (['execution_success', 'execution_error', 'execution_interrupted'].includes(event.type)) this.kick();
       } catch {
         /* Malformed transient events cannot change durable job state. */
       }
@@ -1294,6 +1304,8 @@ export class JobService {
         }
         if (isVideoJob(active)) await this.reconcileVideo(active);
         else await this.reconcile(active);
+        // Submit the next queued job straight away rather than on the next timer tick.
+        if (active.status !== 'running') this.tickAgain = true;
         return;
       }
       if (activity && (activity.state !== 'ready' || activity.foreignRunning || activity.foreignPending)) return;
@@ -1447,6 +1459,10 @@ export class JobService {
     } finally {
       this.polling = false;
       for (const resolve of this.drainWaiters.splice(0)) resolve();
+      if (this.tickAgain && !this.disposed && !this.maintenance) {
+        this.tickAgain = false;
+        setImmediate(() => void this.tick());
+      }
     }
   }
   async retryVideoSave(id: string): Promise<void> {

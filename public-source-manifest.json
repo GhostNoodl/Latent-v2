@@ -882,6 +882,10 @@
       "to": "tests/store-paths.test.ts"
     },
     {
+      "from": "tests/settings-patch.test.ts",
+      "to": "tests/settings-patch.test.ts"
+    },
+    {
       "from": "tests/runtime-install-packages.test.ts",
       "to": "tests/runtime-install-packages.test.ts"
     },
@@ -921,12 +925,16 @@
       "to": "tests/face-detailer.test.ts"
     },
     {
+      "from": "tests/job-queue-wake.test.ts",
+      "to": "tests/job-queue-wake.test.ts"
+    },
+    {
       "from": "tests/runtime-identity.test.ts",
       "to": "tests/runtime-identity.test.ts",
       "exceptions": [
         {
           "category": "credential-url",
-          "sha256": "722ac536695ca4540afa2a7dc94944f27b126ee606f494daa6330c88a88d4371",
+          "sha256": "37ae9f6eb5c7baf6b2b65f07c01c6166c2e5d494c4e0d7de8648a9e10073f857",
           "reason": "Reviewed synthetic Example User path / user:secret@example.com rejection fixture; not a personal credential."
         }
       ]

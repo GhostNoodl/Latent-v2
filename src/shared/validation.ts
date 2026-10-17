@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { AppSettings } from './types';
 import { SAMPLERS, SCHEDULERS } from './defaults';
 import { dynamicPromptAuthoringSchema } from './dynamic-prompt-recipe';
 import { controlNetSettingsSchema } from './controlnet-types';
@@ -197,8 +198,16 @@ export const settingsSchema = z
     notifyError: z.boolean(),
     backendAutoStart: z.boolean(),
     deviceMode: z.enum(['auto', 'lowvram', 'cpu']),
+    fastMath: z.boolean().default(false),
+    sageAttention: z.boolean().default(false),
   })
   .strict();
+/** Zod applies field defaults inside .partial(), which would silently reset settings the patch never named. */
+export function parseSettingsPatch(patch: unknown): Partial<AppSettings> {
+  const parsed = settingsSchema.partial().parse(patch);
+  const named = new Set(Object.keys(patch as object));
+  return Object.fromEntries(Object.entries(parsed).filter(([key]) => named.has(key))) as Partial<AppSettings>;
+}
 const httpsUrl = z
   .url()
   .max(4000)

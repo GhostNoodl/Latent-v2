@@ -54,7 +54,13 @@ export const runtimeIdentityDataSchema = z
           .strict(),
       )
       .max(1024),
-    launch: z.object({ deviceMode: z.enum(['auto', 'lowvram', 'cpu']) }).strict(),
+    launch: z
+      .object({
+        deviceMode: z.enum(['auto', 'lowvram', 'cpu']),
+        fastMath: z.literal(true).optional(),
+        sageAttention: z.literal(true).optional(),
+      })
+      .strict(),
     inventoryPolicy: z.literal('runtime-source-v1'),
   })
   .strict();
