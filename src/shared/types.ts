@@ -310,6 +310,7 @@ export interface ModelDownloadRequest {
 export interface AppSnapshot {
   setupActivity?: import('./setup-activity').SetupActivity[];
   appUpdates?: AppUpdateStatus;
+  telegram?: import('./telegram-types').TelegramStatus;
   dismissedActivity?: { queue: string[]; notifications: string[] };
   notifications?: Array<{
     id: string;
@@ -430,6 +431,8 @@ export interface LatentAPI {
   cancelCivitai(): Promise<void>;
   getCivitaiSettings(): Promise<CivitaiSettings>;
   setCivitaiKey(value: string | null): Promise<void>;
+  saveTelegramSettings(settings: Partial<import('./telegram-types').TelegramSettings>): Promise<void>;
+  setTelegramToken(value: string | null): Promise<void>;
   openCivitaiModel(modelId: number, versionId?: number): Promise<void>;
   setupSegmentation(repair?: boolean): Promise<void>;
   startSegmentation(): Promise<void>;

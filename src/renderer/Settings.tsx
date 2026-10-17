@@ -1,5 +1,6 @@
 import { SetupActivityPanel } from './SetupActivityPanel';
 import { AppUpdates } from './AppUpdates';
+import { TelegramRemote } from './TelegramRemote';
 import { PackageSetupStorage } from './PackageSetupStorage';
 import type { KeyboardEvent } from 'react';
 import { ArrowUpRight, Check, Copy, Download, Play, RotateCcw, Square, Terminal } from 'lucide-react';
@@ -268,6 +269,7 @@ export function StudioSettings({
           onCancel={() => void run('app-update-cancel', () => window.latent.cancelAppUpdate())}
         />
       )}
+      {snapshot.telegram && <TelegramRemote status={snapshot.telegram} run={run} busy={Boolean(busy.telegram)} />}
       <RuntimeUpdates
         onRepair={() => void run('runtime-update', () => window.latent.prepareRuntimeEnvironmentRepair())}
         status={snapshot.runtimeUpdates}
