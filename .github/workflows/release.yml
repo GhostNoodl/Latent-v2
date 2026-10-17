@@ -1,0 +1,136 @@
+name: Release
+# Publishes a Windows installer whenever main carries a version that has no release yet.
+# Bump "version" in package.json (and package-lock.json) to ship an update.
+on:
+  push:
+    branches: [main]
+    paths: [package.json]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Preserve reviewed source bytes
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Find an unreleased version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Releases need a plain x.y.z version, found '$version'." }
+          gh release view "v$version" --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "v$version is already released; nothing to do."
+            "publish=false" >> $env:GITHUB_OUTPUT
+          } else {
+            "publish=true" >> $env:GITHUB_OUTPUT
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          $global:LASTEXITCODE = 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: steps.version.outputs.publish == 'true'
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies
+        if: steps.version.outputs.publish == 'true'
+        run: npm ci --ignore-scripts
+      - name: Install the locked Electron runtime
+        if: steps.version.outputs.publish == 'true'
+        run: node node_modules/electron/install.js
+      - if: steps.version.outputs.publish == 'true'
+        run: npm run notices:check
+      - if: steps.version.outputs.publish == 'true'
+        run: npm run public:check
+      - if: steps.version.outputs.publish == 'true'
+        run: npm test
+      - if: steps.version.outputs.publish == 'true'
+        run: npm run public:release-check
+      - name: Build the installer
+        if: steps.version.outputs.publish == 'true'
+        run: npm run package:installer -- --output ci
+      - name: Gather release files
+        if: steps.version.outputs.publish == 'true'
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SIGNING_KEY: ${{ secrets.LATENT_RELEASE_SIGNING_KEY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP 'release-files'
+          New-Item -ItemType Directory -Path $out | Out-Null
+          $installer = "Latent-v2-$env:VERSION-Setup-x64-unsigned.exe"
+          Copy-Item (Join-Path 'release/ci' $installer) $out
+
+          # In-app updates only offer installers signed with a key the app trusts.
+          if ($env:SIGNING_KEY) {
+            $key = Join-Path $env:RUNNER_TEMP 'release-signing-key.pem'
+            Set-Content -Path $key -Value $env:SIGNING_KEY -NoNewline
+            try {
+              node scripts/release-signing.mjs check-key $key
+              if ($LASTEXITCODE) { throw 'The signing key is not one the app trusts.' }
+              node scripts/release-signing.mjs sign (Join-Path $out $installer) $key
+              if ($LASTEXITCODE) { throw 'Signing failed.' }
+            } finally { Remove-Item $key -Force }
+            "signed=true" >> $env:GITHUB_ENV
+          } else {
+            Write-Warning 'LATENT_RELEASE_SIGNING_KEY is not set: publishing without an in-app update signature.'
+            "signed=false" >> $env:GITHUB_ENV
+          }
+
+          # Public source export for this exact commit.
+          npm run public:export -- ".artifacts/public-source-$env:VERSION"
+          if ($LASTEXITCODE) { throw 'Public source export failed.' }
+          Compress-Archive -Path ".artifacts/public-source-$env:VERSION/*" -DestinationPath (Join-Path $out "Latent-v2-$env:VERSION-public-source.zip")
+
+          # The native-source companion only changes with Sharp; reuse the checksum-verified copy from the release that first shipped it.
+          $sharp = node -p "require('./node_modules/sharp/package.json').version"
+          $pattern = "Latent-native-sources-sharp-$sharp-*.zip"
+          $found = $false
+          foreach ($tag in (gh release list --repo $env:GITHUB_REPOSITORY --limit 50 --json tagName --jq '.[].tagName')) {
+            $staging = Join-Path $env:RUNNER_TEMP "native-$tag"
+            gh release download $tag --repo $env:GITHUB_REPOSITORY --pattern $pattern --pattern 'SHA256SUMS.txt' --dir $staging 2>$null
+            $zip = Get-ChildItem $staging -Filter $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $zip) { continue }
+            $expected = (Get-Content (Join-Path $staging 'SHA256SUMS.txt') | Where-Object { $_ -match [regex]::Escape($zip.Name) + '$' }) -replace '\s.*$', ''
+            $actual = (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            if (-not $expected -or $actual -ne $expected.ToLowerInvariant()) { throw "Native-source companion from $tag does not match its published checksum." }
+            Move-Item $zip.FullName $out
+            $found = $true
+            break
+          }
+          if (-not $found) { throw "No published native-source companion for Sharp $sharp. Build one with scripts/native-source-bundle.py first." }
+
+          $sums = Get-ChildItem $out -File | Sort-Object Name | ForEach-Object {
+            "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)"
+          }
+          Set-Content -Path (Join-Path $out 'SHA256SUMS.txt') -Value $sums
+          "RELEASE_FILES=$out" >> $env:GITHUB_ENV
+          $global:LASTEXITCODE = 0
+      - name: Publish the release
+        if: steps.version.outputs.publish == 'true'
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $notes = if ($env:signed -eq 'true') {
+            'Latent v2 can install this update from Settings > App updates, or run the Setup file below.'
+          } else {
+            'Download and run the Setup file below to update. This build has no in-app update signature.'
+          }
+          $files = Get-ChildItem $env:RELEASE_FILES -File | ForEach-Object { $_.FullName }
+          gh release create "v$env:VERSION" @files --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA `
+            --title "Latent v2 $env:VERSION" --notes $notes --generate-notes --latest
+          if ($LASTEXITCODE) { throw 'Publishing the release failed.' }

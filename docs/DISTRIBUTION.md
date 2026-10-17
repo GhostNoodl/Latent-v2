@@ -4,7 +4,7 @@ Only files explicitly listed in public-source-manifest.json enter a public stagi
 
 Run `npm run public:check` to check allowlisted inputs. Run `npm run public:export -- .artifacts/public-source-NAME` in the private checkout to create a new export without overwriting an earlier one. In the export, install dependencies and run its tests and build. Run `npm run public:release-check` before any publication. It blocks an unapproved license. No command here uploads files.
 
-Pattern checks are defense in depth, not certification that arbitrary credentials cannot exist. Human review of exactly the proposed source and release artifacts remains necessary. Credential findings report file/category only. The release workflow performs checks but does not publish or upload artifacts.
+Pattern checks are defense in depth, not certification that arbitrary credentials cannot exist. Human review of exactly the proposed source and release artifacts remains necessary. Credential findings report file/category only. The public source workflow performs checks only. The separate release workflow (`.github/workflows/release.yml`) publishes a release when `main` carries a version with no release yet: it reruns the checks, builds the installer, signs it when the `LATENT_RELEASE_SIGNING_KEY` repository secret holds a trusted key, and attaches the public source export, the checksum-verified native-source companion and SHA256SUMS.txt.
 
 Historical tests bound to original GPU captures remain private; they must not be rewritten into synthetic evidence and presented as measured results. The public regression suite is explicitly smaller and independent of those captures. Future behavior coverage can migrate through new synthetic fixtures without importing private history.
 

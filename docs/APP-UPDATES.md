@@ -14,6 +14,10 @@ To set up signing once, run `node scripts/release-signing.mjs keygen <path outsi
 
 Downloads are bounded by advertised size, capped at 1 GiB, cancellable and checked against their digest. Redirects stay on an explicit GitHub release-host allowlist. Metadata is limited to 2 MiB. The private studio cache uses exclusive file creation and rejects linked files. Unchanged verified downloads can be reused; changed regular cached installers are preserved under an invalid suffix before a replacement is downloaded. Partial files created by failed transfers are removed. Space checks include both the temporary and final installer copies.
 
+## Publishing an update
+
+Bump `version` in package.json and package-lock.json and merge to `main`. The release workflow builds the installer and publishes it as the latest release. To make it installable from Settings > App updates, store the release private key (the PEM file from `keygen`) once as the `LATENT_RELEASE_SIGNING_KEY` repository secret. The workflow refuses a key that does not match `APP_RELEASE_PUBLIC_KEYS`. Without the secret the release is still published, but only for manual download.
+
 ## Installation and user data
 
 Save, close and install requests installation after pending operations, jobs, video saving, automatic face follow-ups, model transfers and studio tools finish. Shared-engine work also blocks installation. New generation/mutation work is blocked once update shutdown starts, while draft and editor saving can complete. If editor flushing fails, installation is postponed and the app stays open; update shutdown does not offer to discard those edits. The checksum is checked again before shutdown proceeds. The installer is launched only after service shutdown and pending writes complete successfully.

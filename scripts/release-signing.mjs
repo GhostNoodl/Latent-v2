@@ -1,10 +1,11 @@
 // Release signing for in-app updates.
 //   node scripts/release-signing.mjs keygen <private-key-file>  creates a key pair and prints the public key
 //   node scripts/release-signing.mjs sign <installer.exe> <private-key-file>  writes <installer.exe>.sig
+//   node scripts/release-signing.mjs check-key <private-key-file>  fails unless the app trusts this key
 // Paste the public key into src/shared/app-release-signing.ts, then upload the .sig next to the installer.
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createHash, createPrivateKey, generateKeyPairSync, sign } from 'node:crypto';
+import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -19,6 +20,12 @@ function outsideProject(file) {
   if (!relative.startsWith('..') && !path.isAbsolute(relative))
     throw Error('Keep the release private key outside the repository.');
   return path.resolve(file);
+}
+
+/** The raw base64 public key, in the form APP_RELEASE_PUBLIC_KEYS lists it. */
+export function rawPublicKey(privateKeyPem) {
+  const jwk = createPublicKey(createPrivateKey(privateKeyPem)).export({ format: 'jwk' });
+  return Buffer.from(jwk.x, 'base64url').toString('base64');
 }
 
 export async function signInstaller(installer, privateKeyPem) {
@@ -46,5 +53,11 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     const signature = await signInstaller(first, await fs.readFile(outsideProject(second), 'utf8'));
     await fs.writeFile(first + '.sig', signature + '\n');
     console.log(`Signature written to ${first}.sig`);
-  } else throw Error('Use keygen <private-key-file> or sign <installer> <private-key-file>.');
+  } else if (mode === 'check-key' && first) {
+    const trusted = await fs.readFile(path.join(project, 'src', 'shared', 'app-release-signing.ts'), 'utf8');
+    if (!trusted.includes(`'${rawPublicKey(await fs.readFile(outsideProject(first), 'utf8'))}'`))
+      throw Error('This private key does not match any key in APP_RELEASE_PUBLIC_KEYS.');
+    console.log('The signing key matches a trusted public key.');
+  } else
+    throw Error('Use keygen <private-key-file>, sign <installer> <private-key-file> or check-key <private-key-file>.');
 }

@@ -972,6 +972,10 @@
       "to": ".github/workflows/public-source.yml"
     },
     {
+      "from": ".github/workflows/release.yml",
+      "to": ".github/workflows/release.yml"
+    },
+    {
       "from": "scripts/check-public-boundary.mjs",
       "to": "scripts/check-public-boundary.mjs"
     },
