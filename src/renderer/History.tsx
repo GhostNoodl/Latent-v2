@@ -1,7 +1,7 @@
 import { variationDescription } from './variation-description';
 import { ImagePreview } from './ImagePreview';
 import { subscribePreviewRecovery } from './image-preview-recovery';
-import { Fragment as ReactFragment, useEffect, useRef, useState } from 'react';
+import { Fragment as ReactFragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeftRight,
   ArrowUpRight,
@@ -11,6 +11,7 @@ import {
   FolderHeart,
   FolderOpen,
   Image,
+  Layers,
   MoreHorizontal,
   RotateCcw,
   Search,
@@ -22,6 +23,14 @@ import { Modal, Notice, shortDate, type RunAction } from './ui';
 import { CollectionMembershipDialog, CollectionToolbar } from './Collections';
 import { RecipeExtras } from './RecipeExtras';
 import { historyPageForSelection } from '../shared/history-selection';
+import {
+  DEFAULT_IMAGE_VERSIONS,
+  groupImageVersions,
+  imageVersionLabel,
+  separatelyShownVersions,
+  type ImageVersionGroup,
+  type ImageVersionSettings,
+} from '../shared/image-versions';
 
 function HistoryThumbnail({ src, alt }: { src: string; alt: string }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading');
@@ -64,7 +73,8 @@ interface HistoryProps {
   selectedId?: string;
   onSelect: (record: GenerationRecord) => void;
   onReuse: (record: GenerationRecord) => void;
-  onCompare?: (record: GenerationRecord) => void;
+  /** `against` compares with another version of the same image instead of the record's own source. */
+  onCompare?: (record: GenerationRecord, against?: GenerationRecord) => void;
   onVariation?: (record: GenerationRecord) => void;
   collections?: CollectionSnapshot;
   collectionActions?: CollectionActions;
@@ -72,6 +82,7 @@ interface HistoryProps {
   run: RunAction;
   library?: boolean;
   scrollable?: boolean;
+  imageVersions?: ImageVersionSettings;
 }
 export function History({
   records,
@@ -86,8 +97,31 @@ export function History({
   run,
   library = false,
   scrollable = false,
+  imageVersions = DEFAULT_IMAGE_VERSIONS,
 }: HistoryProps) {
-  const [page, setPage] = useState(() => historyPageForSelection(records, selectedId, library ? 24 : 4));
+  const groups = useMemo(() => groupImageVersions(records), [records]);
+  const groupOf = useMemo(
+    () => new Map(groups.flatMap(group => group.versions.map(record => [record.id, group] as const))),
+    [groups],
+  );
+  const groupedIds = useMemo(
+    () =>
+      imageVersions.group
+        ? new Set(
+            groups.flatMap(group => [group.lead, ...separatelyShownVersions(group, imageVersions)]).map(r => r.id),
+          )
+        : undefined,
+    [groups, imageVersions],
+  );
+  const tileFor = (id: string | undefined) => (id && groupedIds && !groupedIds.has(id) ? groupOf.get(id)?.lead.id : id);
+  const selectedTileId = tileFor(selectedId);
+  const [page, setPage] = useState(() =>
+    historyPageForSelection(
+      groupedIds ? records.filter(record => groupedIds.has(record.id)) : records,
+      selectedTileId,
+      library ? 24 : 4,
+    ),
+  );
   const [query, setQuery] = useState('');
   const [collectionId, setCollectionId] = useState<string>();
   const [collectionRecord, setCollectionRecord] = useState<GenerationRecord>();
@@ -100,20 +134,36 @@ export function History({
     ? collections?.collections.find(item => item.kind === 'image' && item.id === collectionId)
     : undefined;
   const members = collection ? new Set(collection.memberIds) : undefined;
+  // Collections hold specific versions, so a collection view shows exactly what was put in it.
+  const grouping = members ? undefined : groupedIds;
+  const matches = (record: GenerationRecord) =>
+    `${record.draft.prompt} ${record.resolvedPrompt} ${record.filename} ${record.checkpoint?.name ?? (record.qwenEdit ? 'Qwen image edit' : 'resize upscale')} ${record.checkpoint?.filename ?? ''} ${(record.loras ?? []).map(model => `${model.name} ${model.filename}`).join(' ')} ${record.actualSeed}`
+      .toLowerCase()
+      .includes(query.toLowerCase());
   const filtered = records.filter(
     record =>
       (!members || members.has(record.id)) &&
-      (!query ||
-        `${record.draft.prompt} ${record.resolvedPrompt} ${record.filename} ${record.checkpoint?.name ?? (record.qwenEdit ? 'Qwen image edit' : 'resize upscale')} ${record.checkpoint?.filename ?? ''} ${(record.loras ?? []).map(model => `${model.name} ${model.filename}`).join(' ')} ${record.actualSeed}`
-          .toLowerCase()
-          .includes(query.toLowerCase())),
+      (!grouping || grouping.has(record.id)) &&
+      (!query || (grouping ? (groupOf.get(record.id)?.versions ?? [record]) : [record]).some(matches)),
   );
-  const lastSelection = useRef(selectedId);
+  const shownSelection = grouping ? selectedTileId : selectedId;
+  const lastSelection = useRef(shownSelection);
   useEffect(() => {
-    if (lastSelection.current === selectedId) return;
-    lastSelection.current = selectedId;
-    setPage(current => historyPageForSelection(filtered, selectedId, pageSize, current));
-  }, [selectedId, filtered, pageSize]);
+    if (lastSelection.current === shownSelection) return;
+    lastSelection.current = shownSelection;
+    setPage(current => historyPageForSelection(filtered, shownSelection, pageSize, current));
+  }, [shownSelection, filtered, pageSize]);
+  const versionsOf = (record: GenerationRecord): ImageVersionGroup<GenerationRecord> | undefined => {
+    const group = groupOf.get(record.id);
+    return group && group.versions.length > 1 ? group : undefined;
+  };
+  /** The first render of this image, when the plain source / result compare would not already show it. */
+  const originalToCompare = (record: GenerationRecord) => {
+    const original = versionsOf(record)?.versions[0];
+    if (!onCompare || !original || original.id === record.id) return undefined;
+    if (original.id === record.baseRecordId || original.id === record.facePass?.parentRecordId) return undefined;
+    return original;
+  };
   const safePage = Math.min(page, Math.max(0, Math.ceil(filtered.length / pageSize) - 1));
   const visible = scrollable ? filtered : filtered.slice(safePage * pageSize, (safePage + 1) * pageSize);
   const canCompare = (record: GenerationRecord) =>
@@ -151,6 +201,8 @@ export function History({
     const rows =
       5 +
       Number(canCompare(record)) +
+      Number(Boolean(originalToCompare(record))) +
+      Math.max(0, (versionsOf(record)?.versions.length ?? 0) - 1) +
       Number(Boolean(onVariation && !record.draft.upscale)) +
       Number(Boolean(collections && collectionActions && onCollectionChange));
     const menuHeight = 72 + rows * (window.matchMedia('(pointer: coarse)').matches ? 44 : 36);
@@ -242,7 +294,7 @@ export function History({
               <button
                 type="button"
                 className="history-preview"
-                aria-pressed={record.id === selectedId}
+                aria-pressed={record.id === (grouping ? selectedTileId : selectedId)}
                 onClick={() => onSelect(record)}
                 onContextMenu={event => {
                   event.preventDefault();
@@ -278,6 +330,15 @@ export function History({
                             : ''}
                   {(record.resolvedPrompt ?? record.draft.prompt) || 'Untitled image'}
                 </span>
+                {grouping && groupOf.get(record.id)?.lead.id === record.id && versionsOf(record) && (
+                  <span
+                    className="history-versions"
+                    title={versionsOf(record)!.versions.map(imageVersionLabel).join(' → ')}
+                  >
+                    <Layers size={12} aria-hidden="true" />
+                    {versionsOf(record)!.versions.length} versions
+                  </span>
+                )}
                 {library && (
                   <span className="history-date">
                     {shortDate(record.createdAt)} · {record.width} × {record.height}
@@ -424,6 +485,36 @@ export function History({
               Compare source / result
             </button>
           )}
+          {onCompare && originalToCompare(menu.record) && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                const record = menu.record;
+                closeMenu();
+                onCompare(record, originalToCompare(record));
+              }}
+            >
+              <ArrowLeftRight size={16} />
+              Compare with original
+            </button>
+          )}
+          {versionsOf(menu.record)
+            ?.versions.filter(version => version.id !== menu.record.id)
+            .map(version => (
+              <button
+                key={version.id}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  closeMenu();
+                  onSelect(version);
+                }}
+              >
+                <Layers size={16} />
+                View {imageVersionLabel(version).toLowerCase()} version
+              </button>
+            ))}
           <button
             type="button"
             role="menuitem"
@@ -572,6 +663,19 @@ export function History({
                 >
                   <ArrowLeftRight size={16} />
                   Compare source / result
+                </button>
+              )}
+              {onCompare && originalToCompare(details) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const record = details;
+                    setDetails(undefined);
+                    onCompare(record, originalToCompare(record));
+                  }}
+                >
+                  <ArrowLeftRight size={16} />
+                  Compare with original
                 </button>
               )}
               {variationParent && (
