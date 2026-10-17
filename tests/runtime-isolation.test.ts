@@ -132,6 +132,17 @@ describe('managed runtime isolation', () => {
     ]);
     expect(backendArguments(paths, 19023, { deviceMode: 'lowvram', fastMath: true })).toContain('--fast');
     expect(backendArguments(paths, 19023, { deviceMode: 'cpu', fastMath: true })).not.toContain('--fast');
+  });
+
+  it('uses SageAttention only when the recorded launch enables it on a GPU', () => {
+    const paths = fixture();
+    expect(backendArguments(paths, 19023, { deviceMode: 'auto' })).not.toContain('--use-sage-attention');
+    expect(backendArguments(paths, 19023, { deviceMode: 'auto', sageAttention: true })).toContain(
+      '--use-sage-attention',
+    );
+    expect(backendArguments(paths, 19023, { deviceMode: 'cpu', sageAttention: true })).not.toContain(
+      '--use-sage-attention',
+    );
     expect(modelPathsYaml(paths)).toContain(JSON.stringify(paths.models.replaceAll('\\', '/')));
   });
 

@@ -191,6 +191,23 @@ export function StudioSettings({
             />
           </fieldset>
         </div>
+        <div className="setting-line">
+          <div>
+            <h3>SageAttention</h3>
+            <p>
+              Faster attention for image, Qwen and video models on NVIDIA cards. Needs the optional SageAttention
+              packages in the private engine; without them the engine starts normally. Applies the next time the backend
+              starts.
+            </p>
+          </div>
+          <fieldset disabled={settingsBusy || settings.deviceMode === 'cpu'}>
+            <Toggle
+              label="SageAttention"
+              checked={settings.sageAttention ?? false}
+              onChange={sageAttention => update({ sageAttention })}
+            />
+          </fieldset>
+        </div>
         <details className="log-details">
           <summary>
             <Terminal size={15} />

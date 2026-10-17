@@ -934,7 +934,7 @@
       "exceptions": [
         {
           "category": "credential-url",
-          "sha256": "789df8e5ef1fb865d6a5ceb21977f8053cb9d2826c0edc4351f2a408695deb6f",
+          "sha256": "37ae9f6eb5c7baf6b2b65f07c01c6166c2e5d494c4e0d7de8648a9e10073f857",
           "reason": "Reviewed synthetic Example User path / user:secret@example.com rejection fixture; not a personal credential."
         }
       ]

@@ -5,6 +5,7 @@ describe('settings patches', () => {
   it('keeps only the settings a patch names, so defaults never overwrite saved choices', () => {
     expect(parseSettingsPatch({ theme: 'dark' })).toEqual({ theme: 'dark' });
     expect(parseSettingsPatch({ fastMath: true })).toEqual({ fastMath: true });
+    expect(parseSettingsPatch({ sageAttention: true })).toEqual({ sageAttention: true });
   });
 
   it('still rejects invalid values', () => {

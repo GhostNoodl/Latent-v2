@@ -199,6 +199,7 @@ export const settingsSchema = z
     backendAutoStart: z.boolean(),
     deviceMode: z.enum(['auto', 'lowvram', 'cpu']),
     fastMath: z.boolean().default(false),
+    sageAttention: z.boolean().default(false),
   })
   .strict();
 /** Zod applies field defaults inside .partial(), which would silently reset settings the patch never named. */

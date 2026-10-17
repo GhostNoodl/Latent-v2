@@ -10,7 +10,7 @@ import {
   runtimeIdentitySchema,
   type RuntimeIdentitySnapshot,
 } from '../shared/runtime-identity';
-import { runtimeEnvironment, validateRuntimePaths } from './runtime-config';
+import { hasSageAttention, runtimeEnvironment, validateRuntimePaths } from './runtime-config';
 
 const MAX_MANIFEST_BYTES = 8 * 1024 * 1024;
 const MAX_IDENTITY_BYTES = 1024 * 1024;
@@ -299,7 +299,7 @@ async function persistContent(root: string, value: unknown, maximum: number, sig
 /** Fixed private observation only; injected probe is a test seam, never an IPC input. */
 export async function captureRuntimeIdentity(
   paths: AppPaths,
-  settings: Pick<AppSettings, 'deviceMode' | 'fastMath'>,
+  settings: Pick<AppSettings, 'deviceMode' | 'fastMath' | 'sageAttention'>,
   signal?: AbortSignal,
   probe = probeRuntimePython,
 ): Promise<RuntimeIdentitySnapshot> {
@@ -314,7 +314,7 @@ export async function captureRuntimeIdentity(
 
 async function captureObservedIdentity(
   paths: AppPaths,
-  settings: Pick<AppSettings, 'deviceMode' | 'fastMath'>,
+  settings: Pick<AppSettings, 'deviceMode' | 'fastMath' | 'sageAttention'>,
   signal: AbortSignal,
   probe: typeof probeRuntimePython,
 ): Promise<RuntimeIdentitySnapshot> {
@@ -399,6 +399,9 @@ async function captureObservedIdentity(
     launch: {
       deviceMode: settings.deviceMode,
       ...(settings.fastMath && settings.deviceMode !== 'cpu' ? { fastMath: true as const } : {}),
+      ...(settings.sageAttention && settings.deviceMode !== 'cpu' && hasSageAttention(checkedPython.packages)
+        ? { sageAttention: true as const }
+        : {}),
     },
     inventoryPolicy: 'runtime-source-v1',
   });

@@ -40,6 +40,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   backendAutoStart: true,
   deviceMode: 'auto',
   fastMath: false,
+  sageAttention: false,
 };
 export const SAMPLERS = [
   'euler',

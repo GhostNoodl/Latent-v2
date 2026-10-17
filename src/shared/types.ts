@@ -176,6 +176,8 @@ export interface AppSettings {
   deviceMode: 'auto' | 'lowvram' | 'cpu';
   /** Opt-in reduced-precision NVIDIA math (`--fast`); results may differ very slightly. */
   fastMath?: boolean;
+  /** Global SageAttention (`--use-sage-attention`) when the reviewed optional packages are installed. */
+  sageAttention?: boolean;
 }
 export interface AppPaths {
   root: string;

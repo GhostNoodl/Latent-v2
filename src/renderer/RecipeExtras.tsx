@@ -281,6 +281,7 @@ export function RecipeExtras({ record }: { record: GenerationRecord }) {
                   {record.runtimeIdentity.data.packages.length} packages ·{' '}
                   {record.runtimeIdentity.data.launch.deviceMode}
                   {record.runtimeIdentity.data.launch.fastMath ? ' · Turbo math' : ''}
+                  {record.runtimeIdentity.data.launch.sageAttention ? ' · SageAttention' : ''}
                 </dd>
               </>
             )}

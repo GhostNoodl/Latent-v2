@@ -718,7 +718,7 @@ export class ManagedBackend {
       environment.LATENT_PARENT_PID = String(process.pid);
       environment.LATENT_BACKEND_MAIN = path.join(this.paths.backend, 'main.py');
       environment.LATENT_BACKEND_ROOT = this.paths.root;
-      const child = spawn(this.paths.python, backendArguments(this.paths, port, settings), {
+      const child = spawn(this.paths.python, backendArguments(this.paths, port, this.runtimeIdentity.data.launch), {
         cwd: this.paths.backend,
         env: environment,
         windowsHide: true,
