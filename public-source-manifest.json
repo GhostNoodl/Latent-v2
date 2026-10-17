@@ -976,6 +976,14 @@
       "to": ".github/workflows/release.yml"
     },
     {
+      "from": ".github/ISSUE_TEMPLATE/bug_report.yml",
+      "to": ".github/ISSUE_TEMPLATE/bug_report.yml"
+    },
+    {
+      "from": ".github/ISSUE_TEMPLATE/idea.yml",
+      "to": ".github/ISSUE_TEMPLATE/idea.yml"
+    },
+    {
       "from": "scripts/check-public-boundary.mjs",
       "to": "scripts/check-public-boundary.mjs"
     },

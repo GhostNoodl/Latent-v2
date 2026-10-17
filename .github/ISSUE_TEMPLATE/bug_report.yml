@@ -1,0 +1,46 @@
+name: Something isn't working
+description: Tell us about a problem with Latent v2.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for letting us know! A few details help us track it down faster. Please leave out personal file paths, keys and private images.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you try, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Latent version
+      description: Shown in Settings.
+      placeholder: 0.2.2
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: Graphics card
+      placeholder: NVIDIA RTX 4070, 12 GB
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where in the app?
+      options:
+        - Setup
+        - Create
+        - Video
+        - Qwen
+        - Library
+        - Models
+        - Discover
+        - Settings or app updates
+        - Somewhere else
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Error messages, screenshots or steps to make it happen again.
