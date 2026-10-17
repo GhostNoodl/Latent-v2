@@ -88,6 +88,7 @@ import { IPADAPTER_RELEASE } from '../shared/ipadapter-release';
 import { MODEL_CATALOG } from '../shared/model-catalog';
 import { draftSchema, parseSettingsPatch } from '../shared/validation';
 import { TelegramBotService } from './telegram-bot';
+import { SIZE_PRESETS } from '../shared/defaults';
 import type { AppSnapshot, GenerationDraft, HardwareInfo, LatentAPI } from '../shared/types';
 
 protocol.registerSchemesAsPrivileged([
@@ -754,6 +755,9 @@ async function initialize() {
     crypto: safeStorage,
     fetch: (input, init) => fetch(input, init),
     draft: () => draft,
+    models: () => models.assets,
+    presets: () => store.presets(),
+    sizes: () => store.settings().sizePresets ?? SIZE_PRESETS,
     queue: value =>
       models.library.withShared('queueing an image from Telegram', async () => {
         assertModelLocationsReady();

@@ -1,12 +1,28 @@
 import { afterEach, expect, it } from 'vitest';
-import { TelegramBotService, telegramDraft, type TelegramBotPorts } from '../src/main/telegram-bot';
-import { DEFAULT_DRAFT } from '../src/shared/defaults';
-import type { GenerationDraft, GenerationJob, GenerationRecord, StudioJob } from '../src/shared/types';
+import { TelegramBotService, type TelegramBotPorts } from '../src/main/telegram-bot';
+import { DEFAULT_DRAFT, SIZE_PRESETS } from '../src/shared/defaults';
+import type { GenerationDraft, GenerationJob, GenerationRecord, ModelAsset, StudioJob } from '../src/shared/types';
 
 const TOKEN = '123456789:AAbbCCddEEffGGhhIIjjKKllMMnnOOppQQ';
 const OWNER = 1111;
 const STRANGER = 2222;
 type Call = { method: string; body: any };
+const asset = (id: string, name: string, kind: 'checkpoint' | 'lora') =>
+  ({
+    id,
+    name,
+    filename: `${id}.safetensors`,
+    kind,
+    family: 'illustrious',
+    bytes: 1,
+    triggers: [],
+    status: 'ready',
+  }) as ModelAsset;
+const MODELS = [
+  asset('model-a', 'Alpha XL', 'checkpoint'),
+  asset('model-b', 'Beta Pony', 'checkpoint'),
+  asset('lora-1', 'Detail Tweaker', 'lora'),
+];
 
 function harness() {
   const state = new Map<string, unknown>();
@@ -53,6 +69,9 @@ function harness() {
     },
     fetch: fakeFetch,
     draft: () => ({ ...structuredClone(DEFAULT_DRAFT), checkpointId: 'model-a' }) as GenerationDraft,
+    models: () => MODELS,
+    presets: () => [],
+    sizes: () => SIZE_PRESETS,
     queue: async draft => {
       queued.push(draft);
       const job = {
@@ -182,18 +201,101 @@ it('reports a rejected token instead of retrying forever', async () => {
   expect(bot.status().message).toMatch(/rejected the bot token/);
 });
 
-it('turns the studio draft into a plain text-to-image job', () => {
-  const base = {
-    ...structuredClone(DEFAULT_DRAFT),
-    prompt: 'old',
-    seed: '7',
-    imageInput: { mode: 'img2img', sourceId: 'a', sourceSha256: 'b', denoise: 0.5, resize: 'stretch' },
-    autoFace: { profile: 'anime', strength: 0.4 },
-    triggerResolutionVersion: 'visible@3',
-  } as GenerationDraft;
-  const draft = telegramDraft(base, 'new prompt');
-  expect(draft).toMatchObject({ prompt: 'new prompt', seed: 'random', triggerResolutionVersion: 'punctuation@2' });
-  expect(draft.imageInput).toBeUndefined();
-  expect(draft.autoFace).toBeUndefined();
-  expect(base.prompt).toBe('old');
+it('changes settings per chat with commands, buttons and one-off prompt flags', async () => {
+  const h = harness();
+  bot = new TelegramBotService(h.ports);
+  await bot.setToken(TOKEN);
+  await bot.saveSettings({ enabled: true, allowedUserIds: [String(OWNER)] });
+  await h.until(() => bot!.status().state === 'online');
+  const sent = () => h.calls.filter(call => call.method === 'sendMessage').map(call => call.body);
+
+  h.push(h.message(OWNER, '/model'));
+  await h.until(() => sent().length === 1);
+  expect(sent()[0].text).toContain('2. Beta Pony');
+  expect(sent()[0].reply_markup.inline_keyboard[1][0]).toEqual({ text: 'Beta Pony', callback_data: 'set:model:2' });
+
+  // A tap on the second model, then typed changes.
+  h.push(
+    {
+      update_id: 900,
+      callback_query: {
+        id: 'q1',
+        from: { id: OWNER },
+        message: { chat: { id: OWNER, type: 'private' } },
+        data: 'set:model:2',
+      },
+    },
+    h.message(OWNER, '/lora detail 0.7'),
+    h.message(OWNER, '/size portrait'),
+    h.message(OWNER, '/steps 500'),
+    h.message(OWNER, 'a lighthouse --steps 12 --seed 99 --neg blurry, lowres'),
+  );
+  await h.until(() => h.queued.length === 1);
+  expect(h.calls.find(call => call.method === 'answerCallbackQuery')?.body.text).toBe('Model set to Beta Pony.');
+  expect(sent().map(body => body.text)).toContain('Steps needs a whole number from 1 to 100.');
+  expect(h.queued[0]).toMatchObject({
+    prompt: 'a lighthouse',
+    checkpointId: 'model-b',
+    loras: [{ modelId: 'lora-1', weight: 0.7, clipWeight: 0.7 }],
+    width: 832,
+    height: 1216,
+    steps: 12,
+    seed: '99',
+    negativePrompt: 'blurry, lowres',
+  });
+
+  // Flags were one-off; the chat's own settings stay, and /again repeats the whole line.
+  h.push(h.message(OWNER, '/settings'), h.message(OWNER, '/reset'), h.message(OWNER, 'a plain prompt'));
+  await h.until(() => h.queued.length === 2);
+  expect(sent().find(body => body.text.startsWith('Model: Beta Pony'))?.text).toContain('Steps 28');
+  expect(h.queued[1]).toMatchObject({ checkpointId: 'model-a', loras: [], width: 1024, seed: 'random' });
+  h.push(h.message(OWNER, '/again'));
+  await h.until(() => h.queued.length === 3);
+  expect(h.queued[2].prompt).toBe('a plain prompt');
+});
+
+it('waits for face fixes and sends the fixed picture instead of the original', async () => {
+  const h = harness();
+  bot = new TelegramBotService(h.ports);
+  await bot.setToken(TOKEN);
+  await bot.saveSettings({ enabled: true, allowedUserIds: [String(OWNER)] });
+  await h.until(() => bot!.status().state === 'online');
+  h.push(h.message(OWNER, 'a portrait --faces on anime'));
+  await h.until(() => h.queued.length === 1);
+  expect(h.queued[0].autoFace).toMatchObject({ profile: 'anime' });
+
+  const parent = h.jobs[0] as GenerationJob;
+  h.records.push({ id: 'orig', jobId: parent.id, actualSeed: '1', width: 1024, height: 1024 } as GenerationRecord);
+  parent.status = 'completed';
+  bot.jobFinished(parent);
+  await bot.sweep();
+  expect(h.calls.some(call => call.method === 'sendPhoto')).toBe(false);
+
+  const child = {
+    ...structuredClone(parent),
+    id: 'child',
+    status: 'running',
+    draft: { ...parent.draft, autoFace: undefined },
+  } as GenerationJob;
+  h.jobs.push(child);
+  parent.autoFaceFinished = true;
+  parent.autoFaceResults = { orig: { state: 'queued', jobId: 'child' } };
+  await bot.sweep();
+  expect(h.calls.some(call => call.method === 'sendPhoto')).toBe(false);
+
+  child.status = 'completed';
+  h.records.push({
+    id: 'fixed',
+    jobId: 'child',
+    outputRole: 'final',
+    actualSeed: '1',
+    width: 1024,
+    height: 1024,
+  } as GenerationRecord);
+  bot.jobFinished(child);
+  await bot.sweep();
+  await h.until(() => h.calls.some(call => call.method === 'sendPhoto'));
+  const photos = h.calls.filter(call => call.method === 'sendPhoto');
+  expect(photos).toHaveLength(1);
+  expect((photos[0].body.photo as File).name).toBe('latent-fixed.png');
 });

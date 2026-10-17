@@ -26,8 +26,9 @@ export function TelegramRemote({ status, run, busy }: { status: TelegramStatus; 
         <div>
           <h2>Telegram remote</h2>
           <p>
-            Send prompts to your own Telegram bot and get the images back in the chat. Everything still runs on this PC,
-            using the current Create settings. Latent checks Telegram for messages, so no ports need opening.
+            Send prompts to your own Telegram bot and get the images back in the chat. Everything still runs on this PC.
+            Chats start from the current Create settings and can change the model, LoRAs, size, steps and more; send
+            /help to the bot to see how. Latent checks Telegram for messages, so no ports need opening.
           </p>
         </div>
         <span className="badge">

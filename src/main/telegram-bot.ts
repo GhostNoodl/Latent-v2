@@ -1,9 +1,32 @@
 import { z } from 'zod';
-import type { BackendStatus, GenerationDraft, GenerationJob, GenerationRecord, StudioJob } from '../shared/types';
+import type {
+  BackendStatus,
+  GenerationDraft,
+  GenerationJob,
+  GenerationRecord,
+  ModelAsset,
+  Preset,
+  StudioJob,
+} from '../shared/types';
 import { isImageJob } from '../shared/types';
+import { SAMPLERS, SCHEDULERS } from '../shared/defaults';
 import { telegramSettingsSchema, type TelegramSettings, type TelegramStatus } from '../shared/telegram-types';
 import type { StudioStore } from './store';
+import {
+  applySetting,
+  checkpointList,
+  describeSettings,
+  effectiveDraft,
+  isSettingKey,
+  loraList,
+  POPULAR_SAMPLERS,
+  splitPromptFlags,
+  type ControlContext,
+  type SettingKey,
+  type TelegramOverrides,
+} from './telegram-controls';
 
+export { telegramDraft } from './telegram-controls';
 export interface TelegramCredentialCrypto {
   isEncryptionAvailable(): boolean;
   encryptString(value: string): Buffer;
@@ -14,8 +37,11 @@ export interface TelegramBotPorts {
   store: Pick<StudioStore, 'getState' | 'setState' | 'records'>;
   crypto?: TelegramCredentialCrypto;
   fetch: typeof fetch;
-  /** The studio's current Create settings, which Telegram prompts reuse. */
+  /** The studio's current Create settings, which Telegram chats start from. */
   draft(): GenerationDraft;
+  models(): ModelAsset[];
+  presets(): Preset[];
+  sizes(): { name: string; width: number; height: number }[];
   queue(draft: GenerationDraft): Promise<GenerationJob>;
   jobs(): StudioJob[];
   cancel(id: string): Promise<void>;
@@ -30,25 +56,44 @@ export interface TelegramBotPorts {
 interface TelegramUser {
   id: number;
 }
+interface TelegramChat {
+  id: number;
+  type: string;
+}
 interface TelegramMessage {
   message_id: number;
   from?: TelegramUser;
-  chat: { id: number; type: string };
+  chat: TelegramChat;
   text?: string;
+}
+interface TelegramCallback {
+  id: string;
+  from: TelegramUser;
+  message?: { chat: TelegramChat };
+  data?: string;
 }
 interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
+  callback_query?: TelegramCallback;
 }
 interface RemoteJob {
   chatId: number;
   prompt: string;
+  /** The image finished; its automatic face fix is still on the way. */
+  waitingFaces?: boolean;
 }
+interface ChatState {
+  overrides: TelegramOverrides;
+  lastPrompt?: string;
+}
+type Button = { text: string; callback_data: string };
 
 const SETTINGS_STATE = 'telegram.settings.v1';
 const TOKEN_STATE = 'telegram.encrypted-token.v1';
 const OFFSET_STATE = 'telegram.offset.v1';
 const JOBS_STATE = 'telegram.jobs.v1';
+const CHATS_STATE = 'telegram.chats.v1';
 const API = 'https://api.telegram.org';
 const POLL_SECONDS = 25;
 const tokenPattern = /^\d{3,20}:[A-Za-z0-9_-]{20,100}$/;
@@ -64,13 +109,32 @@ const storedTokenSchema = z
   .strict();
 const DEFAULT_SETTINGS: TelegramSettings = { enabled: false, allowedUserIds: [] };
 const HELP = [
-  'Send me a prompt and I will make it on the studio PC with the current Create settings (model, size, LoRAs, steps).',
+  'Send me a prompt and I will make it on the studio PC. You start with the studio’s Create settings and can change anything below just for this chat.',
   '',
-  '/gen <prompt> - same as sending a prompt',
+  'Making images',
+  '/gen <prompt> - same as just sending a prompt',
+  '/again - run your last prompt again with a new seed',
   '/queue - what is waiting or running',
   '/cancel - cancel your latest image',
-  '/status - is the image engine running?',
-  '/id - show your Telegram user ID',
+  '',
+  'Settings (send without a value to see choices)',
+  '/settings - show everything',
+  '/model - pick the checkpoint',
+  '/loras - list LoRAs; /lora <name> [weight], /lora remove <name>, /lora clear',
+  '/size 832x1216 or /size portrait',
+  '/steps 30 · /cfg 6.5 · /seed 1234 or random · /batch 1-4',
+  '/sampler · /scheduler',
+  '/neg <negative prompt> or /neg off',
+  '/hires on [scale] [denoise] or off',
+  '/faces on [illustrated|anime|photographic] [strength] or off',
+  '/triggers on|off - add LoRA trigger words automatically',
+  '/preset - load one of the studio’s saved presets',
+  '/reset - go back to the studio’s Create settings',
+  '',
+  'One-off changes work inside a prompt too:',
+  'a fox in the snow --size landscape --steps 35 --seed 7',
+  '',
+  '/status - is the image engine running? · /id - your Telegram user ID',
 ].join('\n');
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -84,31 +148,6 @@ class TelegramApiError extends Error {
   }
 }
 
-/**
- * A Telegram copy of the studio draft: a plain text-to-image job with a fresh seed. Features
- * that need a picked source image or a follow-up pass stay in the studio window.
- */
-export function telegramDraft(base: GenerationDraft, prompt: string): GenerationDraft {
-  const {
-    autoFace: _autoFace,
-    autoFaceParentRecordId: _autoFaceParent,
-    enhance: _enhance,
-    faceDetailer: _faceDetailer,
-    ipAdapter: _ipAdapter,
-    regionalPrompts: _regional,
-    qwenEdit: _qwenEdit,
-    variationOfRecordId: _variation,
-    controlNet: _controlNet,
-    upscale: _upscale,
-    imageInput: _imageInput,
-    dynamicPrompts: _dynamic,
-    promptTriggerSpans: _spans,
-    ...rest
-  } = structuredClone(base);
-  // Studio prompts carry LoRA trigger words visibly; a typed prompt gets them added automatically.
-  return { ...rest, prompt, seed: 'random', triggerResolutionVersion: 'punctuation@2' };
-}
-
 /** Optional remote control: long-polls Telegram, so nothing on the PC has to accept connections. */
 export class TelegramBotService {
   private state: TelegramStatus['state'] = 'off';
@@ -116,6 +155,8 @@ export class TelegramBotService {
   private botUsername?: string;
   private controller?: AbortController;
   private running?: Promise<void>;
+  private sweepTimer?: NodeJS.Timeout;
+  private sweeping = false;
   private disposed = false;
   constructor(private ports: TelegramBotPorts) {}
 
@@ -158,10 +199,13 @@ export class TelegramBotService {
     await this.restart();
   }
   start() {
+    // Face fixes finish as separate jobs after their image; check on them until they land.
+    this.sweepTimer ??= setInterval(() => void this.sweep(), 3000);
     void this.restart();
   }
   async dispose() {
     this.disposed = true;
+    if (this.sweepTimer) clearInterval(this.sweepTimer);
     await this.stop();
   }
 
@@ -169,9 +213,40 @@ export class TelegramBotService {
   jobFinished(job: StudioJob) {
     if (!['completed', 'failed', 'cancelled'].includes(job.status)) return;
     const remote = this.remoteJobs()[job.id];
-    if (!remote) return;
+    if (!remote || remote.waitingFaces) return;
+    if (job.status === 'completed' && isImageJob(job) && job.draft.autoFace && !job.autoFaceFinished) {
+      this.remember(job.id, { ...remote, waitingFaces: true });
+      return;
+    }
     this.forget(job.id);
     void this.deliver(job, remote).catch(error => this.ports.log(`Telegram delivery: ${this.redact(message(error))}`));
+  }
+  /** Sends images whose face fixes have all settled, falling back to the original when none ran. */
+  async sweep() {
+    if (this.sweeping) return;
+    this.sweeping = true;
+    try {
+      const jobs = this.ports.jobs();
+      for (const [id, remote] of Object.entries(this.remoteJobs())) {
+        if (!remote.waitingFaces) continue;
+        const job = jobs.find(item => item.id === id);
+        if (!job || !isImageJob(job)) {
+          this.forget(id);
+          continue;
+        }
+        if (!job.autoFaceFinished) continue;
+        const children = Object.values(job.autoFaceResults ?? {})
+          .map(result => result.jobId && jobs.find(item => item.id === result.jobId))
+          .filter((child): child is StudioJob => Boolean(child));
+        if (children.some(child => ['queued', 'running'].includes(child.status))) continue;
+        this.forget(id);
+        await this.deliver(job, remote).catch(error =>
+          this.ports.log(`Telegram delivery: ${this.redact(message(error))}`),
+        );
+      }
+    } finally {
+      this.sweeping = false;
+    }
   }
 
   private secureCrypto(): TelegramCredentialCrypto {
@@ -291,7 +366,7 @@ export class TelegramBotService {
         const updates = await this.call<TelegramUpdate[]>(
           token,
           'getUpdates',
-          { offset, timeout: POLL_SECONDS, allowed_updates: ['message'] },
+          { offset, timeout: POLL_SECONDS, allowed_updates: ['message', 'callback_query'] },
           signal,
           (POLL_SECONDS + 15) * 1000,
         );
@@ -301,6 +376,7 @@ export class TelegramBotService {
           if (signal.aborted) return;
           this.ports.store.setState(OFFSET_STATE, update.update_id + 1);
           if (update.message) await this.handle(token, update.message, signal);
+          else if (update.callback_query) await this.handleButton(token, update.callback_query, signal);
         }
       } catch (error) {
         if (signal.aborted) return;
@@ -324,8 +400,26 @@ export class TelegramBotService {
       }
     }
   }
-  private async send(token: string, chatId: number, text: string, signal = new AbortController().signal) {
-    await this.call(token, 'sendMessage', { chat_id: chatId, text: text.slice(0, 4000) }, signal);
+  private async send(
+    token: string,
+    chatId: number,
+    text: string,
+    signal = new AbortController().signal,
+    buttons?: Button[][],
+  ) {
+    await this.call(
+      token,
+      'sendMessage',
+      {
+        chat_id: chatId,
+        text: text.slice(0, 4000),
+        ...(buttons?.length ? { reply_markup: { inline_keyboard: buttons } } : {}),
+      },
+      signal,
+    );
+  }
+  private allowed(from: TelegramUser | undefined, chat: TelegramChat | undefined) {
+    return Boolean(from && chat?.type === 'private' && this.settings().allowedUserIds.includes(String(from.id)));
   }
   private async handle(token: string, incoming: TelegramMessage, signal: AbortSignal) {
     const from = incoming.from?.id;
@@ -333,8 +427,9 @@ export class TelegramBotService {
     const text = incoming.text.trim();
     const first = text.split(/\s+/, 1)[0] ?? '';
     const command = first.startsWith('/') ? first.slice(1).split('@')[0].toLowerCase() : undefined;
+    const args = command ? text.slice(first.length).trim() : text;
     const chatId = incoming.chat.id;
-    if (!this.settings().allowedUserIds.includes(String(from))) {
+    if (!this.allowed(incoming.from, incoming.chat)) {
       // Strangers only learn their own ID, so the owner can add them if they mean to.
       if (command === 'start' || command === 'id')
         await this.send(
@@ -345,24 +440,177 @@ export class TelegramBotService {
         );
       return;
     }
+    const reply = (value: string, buttons?: Button[][]) => this.send(token, chatId, value, signal, buttons);
     switch (command) {
       case 'start':
       case 'help':
-        return this.send(token, chatId, HELP, signal);
+        return reply(HELP);
       case 'id':
-        return this.send(token, chatId, `Your Telegram user ID is ${from}.`, signal);
+        return reply(`Your Telegram user ID is ${from}.`);
       case 'status':
-        return this.send(token, chatId, this.statusText(), signal);
+        return reply(this.statusText());
       case 'queue':
-        return this.send(token, chatId, this.queueText(chatId), signal);
+        return reply(this.queueText(chatId));
       case 'cancel':
-        return this.cancelLatest(token, chatId, signal);
+        return this.cancelLatest(chatId, reply);
+      case 'settings':
+        return reply(describeSettings(this.context(), this.chat(chatId).overrides));
+      case 'reset':
+        this.saveChat(chatId, { ...this.chat(chatId), overrides: {} });
+        return reply("Back to the studio's Create settings.");
+      case 'again': {
+        const last = this.chat(chatId).lastPrompt;
+        return last ? this.generate(chatId, last, reply) : reply('There is no earlier prompt yet. Send one first.');
+      }
       case 'gen':
       case undefined:
-        return this.generate(token, chatId, command ? text.slice(first.length).trim() : text, signal);
-      default:
-        return this.send(token, chatId, `I don't know /${command}.\n\n${HELP}`, signal);
+        return this.generate(chatId, args, reply);
+      case 'loras':
+        return reply(this.loraText(chatId));
+      case 'models':
+        return this.choices(chatId, 'model', reply);
     }
+    if (isSettingKey(command)) {
+      if (!args) return this.choices(chatId, command, reply);
+      return this.change(chatId, command, args).then(reply, error => reply(message(error)));
+    }
+    return reply(`I don't know /${command}. Send /help for everything I can do.`);
+  }
+  private async handleButton(token: string, query: TelegramCallback, signal: AbortSignal) {
+    const chat = query.message?.chat;
+    if (!chat || !this.allowed(query.from, chat)) return;
+    const match = /^set:([a-z]+):(.{1,40})$/.exec(query.data ?? '');
+    let text: string;
+    if (!match || !isSettingKey(match[1])) text = 'That button has expired.';
+    else
+      try {
+        text = await this.change(chat.id, match[1], match[2]);
+      } catch (error) {
+        text = message(error);
+      }
+    await this.call(token, 'answerCallbackQuery', { callback_query_id: query.id, text: text.slice(0, 190) }, signal);
+    await this.send(token, chat.id, text, signal);
+  }
+  private context(): ControlContext {
+    return {
+      studio: this.ports.draft(),
+      models: this.ports.models(),
+      // Sorted once here so list numbers, buttons and typed numbers all agree.
+      presets: [...this.ports.presets()].sort((a, b) => a.name.localeCompare(b.name)),
+      sizes: this.ports.sizes(),
+    };
+  }
+  private async change(chatId: number, key: SettingKey, args: string) {
+    const chat = this.chat(chatId);
+    const result = applySetting(this.context(), chat.overrides, key, args);
+    this.saveChat(chatId, { ...chat, overrides: result.overrides });
+    return result.message;
+  }
+  /** Lists the options for a setting, as buttons where a tap is enough. */
+  private async choices(chatId: number, key: SettingKey, reply: (text: string, buttons?: Button[][]) => Promise<void>) {
+    const ctx = this.context();
+    const draft = effectiveDraft(ctx.studio, this.chat(chatId).overrides, '');
+    const button = (text: string, arg: string | number): Button => ({ text, callback_data: `set:${key}:${arg}` });
+    const rows = (buttons: Button[], width: number) =>
+      Array.from({ length: Math.ceil(buttons.length / width) }, (_, index) =>
+        buttons.slice(index * width, index * width + width),
+      );
+    switch (key) {
+      case 'model': {
+        const models = checkpointList(ctx.models);
+        if (!models.length) return reply('No checkpoints are installed in the studio yet.');
+        const current = ctx.models.find(model => model.id === draft.checkpointId)?.name ?? 'none';
+        return reply(
+          `Current model: ${current}\n\n${models.map((model, index) => `${index + 1}. ${model.name}`).join('\n')}\n\nTap one, or send /model <number or name>.`,
+          rows(
+            models.slice(0, 30).map((model, index) => button(model.name.slice(0, 40), index + 1)),
+            1,
+          ),
+        );
+      }
+      case 'lora':
+        return reply(this.loraText(chatId));
+      case 'size':
+        return reply(
+          `Current size: ${draft.width}×${draft.height}. Tap one, or send /size <width>x<height> (multiples of 64, 256 to 2048).`,
+          rows(
+            ctx.sizes.map((size, index) => button(`${size.name} ${size.width}×${size.height}`, index + 1)),
+            2,
+          ),
+        );
+      case 'sampler':
+        return reply(
+          `Current sampler: ${draft.sampler}. Popular ones are below; any of these also work with /sampler <name>:\n${SAMPLERS.join(', ')}`,
+          rows(
+            POPULAR_SAMPLERS.map(name => button(name, name)),
+            2,
+          ),
+        );
+      case 'scheduler':
+        return reply(
+          `Current scheduler: ${draft.scheduler}.`,
+          rows(
+            SCHEDULERS.map(name => button(name, name)),
+            3,
+          ),
+        );
+      case 'preset': {
+        const presets = ctx.presets;
+        if (!presets.length) return reply('The studio has no saved presets yet.');
+        return reply(
+          `${presets.map((preset, index) => `${index + 1}. ${preset.name}`).join('\n')}\n\nTap one to load its model, LoRAs and settings into this chat.`,
+          rows(
+            presets.slice(0, 30).map((preset, index) => button(preset.name.slice(0, 40), index + 1)),
+            1,
+          ),
+        );
+      }
+      case 'hires':
+        return reply(
+          `Hires fix is ${draft.hiresFix ? 'on' : 'off'}. For custom strength send /hires on <scale> <denoise>, like /hires on 1.5 0.35.`,
+          [[button('On (1.5×)', 'on'), button('Off', 'off')]],
+        );
+      case 'faces':
+        return reply(
+          `Face fix is ${draft.autoFace ? `on (${draft.autoFace.profile})` : 'off'}. The face detector must be set up in the studio first.`,
+          [
+            [button('Illustrated', 'on illustrated'), button('Anime', 'on anime'), button('Photo', 'on photographic')],
+            [button('Off', 'off')],
+          ],
+        );
+      case 'triggers':
+        return reply(`Automatic LoRA trigger words are ${draft.autoTriggers ? 'on' : 'off'}.`, [
+          [button('On', 'on'), button('Off', 'off')],
+        ]);
+      case 'neg':
+        return reply(
+          `Negative prompt: ${draft.negativePrompt || 'none'}\n\nSend /neg <text> to change it or /neg off to clear it.`,
+        );
+      case 'steps':
+        return reply(`Steps: ${draft.steps}. Send /steps <1-100>.`);
+      case 'cfg':
+        return reply(`CFG: ${draft.cfg}. Send /cfg <0-30>.`);
+      case 'seed':
+        return reply(`Seed: ${draft.seed}. Send /seed <number> to pin it or /seed random.`);
+      case 'batch':
+        return reply(`Images per prompt: ${draft.batchSize}.`, [
+          [1, 2, 3, 4].map(count => button(String(count), count)),
+        ]);
+    }
+  }
+  private loraText(chatId: number) {
+    const ctx = this.context();
+    const loras = loraList(ctx.models);
+    const draft = effectiveDraft(ctx.studio, this.chat(chatId).overrides, '');
+    if (!loras.length) return 'No LoRAs are installed in the studio yet.';
+    const active = new Map(draft.loras.map(lora => [lora.modelId, lora.weight]));
+    return [
+      ...loras.map(
+        (lora, index) => `${index + 1}. ${lora.name}${active.has(lora.id) ? ` ✅ ${active.get(lora.id)}` : ''}`,
+      ),
+      '',
+      'Add or change one with /lora <number or name> [weight], remove with /lora remove <number>, or /lora clear.',
+    ].join('\n');
   }
   private statusText() {
     const backend = this.ports.backend();
@@ -391,39 +639,53 @@ export class TelegramBotService {
       })
       .join('\n');
   }
-  private async cancelLatest(token: string, chatId: number, signal: AbortSignal) {
+  private async cancelLatest(chatId: number, reply: (text: string) => Promise<void>) {
     const latest = this.mine(chatId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-    if (!latest) return this.send(token, chatId, 'Nothing of yours to cancel.', signal);
+    if (!latest) return reply('Nothing of yours to cancel.');
     try {
       await this.ports.cancel(latest.id);
-      await this.send(token, chatId, 'Cancelling your latest image.', signal);
+      await reply('Cancelling your latest image.');
     } catch (error) {
-      await this.send(token, chatId, `Could not cancel it: ${message(error)}`, signal);
+      await reply(`Could not cancel it: ${message(error)}`);
     }
   }
-  private async generate(token: string, chatId: number, prompt: string, signal: AbortSignal) {
-    if (!prompt)
-      return this.send(token, chatId, 'Send a prompt after /gen, or just send the prompt by itself.', signal);
-    if (prompt.length > 4000)
-      return this.send(token, chatId, 'That prompt is too long. Keep it under 4000 characters.', signal);
+  private async generate(chatId: number, text: string, reply: (text: string) => Promise<void>) {
+    if (!text) return reply('Send a prompt after /gen, or just send the prompt by itself.');
+    if (text.length > 4000) return reply('That prompt is too long. Keep it under 4000 characters.');
+    const { prompt, flags } = splitPromptFlags(text);
+    if (!prompt) return reply('Put the prompt before any --settings, like: a red fox --steps 30');
+    const chat = this.chat(chatId);
+    const ctx = this.context();
+    let overrides = chat.overrides;
+    try {
+      for (const flag of flags) overrides = applySetting(ctx, overrides, flag.key, flag.args).overrides;
+    } catch (error) {
+      return reply(message(error));
+    }
+    this.saveChat(chatId, { ...chat, lastPrompt: text });
     const blocked = this.ports.blockedReason();
-    if (blocked) return this.send(token, chatId, `The studio can't take new images right now: ${blocked}`, signal);
+    if (blocked) return reply(`The studio can't take new images right now: ${blocked}`);
+    const draft = effectiveDraft(ctx.studio, overrides, prompt);
     let job: GenerationJob;
     try {
-      job = await this.ports.queue(telegramDraft(this.ports.draft(), prompt));
+      job = await this.ports.queue(draft);
     } catch (error) {
-      return this.send(token, chatId, `Couldn't queue that: ${message(error)}`, signal);
+      return reply(`Couldn't queue that: ${message(error)}`);
     }
     this.remember(job.id, { chatId, prompt: prompt.slice(0, 300) });
     const ahead = this.ports.jobs().filter(item => item.status === 'queued' && item.id !== job.id).length;
+    const model = ctx.models.find(item => item.id === draft.checkpointId)?.name ?? 'the selected model';
     const engine =
       this.ports.backend().state === 'ready' ? '' : ' The image engine is not running yet, so it will wait for it.';
-    await this.send(
-      token,
-      chatId,
-      `Queued! ${ahead ? `${ahead} ahead of it.` : "It's next up."}${engine} I'll send the image here when it's done.`,
-      signal,
+    await reply(
+      `Queued! ${ahead ? `${ahead} ahead of it.` : "It's next up."}${engine}\n${model} · ${draft.width}×${draft.height} · ${draft.steps} steps${draft.hiresFix ? ' · hires' : ''}${draft.autoFace ? ' · face fix' : ''}`,
     );
+  }
+  /** The pictures a finished job leaves behind, without the in-between hires and face stages. */
+  private finished(jobId: string) {
+    const records = this.ports.store.records().filter(record => record.jobId === jobId);
+    const done = records.filter(record => record.outputRole !== 'base' && record.outputRole !== 'face-pass');
+    return done.length ? done : records;
   }
   private async deliver(job: StudioJob, remote: RemoteJob) {
     const token = this.token();
@@ -438,10 +700,16 @@ export class TelegramBotService {
         signal,
       );
     if (!isImageJob(job)) return;
-    const records = this.ports.store.records().filter(record => record.jobId === job.id);
-    // Hires fix keeps the pre-pass image as a "base" record; send only the finished pictures.
-    const finished = records.filter(record => record.outputRole !== 'base' && record.outputRole !== 'face-pass');
-    const pictures = (finished.length ? finished : records).slice(0, 10);
+    const jobs = this.ports.jobs();
+    // A face-fixed copy replaces its original; anything without one keeps the original.
+    const pictures = this.finished(job.id)
+      .flatMap(record => {
+        const childId = job.autoFaceResults?.[record.id]?.jobId;
+        const child = childId && jobs.find(item => item.id === childId);
+        const fixed = child && child.status === 'completed' ? this.finished(child.id) : [];
+        return fixed.length ? fixed : [record];
+      })
+      .slice(0, 10);
     if (!pictures.length) return this.send(token, remote.chatId, 'Done, but no saved image was found.', signal);
     for (const [index, record] of pictures.entries()) {
       const bytes = await this.ports.readOutput(record);
@@ -475,13 +743,21 @@ export class TelegramBotService {
       await this.call(token, 'sendDocument', form('document'), signal, 120_000);
     }
   }
+  private chat(chatId: number): ChatState {
+    const saved = this.ports.store.getState<Record<string, ChatState>>(CHATS_STATE, {})[String(chatId)];
+    return saved && typeof saved === 'object' ? { ...saved, overrides: saved.overrides ?? {} } : { overrides: {} };
+  }
+  private saveChat(chatId: number, value: ChatState) {
+    const chats = this.ports.store.getState<Record<string, ChatState>>(CHATS_STATE, {});
+    this.ports.store.setState(CHATS_STATE, { ...chats, [String(chatId)]: value });
+  }
   private remoteJobs(): Record<string, RemoteJob> {
     const saved = this.ports.store.getState<Record<string, RemoteJob>>(JOBS_STATE, {});
     return saved && typeof saved === 'object' ? saved : {};
   }
   private remember(id: string, remote: RemoteJob) {
     const live = new Set(this.ports.jobs().map(job => job.id));
-    const kept = Object.entries(this.remoteJobs()).filter(([jobId]) => live.has(jobId));
+    const kept = Object.entries(this.remoteJobs()).filter(([jobId]) => jobId !== id && live.has(jobId));
     this.ports.store.setState(JOBS_STATE, Object.fromEntries([...kept.slice(-200), [id, remote]]));
   }
   private forget(id: string) {

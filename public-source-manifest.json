@@ -1482,6 +1482,14 @@
     {
       "from": "tests/telegram-bot.test.ts",
       "to": "tests/telegram-bot.test.ts"
+    },
+    {
+      "from": "src/main/telegram-controls.ts",
+      "to": "src/main/telegram-controls.ts"
+    },
+    {
+      "from": "tests/telegram-controls.test.ts",
+      "to": "tests/telegram-controls.test.ts"
     }
   ]
 }
