@@ -26,6 +26,7 @@
 - **Video**: turn ideas and images into short clips.
 - **Library**: browse everything you've made, compare results, sort them into collections, and reuse any image's exact settings in one click.
 - **Models** and **Discover**: manage your model files and browse Civitai for new checkpoints and LoRAs right inside the app.
+- **Telegram remote**: send prompts to your own Telegram bot from your phone and get the pictures back in the chat, while everything still runs on your PC. See the [setup guide](docs/TELEGRAM-REMOTE.md).
 
 Everything runs locally. Your prompts, images and models stay on your computer.
 
@@ -64,13 +65,14 @@ Nope. Uninstalling keeps your studio, models and images, and reinstalling picks 
 Latent runs its own private ComfyUI engine, so it won't take over an existing install. You can add your existing model folders from the **Models** page instead of downloading everything again.
 
 **Does anything get sent online?**
-Only what you choose: setup and model downloads come from their publishers, and **Discover** talks to Civitai. If you turn on automatic model info lookup, file checksums are sent to Civitai to find matching models. Your images stay local unless you export them.
+Only what you choose: setup and model downloads come from their publishers, and **Discover** talks to Civitai. If you turn on automatic model info lookup, file checksums are sent to Civitai to find matching models. If you turn on the Telegram remote, your prompts come in through Telegram and finished pictures are sent back to your chat. Your images stay local unless you export them or use the Telegram remote.
 
 **Something's not working.**
 Sorry about that! Please [open an issue](https://github.com/GhostNoodl/Latent-v2/issues/new/choose) and tell us what happened, your Latent version (shown in **Settings**) and your graphics card.
 
 ## 📚 More guides
 
+- [Telegram remote setup](docs/TELEGRAM-REMOTE.md)
 - [Qwen Image Station](docs/QWEN-IMAGE-STATION.md) and [Compact Qwen editing](docs/QWEN-COMPACT.md)
 - [Starter wildcard packs](docs/WILDCARD-PACKS.md)
 - [Offline tag autocomplete](docs/TAG-AUTOCOMPLETE.md)

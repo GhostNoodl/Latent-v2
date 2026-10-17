@@ -1490,6 +1490,10 @@
     {
       "from": "tests/telegram-controls.test.ts",
       "to": "tests/telegram-controls.test.ts"
+    },
+    {
+      "from": "docs/TELEGRAM-REMOTE.md",
+      "to": "docs/TELEGRAM-REMOTE.md"
     }
   ]
 }
