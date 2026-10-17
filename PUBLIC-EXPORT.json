@@ -1168,8 +1168,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 2524,
-      "sha256": "ab28184677725d854d680bd253843dabc68fea3e61df1e30590e1fcfffd2ca34"
+      "bytes": 6391,
+      "sha256": "bbb722e0f4b111951e4b0fe2d5a6158b689c5a52558022bade02dff8ee68bbd0"
     },
     {
       "path": "docs/DISTRIBUTION.md",
@@ -1200,6 +1200,16 @@
       "path": ".github/workflows/release.yml",
       "bytes": 6784,
       "sha256": "41e665fff3d582ca8b7f1d328a933cce35e672b0eee310443b0aa4d14939e1c3"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+      "bytes": 1204,
+      "sha256": "b1476ff6cef1efd418a51b4053f22ac597512b03b6c65c7d9adf7265f3aeafa8"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/idea.yml",
+      "bytes": 315,
+      "sha256": "38f64fd1030e9669b5f3871de7484562ec05f65cc3bd43cc6b64d8d07ee10f7b"
     },
     {
       "path": "scripts/check-public-boundary.mjs",
