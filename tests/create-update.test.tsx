@@ -58,6 +58,22 @@ describe('0.2 authoring preferences', () => {
     expect(followHiresScale({ ...hires, scaleFactor: 2 }, 0, 1024).width).toBe(1536);
   });
 });
+it('accepts any finite LoRA weight and still rejects non-finite ones', () => {
+  const withLora = (weight: number, clipWeight: number) => ({
+    ...DEFAULT_DRAFT,
+    loras: [{ modelId: 'lora-a', weight, clipWeight }],
+  });
+  for (const [weight, clipWeight] of [
+    [5, -7.5],
+    [-12, 3.25],
+    [100, 0],
+  ]) {
+    expect(draftSchema.parse(withLora(weight, clipWeight)).loras[0]).toMatchObject({ weight, clipWeight });
+  }
+  expect(() => draftSchema.parse(withLora(Number.POSITIVE_INFINITY, 1))).toThrow();
+  expect(() => draftSchema.parse(withLora(1, Number.NaN))).toThrow();
+});
+
 it('closes activity on outside click and Escape without breaking its toggle', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   const host = document.createElement('div');

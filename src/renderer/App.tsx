@@ -222,7 +222,8 @@ export default function App() {
 
   const noteHistory = useCallback((history: AppSnapshot['history']) => {
     const known = previousImageIds.current;
-    previousImageIds.current = new Set(history.map(record => record.id));
+    // Keep ids that left the list (deleted files), so restoring one is not mistaken for a new image.
+    previousImageIds.current = new Set([...(known ?? []), ...history.map(record => record.id)]);
     if (known) {
       const newest = history.find(record => !known.has(record.id));
       if (newest) {
@@ -1242,8 +1243,6 @@ export default function App() {
                                   <Field label="Model weight">
                                     <input
                                       type="number"
-                                      min={-2}
-                                      max={2}
                                       step={0.05}
                                       value={lora.weight}
                                       onChange={event => updateLora(index, { weight: Number(event.target.value) })}
@@ -1252,8 +1251,6 @@ export default function App() {
                                   <Field label="CLIP weight">
                                     <input
                                       type="number"
-                                      min={-2}
-                                      max={2}
                                       step={0.05}
                                       value={lora.clipWeight}
                                       onChange={event => updateLora(index, { clipWeight: Number(event.target.value) })}

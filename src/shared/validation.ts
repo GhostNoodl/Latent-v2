@@ -138,8 +138,8 @@ export const draftSchema = z
         z
           .object({
             modelId: z.string().min(1).max(500),
-            weight: z.number().min(-2).max(2),
-            clipWeight: z.number().min(-2).max(2),
+            weight: z.number().finite(),
+            clipWeight: z.number().finite(),
           })
           .strict(),
       )
