@@ -38,12 +38,14 @@ import { copyStudioText } from './clipboard';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
+import { watch as watchFolder, type FSWatcher } from 'node:fs';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { containedPath, inside } from './paths';
+import { MissingOutputs } from './missing-outputs';
 import { createStartupPaths } from './portable-studio';
 import { privateShellPath } from './shell-path';
 import { StudioStore } from './store';
@@ -137,6 +139,9 @@ let videoHistory: VideoHistoryService;
 let videoAssets: VideoAssetsService;
 let videoInspector: VideoMediaInspector;
 let modelTransferActions: ModelTransferActions;
+let missingOutputs: MissingOutputs;
+let outputsWatcher: FSWatcher | undefined;
+let outputsCheckTimer: NodeJS.Timeout | undefined;
 const videoFixture = videoPlaybackFixtureFile({
   isPackaged: app.isPackaged,
   resourcesPath: process.resourcesPath,
@@ -225,7 +230,7 @@ function snapshot(): AppSnapshot {
     segmentation: segmentation.status(),
     sourceImages: sources.list(),
     models: models.assets,
-    history: store.records(),
+    history: missingOutputs.visible(store.records()),
     previewSelectedRecordId: store.previewSelectionId(),
     jobs: jobs.jobs(),
     settings: store.settings(),
@@ -458,6 +463,24 @@ function notify(preference: NotificationPreference, title: string, body: string)
   }
   notifications.send(preference, title, body);
 }
+function scheduleOutputsCheck() {
+  if (closing || closed || outputsCheckTimer) return;
+  outputsCheckTimer = setTimeout(() => {
+    outputsCheckTimer = undefined;
+    void missingOutputs.refresh().catch(error => void desktopLog(`Image check failed: ${errorMessage(error)}`));
+  }, 400);
+}
+function watchOutputs() {
+  try {
+    outputsWatcher = watchFolder(paths.outputs, { recursive: true }, scheduleOutputsCheck);
+    outputsWatcher.on('error', () => {
+      outputsWatcher?.close();
+      outputsWatcher = undefined;
+    });
+  } catch {
+    // Window focus still re-checks when the folder cannot be watched.
+  }
+}
 async function outputPath(id: string) {
   const record = store.records().find(item => item.id === id);
   if (!record) throw new Error('This image is not in your library.');
@@ -604,6 +627,11 @@ export type HandlerContext = ReturnType<typeof handlerContext>;
 async function initialize() {
   configureSetupActivity(paths.logs, broadcast);
   store = new StudioStore(paths.database);
+  missingOutputs = new MissingOutputs(
+    () => store.records(),
+    record => containedPath(paths.outputs, record.filename),
+    broadcast,
+  );
   draft = store.draft();
   models = new ModelService(paths, store, broadcast);
   assistant = new PromptAssistant(paths, store, broadcast);
@@ -1155,6 +1183,8 @@ async function initialize() {
   });
   window.webContents.on('will-attach-webview', event => event.preventDefault());
   window.on('ready-to-show', () => window?.show());
+  // Images deleted outside the app leave the gallery and sidebar on the next check.
+  window.on('focus', scheduleOutputsCheck);
   window.on('close', event => {
     if (!closed) {
       event.preventDefault();
@@ -1166,6 +1196,8 @@ async function initialize() {
   });
   await window.loadURL(trustedUrl);
   window.show();
+  watchOutputs();
+  scheduleOutputsCheck();
   void inventoryHardware();
   if (!modelLocations.snapshot().recoveryRequired && !modelLocations.snapshot().error) await track(models.refresh());
   if (closing || closed) return;
@@ -1306,6 +1338,8 @@ else {
       if (broadcastTimer) clearTimeout(broadcastTimer);
       if (runtimeUpdateTimer) clearInterval(runtimeUpdateTimer);
       if (runtimeIdleTimer) clearTimeout(runtimeIdleTimer);
+      if (outputsCheckTimer) clearTimeout(outputsCheckTimer);
+      outputsWatcher?.close();
       models?.dispose();
       modelTransferActions?.dispose();
       civitai?.cancel();
