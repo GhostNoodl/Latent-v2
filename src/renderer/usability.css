@@ -1181,7 +1181,7 @@
   .navigation > button svg {
     transition: scale 140ms ease;
   }
-  .navigation > button[aria-pressed='true'] svg {
+  .navigation > button[aria-current='page'] svg {
     scale: 1.08;
   }
   .model-card {

@@ -62,7 +62,7 @@ function HistoryThumbnail({ src, alt }: { src: string; alt: string }) {
         <span className={status === 'loading' ? 'history-thumbnail-loading' : 'history-thumbnail-unavailable'}>
           <Image size={20} aria-hidden="true" />
           <span>{status === 'loading' ? 'Loading preview…' : 'Preview unavailable'}</span>
-          {status === 'unavailable' && <small>Saved recipe retained</small>}
+          {status === 'unavailable' && <small>Settings are still saved</small>}
         </span>
       )}
     </span>
@@ -629,7 +629,7 @@ export function History({
                   <dt>Output</dt>
                   <dd>
                     {details.facePass
-                      ? `Face pass ${details.facePass.index + 1} of ${details.faceDetailer?.plan.passes.length}${details.outputRole === 'final' ? ' · final' : ' · retained intermediate'}`
+                      ? `Face pass ${details.facePass.index + 1} of ${details.faceDetailer?.plan.passes.length}${details.outputRole === 'final' ? ' · final' : ' · in-between step'}`
                       : details.outputRole === 'base'
                         ? 'Base image before refinement'
                         : details.advancedImage?.hires
@@ -661,9 +661,7 @@ export function History({
               </dd>
             </dl>
             <RecipeExtras record={details} />
-            {details.resolvedPrompt !== details.draft.prompt && (
-              <Notice>Prompt sent to ComfyUI: {details.resolvedPrompt}</Notice>
-            )}
+            {details.resolvedPrompt !== details.draft.prompt && <Notice>Final prompt: {details.resolvedPrompt}</Notice>}
             {onVariation && !details.draft.upscale && !details.qwenEdit && !details.faceDetailer && (
               <p className="muted small">
                 Make a variation: {variationDescription(details.draft)} Generate when ready; Undo returns to your

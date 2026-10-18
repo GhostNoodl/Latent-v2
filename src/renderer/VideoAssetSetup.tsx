@@ -125,10 +125,7 @@ export function VideoAssetSetup({
           </ul>
         </Notice>
       )}
-      <p>
-        Asset checks verify files only. Experimental generation also checks the private engine before submission;
-        performance depends on the selected settings and available memory.
-      </p>
+      <p>Checking only looks at the files. Speed depends on your settings and how much graphics memory you have.</p>
       <PackageSetupStorage packageId={`video-${profile}`} />
       <div className="button-row">
         <button type="button" disabled={!enabled} onClick={() => onSetup(profile)}>

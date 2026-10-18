@@ -466,7 +466,7 @@ strong {
   color: var(--muted);
   padding: 9px 2px;
 }
-.navigation > button[aria-pressed='true'] {
+.navigation > button[aria-current='page'] {
   color: var(--accent);
   background: var(--soft);
   box-shadow: inset 3px 0 0 var(--accent);

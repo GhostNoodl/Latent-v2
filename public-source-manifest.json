@@ -899,7 +899,7 @@
       "exceptions": [
         {
           "category": "user-profile-path",
-          "sha256": "ee91d6283c505eefb2575e7b0b6a49ba7230700e1ab23869bdfe6eb82f2384a6",
+          "sha256": "c9bed66de6b599b6eed383f78c0a954cb6b0f81a9a980f78db0ceeed9c19bc5e",
           "reason": "Reviewed synthetic Example User path / user:secret@example.com rejection fixture; not a personal credential."
         }
       ]
@@ -1518,6 +1518,10 @@
     {
       "from": "tests/backend-log-pruning.test.ts",
       "to": "tests/backend-log-pruning.test.ts"
+    },
+    {
+      "from": "src/renderer/draft-field-label.ts",
+      "to": "src/renderer/draft-field-label.ts"
     }
   ]
 }

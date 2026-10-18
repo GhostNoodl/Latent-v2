@@ -344,7 +344,7 @@ export function PromptAssistant({
       await flush();
       if (closing.current)
         throw new Error(
-          'Applying prompts was interrupted because the app is closing. Your proposal is retained for review.',
+          "Latent is closing, so the prompts weren't applied. The suggestion is still here for next time.",
         );
       // The proposal stays immutable in conversation history. Apply its two text
       // fields to the current draft, including edits made after the request began.
@@ -788,10 +788,7 @@ export function PromptAssistant({
                         ? 'Changes waiting to save'
                         : 'Conversation saved locally'}
             </span>
-            <small>
-              Latest 30 messages are retained until Clear conversation. Image and video conversations are saved
-              separately.
-            </small>
+            <small>Keeps your last 30 messages until you clear the chat. Image and video have separate chats.</small>
           </p>
           <button
             disabled={pending.close || pending.apply || pending.clear}

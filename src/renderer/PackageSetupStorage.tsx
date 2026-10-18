@@ -39,32 +39,32 @@ export function PackageSetupStorage({ packageId }: { packageId: string }) {
   const item = snapshot?.package;
   return (
     <details className="package-setup-storage" onToggle={event => setOpen(event.currentTarget.open)}>
-      <summary>Setup storage and dependencies</summary>
+      <summary>Download size and requirements</summary>
       {open && (
         <section aria-label="Workflow setup storage">
           <button type="button" disabled={loading} onClick={() => setRevision(value => value + 1)}>
-            {loading ? 'Checking setup storage…' : 'Refresh setup storage'}
+            {loading ? 'Checking…' : 'Check again'}
           </button>
           {error && <Notice error>{error}</Notice>}
           {item && (
             <>
               <p className="small">
-                <strong>{item.name}</strong> · Measured {new Date(snapshot.measuredAt).toLocaleTimeString()}
+                <strong>{item.name}</strong> · Checked {new Date(snapshot.measuredAt).toLocaleTimeString()}
               </p>
               {item.knownPayloadBytes === 0 && item.unknownRequirements.length > 0 ? (
-                <p className="small">Download size is not yet known. Review the requirements below before setup.</p>
+                <p className="small">The download size isn't known yet. See what it needs below.</p>
               ) : (
                 <p className="small">
-                  Known payload: {bytes(item.knownPayloadBytes)}. Present candidates:{' '}
-                  {bytes(item.presentCandidateBytes)}. Resume candidates: {bytes(item.resumableBytes)}. Minimum
-                  remaining download: {bytes(item.minimumDownloadBytes)}.
+                  Total download: {bytes(item.knownPayloadBytes)}. Already on your PC:{' '}
+                  {bytes(item.presentCandidateBytes)}. Partly downloaded: {bytes(item.resumableBytes)}. Still to
+                  download: at least {bytes(item.minimumDownloadBytes)}.
                 </p>
               )}
               <p className="small muted">
-                File sizes identify reuse candidates; setup verifies their identity. Minimum remaining download excludes
-                extraction, retained files and additional dependencies. It is not the total space needed to install.
+                Files already on your PC get checked before they're reused. Unpacking needs extra room, so leave some
+                space beyond the download size.
               </p>
-              {item.dependencies.length > 0 && <p className="small">Requires: {item.dependencies.join('; ')}.</p>}
+              {item.dependencies.length > 0 && <p className="small">Needs: {item.dependencies.join('; ')}.</p>}
               {item.unknownRequirements.map(note => (
                 <p className="small muted" key={note}>
                   {note}

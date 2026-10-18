@@ -420,8 +420,8 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
                 </svg>
                 <p className="muted small">
                   <Move size={12} />
-                  Bounds include feathering. Dashed inset marks the full-strength interior. Overlap mixes guidance; list
-                  order is retained in the recipe.
+                  The soft edge is inside the box; the dashed line shows where the prompt is at full strength. Where
+                  regions overlap, their prompts blend.
                 </p>
                 <ol className="regional-list">
                   {editor.regions.map((region, index) => (

@@ -29,8 +29,8 @@ export function runtimeCommandError(executableName: string, code: number | null,
           .join('\n')
   ).trim();
   if (/Failed to update Windows PE resources/i.test(detail)) {
-    return 'Windows could not finish creating a Python package launcher. Use Repair / finish setup to retry with cached downloads. Full details are in Backend logs.';
+    return 'Windows could not finish creating a Python package launcher. Choose Repair the engine in Settings to try again (it reuses the cached downloads). Full details are in the engine log.';
   }
   const bounded = detail.length > 600 ? `${detail.slice(0, 597)}…` : detail;
-  return `${executableName} exited with code ${code ?? 'unknown'}.${bounded ? ` ${bounded}` : ''} Use Repair / finish setup to retry. Full details are in Backend logs.`;
+  return `${executableName} exited with code ${code ?? 'unknown'}.${bounded ? ` ${bounded}` : ''} Choose Repair the engine in Settings to try again. Full details are in the engine log.`;
 }

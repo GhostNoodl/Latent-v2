@@ -17,12 +17,12 @@ export function RecipeExtras({ record }: { record: GenerationRecord }) {
               src={`latent-asset://source/${record.faceDetailer.source.id}`}
               alt="Original source before face refinement"
             />
-            <figcaption>{record.faceDetailer.source.name} · original canvas retained</figcaption>
+            <figcaption>{record.faceDetailer.source.name} · the original, before face fix</figcaption>
           </figure>
           <p>
             {record.faceDetailer.detection.request.profile} CPU detector · {record.faceDetailer.plan.passes.length}{' '}
             sequential 512 × 512 crops. This image is pass {(record.facePass?.index ?? 0) + 1}
-            {record.outputRole === 'final' ? ', the final result' : ', a retained intermediate'}.
+            {record.outputRole === 'final' ? ', the final result' : ', an in-between step'}.
           </p>
           <p className="muted small">
             Reuse opens the complete saved face run from the original source, with every selected face and seed.
@@ -203,7 +203,7 @@ export function RecipeExtras({ record }: { record: GenerationRecord }) {
             <dt>Fit</dt>
             <dd>
               {record.cropInpaint
-                ? 'Original canvas retained'
+                ? 'Original size kept'
                 : (record.qwenEdit?.plan.settings.resize ??
                   record.draft.upscale?.resize ??
                   record.draft.imageInput?.resize)}
@@ -252,10 +252,7 @@ export function RecipeExtras({ record }: { record: GenerationRecord }) {
           </p>
           {record.controlNet.map ? (
             <figure>
-              <img
-                src={`latent-asset://control-map/${record.id}`}
-                alt="Exact Canny control map retained with this image"
-              />
+              <img src={`latent-asset://control-map/${record.id}`} alt="The Canny outline used to guide this image" />
               <figcaption>The exact control map used by this recipe.</figcaption>
             </figure>
           ) : (
@@ -264,18 +261,20 @@ export function RecipeExtras({ record }: { record: GenerationRecord }) {
         </section>
       )}
       <details className="advanced">
-        <summary>Reproducibility details</summary>
+        <summary>Technical details</summary>
         <div className="advanced-grid">
           <dl className="metadata">
-            <dt>Runtime identity</dt>
-            <dd className="inline-path">{record.runtimeIdentity?.sha256 ?? 'Not recorded by this earlier build'}</dd>
+            <dt>Engine fingerprint</dt>
+            <dd className="inline-path">
+              {record.runtimeIdentity?.sha256 ?? 'Not recorded (made with an older Latent)'}
+            </dd>
             {record.runtimeIdentity && (
               <>
                 <dt>Python / Torch</dt>
                 <dd>
                   {record.runtimeIdentity.data.python.version} / {record.runtimeIdentity.data.python.torchVersion}
                 </dd>
-                <dt>Observed engine</dt>
+                <dt>Engine</dt>
                 <dd>
                   {record.runtimeIdentity.data.comfy.observedVersion ?? 'Version unavailable'} ·{' '}
                   {record.runtimeIdentity.data.packages.length} packages ·{' '}
@@ -309,8 +308,8 @@ export function RecipeExtras({ record }: { record: GenerationRecord }) {
             )}
           </dl>
           <p className="muted small">
-            The adjacent .latent.json file retains the complete recipe and available runtime snapshot. Reusing
-            parameters preserves the recipe; GPU results can differ slightly across runs.
+            The full settings are also saved in a .latent.json file next to the image. Reusing them gets you very close,
+            but GPUs can give slightly different pixels from run to run.
           </p>
         </div>
       </details>

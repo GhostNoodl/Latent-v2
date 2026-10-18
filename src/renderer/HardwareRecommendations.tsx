@@ -39,7 +39,7 @@ export function HardwareRecommendations({
             <Cpu size={18} />
             Your hardware & starting presets
           </h2>
-          <p>Find a starting point for your computer. Review a preset, then apply it when ready.</p>
+          <p>See what your PC can handle and get suggested settings for it.</p>
         </div>
         <button type="button" disabled={working} onClick={onRefresh}>
           <RefreshCw size={15} className={working ? 'spin' : ''} />
@@ -50,7 +50,8 @@ export function HardwareRecommendations({
       {error && <Notice error>{error}</Notice>}
       {inventory && (
         <p className="muted small">
-          Observed {new Date(inventory.observedAt).toLocaleString()}. Refresh after changing the engine or device.
+          Checked {new Date(inventory.observedAt).toLocaleString()}. Refresh after changing your graphics card or
+          engine.
         </p>
       )}
       {inventory?.messages.map(message => (
@@ -85,25 +86,25 @@ export function HardwareRecommendations({
           <dl className="metadata">
             <dt>Detection</dt>
             <dd>{inventory.detection}</dd>
-            <dt>Selected backend device</dt>
-            <dd>{inventory.activeDevice?.name ?? 'Engine not ready or selection unavailable'}</dd>
+            <dt>Device the engine uses</dt>
+            <dd>{inventory.activeDevice?.name ?? 'Start the engine to see this'}</dd>
             <dt>Detected NVIDIA devices</dt>
             <dd>
               {inventory.gpus.length
                 ? inventory.gpus
-                    .map(gpu => `${gpu.name} · ${(gpu.vramMiB / 1024).toFixed(1)} GiB · driver ${gpu.driver}`)
+                    .map(gpu => `${gpu.name} · ${(gpu.vramMiB / 1024).toFixed(1)} GB · driver ${gpu.driver}`)
                     .join('; ')
-                : 'Unavailable; no GPU performance assumed'}
+                : 'None found'}
             </dd>
             <dt>System</dt>
             <dd>
-              {inventory.os} · {inventory.arch} · {(inventory.ramBytes / 1073741824).toFixed(1)} GiB RAM
+              {inventory.os} · {inventory.arch} · {(inventory.ramBytes / 1073741824).toFixed(1)} GB RAM
             </dd>
-            <dt>Runtime</dt>
+            <dt>Engine</dt>
             <dd>
               {inventory.runtimeIdentity
                 ? `${inventory.runtimeIdentity.data.comfy.observedVersion ?? 'Unknown Comfy version'} · ${inventory.runtimeIdentity.sha256.slice(0, 12)}`
-                : 'Start the private engine to capture its exact identity'}
+                : 'Start the engine to see its version'}
             </dd>
           </dl>
         </details>
@@ -111,32 +112,26 @@ export function HardwareRecommendations({
       {status.backend && (
         <div className="setting-line">
           <div>
-            <h3>Backend device policy</h3>
+            <h3>Memory and device mode</h3>
             <p>
-              Selected: {status.backend.actual}. Suggested: {status.backend.suggested ?? 'inspect selection first'}.
-              Source: {status.backend.origin}. Policy: {status.backend.version}.
+              Using: {status.backend.actual}. Suggested: {status.backend.suggested ?? 'refresh hardware first'}.
             </p>
             <p>{status.backend.explanation}</p>
           </div>
           {report && status.backend.suggested && status.backend.actual !== status.backend.suggested && (
             <button type="button" disabled={working || draftChanged} onClick={() => onApplyBackend(report.id)}>
-              Use suggested backend setting
+              Use the suggested mode
             </button>
           )}
         </div>
       )}
       <button type="button" disabled={working || draftInvalid} className="primary" onClick={onRecommend}>
         <Sparkles size={15} />
-        Recommend for current draft
+        Suggest settings for my prompt
       </button>
-      {draftInvalid && (
-        <Notice>
-          Finish the current generation draft's unfinished fields before requesting recommendations. Hardware inspection
-          remains available.
-        </Notice>
-      )}
+      {draftInvalid && <Notice>Some settings in Create aren't finished yet. Fix them first to get suggestions.</Notice>}
       {draftChanged && report && (
-        <Notice>The draft changed after this report. Recommend again before applying settings.</Notice>
+        <Notice>Your settings in Create changed since these suggestions. Ask again to get fresh ones.</Notice>
       )}
       {report && (
         <>
@@ -147,12 +142,12 @@ export function HardwareRecommendations({
                 <h3>{item.profile.title}</h3>
                 <p>
                   {item.state === 'observed'
-                    ? 'Observed local run; limited workload coverage'
+                    ? 'Tested on your PC'
                     : item.state === 'partial-benchmark'
-                      ? 'Partial local benchmark'
+                      ? 'Partly tested on your PC'
                       : item.state === 'stale'
-                        ? 'Rebenchmark after environment changes'
-                        : 'Not measured locally'}
+                        ? 'Tested before your last engine change'
+                        : 'Not tested on your PC yet'}
                 </p>
                 <p>{item.profile.description}</p>
                 <p>
@@ -167,11 +162,11 @@ export function HardwareRecommendations({
                   <>
                     <p>
                       {item.profile.evidence.durationMs !== undefined
-                        ? `${(item.profile.evidence.durationMs / 1000).toFixed(3)} s observed`
-                        : 'Timing unavailable'}
+                        ? `Took ${(item.profile.evidence.durationMs / 1000).toFixed(1)} s`
+                        : 'Time not measured'}
                       {item.profile.evidence.memory
-                        ? ` · ${item.profile.evidence.memory.observedMiB.toLocaleString()} MiB ${item.profile.evidence.memory.scope === 'single-whole-device-sample' ? 'single device sample; peak unknown' : 'sampled whole-device maximum'}`
-                        : ' · memory peak not measured'}
+                        ? ` · used about ${(item.profile.evidence.memory.observedMiB / 1024).toFixed(1)} GB of graphics memory`
+                        : ''}
                     </p>
                     <p>{item.profile.evidence.quality}</p>
                   </>
@@ -187,16 +182,14 @@ export function HardwareRecommendations({
                   disabled={working || draftChanged || !item.applicable || !item.changedFields.length}
                   onClick={() => onApply(item.profile.id, report.id)}
                 >
-                  {item.applicable && !item.changedFields.length
-                    ? 'Current fields already match'
-                    : 'Apply these fields'}
+                  {item.applicable && !item.changedFields.length ? 'Already using these' : 'Use these settings'}
                 </button>
                 {item.applicable && item.changedFields.length > 0 && (
-                  <p>Changes: {item.changedFields.join(', ')}. The previous draft stays available for Undo.</p>
+                  <p>Changes {item.changedFields.join(', ')}. You can Undo afterwards.</p>
                 )}
                 {item.profile.evidence && (
                   <details>
-                    <summary>Evidence and limits</summary>
+                    <summary>Test details</summary>
                     <p>
                       {item.profile.evidence.receipt} · {item.profile.evidence.workflowVersion} · image{' '}
                       {item.profile.evidence.recordId}
@@ -224,7 +217,7 @@ export function HardwareRecommendations({
               <li key={step}>{step}</li>
             ))}
           </ol>
-          <p>No settings were changed and no retry was started.</p>
+          <p>Nothing was changed, and Latent won't retry on its own.</p>
         </Notice>
       )}
     </section>

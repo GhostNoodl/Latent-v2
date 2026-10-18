@@ -83,7 +83,7 @@ export function StudioSettings({
       {onSetup && (
         <section className="settings-card">
           <h2>Studio setup</h2>
-          <p>Check your hardware and set up the engine, image models, editing or video.</p>
+          <p>Check your PC and install the engine, image models, Qwen editing or video.</p>
           <button type="button" className="primary" onClick={onSetup}>
             Open setup
           </button>
@@ -92,17 +92,15 @@ export function StudioSettings({
       <section className="settings-card backend-card">
         <div className="section-heading">
           <div>
-            <h2>Generation backend</h2>
-            <p>A dedicated ComfyUI installation for this studio.</p>
+            <h2>Image engine</h2>
+            <p>The engine that makes your images. Latent gives it its own private copy of ComfyUI.</p>
           </div>
           <span className="badge">
             <span className={`status-dot ${backend.state}`} />
             {stateLabel[backend.state]}
           </span>
         </div>
-        <Notice error={backend.state === 'error'}>
-          {backend.message || 'The backend has not reported a status yet.'}
-        </Notice>
+        <Notice error={backend.state === 'error'}>{backend.message || 'Waiting to hear from the engine…'}</Notice>
         {backend.state === 'installing' && <progress value={backend.installProgress} max={100} />}
         {['not-installed', 'error', 'installing'].includes(backend.state) && (
           <PackageSetupStorage packageId="backend" />
@@ -113,11 +111,11 @@ export function StudioSettings({
               type="button"
               className="primary"
               disabled={busy.setup || backendStartBlocked}
-              onClick={() => void run('setup', () => window.latent.setupBackend(), 'Backend setup finished.')}
+              onClick={() => void run('setup', () => window.latent.setupBackend(), 'The engine is installed.')}
             >
               <Busy active={busy.setup} />
               {!busy.setup && <Download size={16} />}
-              {backend.state === 'error' ? 'Repair / finish setup' : 'Set up generation'}
+              {backend.state === 'error' ? 'Repair the engine' : 'Install the engine'}
             </button>
           )}
           {['stopped', 'error'].includes(backend.state) && (
@@ -128,7 +126,7 @@ export function StudioSettings({
               onClick={() => void run('start', () => window.latent.startBackend())}
             >
               <Busy active={busy.start} />
-              {!busy.start && <Play size={16} />}Start backend
+              {!busy.start && <Play size={16} />}Start engine
             </button>
           )}
           {['ready', 'starting'].includes(backend.state) && (
@@ -138,7 +136,7 @@ export function StudioSettings({
               onClick={() => void run('stop', () => window.latent.stopBackend())}
             >
               <Busy active={busy.stop} />
-              {!busy.stop && <Square size={15} />}Stop backend
+              {!busy.stop && <Square size={15} />}Stop engine
             </button>
           )}
           <button
@@ -153,7 +151,7 @@ export function StudioSettings({
         <div className="setting-line">
           <div>
             <h3>Start with the studio</h3>
-            <p>Launch the installed backend when Latent opens.</p>
+            <p>Start the engine automatically when Latent opens.</p>
           </div>
           <fieldset disabled={settingsBusy}>
             <Toggle
@@ -166,7 +164,7 @@ export function StudioSettings({
         <div className="setting-line">
           <div>
             <h3>Memory and device</h3>
-            <p>Changes apply the next time the backend starts.</p>
+            <p>Takes effect the next time the engine starts.</p>
           </div>
           <select
             aria-label="Memory and device mode"
@@ -184,7 +182,7 @@ export function StudioSettings({
             <h3>Turbo math</h3>
             <p>
               Faster sampling on NVIDIA RTX cards using lower-precision math. Images can differ very slightly from the
-              same seed. Applies the next time the backend starts.
+              same seed. Takes effect the next time the engine starts.
             </p>
           </div>
           <fieldset disabled={settingsBusy || settings.deviceMode === 'cpu'}>
@@ -199,9 +197,8 @@ export function StudioSettings({
           <div>
             <h3>SageAttention</h3>
             <p>
-              Faster attention for image, Qwen and video models on NVIDIA cards. Needs the optional SageAttention
-              packages in the private engine; without them the engine starts normally. Applies the next time the backend
-              starts.
+              Speeds up image, Qwen and video models on NVIDIA cards. If the SageAttention add-on isn't installed, the
+              engine just starts normally without it. Takes effect the next time the engine starts.
             </p>
           </div>
           <fieldset disabled={settingsBusy || settings.deviceMode === 'cpu'}>
@@ -215,22 +212,16 @@ export function StudioSettings({
         <details className="log-details">
           <summary>
             <Terminal size={15} />
-            Backend logs {backend.version ? `· ${backend.version}` : ''}
+            Engine log {backend.version ? `· ComfyUI ${backend.version}` : ''}
           </summary>
-          <pre
-            className="logs"
-            tabIndex={0}
-            role="region"
-            aria-label="Backend log output"
-            onKeyDown={scrollBackendLogs}
-          >
-            {backend.logTail.length ? backend.logTail.join('\n') : 'No backend log entries yet.'}
+          <pre className="logs" tabIndex={0} role="region" aria-label="Engine log output" onKeyDown={scrollBackendLogs}>
+            {backend.logTail.length ? backend.logTail.join('\n') : 'Nothing in the log yet.'}
           </pre>
           <button
             type="button"
             className="text-button"
             onClick={() =>
-              void run('copy-logs', () => window.latent.copyText(backend.logTail.join('\n')), 'Backend logs copied.')
+              void run('copy-logs', () => window.latent.copyText(backend.logTail.join('\n')), 'Engine log copied.')
             }
           >
             <Copy size={14} />
@@ -285,7 +276,6 @@ export function StudioSettings({
       />
       <section className="settings-card">
         <h2>Appearance</h2>
-        <p>A space that feels right.</p>
         <div className="setting-line">
           <label htmlFor="theme">Theme</label>
           <select
@@ -295,8 +285,8 @@ export function StudioSettings({
             onChange={event => update({ theme: event.target.value as AppSettings['theme'] })}
           >
             <option value="system">Use system</option>
-            <option value="dark">Moonstone dark</option>
-            <option value="light">Moonstone light</option>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
           </select>
         </div>
         <div className="setting-line">
@@ -319,18 +309,16 @@ export function StudioSettings({
         </div>
       </section>
       <section className="settings-card">
-        <h2>Optional storage locations</h2>
+        <h2>Where files are stored</h2>
         <p>
-          Keep the current folders, or choose separate storage for models and generated outputs. Changing a location
-          copies and verifies existing files, then restarts the app. Original files remain in place.
+          Want models or images on another drive? Pick a new folder and Latent copies everything there, checks the copy,
+          and restarts. Your original files stay where they are until you delete them.
         </p>
-        <p>
-          Stop the engine and finish downloads first. The destination must be empty and have room for the full copy.
-        </p>
+        <p>Stop the engine and let downloads finish first. The new folder must be empty and big enough.</p>
         {(['models', 'outputs'] as const).map(kind => (
           <div className="setting-line" key={kind}>
             <div>
-              <h3>{kind === 'models' ? 'Models' : 'Generated outputs'}</h3>
+              <h3>{kind === 'models' ? 'Models' : 'Your images'}</h3>
               <p className="inline-path">{snapshot.paths[kind]}</p>
             </div>
             <button
@@ -350,7 +338,8 @@ export function StudioSettings({
           <div>
             <h3>Civitai metadata</h3>
             <p>
-              Match local files by checksum to fetch creator details and previews. Model files stay on your computer.
+              Look up your model files on Civitai to show their creator and preview images. Your files never leave your
+              PC.
             </p>
           </div>
           <fieldset disabled={settingsBusy} className="toggle-group">
@@ -370,8 +359,8 @@ export function StudioSettings({
           <div>
             <h3>Generation preview</h3>
             <p>
-              Show intermediate images while a generation runs. This changes the preview display; saved output pixels
-              and generation parameters stay the same.
+              Watch the image take shape while it generates. This only changes what you see while waiting; the final
+              image is the same either way.
             </p>
           </div>
           <fieldset disabled={settingsBusy}>
@@ -426,7 +415,7 @@ export function StudioSettings({
         <div className="setting-line">
           <div>
             <h3>Remember prompts</h3>
-            <p>Keep chosen prompt fields between sessions. Saved image recipes always retain their prompts.</p>
+            <p>Bring these prompts back next time you open Latent. Saved images always keep their own prompts.</p>
           </div>
           <fieldset disabled={settingsBusy} className="toggle-group">
             <Toggle
@@ -444,7 +433,7 @@ export function StudioSettings({
         <div className="setting-line">
           <div>
             <h3>Notification preferences</h3>
-            <p>Keep up with work while the studio is in the background.</p>
+            <p>Get a heads-up when something finishes while Latent is in the background.</p>
           </div>
           <fieldset disabled={settingsBusy} className="toggle-group">
             <Toggle

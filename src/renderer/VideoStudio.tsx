@@ -301,7 +301,7 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
         return;
       }
       setPlan(result);
-      setMessage('Plan reviewed locally. No generation was queued and no model was downloaded.');
+      setMessage('Here is the plan. Nothing has been queued or downloaded yet.');
     });
   const queueVideo = () =>
     action('queue', async () => {
@@ -462,7 +462,7 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
             />
           )}
           {plan && (
-            <Modal title="Reviewed video plan" onClose={() => setPlan(undefined)}>
+            <Modal title="Video plan" onClose={() => setPlan(undefined)}>
               <dl className="metadata">
                 <dt>Output</dt>
                 <dd>

@@ -190,7 +190,7 @@ export function SourceInput({ snapshot, draft, onChange, selected, run }: Source
             {!source || sourceChanged ? (
               <p className="inline-error" role="alert">
                 {sourceChanged
-                  ? 'This source differs from the saved recipe. Choose a source deliberately to replace it.'
+                  ? "This isn't the same source image the saved settings used. Pick a source image to continue."
                   : 'The source for this recipe is missing. Choose or import its source before generating.'}
               </p>
             ) : (

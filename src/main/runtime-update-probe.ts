@@ -109,7 +109,7 @@ export async function verifyUpdateEnvironment(
   if (observed.pythonVersion !== set.pythonVersion || JSON.stringify(observed.packages) !== JSON.stringify(expected))
     throw new RuntimeEnvironmentMismatch(
       purpose === 'setup'
-        ? 'The installed Python/package versions differ from the reviewed setup requirements. Setup is incomplete; check the backend log before retrying.'
+        ? "Some of the engine's packages don't match what they should be, so setup isn't finished. Check the engine log in Settings, then try again."
         : `The private environment differs from the reviewed runtime. ${describeEnvironmentDifference(observed, set)}. No packages were changed. A separately prepared reviewed environment is required before this runtime can start.`,
     );
   return observed;

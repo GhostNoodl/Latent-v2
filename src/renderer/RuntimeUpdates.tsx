@@ -33,60 +33,61 @@ export function RuntimeUpdates({
         <div>
           <h2>
             <ShieldCheck size={18} />
-            Reviewed runtime updates
+            Engine updates
           </h2>
-          <p>The backend, reviewed custom nodes and built-in workflows stay together as one compatible set.</p>
+          <p>
+            ComfyUI, its add-ons and Latent's built-in workflows are tested together and update together, so they always
+            fit.
+          </p>
         </div>
       </div>
       <Notice error={status.state === 'error'}>{status.message}</Notice>
       {working && status.progress !== undefined && <progress value={status.progress} max={100} />}
       {status.automaticRetryPaused && (
         <p>
-          Automatic retries are paused after a failed or cancelled operation. Resolve the issue, then choose Check now
-          to resume automatic updates, or retry preparation manually.
+          Automatic updates are paused because the last one failed or was cancelled. Choose Check now to turn them back
+          on, or try again by hand.
         </p>
       )}
       <dl className="metadata">
-        <dt>Installed set</dt>
-        <dd>{status.current?.label ?? 'No reviewed runtime recorded yet'}</dd>
+        <dt>Installed</dt>
+        <dd>{status.current?.label ?? 'Not recorded yet'}</dd>
         <dt>Available</dt>
-        <dd>{status.available?.label ?? 'No newer reviewed set'}</dd>
+        <dd>{status.available?.label ?? "You're up to date"}</dd>
         <dt>Previous</dt>
-        <dd>{status.previous?.label ?? 'Available after the first successful refresh or update'}</dd>
+        <dd>{status.previous?.label ?? 'Kept after your first update, so you can go back'}</dd>
         <dt>Last checked</dt>
         <dd>{status.lastCheckedAt ? new Date(status.lastCheckedAt).toLocaleString() : 'Not checked yet'}</dd>
         {status.staged && (
           <>
-            <dt>Staged</dt>
+            <dt>Ready to apply</dt>
             <dd>
-              {status.staged.label} · {status.staged.kind === 'refresh' ? 'same-version refresh' : 'reviewed update'}
+              {status.staged.label} · {status.staged.kind === 'refresh' ? 'fresh copy of this version' : 'update'}
             </dd>
           </>
         )}
       </dl>
       {status.available?.environmentPreparationBytes && (
         <p>
-          Preparation space budget: {(status.available.environmentPreparationBytes / 1024 ** 3).toFixed(1)} GiB. This
-          allowance covers a separate Python environment, package cache and temporary files. Actual space use can vary.
+          Needs about {(status.available.environmentPreparationBytes / 1024 ** 3).toFixed(1)} GB of free space while it
+          installs.
         </p>
       )}
       <div className="setting-line">
         <div>
           <h3>Automatic checks</h3>
-          <p>
-            Check the reviewed channel shipped with this app. Newer channel entries arrive with reviewed app releases.
-          </p>
+          <p>New engine versions arrive with Latent app updates.</p>
         </div>
         <fieldset disabled={working}>
           <Toggle
-            label="Check runtime updates automatically"
+            label="Check for engine updates automatically"
             checked={status.settings.autoCheck}
             onChange={autoCheck => update({ autoCheck })}
           />
         </fieldset>
       </div>
       <div className="setting-line">
-        <label htmlFor="runtime-update-interval">Check interval while the studio is open</label>
+        <label htmlFor="runtime-update-interval">How often to check while Latent is open</label>
         <select
           id="runtime-update-interval"
           value={status.settings.intervalHours}
@@ -105,12 +106,12 @@ export function RuntimeUpdates({
       </div>
       <div className="setting-line">
         <div>
-          <h3>Apply reviewed updates while idle</h3>
-          <p>Wait for active and queued work to finish. Preserve the previous runtime for recovery.</p>
+          <h3>Install updates when idle</h3>
+          <p>Waits until nothing is generating, and keeps the old version so you can go back.</p>
         </div>
         <fieldset disabled={working && !['checking', 'staging'].includes(status.state)}>
           <Toggle
-            label="Apply reviewed runtime updates automatically"
+            label="Install engine updates automatically"
             checked={status.settings.autoApply}
             onChange={autoApply => update({ autoApply })}
           />
@@ -118,17 +119,17 @@ export function RuntimeUpdates({
       </div>
       {status.environmentRepairRequired && (
         <Notice>
-          The installed package versions need repair. Prepare a separate reviewed environment, then apply it while idle.
-          The original environment and studio files are retained.
+          Some of the engine's packages don't match what they should be. Prepare a repair and Latent fixes it in a
+          separate copy, so nothing breaks if it fails.
           {status.environmentRepairBytes
-            ? ` Allow ${(status.environmentRepairBytes / 1024 ** 3).toFixed(1)} GiB of free workspace for preparation; actual download size can vary.`
+            ? ` It needs about ${(status.environmentRepairBytes / 1024 ** 3).toFixed(1)} GB of free space while it works.`
             : ''}
         </Notice>
       )}
       {status.environmentRepairRequired && !status.staged?.environmentRepair && (
         <button type="button" disabled={working || status.recoveryRequired} onClick={onRepair}>
           <Download size={15} />
-          Prepare environment repair
+          Prepare a repair
         </button>
       )}
       <div className="button-row">
@@ -143,45 +144,44 @@ export function RuntimeUpdates({
         {status.available && (
           <button type="button" disabled={working || status.recoveryRequired} onClick={() => onStage('update')}>
             <Download size={15} />
-            Stage reviewed update
+            Download update
           </button>
         )}
         {status.staged && (
           <button type="button" className="primary" disabled={working || status.recoveryRequired} onClick={onActivate}>
-            {status.staged.environmentRepair ? 'Apply prepared repair' : 'Apply staged runtime'}
+            {status.staged.environmentRepair ? 'Apply repair' : 'Install update'}
           </button>
         )}
         {status.previous && (
           <button type="button" disabled={working || status.recoveryRequired} onClick={onRollback}>
             <RotateCcw size={15} />
-            Restore previous runtime
+            Go back to previous version
           </button>
         )}
         {status.recoveryRequired && (
           <button type="button" className="primary" disabled={working} onClick={onRecover}>
-            Recover interrupted update
+            Finish interrupted update
           </button>
         )}
         {['checking', 'staging'].includes(status.state) && (
           <button type="button" onClick={onCancel}>
-            Cancel preparation
+            Cancel
           </button>
         )}
       </div>
       <details>
-        <summary>Same-version refresh and update history</summary>
+        <summary>Reinstall and update history</summary>
         <p>
-          A verified refresh stages a clean copy of the current reviewed source. It does not upgrade to a newer version.
-          Models, saved images, settings and the Python environment remain in their existing private locations.
+          Something acting up? Reinstall downloads a clean copy of the version you have now. It doesn't upgrade
+          anything, and your models, images and settings stay put.
         </p>
         <button
           type="button"
           disabled={working || status.recoveryRequired || status.environmentRepairRequired || !status.current}
           onClick={() => onStage('refresh')}
         >
-          Stage verified runtime refresh
+          Reinstall this version
         </button>
-        <p>Source hashes and startup checks are recorded here. Model-generation checks remain separate evidence.</p>
         {status.history.length ? (
           <ol>
             {[...status.history]
@@ -196,7 +196,7 @@ export function RuntimeUpdates({
               ))}
           </ol>
         ) : (
-          <p>No runtime maintenance has been recorded.</p>
+          <p>No updates yet.</p>
         )}
       </details>
     </section>

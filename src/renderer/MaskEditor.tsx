@@ -1386,8 +1386,7 @@ export function MaskEditor({ source, mask, segmentationStatus, onSaved, onClose,
         </div>
         {editCount >= 256 && (
           <Notice>
-            This revision has reached its 256-edit limit. Save and reopen the mask to continue, or Undo an edit. Its
-            recorded edit history will be retained.
+            You've hit the 256-edit limit for this mask. Save and reopen it to keep going, or Undo an edit.
           </Notice>
         )}
         <section className="mask-transform" aria-label="Grow, shrink, and feather mask">

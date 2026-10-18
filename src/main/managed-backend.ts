@@ -106,9 +106,7 @@ export class ManagedBackend {
     const installed = this.readMarker();
     this.current = {
       state: installed ? 'stopped' : 'not-installed',
-      message: installed
-        ? 'Your dedicated ComfyUI backend is installed.'
-        : 'Set up your dedicated ComfyUI backend to begin.',
+      message: installed ? 'The engine is installed.' : 'Install the engine to start making images.',
       ...(installed ? { version: installed.comfyVersion } : {}),
       logTail: [],
     };
@@ -146,7 +144,7 @@ export class ManagedBackend {
     if (this.child)
       return this.current.state === 'ready'
         ? Promise.resolve()
-        : Promise.reject(new Error('The backend is reconnecting. Stop it before restarting.'));
+        : Promise.reject(new Error('The engine is reconnecting. Stop it before restarting.'));
     this.startPromise = this.launch().finally(() => {
       this.startPromise = undefined;
     });
@@ -241,7 +239,7 @@ export class ManagedBackend {
 
   private checkCancelled(): void {
     if (this.disposed || this.abort?.signal.aborted)
-      throw new Error('Backend setup was cancelled. It can be resumed safely.');
+      throw new Error('Engine setup was cancelled. You can pick it up again any time.');
   }
 
   private async ensureDirectories(): Promise<void> {
@@ -525,7 +523,7 @@ export class ManagedBackend {
           if (this.installer === child) this.installer = undefined;
           if (timedOut) reject(new Error('Runtime installation timed out. Retry setup to resume cached downloads.'));
           else if (this.abort?.signal.aborted || this.disposed)
-            reject(new Error('Backend setup was cancelled. It can be resumed safely.'));
+            reject(new Error('Engine setup was cancelled. You can pick it up again any time.'));
           else if (code !== 0) reject(new RuntimeCommandFailure(path.basename(executable), code, output));
           else resolve(output);
         });
@@ -741,7 +739,7 @@ export class ManagedBackend {
       this.activeUrl = `http://127.0.0.1:${port}`;
       this.publish({
         state: 'starting',
-        message: 'Starting your dedicated ComfyUI backend…',
+        message: 'Starting the engine…',
         url: this.activeUrl,
         version: this.expectedVersion,
       });
@@ -786,8 +784,8 @@ export class ManagedBackend {
         if (this.child !== child || child.exitCode !== null)
           throw new Error(
             child.exitCode === 12
-              ? 'Another Latent v2 backend already owns this studio. Close the other app or verification run before starting.'
-              : 'ComfyUI exited during startup. See the backend log for details.',
+              ? 'Another copy of Latent is already using this studio. Close it, then start the engine again.'
+              : 'The engine stopped while starting up. The engine log in Settings has the details.',
           );
         if (await this.probe()) {
           if (this.child !== child || this.stopping || lifecycle !== this.lifecycle) return;
@@ -801,7 +799,9 @@ export class ManagedBackend {
         }
         await delay(650);
       }
-      throw new Error('ComfyUI did not become ready within three minutes. Check the backend log and retry.');
+      throw new Error(
+        'The engine took more than three minutes to start. Check the engine log in Settings and try again.',
+      );
     } catch (error) {
       if (this.stopping || this.disposed || lifecycle !== this.lifecycle) return;
       if (this.child) {
@@ -845,7 +845,7 @@ export class ManagedBackend {
           } else if (++misses >= 3)
             this.publish({
               state: 'starting',
-              message: 'Connection interrupted. Waiting for your backend to respond…',
+              message: 'Lost touch with the engine. Waiting for it to respond…',
               url: this.activeUrl ?? undefined,
             });
         })
@@ -905,7 +905,9 @@ export class ManagedBackend {
       this.activeUrl = null;
       this.publish({
         state: this.readMarker() ? 'stopped' : 'not-installed',
-        message: this.readMarker() ? 'Your backend is stopped.' : 'Setup is incomplete. Run setup to resume.',
+        message: this.readMarker()
+          ? 'The engine is stopped.'
+          : "Setup didn't finish. Run setup again to pick up where it left off.",
         url: undefined,
         installProgress: undefined,
         setupDownload: undefined,

@@ -233,8 +233,8 @@ export function ControlNetControls({
               </select>
             </Field>
             <p className="muted small">
-              The exact {draft.width} × {draft.height} control map is retained with the result. One sampling pass only;
-              turn off hires fix, inpainting and standalone enlargement.
+              The {draft.width} × {draft.height} guide image is saved with the result. Turn off hires fix, inpainting
+              and upscaling to use it.
             </p>
             <Notice>{status.message}</Notice>
             {status.state !== 'ready' && (
