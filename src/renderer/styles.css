@@ -2182,3 +2182,29 @@ strong {
   display: flex;
   gap: 8px;
 }
+.danger-button {
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-weight: 500;
+}
+.danger-button:hover:not(:disabled) {
+  background: var(--danger-bg);
+  filter: brightness(1.1);
+}
+.confirm-dialog {
+  display: grid;
+  gap: 14px;
+  max-width: 420px;
+}
+.confirm-dialog p {
+  margin: 0;
+  line-height: 1.6;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.context-menu button.danger-menuitem {
+  color: var(--danger);
+}

@@ -1494,6 +1494,10 @@
     {
       "from": "docs/TELEGRAM-REMOTE.md",
       "to": "docs/TELEGRAM-REMOTE.md"
+    },
+    {
+      "from": "tests/assistant-conversation-keys.test.ts",
+      "to": "tests/assistant-conversation-keys.test.ts"
     }
   ]
 }

@@ -37,7 +37,7 @@ export function storageHardwareHandlers(ctx: HandlerContext) {
       const priorMode = ctx.store.settings().deviceMode;
       const result = await ctx.hardwareProfiles.applyBackendRecommendation(z.uuid().parse(reportId));
       if (ctx.store.settings().deviceMode !== priorMode)
-        throw new Error('The ctx.backend preference changed while it was being checked. Recommend again.');
+        throw new Error('The engine preference changed while it was being checked. Recommend again.');
       ctx.store.saveSettings(result.settings);
       ctx.hardwareProfiles.settingsChanged();
       ctx.broadcast();

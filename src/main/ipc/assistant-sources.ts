@@ -39,18 +39,20 @@ export function assistantSourcesHandlers(ctx: HandlerContext) {
     cancelAssistant: async () => ctx.assistant.cancel(),
     getAssistantConversation: async target => {
       const scope = z.enum(['image', 'video']).optional().parse(target);
-      const saved = ctx.store.getState(
-        scope === 'video' ? 'ctx.assistant.video.conversation' : 'ctx.assistant.conversation',
-        null,
-      );
+      const key = conversationKey(scope);
+      // 0.2.2 and 0.2.3 saved under a mistyped key; move that conversation back where it belongs.
+      const misplaced = ctx.store.takeState(`ctx.${key}`);
+      if (misplaced !== undefined) ctx.store.setState(key, misplaced);
+      const saved = ctx.store.getState(key, null);
       return saved ? assistantConversationSchema.parse(saved) : null;
     },
     saveAssistantConversation: async (value, target) => {
       const scope = z.enum(['image', 'video']).optional().parse(target);
-      ctx.store.setState(
-        scope === 'video' ? 'ctx.assistant.video.conversation' : 'ctx.assistant.conversation',
-        assistantConversationSchema.parse(value),
-      );
+      ctx.store.setState(conversationKey(scope), assistantConversationSchema.parse(value));
     },
   } satisfies Partial<StudioMethods>;
+}
+
+export function conversationKey(scope: 'image' | 'video' | undefined) {
+  return scope === 'video' ? 'assistant.video.conversation' : 'assistant.conversation';
 }

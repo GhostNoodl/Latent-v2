@@ -158,3 +158,40 @@ export function Modal({ title, children, onClose }: { title: string; children: R
     </div>
   );
 }
+/** Asks before a destructive action; Cancel has focus so Enter never destroys by accident. */
+export function ConfirmDialog({
+  title,
+  children,
+  confirmLabel,
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  children: ReactNode;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal title={title} onClose={onClose}>
+      <div className="confirm-dialog">
+        {children}
+        <div className="confirm-actions">
+          <button type="button" className="soft-button" autoFocus onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="danger-button"
+            onClick={() => {
+              onClose();
+              onConfirm();
+            }}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}

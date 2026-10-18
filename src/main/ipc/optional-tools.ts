@@ -102,7 +102,7 @@ export function optionalToolsHandlers(ctx: HandlerContext) {
       if (requested)
         await ctx.jobs.withRuntimeMaintenance(
           async () => {
-            await ctx.backendActivity.assertIdle('repair the illustration ctx.upscaler');
+            await ctx.backendActivity.assertIdle('repair the illustration upscaler');
             await ctx.upscaler.setup(true);
           },
           { allowRetainedJobs: false },

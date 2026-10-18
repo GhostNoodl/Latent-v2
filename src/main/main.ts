@@ -1077,6 +1077,20 @@ async function initialize() {
     revealOutput: async recordId => {
       shell.showItemInFolder(await privateShellPath(paths.outputs, await outputPath(id.parse(recordId))));
     },
+    trashOutputs: async recordIds => {
+      const files = await Promise.all(
+        z
+          .array(id)
+          .min(1)
+          .max(500)
+          .parse(recordIds)
+          .map(async recordId => privateShellPath(paths.outputs, await outputPath(recordId))),
+      );
+      // The Recycle Bin is the undo: restoring a file brings its image back on the next check.
+      for (const file of files) await shell.trashItem(file);
+      await missingOutputs.refresh();
+      broadcast();
+    },
     openOutput: async recordId => {
       const error = await shell.openPath(await privateShellPath(paths.outputs, await outputPath(id.parse(recordId))));
       if (error) throw new Error(error);

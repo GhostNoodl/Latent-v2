@@ -16,10 +16,11 @@ import {
   RotateCcw,
   Search,
   Shuffle,
+  Trash2,
 } from 'lucide-react';
 import type { GenerationRecord } from '../shared/types';
 import type { CollectionActions, CollectionSnapshot } from '../shared/collections-types';
-import { Modal, Notice, shortDate, type RunAction } from './ui';
+import { ConfirmDialog, Modal, Notice, shortDate, type RunAction } from './ui';
 import { CollectionMembershipDialog, CollectionToolbar } from './Collections';
 import { RecipeExtras } from './RecipeExtras';
 import { historyPageForSelection } from '../shared/history-selection';
@@ -127,6 +128,7 @@ export function History({
   const [collectionRecord, setCollectionRecord] = useState<GenerationRecord>();
   const [menu, setMenu] = useState<{ record: GenerationRecord; x: number; y: number }>();
   const [details, setDetails] = useState<GenerationRecord>();
+  const [trashing, setTrashing] = useState<GenerationRecord[]>();
   const menuRef = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const pageSize = library ? 24 : 4;
@@ -164,6 +166,12 @@ export function History({
     if (original.id === record.baseRecordId || original.id === record.facePass?.parentRecordId) return undefined;
     return original;
   };
+  /** A grouped tile stands for its hidden versions too, so they go to the Recycle Bin together. */
+  const tileRecords = (record: GenerationRecord) => {
+    const group = grouping && groupOf.get(record.id);
+    if (!group || group.lead.id !== record.id) return [record];
+    return [record, ...group.versions.filter(version => version.id !== record.id && !grouping.has(version.id))];
+  };
   const safePage = Math.min(page, Math.max(0, Math.ceil(filtered.length / pageSize) - 1));
   const visible = scrollable ? filtered : filtered.slice(safePage * pageSize, (safePage + 1) * pageSize);
   const canCompare = (record: GenerationRecord) =>
@@ -199,7 +207,7 @@ export function History({
   function openMenu(record: GenerationRecord, target: HTMLElement, x: number, y: number) {
     opener.current = target;
     const rows =
-      5 +
+      6 +
       Number(canCompare(record)) +
       Number(Boolean(originalToCompare(record))) +
       Math.max(0, (versionsOf(record)?.versions.length ?? 0) - 1) +
@@ -305,6 +313,10 @@ export function History({
                     event.preventDefault();
                     const rect = event.currentTarget.getBoundingClientRect();
                     openMenu(record, event.currentTarget, rect.left, rect.top);
+                  }
+                  if (event.key === 'Delete') {
+                    event.preventDefault();
+                    setTrashing(tileRecords(record));
                   }
                 }}
                 title={(record.resolvedPrompt ?? record.draft.prompt) || record.filename}
@@ -539,7 +551,39 @@ export function History({
             <FolderOpen size={16} />
             Show in folder
           </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="danger-menuitem"
+            onClick={() => {
+              const record = menu.record;
+              closeMenu();
+              setTrashing(tileRecords(record));
+            }}
+          >
+            <Trash2 size={16} />
+            Move to Recycle Bin
+          </button>
         </div>
+      )}
+      {trashing && (
+        <ConfirmDialog
+          title={trashing.length > 1 ? `Delete ${trashing.length} images?` : 'Delete this image?'}
+          confirmLabel="Move to Recycle Bin"
+          onClose={() => setTrashing(undefined)}
+          onConfirm={() =>
+            void run('trash-outputs', () => window.latent.trashOutputs(trashing.map(record => record.id)))
+          }
+        >
+          <p>
+            {trashing.length > 1
+              ? `This removes the image and its ${trashing.length - 1} other version${trashing.length > 2 ? 's' : ''} (${[
+                  ...new Set(trashing.slice(1).map(record => imageVersionLabel(record).toLowerCase())),
+                ].join(', ')}) from your library.`
+              : 'This removes the image from your library.'}{' '}
+            Changed your mind later? Restore it from the Recycle Bin and it comes right back.
+          </p>
+        </ConfirmDialog>
       )}
       {details && (
         <Modal title="Image parameters" onClose={() => setDetails(undefined)}>

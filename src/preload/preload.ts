@@ -136,6 +136,7 @@ const api: LatentAPI = {
   deletePreset: id => invoke('deletePreset', id),
   copyOutput: id => invoke('copyOutput', id),
   revealOutput: id => invoke('revealOutput', id),
+  trashOutputs: ids => invoke('trashOutputs', ids),
   openOutput: id => invoke('openOutput', id),
   onSnapshot: listener => {
     const handler = (_event: Electron.IpcRendererEvent, changes: Partial<AppSnapshot>) => listener(changes);
