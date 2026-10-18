@@ -74,3 +74,22 @@ describe('image library cache', () => {
     expect(store.presetsRevision).toBe(revision + 2);
   });
 });
+
+describe('Create mode default', () => {
+  it('starts new studios in Simple and keeps existing ones in Advanced', () => {
+    expect(open().store.settings().createMode).toBe('simple');
+    const { store } = open();
+    store.setState('settings', { theme: 'dark' });
+    expect(store.settings().createMode).toBe('advanced');
+    store.saveSettings({ createMode: 'simple' });
+    expect(store.settings().createMode).toBe('simple');
+  });
+});
+
+it('opens with settings saved by a newer version instead of refusing to start', () => {
+  const { store } = open();
+  store.setState('settings', { theme: 'dark', someFutureOption: true });
+  expect(store.settings().theme).toBe('dark');
+  store.setState('settings', { theme: 'neon' });
+  expect(store.settings().theme).toBe('system');
+});

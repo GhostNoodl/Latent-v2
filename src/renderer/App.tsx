@@ -14,6 +14,7 @@ import { LoraTriggerChoices } from './LoraTriggerChoices';
 import { SizePresets } from './SizePresets';
 import { PreviewMenu } from './PreviewMenu';
 import { draftFieldLabel } from './draft-field-label';
+import { hiddenAdvancedSettings } from '../shared/create-mode';
 import { applySnapshotChanges, type SnapshotChanges } from '../shared/snapshot-changes';
 import { useDismissiblePanel } from './useDismissiblePanel';
 import { imageSetupReason } from '../shared/setup';
@@ -771,6 +772,8 @@ export default function App() {
               height: compareRecord.imageInput.source.normalized.height,
             }
           : undefined;
+  const createMode = snapshot.settings.createMode ?? 'advanced';
+  const hiddenSettings = createMode === 'simple' ? hiddenAdvancedSettings(draft) : [];
   const activeJobs = snapshot.jobs.filter(queueJobActive);
   const queueItems = snapshot.jobs.filter(
     job => queueJobActive(job) || !snapshot.dismissedActivity?.queue.includes(queueClearKey(job)),
@@ -1124,6 +1127,39 @@ export default function App() {
                   }}
                 >
                   <div className="composer-fields">
+                    <div className="create-mode" role="group" aria-label="How many controls to show">
+                      {(['simple', 'advanced'] as const).map(mode => (
+                        <button
+                          key={mode}
+                          type="button"
+                          aria-pressed={createMode === mode}
+                          disabled={busy.settings}
+                          onClick={() =>
+                            void run('settings', async () =>
+                              receive(await window.latent.updateSettings({ createMode: mode })),
+                            )
+                          }
+                        >
+                          {mode === 'simple' ? 'Simple' : 'Advanced'}
+                        </button>
+                      ))}
+                    </div>
+                    {createMode === 'simple' && hiddenSettings.length > 0 && (
+                      <Notice>
+                        This draft also uses {hiddenSettings.join(', ')}, which Simple hides.{' '}
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() =>
+                            void run('settings', async () =>
+                              receive(await window.latent.updateSettings({ createMode: 'advanced' })),
+                            )
+                          }
+                        >
+                          Show advanced
+                        </button>
+                      </Notice>
+                    )}
                     <SizePresets
                       sizes={snapshot.settings.sizePresets}
                       width={draft.width}
@@ -1363,30 +1399,32 @@ export default function App() {
                     )}
 
                     <details className="advanced" open>
-                      <summary>Generation parameters</summary>
+                      <summary>Generation settings</summary>
                       <div className="advanced-grid">
-                        <div className="two-columns">
-                          <Field label="Width">
-                            <input
-                              type="number"
-                              min={256}
-                              max={2048}
-                              step={64}
-                              value={draft.width || ''}
-                              onChange={event => changeDraft({ width: Number(event.target.value) })}
-                            />
-                          </Field>
-                          <Field label="Height">
-                            <input
-                              type="number"
-                              min={256}
-                              max={2048}
-                              step={64}
-                              value={draft.height || ''}
-                              onChange={event => changeDraft({ height: Number(event.target.value) })}
-                            />
-                          </Field>
-                        </div>
+                        {createMode === 'advanced' && (
+                          <div className="two-columns">
+                            <Field label="Width">
+                              <input
+                                type="number"
+                                min={256}
+                                max={2048}
+                                step={64}
+                                value={draft.width || ''}
+                                onChange={event => changeDraft({ width: Number(event.target.value) })}
+                              />
+                            </Field>
+                            <Field label="Height">
+                              <input
+                                type="number"
+                                min={256}
+                                max={2048}
+                                step={64}
+                                value={draft.height || ''}
+                                onChange={event => changeDraft({ height: Number(event.target.value) })}
+                              />
+                            </Field>
+                          </div>
+                        )}
                         <div className="two-columns">
                           <Field label="Steps">
                             <input
@@ -1425,72 +1463,81 @@ export default function App() {
                             </button>
                           </div>
                         </Field>
-                        <details>
-                          <summary>Model sampling</summary>
-                          <Field label="Prediction type">
-                            <select
-                              value={draft.modelSampling?.prediction ?? 'auto'}
-                              onChange={event =>
-                                changeDraft({
-                                  modelSampling:
-                                    event.target.value === 'auto'
-                                      ? undefined
-                                      : {
-                                          prediction: event.target.value as 'eps' | 'v_prediction' | 'lcm' | 'x0',
-                                          zeroTerminalSnr: event.target.value === 'v_prediction',
+                        {createMode === 'advanced' && (
+                          <>
+                            <details>
+                              <summary>Model sampling</summary>
+                              <Field label="Prediction type">
+                                <select
+                                  value={draft.modelSampling?.prediction ?? 'auto'}
+                                  onChange={event =>
+                                    changeDraft({
+                                      modelSampling:
+                                        event.target.value === 'auto'
+                                          ? undefined
+                                          : {
+                                              prediction: event.target.value as 'eps' | 'v_prediction' | 'lcm' | 'x0',
+                                              zeroTerminalSnr: event.target.value === 'v_prediction',
+                                            },
+                                    })
+                                  }
+                                >
+                                  <option value="auto">Automatic (checkpoint default)</option>
+                                  <option value="eps">Epsilon / standard SDXL</option>
+                                  <option value="v_prediction">V-prediction / NoobAI V-pred</option>
+                                  <option value="lcm">LCM</option>
+                                  <option value="x0">X0 / one-step Lightning</option>
+                                </select>
+                              </Field>
+                              {draft.modelSampling && (
+                                <label className="checkbox-label">
+                                  <input
+                                    type="checkbox"
+                                    checked={draft.modelSampling.zeroTerminalSnr}
+                                    onChange={event =>
+                                      changeDraft({
+                                        modelSampling: {
+                                          ...draft.modelSampling!,
+                                          zeroTerminalSnr: event.target.checked,
                                         },
-                                })
-                              }
-                            >
-                              <option value="auto">Automatic (checkpoint default)</option>
-                              <option value="eps">Epsilon / standard SDXL</option>
-                              <option value="v_prediction">V-prediction / NoobAI V-pred</option>
-                              <option value="lcm">LCM</option>
-                              <option value="x0">X0 / one-step Lightning</option>
-                            </select>
-                          </Field>
-                          {draft.modelSampling && (
-                            <label className="checkbox-label">
-                              <input
-                                type="checkbox"
-                                checked={draft.modelSampling.zeroTerminalSnr}
-                                onChange={event =>
-                                  changeDraft({
-                                    modelSampling: { ...draft.modelSampling!, zeroTerminalSnr: event.target.checked },
-                                  })
-                                }
-                              />
-                              Zero terminal SNR
-                            </label>
-                          )}
-                          <p className="muted small">Use the model author's recommended steps, guidance and sampler.</p>
-                        </details>
-                        <Field label="Sampler">
-                          <select
-                            value={draft.sampler}
-                            onChange={event => changeDraft({ sampler: event.target.value })}
-                          >
-                            {!SAMPLERS.includes(draft.sampler) && (
-                              <option value={draft.sampler}>{draft.sampler} (unavailable)</option>
-                            )}
-                            {SAMPLERS.map(value => (
-                              <option key={value}>{value}</option>
-                            ))}
-                          </select>
-                        </Field>
-                        <Field label="Scheduler">
-                          <select
-                            value={draft.scheduler}
-                            onChange={event => changeDraft({ scheduler: event.target.value })}
-                          >
-                            {!SCHEDULERS.includes(draft.scheduler) && (
-                              <option value={draft.scheduler}>{draft.scheduler} (unavailable)</option>
-                            )}
-                            {SCHEDULERS.map(value => (
-                              <option key={value}>{value}</option>
-                            ))}
-                          </select>
-                        </Field>
+                                      })
+                                    }
+                                  />
+                                  Zero terminal SNR
+                                </label>
+                              )}
+                              <p className="muted small">
+                                Use the model author's recommended steps, guidance and sampler.
+                              </p>
+                            </details>
+                            <Field label="Sampler">
+                              <select
+                                value={draft.sampler}
+                                onChange={event => changeDraft({ sampler: event.target.value })}
+                              >
+                                {!SAMPLERS.includes(draft.sampler) && (
+                                  <option value={draft.sampler}>{draft.sampler} (unavailable)</option>
+                                )}
+                                {SAMPLERS.map(value => (
+                                  <option key={value}>{value}</option>
+                                ))}
+                              </select>
+                            </Field>
+                            <Field label="Scheduler">
+                              <select
+                                value={draft.scheduler}
+                                onChange={event => changeDraft({ scheduler: event.target.value })}
+                              >
+                                {!SCHEDULERS.includes(draft.scheduler) && (
+                                  <option value={draft.scheduler}>{draft.scheduler} (unavailable)</option>
+                                )}
+                                {SCHEDULERS.map(value => (
+                                  <option key={value}>{value}</option>
+                                ))}
+                              </select>
+                            </Field>
+                          </>
+                        )}
                         <Field label="Images per batch">
                           <input
                             type="number"
@@ -1503,42 +1550,46 @@ export default function App() {
                       </div>
                     </details>
                     <AdvancedImageControls draft={draft} snapshot={snapshot} onChange={changeDraft} run={run} />
-                    <SourceInput
-                      snapshot={snapshot}
-                      draft={draft}
-                      onChange={changeDraft}
-                      selected={selected}
-                      run={run}
-                    />
-                    <ControlNetControls
-                      snapshot={snapshot}
-                      draft={draft}
-                      selected={selected}
-                      onChange={changeDraft}
-                      run={run}
-                    />
-                    <RegionalPrompts
-                      value={draft.regionalPrompts?.settings}
-                      width={draft.width}
-                      height={draft.height}
-                      disabledReason={regionalDisabledReason}
-                      onChange={settings => changeDraft({ regionalPrompts: settings ? { settings } : undefined })}
-                    />
-                    <IPAdapterControls
-                      draftRevision={draft}
-                      family={draft.family}
-                      value={draft.ipAdapter?.settings}
-                      frozen={Boolean(draft.ipAdapter?.frozen)}
-                      sources={snapshot.sourceImages.sources}
-                      status={snapshot.ipAdapter}
-                      engineStopped={snapshot.backend.state === 'stopped' && activeJobs.length === 0}
-                      disabledReason={ipAdapterDisabledReason}
-                      onChange={settings => changeDraft({ ipAdapter: settings ? { settings } : undefined })}
-                      onImportSource={() => window.latent.importSourceImage()}
-                      onStage={() => window.latent.stageIPAdapter(snapshot.ipAdapter.state === 'error')}
-                      onActivate={() => window.latent.activateIPAdapter()}
-                      onCancelSetup={() => window.latent.cancelIPAdapterSetup()}
-                    />
+                    {createMode === 'advanced' && (
+                      <>
+                        <SourceInput
+                          snapshot={snapshot}
+                          draft={draft}
+                          onChange={changeDraft}
+                          selected={selected}
+                          run={run}
+                        />
+                        <ControlNetControls
+                          snapshot={snapshot}
+                          draft={draft}
+                          selected={selected}
+                          onChange={changeDraft}
+                          run={run}
+                        />
+                        <RegionalPrompts
+                          value={draft.regionalPrompts?.settings}
+                          width={draft.width}
+                          height={draft.height}
+                          disabledReason={regionalDisabledReason}
+                          onChange={settings => changeDraft({ regionalPrompts: settings ? { settings } : undefined })}
+                        />
+                        <IPAdapterControls
+                          draftRevision={draft}
+                          family={draft.family}
+                          value={draft.ipAdapter?.settings}
+                          frozen={Boolean(draft.ipAdapter?.frozen)}
+                          sources={snapshot.sourceImages.sources}
+                          status={snapshot.ipAdapter}
+                          engineStopped={snapshot.backend.state === 'stopped' && activeJobs.length === 0}
+                          disabledReason={ipAdapterDisabledReason}
+                          onChange={settings => changeDraft({ ipAdapter: settings ? { settings } : undefined })}
+                          onImportSource={() => window.latent.importSourceImage()}
+                          onStage={() => window.latent.stageIPAdapter(snapshot.ipAdapter.state === 'error')}
+                          onActivate={() => window.latent.activateIPAdapter()}
+                          onCancelSetup={() => window.latent.cancelIPAdapterSetup()}
+                        />
+                      </>
+                    )}
                     <button
                       type="button"
                       className="presets-button"

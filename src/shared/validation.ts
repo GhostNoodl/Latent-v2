@@ -209,6 +209,7 @@ export const settingsSchema = z
       })
       .strict()
       .default({ group: true, showOriginal: false, showRefined: false, showFaceSteps: false }),
+    createMode: z.enum(['simple', 'advanced']).default('simple'),
   })
   .strict();
 /** Zod applies field defaults inside .partial(), which would silently reset settings the patch never named. */

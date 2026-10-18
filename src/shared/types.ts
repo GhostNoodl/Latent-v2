@@ -181,6 +181,8 @@ export interface AppSettings {
   sageAttention?: boolean;
   /** Show an image's original, hires fix and face fix as one gallery card; the flags keep stages as their own tiles too. */
   imageVersions?: { group: boolean; showOriginal: boolean; showRefined: boolean; showFaceSteps: boolean };
+  /** Simple shows the everyday Create controls; Advanced shows every tool. */
+  createMode?: 'simple' | 'advanced';
 }
 export interface AppPaths {
   root: string;

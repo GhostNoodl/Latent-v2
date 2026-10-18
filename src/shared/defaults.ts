@@ -42,6 +42,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   fastMath: false,
   sageAttention: false,
   imageVersions: { group: true, showOriginal: false, showRefined: false, showFaceSteps: false },
+  createMode: 'simple',
 };
 export const SAMPLERS = [
   'euler',
