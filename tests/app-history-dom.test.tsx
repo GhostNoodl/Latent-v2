@@ -149,7 +149,7 @@ beforeEach(async () => {
     previewSelectedRecordId: savedSelection,
     models: [checkpoint, lora],
     jobs: [],
-    settings: structuredClone(DEFAULT_SETTINGS),
+    settings: { ...structuredClone(DEFAULT_SETTINGS), createMode: 'advanced' },
     presets: [],
     downloads: [],
     backend: { state: 'ready', message: 'Fixture engine', logTail: [] },
@@ -1056,4 +1056,46 @@ it('shows the saved wildcard result in history and preview while retaining its a
   expect(host.querySelector('.preview-caption p')?.textContent).toBe('portrait, wolf');
   expect(host.querySelector('.preview-caption p')?.getAttribute('title')).toBe('portrait, wolf');
   expect(first.draft.prompt).toBe(template);
+});
+
+describe('Simple and Advanced Create', () => {
+  async function boot(createMode: 'simple' | 'advanced', draft: GenerationDraft = authored()) {
+    await act(async () => {
+      root.unmount();
+    });
+    root = createRoot(host);
+    snapshot = { ...snapshot, draft, settings: { ...snapshot.settings, createMode } };
+    await render();
+  }
+  const labels = () => [...host.querySelectorAll('label.field span')].map(item => item.textContent);
+  const switchButton = (name: string) =>
+    [...host.querySelectorAll<HTMLButtonElement>('.create-mode button')].find(item => item.textContent === name)!;
+
+  it('keeps the everyday controls in Simple and hides the expert ones', async () => {
+    await boot('simple');
+    expect(labels()).toEqual(expect.arrayContaining(['Steps', 'Guidance (CFG)', 'Seed', 'Images per batch']));
+    expect(labels()).not.toContain('Sampler');
+    expect(labels()).not.toContain('Width');
+    expect(host.textContent).not.toContain('Source image');
+    expect(switchButton('Simple').getAttribute('aria-pressed')).toBe('true');
+    await boot('advanced');
+    expect(labels()).toEqual(expect.arrayContaining(['Sampler', 'Scheduler', 'Width']));
+  });
+
+  it('says when Simple hides something the draft still uses, and switches on request', async () => {
+    const updateSettings = vi.fn(async (patch: Partial<AppSnapshot['settings']>) => ({
+      ...snapshot,
+      settings: { ...snapshot.settings, ...patch },
+    }));
+    Object.assign(api, { updateSettings });
+    await boot('simple', { ...authored(), sampler: 'dpmpp_2m', scheduler: 'karras' });
+    expect(host.textContent).toContain('This draft also uses dpmpp_2m / karras sampling, which Simple hides.');
+    await act(async () => {
+      [...host.querySelectorAll<HTMLButtonElement>('button')]
+        .find(item => item.textContent === 'Show advanced')!
+        .click();
+    });
+    expect(updateSettings).toHaveBeenCalledWith({ createMode: 'advanced' });
+    expect(labels()).toContain('Sampler');
+  });
 });

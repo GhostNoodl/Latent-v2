@@ -298,8 +298,8 @@
     },
     {
       "path": "src/main/store.ts",
-      "bytes": 14805,
-      "sha256": "23c4e399022de66d24c269408352faccca45ed59a4f8910d23933265a1ef28f5"
+      "bytes": 15483,
+      "sha256": "58e2a99210bd5cff26ba870a4365613db3f447d212af5c626814466e2ac45aff"
     },
     {
       "path": "src/main/upscaler.ts",
@@ -368,8 +368,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 113607,
-      "sha256": "3172cb1f9e80d7866162edac34e3dce308b7aaeb6acd26a94f41d81868602f6f"
+      "bytes": 116396,
+      "sha256": "37423a99c5a7196a7500e2ef8d164a8054f25f9a57283f5b247564e323ff221e"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -643,8 +643,8 @@
     },
     {
       "path": "src/renderer/usability.css",
-      "bytes": 29623,
-      "sha256": "59bed1b74a1c29789f26cb3f26d9085e64285e1dd9cb917d6ede4dab3e9273b1"
+      "bytes": 30090,
+      "sha256": "9428b5907efe710a8f085154baab2648227b931412907b5ecd1358bbed2ea4db"
     },
     {
       "path": "src/renderer/variation-description.ts",
@@ -748,8 +748,8 @@
     },
     {
       "path": "src/shared/defaults.ts",
-      "bytes": 2283,
-      "sha256": "18b9c529852e6e1e3f31955cd2bec6321db86084e7dea1514a7f34225764473f"
+      "bytes": 2307,
+      "sha256": "61929752f2b81fe75e80316c1ae37839dfdfbd38bc95f2a14dca4391a196f0c5"
     },
     {
       "path": "src/shared/dynamic-prompt-recipe.ts",
@@ -918,13 +918,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 20008,
-      "sha256": "83189a9f91c80b2095272ab9e644d5b6b2cab8866de44505112aa2c4ad1e56cf"
+      "bytes": 20125,
+      "sha256": "cf3edf7f98b0c33407f73b34a21b6ab1c374c1f7e8dafcb9c5bb2433fa542bf4"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 10893,
-      "sha256": "407652eee057dca3c3f36c9d40de70b87033d297fe3b0d633453bfb6721ae18e"
+      "bytes": 10959,
+      "sha256": "0bea47b6861830f9c7a145328bc4763065f04aa63f54ad7cf23b9ea075ecdc0f"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1253,8 +1253,8 @@
     },
     {
       "path": "tests/app-history-dom.test.tsx",
-      "bytes": 40909,
-      "sha256": "de45f43543dcab27f94e3e421d41cccdc450c6ad979869a13d6cd034a942cd22"
+      "bytes": 42935,
+      "sha256": "642299fe0188bd0ee4cad139b590393dd0c2c9fa13685b1d4b9f1259a80b6cec"
     },
     {
       "path": "tests/image-versions.test.tsx",
@@ -1873,8 +1873,8 @@
     },
     {
       "path": "tests/store-records-cache.test.ts",
-      "bytes": 3087,
-      "sha256": "04a9e36f437ae5302362d1130eaa48d695225895e8a85507c71e4b4f778e1ae3"
+      "bytes": 3866,
+      "sha256": "a2c339f1afbb2960d5f66b011fa07742413a4b76e311257fab3ecca7e55bf691"
     },
     {
       "path": "tests/backend-log-pruning.test.ts",
@@ -1885,6 +1885,11 @@
       "path": "src/renderer/draft-field-label.ts",
       "bytes": 932,
       "sha256": "17904d4c7755db8056a21f615bb6f53fe9d7d2456f54a3f1aa5e740c884dfe86"
+    },
+    {
+      "path": "src/shared/create-mode.ts",
+      "bytes": 848,
+      "sha256": "5e44f07fc96d8acfb1589ac508cb8ade594a92b7e25560f9ede87d75553d1572"
     }
   ],
   "privateHistoryIncluded": false

@@ -70,7 +70,17 @@ export class StudioStore {
       .run(key, JSON.stringify(value));
   }
   settings(): AppSettings {
-    this.settingsCache ??= settingsSchema.parse({ ...DEFAULT_SETTINGS, ...this.getState('settings', {}) });
+    if (!this.settingsCache) {
+      const stored = this.getState<Partial<AppSettings>>('settings', {});
+      // Settings written by a newer version may name options this one doesn't know; skip them instead of failing to open.
+      const saved = Object.fromEntries(
+        Object.entries(stored).filter(([key]) => key in settingsSchema.shape),
+      ) as Partial<AppSettings>;
+      // People who used Latent before Simple mode existed keep the full Create panel they know.
+      const legacy = Object.keys(saved).length && !saved.createMode ? { createMode: 'advanced' as const } : {};
+      const parsed = settingsSchema.safeParse({ ...DEFAULT_SETTINGS, ...saved, ...legacy });
+      this.settingsCache = parsed.success ? parsed.data : settingsSchema.parse(DEFAULT_SETTINGS);
+    }
     return structuredClone(this.settingsCache);
   }
   saveSettings(patch: Partial<AppSettings>): AppSettings {

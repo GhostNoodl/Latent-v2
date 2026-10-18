@@ -1522,6 +1522,10 @@
     {
       "from": "src/renderer/draft-field-label.ts",
       "to": "src/renderer/draft-field-label.ts"
+    },
+    {
+      "from": "src/shared/create-mode.ts",
+      "to": "src/shared/create-mode.ts"
     }
   ]
 }
