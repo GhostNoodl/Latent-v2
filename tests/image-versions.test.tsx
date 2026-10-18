@@ -143,3 +143,44 @@ describe('grouped gallery', () => {
     expect(onSelect).toHaveBeenCalledWith(refined);
   });
 });
+
+describe('moving images to the Recycle Bin', () => {
+  const trashOutputs = vi.fn(async () => undefined);
+  beforeEach(() => {
+    trashOutputs.mockClear();
+    (window as unknown as { latent: unknown }).latent = { trashOutputs };
+  });
+  const run = async (_name: string, action: () => Promise<unknown>) => {
+    await action();
+    return true;
+  };
+  const menuItem = (label: string) =>
+    Array.from(host.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(item => item.textContent === label)!;
+  const button = (label: string) =>
+    Array.from(host.querySelectorAll<HTMLButtonElement>('button')).find(item => item.textContent === label)!;
+
+  it('asks first, then trashes a grouped card together with its hidden versions', async () => {
+    render({ run });
+    act(() => host.querySelectorAll<HTMLButtonElement>('.history-more')[1].click());
+    act(() => menuItem('Move to Recycle Bin').click());
+    expect(trashOutputs).not.toHaveBeenCalled();
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('its 3 other versions');
+    expect(document.activeElement?.textContent).toBe('Cancel');
+    await act(async () => button('Move to Recycle Bin').click());
+    const [[ids]] = trashOutputs.mock.calls as unknown as [[string[]]];
+    expect(ids[0]).toBe('face2');
+    expect([...ids].sort()).toEqual(['base', 'face1', 'face2', 'refined']);
+  });
+
+  it('trashes only the chosen image when grouping is off, and Cancel does nothing', async () => {
+    render({ run, imageVersions: { ...DEFAULT_IMAGE_VERSIONS, group: false } });
+    const tile = host.querySelectorAll<HTMLButtonElement>('.history-preview')[1];
+    act(() => tile.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })));
+    act(() => button('Cancel').click());
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    act(() => tile.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })));
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('This removes the image from your library.');
+    await act(async () => button('Move to Recycle Bin').click());
+    expect(trashOutputs).toHaveBeenCalledWith(['face2']);
+  });
+});

@@ -59,6 +59,7 @@ import {
   type AppSnapshot,
   type GenerationDraft,
   type GenerationRecord,
+  type Preset,
   type LoraSelection,
   type ModelAsset,
   type StudioJob,
@@ -100,7 +101,7 @@ import { acceptHardwareProfileApplication } from '../shared/hardware-profile-app
 import { SharedBackendActivity } from './SharedBackendActivity';
 import { queueJobActive, queueJobPresentation, queueView, runningImageJob } from './queue-view';
 import type { HardwareOomAdvice } from '../shared/hardware-profile-types';
-import { Busy, Field, Modal, Notice, Toggle, shortDate, type RunAction } from './ui';
+import { Busy, ConfirmDialog, Field, Modal, Notice, Toggle, shortDate, type RunAction } from './ui';
 
 const CivitaiBrowser = lazy(() => import('./CivitaiBrowser').then(module => ({ default: module.CivitaiBrowser })));
 const QwenEditor = lazy(() => import('./QwenEditor').then(module => ({ default: module.QwenEditor })));
@@ -201,6 +202,9 @@ export default function App() {
     setActivityPanel(previous => (open ? 'queue' : previous === 'queue' ? undefined : previous));
   const [queueHistoryLimit, setQueueHistoryLimit] = useState(5);
   const [presetsOpen, setPresetsOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<
+    { kind: 'preset'; preset: Preset } | { kind: 'image'; record: GenerationRecord }
+  >();
   const [presetName, setPresetName] = useState('');
   const presetNameRevision = useRef(0);
   const [loraOpen, setLoraOpen] = useState(false);
@@ -2060,6 +2064,7 @@ export default function App() {
           onClose={closePreviewMenu}
           onReuse={() => restore(previewMenu.record)}
           onEnhance={() => enhanceImage(previewMenu.record)}
+          onTrash={() => setConfirmDelete({ kind: 'image', record: previewMenu.record })}
           run={run}
         />
       )}
@@ -2467,13 +2472,7 @@ export default function App() {
                   <button
                     aria-label={`Delete preset ${preset.name}`}
                     disabled={busy[`preset-${preset.id}`]}
-                    onClick={() =>
-                      void runUserWrite(
-                        `preset-${preset.id}`,
-                        async () => receive(await window.latent.deletePreset(preset.id)),
-                        'Preset deleted.',
-                      )
-                    }
+                    onClick={() => setConfirmDelete({ kind: 'preset', preset })}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -2500,6 +2499,35 @@ export default function App() {
         <Modal title="A little studio guide" onClose={() => setHelpOpen(false)}>
           <StudioHelp />
         </Modal>
+      )}
+      {confirmDelete?.kind === 'preset' && (
+        <ConfirmDialog
+          title={`Delete “${confirmDelete.preset.name}”?`}
+          confirmLabel="Delete preset"
+          onClose={() => setConfirmDelete(undefined)}
+          onConfirm={() =>
+            void runUserWrite(
+              `preset-${confirmDelete.preset.id}`,
+              async () => receive(await window.latent.deletePreset(confirmDelete.preset.id)),
+              'Preset deleted.',
+            )
+          }
+        >
+          <p>This preset is gone for good once you delete it. Images you made with it keep their recipes.</p>
+        </ConfirmDialog>
+      )}
+      {confirmDelete?.kind === 'image' && (
+        <ConfirmDialog
+          title="Delete this image?"
+          confirmLabel="Move to Recycle Bin"
+          onClose={() => setConfirmDelete(undefined)}
+          onConfirm={() => void run('trash-outputs', () => window.latent.trashOutputs([confirmDelete.record.id]))}
+        >
+          <p>
+            This removes the image from your library. Changed your mind later? Restore it from the Recycle Bin and it
+            comes right back.
+          </p>
+        </ConfirmDialog>
       )}
     </div>
   );

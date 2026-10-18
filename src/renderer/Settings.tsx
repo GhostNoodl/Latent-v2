@@ -2,12 +2,12 @@ import { SetupActivityPanel } from './SetupActivityPanel';
 import { AppUpdates } from './AppUpdates';
 import { TelegramRemote } from './TelegramRemote';
 import { PackageSetupStorage } from './PackageSetupStorage';
-import type { KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import { ArrowUpRight, Check, Copy, Download, Play, RotateCcw, Square, Terminal } from 'lucide-react';
 import type { AppSettings, AppSnapshot } from '../shared/types';
 import { DEFAULT_SETTINGS } from '../shared/defaults';
 import { DEFAULT_IMAGE_VERSIONS } from '../shared/image-versions';
-import { Busy, Notice, Toggle, type RunAction } from './ui';
+import { Busy, ConfirmDialog, Notice, Toggle, type RunAction } from './ui';
 import { RuntimeUpdates } from './RuntimeUpdates';
 import { StorageOverview } from './StorageOverview';
 import { HardwareRecommendations, type HardwareRecommendationsProps } from './HardwareRecommendations';
@@ -54,6 +54,7 @@ export function StudioSettings({
   const { settings, backend, paths } = snapshot;
   const imageVersions = settings.imageVersions ?? DEFAULT_IMAGE_VERSIONS;
   const settingsBusy = busy.settings || busy.hardware;
+  const [confirmReset, setConfirmReset] = useState(false);
   const runtimeWorking =
     ['applying', 'rolling-back', 'recovering'].includes(snapshot.runtimeUpdates.state) ||
     snapshot.ipAdapter.state === 'activating';
@@ -66,7 +67,7 @@ export function StudioSettings({
     void run(
       'settings',
       async () => receive(await window.latent.updateSettings(DEFAULT_SETTINGS)),
-      'Studio settings reset. Saved images, full recipes, and generation parameters are retained.',
+      'Settings are back to their defaults. Your images, recipes and presets are untouched.',
     );
   };
   const stateLabel = {
@@ -512,30 +513,34 @@ export function StudioSettings({
         </details>
       </section>
       <section className="settings-card">
-        <h2>Reset studio settings</h2>
-        <p>
-          Restore the studio preferences below. Generated images, complete image recipes, presets, models, and
-          generation parameters stay intact.
-        </p>
+        <h2>Reset settings</h2>
         <div className="setting-line">
           <div>
-            <h3>Restore application defaults</h3>
+            <h3>Start fresh</h3>
             <p>
-              Use the system theme with the iris accent, enable live previews and all notifications, and restore
-              automatic backend startup with automatic device selection. Device changes take effect when the backend
-              next starts.
-            </p>
-            <p>
-              Positive-prompt memory turns on. Negative-prompt memory turns off, clearing its remembered text. Saved
-              variation choices in the remembered draft are also cleared. Saved image recipes keep their complete
-              prompts and choices.
+              Puts every option on this page back the way it was when you installed Latent. Your images, recipes,
+              presets and models aren't touched.
             </p>
           </div>
-          <button type="button" disabled={settingsBusy} onClick={reset}>
+          <button type="button" disabled={settingsBusy} onClick={() => setConfirmReset(true)}>
             <Busy active={busy.settings} />
-            {!busy.settings && <RotateCcw size={15} />}Reset studio settings
+            {!busy.settings && <RotateCcw size={15} />}Reset settings
           </button>
         </div>
+        {confirmReset && (
+          <ConfirmDialog
+            title="Reset all settings?"
+            confirmLabel="Reset settings"
+            onClose={() => setConfirmReset(false)}
+            onConfirm={reset}
+          >
+            <p>
+              Theme, notifications, engine startup and prompt memory go back to their defaults. Negative-prompt memory
+              turns off, so the negative prompt it remembered is cleared. Your images, recipes, presets and models stay
+              put.
+            </p>
+          </ConfirmDialog>
+        )}
       </section>
     </div>
   );

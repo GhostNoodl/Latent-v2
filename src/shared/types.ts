@@ -477,6 +477,8 @@ export interface LatentAPI {
   copyOutput(id: string): Promise<void>;
   revealOutput(id: string): Promise<void>;
   openOutput(id: string): Promise<void>;
+  /** Moves saved images to the Recycle Bin; restoring them there brings them back. */
+  trashOutputs(ids: string[]): Promise<void>;
   /** Receives the top-level snapshot fields that changed since the last delivery. */
   onSnapshot(listener: (changes: Partial<AppSnapshot>) => void): () => void;
   onBeforeClose(listener: () => Promise<void>): () => void;

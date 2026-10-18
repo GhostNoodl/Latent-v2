@@ -9,6 +9,7 @@ export function PreviewMenu({
   onClose,
   onReuse,
   onEnhance,
+  onTrash,
   run,
 }: {
   record: GenerationRecord;
@@ -17,6 +18,7 @@ export function PreviewMenu({
   onClose(): void;
   onReuse(): void;
   onEnhance?(): void;
+  onTrash(): void;
   run: RunAction;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -111,6 +113,17 @@ export function PreviewMenu({
         }}
       >
         Reuse parameters
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="danger-menuitem"
+        onClick={() => {
+          onClose();
+          onTrash();
+        }}
+      >
+        Move to Recycle Bin
       </button>
     </div>
   );
