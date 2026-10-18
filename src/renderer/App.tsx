@@ -13,6 +13,7 @@ import { reconcileVisibleTriggers } from '../shared/visible-triggers';
 import { LoraTriggerChoices } from './LoraTriggerChoices';
 import { SizePresets } from './SizePresets';
 import { PreviewMenu } from './PreviewMenu';
+import { applySnapshotChanges, type SnapshotChanges } from '../shared/snapshot-changes';
 import { useDismissiblePanel } from './useDismissiblePanel';
 import { imageSetupReason } from '../shared/setup';
 import { SetupHub } from './SetupHub';
@@ -261,10 +262,10 @@ export default function App() {
   );
   /** Pushed updates carry only changed fields; untouched fields keep their identity. */
   const receiveChanges = useCallback(
-    (changes: Partial<AppSnapshot>) => {
+    (changes: SnapshotChanges) => {
       if (!initialized.current) return; // The initial full snapshot is still on its way.
       if (changes.history) noteHistory(changes.history);
-      setSnapshot(current => (current ? { ...current, ...changes } : current));
+      setSnapshot(current => (current ? applySnapshotChanges(current, changes) : current));
     },
     [noteHistory],
   );

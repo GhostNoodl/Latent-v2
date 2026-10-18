@@ -22,8 +22,29 @@ function encodeReceipt(value: unknown): string {
   if (encoded === undefined) throw new Error('A serializable job execution receipt is required.');
   return encoded;
 }
+/** Tests freeze cached rows so any caller that edits a shared record fails loudly instead of corrupting the cache. */
+const freezeCached = Boolean(process.env.VITEST);
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const child of Object.values(value)) deepFreeze(child);
+  }
+  return value;
+}
 export class StudioStore {
   private db: DatabaseSync;
+  /** Parsed once and kept in step with every write, so reads never re-parse the whole library. */
+  private recordCache?: {
+    list: GenerationRecord[];
+    byId: Map<string, GenerationRecord>;
+    rowTime: Map<string, string>;
+    byJob?: Map<string, GenerationRecord[]>;
+  };
+  private settingsCache?: AppSettings;
+  private presetCache?: Preset[];
+  /** Bumps whenever the image library changes, so callers can skip work when it has not. */
+  recordsRevision = 0;
+  presetsRevision = 0;
   constructor(filename: string) {
     this.db = new DatabaseSync(filename);
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
@@ -43,12 +64,14 @@ export class StudioStore {
     return row ? JSON.parse(String(row.value)) : undefined;
   }
   setState(key: string, value: unknown) {
+    if (key === 'settings') this.settingsCache = undefined;
     this.db
       .prepare('INSERT INTO state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value')
       .run(key, JSON.stringify(value));
   }
   settings(): AppSettings {
-    return settingsSchema.parse({ ...DEFAULT_SETTINGS, ...this.getState('settings', {}) });
+    this.settingsCache ??= settingsSchema.parse({ ...DEFAULT_SETTINGS, ...this.getState('settings', {}) });
+    return structuredClone(this.settingsCache);
   }
   saveSettings(patch: Partial<AppSettings>): AppSettings {
     const settings = settingsSchema.parse({ ...this.settings(), ...parseSettingsPatch(patch) });
@@ -162,11 +185,38 @@ export class StudioStore {
       throw error;
     }
   }
-  records(): GenerationRecord[] {
-    return this.db
-      .prepare('SELECT value FROM records ORDER BY created_at DESC, id DESC')
-      .all()
-      .map(row => JSON.parse(String(row.value)) as GenerationRecord);
+  /** Every image, newest first. The array and its records are shared: copy before changing anything. */
+  records(): readonly GenerationRecord[] {
+    return this.loadRecords().list;
+  }
+  record(id: string): GenerationRecord | undefined {
+    return this.loadRecords().byId.get(id);
+  }
+  /** A job's images, newest first. */
+  recordsForJob(jobId: string): GenerationRecord[] {
+    const cache = this.loadRecords();
+    if (!cache.byJob) {
+      cache.byJob = new Map();
+      for (const record of cache.list) {
+        const list = cache.byJob.get(record.jobId);
+        if (list) list.push(record);
+        else cache.byJob.set(record.jobId, [record]);
+      }
+    }
+    return [...(cache.byJob.get(jobId) ?? [])];
+  }
+  private loadRecords() {
+    if (!this.recordCache) {
+      const rows = this.db.prepare('SELECT created_at,value FROM records ORDER BY created_at DESC, id DESC').all();
+      const list = rows.map(row => JSON.parse(String(row.value)) as GenerationRecord);
+      if (freezeCached) for (const record of list) deepFreeze(record);
+      this.recordCache = {
+        list,
+        byId: new Map(list.map(record => [record.id, record])),
+        rowTime: new Map(list.map((record, i) => [record.id, String(rows[i].created_at)])),
+      };
+    }
+    return this.recordCache;
   }
   previewSelectionId(): string | null {
     const parsed = previewSelectionIdSchema.safeParse(this.getState('preview.selectedRecordId', null));
@@ -179,11 +229,34 @@ export class StudioStore {
     this.setState('preview.selectedRecordId', id);
   }
   saveRecord(record: GenerationRecord) {
+    const encoded = JSON.stringify(record);
     this.db
       .prepare(
         'INSERT INTO records(id,job_id,created_at,value) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value',
       )
-      .run(record.id, record.jobId, record.createdAt, JSON.stringify(record));
+      .run(record.id, record.jobId, record.createdAt, encoded);
+    this.recordsRevision++;
+    const cache = this.recordCache;
+    if (!cache) return;
+    // A private copy, so later edits to the caller's object cannot leak into the cache.
+    const cached = JSON.parse(encoded) as GenerationRecord;
+    cache.byJob = undefined;
+    if (freezeCached) deepFreeze(cached);
+    const existing = cache.byId.get(record.id);
+    cache.byId.set(record.id, cached);
+    if (existing) {
+      // An update keeps the row's original created_at, so the record keeps its place.
+      cache.list[cache.list.indexOf(existing)] = cached;
+      return;
+    }
+    cache.rowTime.set(record.id, record.createdAt);
+    const newer = (id: string) => {
+      const time = cache.rowTime.get(id)!;
+      return time > record.createdAt || (time === record.createdAt && id > record.id);
+    };
+    let at = 0;
+    while (at < cache.list.length && newer(cache.list[at].id)) at++;
+    cache.list.splice(at, 0, cached);
   }
   videoRecords(): unknown[] {
     return this.db
@@ -225,10 +298,11 @@ export class StudioStore {
       throw new Error('This video identity already has a different saved record. The original was preserved.');
   }
   presets(): Preset[] {
-    return this.db
+    this.presetCache ??= this.db
       .prepare('SELECT value FROM presets ORDER BY id')
       .all()
       .map(row => JSON.parse(String(row.value)) as Preset);
+    return structuredClone(this.presetCache);
   }
   savePreset(preset: Preset) {
     if (!preset.id || !preset.name.trim() || preset.name.length > 80)
@@ -237,9 +311,13 @@ export class StudioStore {
     this.db
       .prepare('INSERT INTO presets(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value')
       .run(preset.id, JSON.stringify(validated));
+    this.presetCache = undefined;
+    this.presetsRevision++;
   }
   deletePreset(id: string) {
     this.db.prepare('DELETE FROM presets WHERE id=?').run(id);
+    this.presetCache = undefined;
+    this.presetsRevision++;
   }
   modelMetadata<T extends object>(id: string): T | undefined {
     const row = this.db.prepare('SELECT value FROM model_metadata WHERE id=?').get(id);

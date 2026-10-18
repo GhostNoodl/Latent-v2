@@ -90,6 +90,7 @@ import { draftSchema, parseSettingsPatch } from '../shared/validation';
 import { TelegramBotService } from './telegram-bot';
 import { SIZE_PRESETS } from '../shared/defaults';
 import type { AppSnapshot, GenerationDraft, HardwareInfo, LatentAPI } from '../shared/types';
+import { SnapshotSender, type LightSnapshot } from './snapshot-sender';
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -211,6 +212,9 @@ function videoStatus(): AppSnapshot['video'] {
   );
 }
 function snapshot(): AppSnapshot {
+  return snapshots.snapshot();
+}
+function lightSnapshot(): LightSnapshot {
   return {
     setupActivity: setupActivitySnapshot(),
     dismissedActivity: store.getState('activity.dismissed', { queue: [], notifications: [] }),
@@ -233,13 +237,10 @@ function snapshot(): AppSnapshot {
     segmentation: segmentation.status(),
     sourceImages: sources.list(),
     models: models.assets,
-    history: missingOutputs.visible(store.records()),
     previewSelectedRecordId: store.previewSelectionId(),
-    jobs: jobs.jobs(),
     telegram: telegram?.status(),
     settings: store.settings(),
     draft,
-    presets: store.presets(),
     paths,
     hardware,
     downloads: models.downloads,
@@ -422,36 +423,26 @@ function startEngine(allowModelChange = false) {
   });
 }
 /** Serialized form of each top-level snapshot field as the renderer last received it. */
-const sentSnapshot = new Map<string, string | undefined>();
-function rememberSent(value: AppSnapshot) {
-  sentSnapshot.clear();
-  for (const [key, field] of Object.entries(value)) sentSnapshot.set(key, JSON.stringify(field));
-  return value;
-}
-/**
- * Send only the top-level fields that changed since the renderer's last copy. A progress tick
- * then carries `jobs`, not the whole history and model library, and unchanged fields keep their
- * identity in React so the pages that read them do not re-render.
- */
-function snapshotPatch(): Partial<AppSnapshot> | undefined {
-  const patch: Record<string, unknown> = {};
-  let changed = false;
-  for (const [key, field] of Object.entries(snapshot())) {
-    const serialized = JSON.stringify(field);
-    if (sentSnapshot.has(key) && sentSnapshot.get(key) === serialized) continue;
-    sentSnapshot.set(key, serialized);
-    patch[key] = field;
-    changed = true;
-  }
-  return changed ? (patch as Partial<AppSnapshot>) : undefined;
-}
+const snapshots = new SnapshotSender({
+  light: lightSnapshot,
+  history: () => missingOutputs.visible(store.records()),
+  historyRevision: () => `${store.recordsRevision}:${missingOutputs.revision}`,
+  presets: () => store.presets(),
+  presetsRevision: () => store.presetsRevision,
+  jobs: {
+    jobs: () => jobs.jobs(),
+    jobOrder: () => jobs.jobOrder(),
+    jobSnapshot: id => jobs.jobSnapshot(id),
+    takeChangedJobIds: () => jobs.takeChangedJobIds(),
+  },
+});
 function broadcast() {
   scheduleRuntimeIdleCheck();
   if (closed || closing || broadcastTimer) return;
   broadcastTimer = setTimeout(() => {
     broadcastTimer = undefined;
     if (window && !window.isDestroyed() && store && models && jobs && backend) {
-      const patch = snapshotPatch();
+      const patch = snapshots.patch();
       if (patch) window.webContents.send('latent:snapshot', patch);
     }
   }, 120);
@@ -467,16 +458,26 @@ function notify(preference: NotificationPreference, title: string, body: string)
   }
   notifications.send(preference, title, body);
 }
-function scheduleOutputsCheck() {
-  if (closing || closed || outputsCheckTimer) return;
+/** Files the outputs watcher named since the last check; undefined means look at everything. */
+let changedOutputs: Set<string> | undefined;
+function scheduleOutputsCheck(file?: string) {
+  if (closing || closed) return;
+  if (!file) changedOutputs = undefined;
+  else if (changedOutputs || !outputsCheckTimer) (changedOutputs ??= new Set()).add(path.join(paths.outputs, file));
+  if (outputsCheckTimer) return;
   outputsCheckTimer = setTimeout(() => {
     outputsCheckTimer = undefined;
-    void missingOutputs.refresh().catch(error => void desktopLog(`Image check failed: ${errorMessage(error)}`));
+    const files = changedOutputs;
+    changedOutputs = undefined;
+    void missingOutputs.refresh(files).catch(error => void desktopLog(`Image check failed: ${errorMessage(error)}`));
   }, 400);
 }
 function watchOutputs() {
   try {
-    outputsWatcher = watchFolder(paths.outputs, { recursive: true }, scheduleOutputsCheck);
+    // Only the files the watcher names are re-checked, so each new image costs one check, not one per image.
+    outputsWatcher = watchFolder(paths.outputs, { recursive: true }, (_event, file) =>
+      scheduleOutputsCheck(file ? String(file) : undefined),
+    );
     outputsWatcher.on('error', () => {
       outputsWatcher?.close();
       outputsWatcher = undefined;
@@ -486,7 +487,7 @@ function watchOutputs() {
   }
 }
 async function outputPath(id: string) {
-  const record = store.records().find(item => item.id === id);
+  const record = store.record(id);
   if (!record) throw new Error('This image is not in your library.');
   const file = containedPath(paths.outputs, record.filename);
   const real = await fs.realpath(file);
@@ -917,7 +918,7 @@ async function initialize() {
       broadcast();
       return snapshot();
     },
-    getSnapshot: async () => rememberSent(snapshot()),
+    getSnapshot: async () => snapshots.remember(snapshot()),
     changeStorageLocation: async requestedKind => {
       const kind = z.enum(['models', 'outputs']).parse(requestedKind);
       if (
@@ -1227,7 +1228,7 @@ async function initialize() {
   window.webContents.on('will-attach-webview', event => event.preventDefault());
   window.on('ready-to-show', () => window?.show());
   // Images deleted outside the app leave the gallery and sidebar on the next check.
-  window.on('focus', scheduleOutputsCheck);
+  window.on('focus', () => scheduleOutputsCheck());
   window.on('close', event => {
     if (!closed) {
       event.preventDefault();

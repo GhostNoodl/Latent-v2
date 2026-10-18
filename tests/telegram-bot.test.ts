@@ -60,7 +60,7 @@ function harness() {
     store: {
       getState: <T>(key: string, fallback: T) => (state.has(key) ? structuredClone(state.get(key) as T) : fallback),
       setState: (key: string, value: unknown) => void state.set(key, structuredClone(value)),
-      records: () => records,
+      recordsForJob: (jobId: string) => records.filter(record => record.jobId === jobId),
     },
     crypto: {
       isEncryptionAvailable: () => true,

@@ -49,3 +49,26 @@ it('keeps an image whose path cannot be resolved rather than hiding it', async (
   expect(await missing.refresh()).toBe(false);
   expect(missing.visible(records)).toHaveLength(1);
 });
+
+it('re-checks only the files it is told about, and keeps what it already knew', async () => {
+  dir = await fs.mkdtemp(path.join(os.tmpdir(), 'latent-missing-'));
+  const records = [record('a'), record('b'), record('c')];
+  for (const item of records) await fs.writeFile(path.join(dir, item.filename), 'png');
+  const missing = new MissingOutputs(
+    () => records,
+    item => path.join(dir!, item.filename),
+    () => undefined,
+  );
+  await fs.rm(path.join(dir, 'a.png'));
+  await fs.rm(path.join(dir, 'b.png'));
+  expect(await missing.refresh([path.join(dir, 'a.png')])).toBe(true);
+  expect(missing.visible(records).map(item => item.id)).toEqual(['b', 'c']);
+  const shown = missing.visible(records);
+  expect(missing.visible(records)).toBe(shown);
+  expect(await missing.refresh()).toBe(true);
+  expect(missing.visible(records).map(item => item.id)).toEqual(['c']);
+  await fs.writeFile(path.join(dir, 'b.png'), 'png');
+  expect(await missing.refresh([path.join(dir, 'b.png')])).toBe(true);
+  expect(missing.visible(records).map(item => item.id)).toEqual(['b', 'c']);
+  expect(missing.revision).toBe(3);
+});

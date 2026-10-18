@@ -145,6 +145,10 @@ export class JobService {
   private drainWaiters: Array<() => void> = [];
   private sources: SourceImageService;
   private regionalMasks: RegionalMaskService;
+  /** Jobs changed since the snapshot last asked, so a progress tick re-sends one job, not the whole list. */
+  private dirty = new Set<string>();
+  /** The running job's recipe, read once instead of on every progress message. */
+  private phaseRecipe?: { id: string; context: ExecutionContext };
   constructor(
     private paths: AppPaths,
     private store: StudioStore,
@@ -210,22 +214,21 @@ export class JobService {
       throw new Error(reason || 'Wait for runtime maintenance to finish before queueing generation.');
   }
   jobs() {
-    const rank = (job: StudioJob) => {
-      const n = this.order.indexOf(job.id);
-      return n < 0 ? Number.MAX_SAFE_INTEGER : n;
-    };
-    return this.items
-      .map(job => structuredClone(job))
-      .sort((a, b) => {
-        if ((a.status === 'queued') !== (b.status === 'queued')) return a.status === 'queued' ? 1 : -1;
-        return a.status === 'queued'
-          ? rank(a) - rank(b) || a.createdAt.localeCompare(b.createdAt)
-          : a.createdAt.localeCompare(b.createdAt);
-      });
+    return this.sorted(this.items.map(job => structuredClone(job)));
+  }
+  private sorted(jobs: StudioJob[]) {
+    const positions = new Map(this.order.map((id, n) => [id, n]));
+    const rank = (job: StudioJob) => positions.get(job.id) ?? Number.MAX_SAFE_INTEGER;
+    return [...jobs].sort((a, b) => {
+      if ((a.status === 'queued') !== (b.status === 'queued')) return a.status === 'queued' ? 1 : -1;
+      return a.status === 'queued'
+        ? rank(a) - rank(b) || a.createdAt.localeCompare(b.createdAt)
+        : a.createdAt.localeCompare(b.createdAt);
+    });
   }
   async controlMapPath(recordId: string): Promise<string> {
     if (!/^[a-f0-9]{32}$/.test(recordId)) throw new Error('Control-map image is unavailable.');
-    const record = this.store.records().find(item => item.id === recordId);
+    const record = this.store.record(recordId);
     const map = record?.controlNet?.map;
     if (!record || !map) throw new Error('Control-map image is unavailable or incomplete.');
     const output = this.controlOutput({ id: record.jobId, draft: record.draft }, record);
@@ -245,7 +248,7 @@ export class JobService {
     const { previewUrl: _, ...durable } = job;
     this.store.saveJob(durable);
     this.progressSavedAt.set(job.id, Date.now());
-    this.changed();
+    this.touch(job);
   }
   /**
    * Sampler progress arrives many times a second. The UI sees every step, but the row is
@@ -253,7 +256,27 @@ export class JobService {
    */
   private saveProgress(job: StudioJob) {
     if (Date.now() - (this.progressSavedAt.get(job.id) ?? 0) >= 1000) this.save(job);
-    else this.changed();
+    else this.touch(job);
+  }
+  /** Marks a job as changed for the next snapshot, then lets the UI know. */
+  private touch(job: StudioJob) {
+    this.dirty.add(job.id);
+    this.changed();
+  }
+  /** Ids of jobs changed since the last call. */
+  takeChangedJobIds(): Set<string> {
+    const changed = this.dirty;
+    this.dirty = new Set();
+    return changed;
+  }
+  /** One job as the snapshot shows it, or undefined once it is gone. */
+  jobSnapshot(id: string): StudioJob | undefined {
+    const job = this.items.find(item => item.id === id);
+    return job && structuredClone(job);
+  }
+  /** Job ids in the order `jobs()` lists them. */
+  jobOrder(): string[] {
+    return this.sorted(this.items).map(job => job.id);
   }
   /** ComfyUI's job cancel endpoint handles both a running and a still-pending prompt. */
   private async cancelPrompt(promptId: string | undefined) {
@@ -265,7 +288,8 @@ export class JobService {
     this.store.acceptJob(job, context, order);
     this.items.push(job);
     this.order = order;
-    this.changed();
+    this.phaseRecipe = undefined;
+    this.touch(job);
   }
   private saveTogether(job: StudioJob, context: ExecutionContext | VideoQueueContext) {
     job.updatedAt = new Date().toISOString();
@@ -279,10 +303,13 @@ export class JobService {
       if (saved) {
         for (const key of Object.keys(job)) delete (job as unknown as Record<string, unknown>)[key];
         Object.assign(job, saved);
+        this.dirty.add(job.id);
       }
       throw new JobPersistenceError(`Could not persist the queue transition: ${message(error)}`);
+    } finally {
+      if (this.phaseRecipe?.id === job.id) this.phaseRecipe = undefined;
     }
-    this.changed();
+    this.touch(job);
   }
   private videoContext(job: VideoJob) {
     if (!this.videoQueue) throw new Error('The video queue integration is unavailable.');
@@ -295,6 +322,11 @@ export class JobService {
   }
   private saveContext(id: string, context: ExecutionContext) {
     this.store.setState(`execution:${id}`, context);
+    if (this.phaseRecipe?.id === id) this.phaseRecipe = undefined;
+  }
+  private recipeForPhase(id: string) {
+    if (this.phaseRecipe?.id !== id) this.phaseRecipe = { id, context: this.context(id) };
+    return this.phaseRecipe.context;
   }
   private async decodeVerifiedMask(mask: Awaited<ReturnType<SourceImageService['resolveMask']>>) {
     const bytes = await fs.readFile(mask.path);
@@ -464,7 +496,7 @@ export class JobService {
       throw new Error(
         'Crop inpainting requires one source and mask, batch size 1, and cannot yet be combined with hires, standalone upscale or ControlNet.',
       );
-    if (draft.variationOfRecordId && !this.store.records().some(record => record.id === draft.variationOfRecordId))
+    if (draft.variationOfRecordId && !this.store.record(draft.variationOfRecordId))
       throw new Error('The original image for this variation is no longer in the studio history.');
     if (draft.upscale && draft.hiresFix)
       throw new Error('Choose either standalone resize/enhancement or hires fix for this job.');
@@ -834,7 +866,7 @@ export class JobService {
     const { parentRecordId } = request.lineage;
     if (parentRecordId !== originGenerationId)
       throw new Error('The Qwen edit parent must be the image from which this immutable source was imported.');
-    const parent = parentRecordId ? this.store.records().find(record => record.id === parentRecordId) : undefined;
+    const parent = parentRecordId ? this.store.record(parentRecordId) : undefined;
     if (parentRecordId && !parent) throw new Error('The original Qwen edit parent is no longer in studio history.');
     if (parent?.qwenEdit && parent.qwenEdit.lineage.conversationId !== request.lineage.conversationId)
       throw new Error(
@@ -971,7 +1003,7 @@ export class JobService {
       // Live progress is unknown until the channel returns; polling still finishes the job.
       for (const job of this.items.filter(item => item.status === 'running' && item.queueState === 'running')) {
         job.queueState = 'unknown';
-        this.changed();
+        this.touch(job);
       }
     });
     ws.on('message', (data, binary) => {
@@ -986,7 +1018,7 @@ export class JobService {
           if (preview) {
             job.previewUrl = preview;
             job.queueState = 'running';
-            this.changed();
+            this.touch(job);
           }
           return;
         }
@@ -1026,7 +1058,7 @@ export class JobService {
                       ? 'Decoding audio'
                       : 'Preparing video';
           } else {
-            const context = this.context(job.id);
+            const context = this.recipeForPhase(job.id);
             job.phase = generationPhase(context.workflow, node, context.advancedImage, context.faceDetailer?.plan);
           }
           // A node change is a phase change worth keeping; within a node only progress moves.
@@ -2218,9 +2250,7 @@ export class JobService {
   }
   private async linkControlMap(job: GenerationJob, context: ExecutionContext) {
     if (!context.controlNet?.map) return;
-    for (const record of this.store
-      .records()
-      .filter(record => record.jobId === job.id && job.outputIds.includes(record.id))) {
+    for (const record of this.store.recordsForJob(job.id).filter(record => job.outputIds.includes(record.id))) {
       if (
         record.controlNet?.map?.sha256 === context.controlNet.map.sha256 &&
         record.controlNet.map.filename === context.controlNet.map.filename
@@ -2244,7 +2274,7 @@ export class JobService {
   private async linkBaseRecords(job: GenerationJob, context: ExecutionContext) {
     await this.linkFaceRecords(job, context);
     if (!context.advancedImage?.outputs.some(output => output.role === 'base')) return;
-    const records = this.store.records().filter(record => record.jobId === job.id && job.outputIds.includes(record.id));
+    const records = this.store.recordsForJob(job.id).filter(record => job.outputIds.includes(record.id));
     for (const final of records.filter(record => record.outputRole === 'final')) {
       const base = records.find(
         record => record.outputRole === 'base' && record.outputBatchIndex === final.outputBatchIndex,
@@ -2257,7 +2287,7 @@ export class JobService {
   }
   private async linkFaceRecords(job: GenerationJob, context: ExecutionContext) {
     if (!context.faceDetailer) return;
-    const records = this.store.records().filter(record => record.jobId === job.id && job.outputIds.includes(record.id));
+    const records = this.store.recordsForJob(job.id).filter(record => job.outputIds.includes(record.id));
     for (const record of records) {
       if (!record.facePass || record.facePass.index === 0) continue;
       const parent = records.find(item => item.facePass?.index === record.facePass!.index - 1);
@@ -2367,13 +2397,8 @@ export class JobService {
     const id = createHash('sha256').update(`${job.id}:${normalized}`).digest('hex').slice(0, 32);
     if (job.outputIds.includes(id)) return;
     const previous = this.store
-      .records()
-      .filter(
-        record =>
-          record.jobId === job.id &&
-          job.outputIds.includes(record.id) &&
-          (record.outputNodeId ?? '7') === output.nodeId,
-      );
+      .recordsForJob(job.id)
+      .filter(record => job.outputIds.includes(record.id) && (record.outputNodeId ?? '7') === output.nodeId);
     if (
       previous.length >= output.batchSize ||
       (identity.batchIndex !== undefined && previous.some(record => record.outputBatchIndex === identity.batchIndex))

@@ -21,6 +21,7 @@ import type { DynamicPromptAuthoring, DynamicPromptRecipe, WildcardSnapshot } fr
 import type { ControlNetPlan, ControlNetSettings, ControlNetStatus, RetainedControlMap } from './controlnet-types';
 import type { CollectionKind, CollectionSnapshot } from './collections-types';
 import type { RuntimeIdentitySnapshot } from './runtime-identity';
+import type { SnapshotChanges } from './snapshot-changes';
 import type { CropInpaintPlan, CropInpaintSettings } from './crop-inpaint-types';
 import type { CreateModelFolderRequest, ModelLocationsSnapshot, MoveModelRequest } from './model-locations';
 import type { QwenEditAssetsStatus, QwenEditJobRequest, QwenEditProfile, QwenEditRecord } from './qwen-edit-types';
@@ -480,7 +481,7 @@ export interface LatentAPI {
   /** Moves saved images to the Recycle Bin; restoring them there brings them back. */
   trashOutputs(ids: string[]): Promise<void>;
   /** Receives the top-level snapshot fields that changed since the last delivery. */
-  onSnapshot(listener: (changes: Partial<AppSnapshot>) => void): () => void;
+  onSnapshot(listener: (changes: SnapshotChanges) => void): () => void;
   onBeforeClose(listener: () => Promise<void>): () => void;
   onCloseCancelled(listener: () => void): () => void;
 }
