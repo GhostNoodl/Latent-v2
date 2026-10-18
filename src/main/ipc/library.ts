@@ -79,7 +79,7 @@ export function libraryHandlers(ctx: HandlerContext) {
       ctx.civitai.setApiKey(value);
     },
     openCivitaiModel: async (modelId, versionId) => {
-      const url = new URL(`https://ctx.civitai.com/ctx.models/${z.number().int().positive().parse(modelId)}`);
+      const url = new URL(`https://civitai.com/models/${z.number().int().positive().parse(modelId)}`);
       if (versionId !== undefined)
         url.searchParams.set('modelVersionId', String(z.number().int().positive().parse(versionId)));
       await shell.openExternal(url.href);

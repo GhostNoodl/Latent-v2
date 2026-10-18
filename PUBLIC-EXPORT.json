@@ -298,8 +298,8 @@
     },
     {
       "path": "src/main/store.ts",
-      "bytes": 11387,
-      "sha256": "1c0fe2d60c273a8cd8372396779954bfd5e441960f2ca62013497e1f7a0fbab2"
+      "bytes": 11578,
+      "sha256": "4ad056c1a01b71c334152f81a16d3ee1b88768234d84832fee2e642426469973"
     },
     {
       "path": "src/main/upscaler.ts",
@@ -1173,8 +1173,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 6391,
-      "sha256": "bbb722e0f4b111951e4b0fe2d5a6158b689c5a52558022bade02dff8ee68bbd0"
+      "bytes": 6797,
+      "sha256": "94c9628b854e6628a158d195cc397d182863b84d62d91ea78ff48b677b1da0a8"
     },
     {
       "path": "docs/DISTRIBUTION.md",
@@ -1768,8 +1768,8 @@
     },
     {
       "path": "src/main/ipc/assistant-sources.ts",
-      "bytes": 2615,
-      "sha256": "11b39f839c1bfe226dbaef30b3516f41977a923b2589e9ca2e0c617c961e85e5"
+      "bytes": 2854,
+      "sha256": "a37036d7959cb6e2d94538cf13c5e639e63c1da2e5067b7f214536199c1fb801"
     },
     {
       "path": "src/main/ipc/gate.ts",
@@ -1778,18 +1778,18 @@
     },
     {
       "path": "src/main/ipc/library.ts",
-      "bytes": 4093,
-      "sha256": "19244c605eaae250ce66cf78bde6ad173f4eb3b05fcf438b3c01237f7bca1399"
+      "bytes": 4085,
+      "sha256": "93764aac64490423c7773f3e40fc9b056c55c33b0e84d00c7e2d5a1f467dcec9"
     },
     {
       "path": "src/main/ipc/optional-tools.ts",
-      "bytes": 4823,
-      "sha256": "efa22e6e6b2f14966433b9230e8049a7f10e31980d670c155a018e9b03450afb"
+      "bytes": 4819,
+      "sha256": "de6ae2e59ce0239cc7a9a29bdb1bd9efb2202158c8add0fd6e92f57789f4a463"
     },
     {
       "path": "src/main/ipc/storage-hardware.ts",
-      "bytes": 2543,
-      "sha256": "f64d30d81da88dced820055d593962fe4766eecba7143164125fd14ea74e8a63"
+      "bytes": 2538,
+      "sha256": "db15623d04408d3446e282149082d248d14701defa5bd1fee06106f3f9727ce1"
     },
     {
       "path": "src/main/ipc/updates.ts",
@@ -1845,6 +1845,16 @@
       "path": "tests/telegram-controls.test.ts",
       "bytes": 3667,
       "sha256": "4572d0fef1e0e9e0575d505f549c02b411f3a3c34ebf0a8d44d4c0f5e15355a1"
+    },
+    {
+      "path": "docs/TELEGRAM-REMOTE.md",
+      "bytes": 6126,
+      "sha256": "3be2a7564b9ad30e4a443fd4da1a862130b2ea729aa7ce9d9680b14df21fc691"
+    },
+    {
+      "path": "tests/assistant-conversation-keys.test.ts",
+      "bytes": 2541,
+      "sha256": "229b44561a2519944082d9aa265a1f20563b9bc0080ae12480a2538b360af82a"
     }
   ],
   "privateHistoryIncluded": false

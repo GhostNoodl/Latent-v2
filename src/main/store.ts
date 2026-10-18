@@ -38,6 +38,10 @@ export class StudioStore {
     const row = this.db.prepare('SELECT value FROM state WHERE key=?').get(key);
     return row ? (JSON.parse(String(row.value)) as T) : structuredClone(fallback);
   }
+  takeState(key: string): unknown {
+    const row = this.db.prepare('DELETE FROM state WHERE key=? RETURNING value').get(key);
+    return row ? JSON.parse(String(row.value)) : undefined;
+  }
   setState(key: string, value: unknown) {
     this.db
       .prepare('INSERT INTO state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value')
