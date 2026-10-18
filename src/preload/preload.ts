@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AppSnapshot, LatentAPI } from '../shared/types';
+import type { LatentAPI } from '../shared/types';
+import type { SnapshotChanges } from '../shared/snapshot-changes';
 const invoke = (method: string, ...args: unknown[]) => ipcRenderer.invoke(`latent:${method}`, ...args);
 const closeListeners = new Set<() => Promise<void>>();
 ipcRenderer.on('latent:flush-draft', async (_event: Electron.IpcRendererEvent, nonce: string) => {
@@ -139,7 +140,7 @@ const api: LatentAPI = {
   trashOutputs: ids => invoke('trashOutputs', ids),
   openOutput: id => invoke('openOutput', id),
   onSnapshot: listener => {
-    const handler = (_event: Electron.IpcRendererEvent, changes: Partial<AppSnapshot>) => listener(changes);
+    const handler = (_event: Electron.IpcRendererEvent, changes: SnapshotChanges) => listener(changes);
     ipcRenderer.on('latent:snapshot', handler);
     return () => ipcRenderer.removeListener('latent:snapshot', handler);
   },

@@ -34,7 +34,7 @@ export interface TelegramCredentialCrypto {
   getSelectedStorageBackend?(): string;
 }
 export interface TelegramBotPorts {
-  store: Pick<StudioStore, 'getState' | 'setState' | 'records'>;
+  store: Pick<StudioStore, 'getState' | 'setState' | 'recordsForJob'>;
   crypto?: TelegramCredentialCrypto;
   fetch: typeof fetch;
   /** The studio's current Create settings, which Telegram chats start from. */
@@ -683,7 +683,7 @@ export class TelegramBotService {
   }
   /** The pictures a finished job leaves behind, without the in-between hires and face stages. */
   private finished(jobId: string) {
-    const records = this.ports.store.records().filter(record => record.jobId === jobId);
+    const records = this.ports.store.recordsForJob(jobId);
     const done = records.filter(record => record.outputRole !== 'base' && record.outputRole !== 'face-pass');
     return done.length ? done : records;
   }

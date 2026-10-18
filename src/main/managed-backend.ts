@@ -84,6 +84,9 @@ export class ManagedBackend {
   private activeUrl: string | null = null;
   private stopping = false;
   private disposed = false;
+  private pendingLog: string[] = [];
+  private logTimer?: NodeJS.Timeout;
+  private logWrite: Promise<void> = Promise.resolve();
   private lifecycle = 0;
   private runtimeIdentity?: RuntimeIdentitySnapshot;
   private expectedVersion: string = RUNTIME_RELEASE.comfyVersion;
@@ -165,7 +168,12 @@ export class ManagedBackend {
 
   async dispose(): Promise<void> {
     this.disposed = true;
-    await this.stop();
+    try {
+      await this.stop();
+    } finally {
+      await this.logWrite;
+      await this.flushLog(true);
+    }
   }
 
   private readMarker(): RuntimeMarker | null {
@@ -202,12 +210,33 @@ export class ManagedBackend {
     if (!clean) return;
     const lines = clean.split(/[\r\n]+/).map(line => line.slice(0, 2000));
     this.current.logTail = [...this.current.logTail, ...lines].slice(-100);
-    try {
-      fs.appendFileSync(this.logPath, `${new Date().toISOString()} ${lines.join('\n')}\n`, 'utf8');
-    } catch {
-      /* Status still reports disk errors through the operation. */
-    }
+    // ComfyUI prints progress bars constantly; batch them into one background write a moment later.
+    this.pendingLog.push(`${new Date().toISOString()} ${lines.join('\n')}\n`);
+    this.logTimer ??= setTimeout(() => void this.flushLog(), 250);
     this.publish({});
+  }
+
+  /** Writes buffered log lines; `sync` is for shutdown, when there is no later tick to wait for. */
+  private async flushLog(sync = false): Promise<void> {
+    if (this.logTimer) clearTimeout(this.logTimer);
+    this.logTimer = undefined;
+    if (!this.pendingLog.length) return this.logWrite;
+    const text = this.pendingLog.join('');
+    this.pendingLog = [];
+    if (sync) {
+      try {
+        fs.appendFileSync(this.logPath, text, 'utf8');
+      } catch {
+        /* Status still reports disk errors through the operation. */
+      }
+      return;
+    }
+    this.logWrite = this.logWrite
+      .then(() => fs.promises.appendFile(this.logPath, text, 'utf8'))
+      .catch(() => {
+        /* Status still reports disk errors through the operation. */
+      });
+    return this.logWrite;
   }
 
   private checkCancelled(): void {
@@ -259,7 +288,9 @@ export class ManagedBackend {
     for (const directory of directories) await fs.promises.mkdir(directory, { recursive: true });
     try {
       if ((await fs.promises.stat(this.logPath)).size > 5 * 1024 * 1024) {
+        await this.flushLog();
         await fs.promises.rename(this.logPath, path.join(this.paths.logs, `backend-${Date.now()}.log`));
+        await pruneOldLogs(this.paths.logs);
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
@@ -887,4 +918,13 @@ export class ManagedBackend {
       this.stopping = false;
     }
   }
+}
+
+/** Rotated backend logs to keep; older ones are deleted so the folder cannot grow forever. */
+const KEPT_LOGS = 5;
+export async function pruneOldLogs(folder: string): Promise<void> {
+  const rotated = (await fs.promises.readdir(folder))
+    .filter(name => /^backend-\d+\.log$/.test(name))
+    .sort((a, b) => Number(b.slice(8, -4)) - Number(a.slice(8, -4)));
+  for (const name of rotated.slice(KEPT_LOGS)) await fs.promises.rm(path.join(folder, name), { force: true });
 }

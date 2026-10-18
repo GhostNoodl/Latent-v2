@@ -43,7 +43,7 @@ export function enhancementIssue(draft: GenerationDraft): string | undefined {
 export function validateEnhancementSource(
   draft: GenerationDraft,
   source: SourceImageAsset,
-  records: GenerationRecord[],
+  records: readonly GenerationRecord[],
 ) {
   const issue = enhancementIssue(draft);
   if (issue) throw Error(issue);

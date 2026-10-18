@@ -12,7 +12,7 @@ import type { SourceImageAsset } from '../shared/source-types';
 
 type Dependencies = {
   jobs(): StudioJob[];
-  records(): GenerationRecord[];
+  records(): readonly GenerationRecord[];
   save(job: GenerationJob): void;
   ready(): boolean;
   stopped(): boolean;

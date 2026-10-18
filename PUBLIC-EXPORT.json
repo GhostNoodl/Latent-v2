@@ -108,18 +108,18 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 112278,
-      "sha256": "9c71469097bc6db19d7ee58077f66e57aedb0fc4b1e16e760499b929e0e81a5c"
+      "bytes": 113530,
+      "sha256": "ed1d6d9aa4a937185d8f2d3a6a5fb84f643e1fec2aaf523ffeb8975ad436221a"
     },
     {
       "path": "src/main/main.ts",
-      "bytes": 54381,
-      "sha256": "c5ea758e9a6b7fa40f49dcf0e3e5503e1492e084429e384fcf2cb71783b0ff68"
+      "bytes": 54467,
+      "sha256": "12a4cf436928036f6582c23077a30fccd89a69314ebbf6117daf4f9240cb6803"
     },
     {
       "path": "src/main/managed-backend.ts",
-      "bytes": 36205,
-      "sha256": "36deff13fd68d7b1a71808cddfce34c43a8a0bab349d4200be1ad30b5fe7e863"
+      "bytes": 37825,
+      "sha256": "afb1df86e0f0367ccd6b0775b96a4d154dc9575852570341d4a50eb029e61740"
     },
     {
       "path": "src/main/model-library-lease.ts",
@@ -298,8 +298,8 @@
     },
     {
       "path": "src/main/store.ts",
-      "bytes": 11578,
-      "sha256": "4ad056c1a01b71c334152f81a16d3ee1b88768234d84832fee2e642426469973"
+      "bytes": 14805,
+      "sha256": "23c4e399022de66d24c269408352faccca45ed59a4f8910d23933265a1ef28f5"
     },
     {
       "path": "src/main/upscaler.ts",
@@ -358,8 +358,8 @@
     },
     {
       "path": "src/preload/preload.ts",
-      "bytes": 9126,
-      "sha256": "d9ebca5318e5eb1ccabc227b2d0ee9722fdef87fbc451852228c8ec3ce045846"
+      "bytes": 9175,
+      "sha256": "6040b96f37118a9f7ce95b282c3019cd42e296fe8d93f213e8874f1f83c5b6a9"
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
@@ -368,8 +368,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 112967,
-      "sha256": "439e4c904733edb0f33ca83bbd0762f09edd31015081a5d8c8fc1242e215368b"
+      "bytes": 113063,
+      "sha256": "e9a56260903e25ef3c07693569ddb8f89fe720d2cdb98d1a10fe860300e6802e"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -918,8 +918,8 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 19954,
-      "sha256": "d75f16fa59e52442b38ca4c53200d42ac24d6b7dc370e873e2f5d2e8d6e4e8d0"
+      "bytes": 20008,
+      "sha256": "83189a9f91c80b2095272ab9e644d5b6b2cab8866de44505112aa2c4ad1e56cf"
     },
     {
       "path": "src/shared/validation.ts",
@@ -1378,13 +1378,13 @@
     },
     {
       "path": "src/main/missing-outputs.ts",
-      "bytes": 2051,
-      "sha256": "62fddea7ebefaefbd27af3d4bb40d68f572928552b5f060c3a0ab4b3e278c722"
+      "bytes": 4038,
+      "sha256": "06676b623415d5cc2064056488509559036e87a5fe9d5d5b2b8cf7dc7fa0921d"
     },
     {
       "path": "tests/missing-outputs.test.ts",
-      "bytes": 1871,
-      "sha256": "92ea78fea66d466a0a76ecb749654b290c95bad670bddd575923bb0a9bbb7349"
+      "bytes": 2987,
+      "sha256": "23b59cf0297d47928850f6e050f9cb7786cc0297ad4b2fcb5053fcd0703da082"
     },
     {
       "path": "src/shared/civitai-discovery.ts",
@@ -1423,8 +1423,8 @@
     },
     {
       "path": "src/shared/enhancement.ts",
-      "bytes": 7379,
-      "sha256": "da99ef1e9afa2229854984034fee069789602ee2a56bd5c71514f1c87d0d58c4"
+      "bytes": 7388,
+      "sha256": "3fed1efeeb74bd4269e2027bbf101ee732c8f0afa1b12c83c6e5d91732e1d820"
     },
     {
       "path": "src/renderer/EnhanceDialog.tsx",
@@ -1443,8 +1443,8 @@
     },
     {
       "path": "src/main/automatic-faces.ts",
-      "bytes": 5381,
-      "sha256": "5d59db62d8533a9f232c1705bb518676a977cba3b04b4414802cb3f54c3ca8a0"
+      "bytes": 5390,
+      "sha256": "61f17eb5663dc57f787f352050f41b87af1fae880b7dc7061c908e630eda4643"
     },
     {
       "path": "src/renderer/AutomaticFaceControls.tsx",
@@ -1818,8 +1818,8 @@
     },
     {
       "path": "src/main/telegram-bot.ts",
-      "bytes": 31184,
-      "sha256": "aee76820133fb5e1ca7781af70094521c8abe102ff132cbf0663ad2a92a9c679"
+      "bytes": 31160,
+      "sha256": "d27e4d4862230e46e5fe785b71e142438c99daf21db4b3b6d5269c2d13dc5ae1"
     },
     {
       "path": "src/shared/telegram-types.ts",
@@ -1833,8 +1833,8 @@
     },
     {
       "path": "tests/telegram-bot.test.ts",
-      "bytes": 11789,
-      "sha256": "e75634a733f8d84c6c83b9477c078388ef32a23ffb605ea0b2f4143bdece286f"
+      "bytes": 11849,
+      "sha256": "7dd1b60015e2f9cbd318d59603a6e185286f20caaa3680ccc15f603429b4add8"
     },
     {
       "path": "src/main/telegram-controls.ts",
@@ -1855,6 +1855,31 @@
       "path": "tests/assistant-conversation-keys.test.ts",
       "bytes": 2541,
       "sha256": "229b44561a2519944082d9aa265a1f20563b9bc0080ae12480a2538b360af82a"
+    },
+    {
+      "path": "src/main/snapshot-sender.ts",
+      "bytes": 4217,
+      "sha256": "541d55e028ce533a9641b116e4f0067350f647591a512152fdcf6c1528207a1e"
+    },
+    {
+      "path": "src/shared/snapshot-changes.ts",
+      "bytes": 711,
+      "sha256": "bbe86ea2db4154ebfe6d29d26006b5c10f213516bf921e8b25117fffb562268c"
+    },
+    {
+      "path": "tests/snapshot-sender.test.ts",
+      "bytes": 3446,
+      "sha256": "464914d6eb353394b8427cd8218311b563d1c4d481b12b8625bdb8ba578bfb35"
+    },
+    {
+      "path": "tests/store-records-cache.test.ts",
+      "bytes": 3087,
+      "sha256": "04a9e36f437ae5302362d1130eaa48d695225895e8a85507c71e4b4f778e1ae3"
+    },
+    {
+      "path": "tests/backend-log-pruning.test.ts",
+      "bytes": 1010,
+      "sha256": "150709b638a93c7ba3cc9e65de7c1f803730f579624ad354ee0678eb851a1fa5"
     }
   ],
   "privateHistoryIncluded": false

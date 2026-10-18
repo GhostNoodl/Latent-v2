@@ -1498,6 +1498,26 @@
     {
       "from": "tests/assistant-conversation-keys.test.ts",
       "to": "tests/assistant-conversation-keys.test.ts"
+    },
+    {
+      "from": "src/main/snapshot-sender.ts",
+      "to": "src/main/snapshot-sender.ts"
+    },
+    {
+      "from": "src/shared/snapshot-changes.ts",
+      "to": "src/shared/snapshot-changes.ts"
+    },
+    {
+      "from": "tests/snapshot-sender.test.ts",
+      "to": "tests/snapshot-sender.test.ts"
+    },
+    {
+      "from": "tests/store-records-cache.test.ts",
+      "to": "tests/store-records-cache.test.ts"
+    },
+    {
+      "from": "tests/backend-log-pruning.test.ts",
+      "to": "tests/backend-log-pruning.test.ts"
     }
   ]
 }
