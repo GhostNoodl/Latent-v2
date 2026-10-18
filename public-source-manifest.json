@@ -1518,6 +1518,10 @@
     {
       "from": "tests/backend-log-pruning.test.ts",
       "to": "tests/backend-log-pruning.test.ts"
+    },
+    {
+      "from": "src/renderer/draft-field-label.ts",
+      "to": "src/renderer/draft-field-label.ts"
     }
   ]
 }

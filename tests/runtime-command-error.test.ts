@@ -19,7 +19,7 @@ describe('runtime setup error presentation', () => {
     );
     expect(result).toContain('File not found: C:\\Users\\Example User\\Desktop\\Coding');
     expect(result).not.toMatch(/Downloading|Downloaded|\x1b/);
-    expect(result).toContain('Backend logs');
+    expect(result).toContain('engine log');
   });
   it('gives a retry action for the observed Windows PE launcher failure without assigning a cause', () => {
     const result = runtimeCommandError(

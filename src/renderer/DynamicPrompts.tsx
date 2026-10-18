@@ -442,8 +442,7 @@ export function DynamicPrompts({ draft, wildcards, previewSeed, onReroll, onSave
               </Notice>
             )}
             <p className="muted small">
-              Wildcard lists are saved explicitly. Prompt-memory switches apply to the compositor, while saved wildcard
-              lists and image recipes remain available.
+              Wildcard lists only save when you press Save. They stay saved even if prompt memory is off.
             </p>
             <div className="button-row">
               <button type="button" className="primary" disabled={saving || closing} onClick={() => void save()}>

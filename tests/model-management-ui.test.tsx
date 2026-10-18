@@ -54,7 +54,7 @@ it('shows byte counts and keeps unknown-size downloads indeterminate', async () 
   } as AppSnapshot;
   await mount(<SetupProgress snapshot={snapshot} capability="images" />);
   expect(document.querySelector('progress')?.hasAttribute('value')).toBe(false);
-  expect(document.body.textContent).toContain('1.0 KiB');
+  expect(document.body.textContent).toContain('1.0 KB');
 });
 it('identifies the active setup component and clamps progress', async () => {
   const snapshot = {

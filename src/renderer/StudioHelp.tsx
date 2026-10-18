@@ -1,112 +1,110 @@
 import { Notice } from './ui';
 import './studio-help.css';
 
-/** Content for the existing Help modal. Every disclosure is explicitly keyboard-focusable. */
+/** Content for the Help modal. Every disclosure is keyboard-focusable. */
 export function StudioHelp() {
   return (
     <div className="studio-help">
       <ol className="help-steps">
         <li>
-          In <strong>Settings</strong>, set up generation if needed, then start the backend.
+          Open <strong>Setup</strong> (it pops up on first launch) and install the image engine. Latent starts it for
+          you from then on.
         </li>
         <li>
-          In <strong>Models</strong>, import or download an SDXL or Illustrious checkpoint. Choose LoRAs for the same
-          family.
+          In <strong>Models</strong>, add an SDXL or Illustrious checkpoint, or grab one from <strong>Discover</strong>.
+          LoRAs need to match the checkpoint's family.
         </li>
         <li>
-          In <strong>Create</strong>, choose your model, write a prompt, review the settings, and Generate.{' '}
-          <strong>Ctrl+Enter</strong> works too.
+          In <strong>Create</strong>, pick your model, write a prompt and hit Generate (or press{' '}
+          <strong>Ctrl+Enter</strong>).
         </li>
         <li>
-          Click a recent thumbnail to preview. Use right-click or <strong>⋯ → Reuse parameters</strong> to restore its
-          recipe and seed. <strong>Undo</strong> returns to your previous draft.
+          Click a thumbnail to look at it. Right-click it and choose <strong>Reuse parameters</strong> to load its exact
+          settings. <strong>Undo</strong> takes you back to what you had before.
         </li>
       </ol>
       <Notice>
-        Previewing an image leaves your draft unchanged. Reusing a recipe never starts generation automatically.
+        Looking at an old image never changes your prompt, and reusing settings never starts a generation.
       </Notice>
       <details>
-        <summary tabIndex={0}>History, variations, and missing models</summary>
+        <summary>History, variations and missing models</summary>
         <p>
-          History arrows reach older images; Library adds search and collections. Use Shift+F10 on a thumbnail for its
-          menu. Make a variation deliberately chooses a new seed and rerolls enabled prompt choices. Missing or changed
-          assets need the original file or an explicit replacement. Exact settings cannot promise identical pixels
-          across different runtimes.
+          The arrows next to your history page through older images. Library has search and collections. On a thumbnail,
+          Shift+F10 opens its menu and Delete moves it to the Recycle Bin.
+        </p>
+        <p>
+          Make a variation picks a new seed and rerolls any random prompt choices. If an image used a model you no
+          longer have, put the file back or pick a replacement. The same settings can still give slightly different
+          pixels after an engine update.
         </p>
       </details>
       <details>
-        <summary tabIndex={0}>Source images and optional tools</summary>
+        <summary>Source images and extra tools</summary>
         <p>
-          Import an image or Use preview as a source. For inpainting, use batch 1 and save a mask: white edits, black
-          preserves. Review a smart-mask suggestion and accept it before saving. Advanced controls explain required
-          downloads and incompatible combinations; accepted sizes are not a guarantee that they fit GPU memory.
+          Import an image, or use the one on the canvas, as a starting point. To edit part of it, paint a mask: white
+          gets changed, black stays the same. Masks work with a batch size of 1. Extra tools tell you what they need to
+          download and which options don't mix. A size being allowed doesn't guarantee it fits in your GPU's memory.
         </p>
         <p>
-          LoRA trigger words stay separate from your typed prompt. Help me write offers local prompt suggestions; Apply
-          changes only the prompts, with Undo in Create.
-        </p>
-      </details>
-      <details>
-        <summary tabIndex={0}>Qwen image versions</summary>
-        <p>
-          Edit an image with Qwen opens a separate editor. Previewing a version does not change its next input. Continue
-          or Branch explicitly uses that version as the next image; Reuse exact recipe restores its recorded input and
-          settings. Qwen has its own Undo. Removing an editor draft keeps generated versions in Library.
-        </p>
-        <p>
-          Base and fast are different experimental profiles. Compare their results; no general quality or speed
-          advantage is promised.
+          LoRA trigger words are kept apart from what you type. Help me write suggests prompts on your PC, and Apply
+          only changes the prompts, with Undo if you don't like it.
         </p>
       </details>
       <details>
-        <summary tabIndex={0}>Downloads, folders, and remembered text</summary>
+        <summary>Editing with Qwen</summary>
         <p>
-          Refresh storage in Settings shows actual private destinations and space estimates. Cancel stops the selected
-          transfer; Retry / Resume uses its retained request when possible. An expired link may need a fresh source.
-          Optional bundles are installed only when requested.
+          Edit with Qwen opens its own editor. Clicking an older version just shows it. Continue or Branch makes it the
+          next image to edit, and Reuse exact recipe loads the settings that made it. Qwen has its own Undo. Deleting an
+          editor draft keeps the images it made in your Library.
+        </p>
+        <p>Base and Fast are two different setups. Try both and keep whichever you like better.</p>
+      </details>
+      <details>
+        <summary>Downloads, folders and what Latent remembers</summary>
+        <p>
+          Settings shows where everything lives and how much space it takes. Cancel stops a download, and Retry / Resume
+          picks it back up where it can. Old links sometimes expire, so you may need a fresh one. Optional extras are
+          only downloaded when you ask for them.
         </p>
         <p>
-          Collections group without moving files. Model folders manages private files and explicitly chosen read-only
-          external directories. Stop generation and clear queued work before changing folders.
+          Collections group images without moving any files. Model folders can also read models from folders you already
+          have elsewhere, without changing them. Finish or cancel what's in the queue before moving folders.
         </p>
         <p>
-          Prompt memory controls remembered Create fields, and positive memory also covers video draft prompts. Full
-          recipes, presets, wildcard lists, assistant conversations, and Qwen conversations are separate. Reset studio
-          settings retains saved images and generation parameters.
+          The prompt memory switches decide which Create fields come back next time. Saved recipes, presets, wildcard
+          lists and assistant chats are always kept. Resetting settings never touches your images.
         </p>
       </details>
       <details>
-        <summary tabIndex={0}>Ordinary ComfyUI and the shared queue</summary>
+        <summary>Using ComfyUI directly</summary>
         <p>
-          Open ComfyUI uses this studio’s engine in your browser. Queue reports browser-started work; Latent waits
-          behind it and cancels only its own jobs. Finish or cancel browser work in ComfyUI before stopping or closing
-          the studio. Those outputs do not automatically appear in Library.
+          Latent runs on ComfyUI. Settings › Open ComfyUI opens the same engine in your browser for node-graph
+          tinkering. Anything you start there shows up in the queue, and Latent waits for it to finish. Images made in
+          ComfyUI don't show up in your Library.
         </p>
         <p>
-          Your default studio home is %LOCALAPPDATA%\Latentv2. Settings shows the actual paths. Existing installations
-          are not automatically used or modified.
-        </p>
-      </details>
-      <details>
-        <summary tabIndex={0}>Video planning and local models</summary>
-        <p>
-          Video saves independent drafts and reviews first/last frames, duration, size, and seed. For H3, expand
-          Required local files, supply the exact files separately, then choose Verify saved video assets. Automatic
-          downloads are disabled. Verification can be cancelled without deleting your files. Generation requires the
-          local files and a compatible running private engine; every job checks its selected profile and sources before
-          submission.
-        </p>
-        <p>
-          Actual H3 output quality and performance on this GPU remain unverified. The optional playback diagnostic is a
-          labeled synthetic clip, not AI output or a generated-history entry.
+          Your studio lives in %LOCALAPPDATA%\Latentv2 by default. Settings shows the exact paths. Latent never touches
+          other ComfyUI installs.
         </p>
       </details>
       <details>
-        <summary tabIndex={0}>Licenses and installed files</summary>
+        <summary>Video</summary>
         <p>
-          Latent v2 is MIT licensed. The installation folder includes LICENSE, THIRD-PARTY-NOTICES.txt,
-          LICENSE.electron.txt and LICENSES.chromium.html. Native image libraries have separate licenses, including the
-          LGPL. Uninstalling the desktop app preserves your studio, models and images.
+          Video keeps separate drafts where you set the first and last frames, length, size and seed. Setup downloads
+          the video model files, or you can add files you already have and check them. Every job double-checks its files
+          before starting.
+        </p>
+        <p>
+          Video is new and heavy, so results and speed depend a lot on your GPU. A clip marked as a playback sample is
+          only there to test playback. It isn't AI output.
+        </p>
+      </details>
+      <details>
+        <summary>Licenses and installed files</summary>
+        <p>
+          Latent v2 is MIT licensed. The install folder includes LICENSE, THIRD-PARTY-NOTICES.txt, LICENSE.electron.txt
+          and LICENSES.chromium.html. Some image libraries have their own licenses, including the LGPL. Uninstalling the
+          app keeps your studio, models and images.
         </p>
       </details>
     </div>

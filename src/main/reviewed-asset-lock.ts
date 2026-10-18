@@ -141,7 +141,7 @@ sys.stdin.buffer.read()
             new Error(
               code === 42
                 ? backendOwner
-                  ? 'Another Latent process owns this studio backend. Stop it before changing private Python configuration.'
+                  ? 'Another copy of Latent is using this studio. Close it first.'
                   : 'Another Latent process is already setting up this reviewed asset. Wait for it to finish, then retry.'
                 : `Reviewed asset ownership helper exited (${code}): ${stderr}`,
             ),

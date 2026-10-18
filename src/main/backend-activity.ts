@@ -158,7 +158,7 @@ export class BackendActivityService {
       );
     if (activity.foreignRunning || activity.foreignPending)
       throw new Error(
-        `Cannot ${action} while ordinary ComfyUI has ${activity.foreignRunning} running and ${activity.foreignPending} waiting jobs. Finish or cancel that work in ComfyUI first.`,
+        `Can't ${action} while ComfyUI is busy with work started outside Latent (${activity.foreignRunning} running, ${activity.foreignPending} queued). Finish or cancel it in ComfyUI first.`,
       );
   }
   async assertIdle(action: string): Promise<void> {

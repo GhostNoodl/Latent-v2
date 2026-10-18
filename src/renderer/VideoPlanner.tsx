@@ -255,8 +255,8 @@ export function VideoPlanner({
                         </>
                       ) : (
                         <Notice error>
-                          The saved {role === 'firstFrame' ? 'first' : 'last'} frame is unavailable or changed. Select a
-                          replacement deliberately.
+                          The saved {role === 'firstFrame' ? 'first' : 'last'} frame is missing or has changed. Pick a
+                          new one.
                         </Notice>
                       )}
                     </figure>

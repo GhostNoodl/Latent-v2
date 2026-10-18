@@ -122,7 +122,9 @@ async function hashFile(
       before.ino !== current.ino ||
       before.mtimeMs !== current.mtimeMs
     )
-      throw new Error('Runtime files changed during inventory. Finish maintenance and restart the backend.');
+      throw new Error(
+        'Engine files changed while Latent was checking them. Let any update finish, then restart the engine.',
+      );
     return { sha256: hash.digest('hex'), bytes };
   } finally {
     await handle.close();

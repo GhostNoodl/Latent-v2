@@ -161,7 +161,7 @@ export class ModelLocationService implements ModelLocationLookup {
     const index = this.read();
     if (index.pending)
       throw new Error(
-        'A model move needs recovery. Stop the backend and recover model folders before refreshing or generating.',
+        'A model move was interrupted. Stop the engine and choose Recover interrupted move in Models before generating.',
       );
     return index.bindings;
   }
@@ -335,7 +335,7 @@ export class ModelLocationService implements ModelLocationLookup {
             ? 'Check permissions on the source and destination folders, and close any other app using the model file. '
             : '';
           throw new Error(
-            `The move was interrupted; its files are preserved for recovery. ${accessAdvice}Stop the backend and choose Recover interrupted move before retrying. ${error instanceof Error ? error.message : String(error)}`,
+            `The move was interrupted; its files are preserved for recovery. ${accessAdvice}Stop the engine and choose Recover interrupted move before retrying. ${error instanceof Error ? error.message : String(error)}`,
           );
         }
         await this.readFolders();

@@ -34,10 +34,10 @@ export function hardwareBackendPolicy(
     applyOnCleanInstall: Boolean(cuda && !saved),
     restartRequired: Boolean(cuda && actual !== 'auto'),
     explanation: saved
-      ? 'The saved device choice wins. Automatic CUDA/default memory is only a visible suggestion; applying it is an explicit action for the next engine start.'
+      ? 'Your saved choice stays in charge. Automatic is only a suggestion until you apply it, and it takes effect the next time the engine starts.'
       : cuda
-        ? 'For a clean install with one detected NVIDIA GPU, use automatic device selection and the backend’s default memory management. This policy does not change a generation draft.'
-        : 'Detection is unavailable or ambiguous. Keep the current device selection and inspect the runtime before choosing a hardware default.',
+        ? 'You have one NVIDIA graphics card, so Automatic is the best choice. It does not change your Create settings.'
+        : 'Latent could not tell which graphics card to use. Keep your current choice, start the engine, and refresh to check again.',
   };
 }
 function proposal(profile: HardwareProfile, draft: GenerationDraft): GenerationDraft {
@@ -231,7 +231,7 @@ export class HardwareProfilesService {
         inventory.runtimeIdentity.data.launch.deviceMode !== this.hooks.getSettings().deviceMode
       )
         reasons.push(
-          'The selected backend preference differs from the running engine. Restart it when idle and refresh recommendations.',
+          'Your memory and device choice changed since the engine started. Restart the engine when nothing is generating, then refresh.',
         );
       if (
         draft.faceDetailer ||
@@ -407,7 +407,7 @@ export class HardwareProfilesService {
         'Qwen text encoding is already on CPU; the 20.5-GB diffusion model may still require offloading. The measured Fast @2 square example is specific to its recorded machine/runtime. Smaller saved dimensions do not reduce the aligned native sampling area; do not use them as a memory-recovery shortcut.',
       );
     steps.push(
-      'Low-VRAM mode is an explicit backend setting that takes effect after an owned engine restart. Its speed/quality tradeoff is not yet measured here.',
+      'Try Low VRAM in Settings › Memory and device. It takes effect when the engine restarts and is usually slower.',
     );
     return {
       recognized: true,

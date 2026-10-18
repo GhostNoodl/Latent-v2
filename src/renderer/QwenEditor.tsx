@@ -86,9 +86,7 @@ export function QwenSelectedStudioImageDetails({
       <strong>
         {record.width} × {record.height}
       </strong>
-      <small>
-        This image is being previewed from Create. Your saved conversation and current edit input are unchanged.
-      </small>
+      <small>You're looking at an image from Create. Nothing in your Qwen chat changes unless you use it.</small>
       <button type="button" disabled={locked} onClick={onUse}>
         <ImagePlus size={14} />
         Use this image as input
@@ -104,9 +102,9 @@ export function QwenQueueJobDetails({ job }: { job: GenerationJob }) {
       ? running
         ? 'Editing image'
         : job.queueState === 'pending'
-          ? 'Waiting in ComfyUI'
+          ? 'Waiting its turn'
           : job.queueState === 'submitting'
-            ? 'Submitting to ComfyUI'
+            ? 'Sending to the engine'
             : 'Checking engine state'
       : job.status === 'queued'
         ? 'Queued image edit'
@@ -294,7 +292,7 @@ export function QwenEditor({
         const existing = next.conversations.find(item => item.id === conversationId);
         if (!existing && next.conversations.length >= QWEN_CONVERSATION_LIMIT) {
           setNotice(
-            'This image is previewed, but 50 saved editor drafts already exist. Remove an unused editor draft to replay or branch here.',
+            'You already have 50 saved Qwen drafts, which is the limit. Delete one you no longer need to edit this image.',
           );
         } else {
           const draft =
@@ -699,7 +697,7 @@ export function QwenEditor({
     setShowLive(false);
     setNotice(
       parent
-        ? 'This exact version is now the input. Describe the next change; its parent is retained in the recipe.'
+        ? 'This version is now the one being edited. Describe the next change.'
         : 'Starting image imported. Describe the first change.',
     );
   }
@@ -860,7 +858,7 @@ export function QwenEditor({
           {repairNeeded &&
             profile !== 'compact' &&
             !['stopped', 'error', 'not-installed'].includes(snapshot.backend.state) && (
-              <p>Stop the image engine in Create before repairing Qwen assets.</p>
+              <p>Stop the engine in Settings before repairing the Qwen files.</p>
             )}
           <div className="qwen-runtime">
             <div>
@@ -1321,8 +1319,8 @@ export function QwenEditor({
                           )}
                           {sourceChanged && (
                             <Notice error>
-                              The retained input is missing or its identity differs. Choose the intended source
-                              explicitly before generating.
+                              The image this edit started from is missing or has changed. Pick the image you want to
+                              edit before generating.
                             </Notice>
                           )}
                           <small>
@@ -1559,8 +1557,7 @@ export function QwenEditor({
                 : saveState === 'saving'
                   ? 'Saving editor draft…'
                   : 'Editor draft has unsaved changes.'}{' '}
-              Generated versions and full recipes are retained separately in the Library. Closing this editor leaves
-              queued jobs running.
+              Everything you generate is also saved in your Library. Closing the editor doesn't stop queued edits.
             </small>
             <div className="button-row">
               {saveError && (

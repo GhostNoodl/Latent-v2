@@ -146,13 +146,12 @@ export function FaceDetailerControls({
         <span className="tag">Experimental · CPU detection</span>
       </div>
       <p className="face-help">
-        Find faces, review the selected regions, then refine each one at 512 × 512. Your chosen diffusion model and
-        prompts supply the edit. The original canvas is retained.
+        Find the faces, pick the ones to fix, and each one gets redrawn up close using your model and prompt. Your
+        original image is kept.
       </p>
       {frozen && (
         <Notice>
-          The saved recipe keeps its exact detections, selected faces, order and seeds. Editing selection, strength,
-          context or seed deliberately creates a new plan.
+          These are the exact faces and seeds from the saved image. Changing any of them makes a new face fix instead.
         </Notice>
       )}
       {(onImport || onUsePreview) && (

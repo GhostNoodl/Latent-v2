@@ -212,9 +212,8 @@ export function ModelLocationsUI({ snapshot, models, actions, onChange }: ModelL
                 <div>
                   <strong>Reuse an existing directory</strong>
                   <p>
-                    Choose a checkpoint or LoRA folder explicitly. Latent reads the original model files and stores
-                    metadata here; it does not copy, move, rename, or delete files in that directory. Conflicting
-                    filenames block generation until resolved.
+                    Point Latent at a checkpoint or LoRA folder you already have. Latent only reads from it and never
+                    copies, moves, renames or deletes anything there. If two models share a file name, fix that first.
                   </p>
                 </div>
                 <div className="button-row">
@@ -269,8 +268,8 @@ export function ModelLocationsUI({ snapshot, models, actions, onChange }: ModelL
                       </strong>
                       <code>{root.path}</code>
                       <small>
-                        {root.kind === 'checkpoint' ? 'Checkpoints' : 'LoRAs'} · {root.modelCount} retained model
-                        identities{!root.active && ' · choose this directory again to reconnect'}
+                        {root.kind === 'checkpoint' ? 'Checkpoints' : 'LoRAs'} · {root.modelCount} models
+                        {!root.active && ' · choose this directory again to reconnect'}
                       </small>
                       {root.error && <p className="model-locations-root-error">{root.error}</p>}
                     </div>

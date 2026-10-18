@@ -57,15 +57,11 @@ export function StorageOverview({ refresh, reveal, run, initialSnapshot }: Stora
         </button>
       </div>
       <p className="storage-help">
-        Private studio folders only. External model libraries are excluded. Refresh measures file sizes without loading
-        models or checking their full hashes. Package progress and transfers below are snapshots from that measurement;
-        refresh to update them.
+        Shows Latent's own folders (not model folders you linked from elsewhere). Numbers update when you press Refresh.
       </p>
       {error && <Notice error>{error}</Notice>}
       {!snapshot && !error && (
-        <Notice>
-          Refresh to see available disk space, saved files, partial downloads, and reviewed package destinations.
-        </Notice>
+        <Notice>Press Refresh to see free space, what's using it, and any half-finished downloads.</Notice>
       )}
       {snapshot && (
         <>
@@ -125,16 +121,15 @@ export function StorageOverview({ refresh, reveal, run, initialSnapshot }: Stora
             </div>
             <div>
               <strong>{bytes(snapshot.totals.stagingBytes)}</strong>
-              <span>Staging / retained files</span>
+              <span>Updates and backups</span>
             </div>
           </div>
           <p className="storage-help">
-            These are logical file sizes, not allocated disk usage. Folder categories count files at each location; the
-            unique-file total counts hard links once. Sparse files, compression and other programs can change actual
-            disk usage. Resume candidates still depend on the server accepting the saved range.
+            Sizes are close estimates; Windows may report slightly different numbers. Half-finished downloads resume
+            when the site allows it.
           </p>
           <details className="storage-folders">
-            <summary>Private folder destinations</summary>
+            <summary>Folders</summary>
             <div className="storage-folder-list">
               {snapshot.areas.map(area => {
                 const destination = findDestination(area.destinationId);
@@ -159,7 +154,7 @@ export function StorageOverview({ refresh, reveal, run, initialSnapshot }: Stora
                       className="icon-button"
                       disabled={!destination}
                       aria-label={`Open ${area.label}`}
-                      title="Open the nearest existing private folder"
+                      title="Open this folder"
                       onClick={() => open(area.destinationId)}
                     >
                       <FolderOpen size={16} />
@@ -170,12 +165,10 @@ export function StorageOverview({ refresh, reveal, run, initialSnapshot }: Stora
             </div>
           </details>
           <div className="storage-packages">
-            <h4>Reviewed workflow packages</h4>
+            <h4>Installable parts</h4>
             <p className="storage-help">
-              A matching file size is only a reuse candidate. The owning setup service verifies identity and decides
-              readiness. Minimum absent payload excludes unmeasured extraction, dependencies and temporary headroom; it
-              is not an installation-space guarantee. Ready workflows may already have extracted files whose download
-              archive is no longer cached.
+              How much each part still needs to download. Unpacking takes extra room, so leave some space beyond these
+              numbers.
             </p>
             {snapshot.packages.map(item => (
               <details className="storage-package" key={item.id}>
@@ -185,9 +178,7 @@ export function StorageOverview({ refresh, reveal, run, initialSnapshot }: Stora
                     <small>{item.state.replaceAll('-', ' ')}</small>
                   </span>
                   <span>
-                    {item.knownPayloadBytes
-                      ? `${bytes(item.minimumDownloadBytes)} minimum absent`
-                      : 'Required size unknown'}
+                    {item.knownPayloadBytes ? `${bytes(item.minimumDownloadBytes)} to download` : 'Size unknown'}
                   </span>
                 </summary>
                 <div className="storage-package-body">
@@ -240,7 +231,7 @@ export function StorageOverview({ refresh, reveal, run, initialSnapshot }: Stora
                             type="button"
                             className="icon-button"
                             aria-label={`Open ${item.name} destination`}
-                            title="Open the nearest existing private folder"
+                            title="Open this folder"
                             onClick={() => open(id)}
                           >
                             <FolderOpen size={15} />

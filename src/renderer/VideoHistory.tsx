@@ -142,7 +142,7 @@ export function VideoHistory({
               </span>
               <small>
                 {record.evidenceKind === 'synthetic-fixture'
-                  ? 'Synthetic playback fixture — not generated'
+                  ? 'Playback sample (not AI-made)'
                   : new Date(record.createdAt).toLocaleString()}
               </small>
             </button>

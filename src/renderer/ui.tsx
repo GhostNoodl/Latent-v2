@@ -5,7 +5,7 @@ export type RunAction = (key: string, task: () => Promise<unknown>, success?: st
 export function bytes(value: number) {
   if (!value) return '0 B';
   const unit = Math.min(4, Math.floor(Math.log(value) / Math.log(1024)));
-  return `${(value / 1024 ** unit).toFixed(unit ? 1 : 0)} ${['B', 'KiB', 'MiB', 'GiB', 'TiB'][unit]}`;
+  return `${(value / 1024 ** unit).toFixed(unit ? 1 : 0)} ${['B', 'KB', 'MB', 'GB', 'TB'][unit]}`;
 }
 export function shortDate(value: string) {
   return new Date(value).toLocaleString(undefined, {

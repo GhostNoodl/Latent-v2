@@ -13,6 +13,7 @@ import { reconcileVisibleTriggers } from '../shared/visible-triggers';
 import { LoraTriggerChoices } from './LoraTriggerChoices';
 import { SizePresets } from './SizePresets';
 import { PreviewMenu } from './PreviewMenu';
+import { draftFieldLabel } from './draft-field-label';
 import { applySnapshotChanges, type SnapshotChanges } from '../shared/snapshot-changes';
 import { useDismissiblePanel } from './useDismissiblePanel';
 import { imageSetupReason } from '../shared/setup';
@@ -47,6 +48,7 @@ import {
   Save,
   Settings2,
   Sparkles,
+  WandSparkles,
   Sprout,
   Trash2,
   Undo2,
@@ -115,13 +117,13 @@ const VideoStudio = lazy(() =>
 
 type Page = 'qwen' | 'create' | 'library' | 'video' | 'models' | 'discover' | 'settings';
 const pages = {
-  qwen: ['Qwen Image Station', 'Create, edit and explore references.'],
-  discover: ['Discover models', 'Explore Civitai and find your next style.'],
-  create: ['Create an image', 'A little room for imagination.'],
-  library: ['Your library', 'Keep the good ideas close.'],
-  video: ['Video studio', 'Save a motion idea. Review what comes next.'],
-  models: ['Models', 'Find your own style.'],
-  settings: ['Studio settings', 'Make yourself at home.'],
+  qwen: ['Qwen', 'Edit images by describing the change, or make new ones from text.'],
+  discover: ['Discover', 'Browse Civitai for checkpoints and LoRAs, and download them here.'],
+  create: ['Create', 'Type a prompt, pick a model and generate.'],
+  library: ['Library', 'Everything you have made, with the settings behind it.'],
+  video: ['Video', 'Turn an idea or an image into a short clip.'],
+  models: ['Models', 'The checkpoints and LoRAs on your PC.'],
+  settings: ['Settings', 'Engine, updates, storage and preferences.'],
 };
 function copyDraft(draft: GenerationDraft): GenerationDraft {
   return {
@@ -408,7 +410,7 @@ export default function App() {
       const validation = draftSchema.safeParse(draftRef.current);
       if (!validation.success)
         throw new Error(
-          `Your latest draft has an unfinished field: ${validation.error.issues[0].path.join(' ')}. Finish editing to save it.`,
+          `Check ${draftFieldLabel(validation.error.issues[0].path)}: it isn't a valid value yet. Your draft saves as soon as it is.`,
         );
       await persist(copyDraft(draftRef.current), savingRevision);
     } while (savingRevision !== revision.current);
@@ -555,7 +557,7 @@ export default function App() {
           receive(await window.latent.applyHardwareBackendRecommendation(reportId));
           setHardwareReportContext(undefined);
           setNotice({
-            text: 'Automatic device selection is saved for the next backend start. Your generation draft is unchanged.',
+            text: 'Saved. The engine picks the best device the next time it starts.',
           });
         })(),
       ),
@@ -783,7 +785,7 @@ export default function App() {
     activity.state !== 'ready'
       ? 'Checking engine activity'
       : foreignJobs
-        ? `ComfyUI: ${activity.foreignRunning} running · ${activity.foreignPending} waiting`
+        ? `Waiting on ComfyUI: ${activity.foreignRunning} running · ${activity.foreignPending} queued`
         : activity.totalRunning
           ? 'Generating in studio'
           : activeJobs.length
@@ -856,7 +858,7 @@ export default function App() {
       : missing.length
         ? 'Restore the missing model files before generating.'
         : changedAssets.length
-          ? 'Saved model versions differ. Choose replacements deliberately.'
+          ? 'A model file changed since this image was made. See the note above.'
           : familyMismatch
             ? checkpoint?.family === 'unknown'
               ? 'Tag your checkpoint with its matching family in Models.'
@@ -1061,7 +1063,6 @@ export default function App() {
           </span>
           latent <small>v2</small>
         </div>
-        <span className="edition">Moonstone studio</span>
         <button className="runtime" onClick={() => setPage('settings')}>
           <span className={`status-dot ${snapshot.backend.state}`} />
           <span>
@@ -1074,8 +1075,8 @@ export default function App() {
                   : snapshot.backend.state === 'starting'
                     ? 'Starting…'
                     : snapshot.backend.state === 'error'
-                      ? 'Backend needs attention'
-                      : 'Backend stopped'}
+                      ? 'Engine needs attention'
+                      : 'Engine stopped'}
           </span>
           <ChevronDown size={13} />
         </button>
@@ -1086,14 +1087,14 @@ export default function App() {
             [
               ['create', Sparkles, 'Create'],
               ['video', Film, 'Video'],
-              ['qwen', Sparkles, 'Qwen'],
+              ['qwen', WandSparkles, 'Qwen'],
               ['library', Images, 'Library'],
               ['models', Boxes, 'Models'],
               ['discover', Compass, 'Discover'],
               ['settings', Settings2, 'Settings'],
             ] as const
           ).map(([key, Icon, label]) => (
-            <button key={key} aria-pressed={page === key} onClick={() => setPage(key)}>
+            <button key={key} aria-current={page === key ? 'page' : undefined} onClick={() => setPage(key)}>
               <Icon size={21} />
               <span>{label}</span>
             </button>
@@ -1184,9 +1185,9 @@ export default function App() {
                       )}
                       {changedAssets.length > 0 && (
                         <Notice error>
-                          Saved model versions differ: {changedAssets.map(id => findAsset(id)?.name || id).join(', ')}.
-                          Restore the original files for this recipe, or deliberately choose a checkpoint in Models /
-                          remove and re-add a LoRA to use a replacement.
+                          These model files changed since this image was made:{' '}
+                          {changedAssets.map(id => findAsset(id)?.name || id).join(', ')}. Put the original files back,
+                          or pick a different checkpoint (or remove and re-add the LoRA) to use the new version.
                         </Notice>
                       )}
                       <div className="lora-section">
@@ -1339,7 +1340,7 @@ export default function App() {
                               draft.autoTriggers &&
                               resolvedPrompt !== draft.prompt && (
                                 <details className="resolved-prompt">
-                                  <summary>Prompt sent to ComfyUI</summary>
+                                  <summary>Full prompt with trigger words</summary>
                                   <p>{resolvedPrompt}</p>
                                 </details>
                               )}
@@ -1653,7 +1654,9 @@ export default function App() {
                     </button>
                     <p className="hint">
                       {cannotGenerate ||
-                        (foreignJobs ? 'Will wait for ordinary ComfyUI to finish.' : 'Ctrl + Enter to generate')}
+                        (foreignJobs
+                          ? 'Starts once the ComfyUI work ahead of it finishes.'
+                          : 'Ctrl + Enter to generate')}
                     </p>
                     {saveState === 'error' && (
                       <p className="draft-status inline-error" role="alert">
@@ -1726,7 +1729,7 @@ export default function App() {
                         className="text-button qwen-preview-action"
                         onClick={() => setQwenEditor({ record: selected })}
                       >
-                        <Sparkles size={14} />
+                        <WandSparkles size={14} />
                         Edit with Qwen
                       </button>
                       <button
@@ -1780,9 +1783,17 @@ export default function App() {
                           <button
                             type="button"
                             className="soft-button"
-                            onClick={() => setPage(snapshot.backend.state === 'ready' ? 'models' : 'settings')}
+                            onClick={() =>
+                              snapshot.backend.state === 'not-installed'
+                                ? setSetupOpen(true)
+                                : setPage(snapshot.backend.state === 'ready' ? 'models' : 'settings')
+                            }
                           >
-                            {snapshot.backend.state === 'ready' ? 'Choose your models' : 'Set up generation'}
+                            {snapshot.backend.state === 'ready'
+                              ? 'Choose your models'
+                              : snapshot.backend.state === 'not-installed'
+                                ? 'Open setup'
+                                : 'Go to the engine'}
                             <ArrowUpRight size={15} />
                           </button>
                         </div>
@@ -2302,7 +2313,7 @@ export default function App() {
           {snapshot.backend.state === 'ready' && activity.state !== 'ready' && <span> · checking</span>}
           {queueOpen ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
         </button>
-        <span>Local studio · SDXL / Illustrious</span>
+        <span>Everything runs on your PC</span>
       </footer>
       {(notice || previousDraft) && (
         <div className={`toast ${notice?.error ? 'error' : ''}`} role={notice?.error ? 'alert' : 'status'}>

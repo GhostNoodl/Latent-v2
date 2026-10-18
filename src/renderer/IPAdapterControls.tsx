@@ -85,10 +85,10 @@ export function IPAdapterControls({
   const setupMessage =
     status.state === 'ready'
       ? engineStopped
-        ? 'Reviewed reference files are activated. Start the image engine to use them.'
-        : 'Reviewed reference files are activated. Reference compatibility is checked before generation.'
+        ? 'Image reference is installed. Start the engine to use it.'
+        : 'Image reference is installed and ready.'
       : status.state === 'staged' && engineStopped
-        ? 'Reviewed reference files are staged. Activate them, then start the image engine.'
+        ? 'Image reference is downloaded. Turn it on, then start the engine.'
         : status.message;
   let framingError = '';
   let rectangle: ReturnType<typeof ipAdapterReferenceRectangle> | undefined;
@@ -276,8 +276,8 @@ export function IPAdapterControls({
               <Notice error>Reference influence must start before it ends.</Notice>
             )}
             <p className="muted small">
-              One SDXL/Illustrious text-to-image pass, batch 1. The reference is retained unchanged. Other advanced
-              workflows require separate compatibility tests.
+              Works with SDXL and Illustrious text-to-image, one image at a time. Some other advanced tools may not work
+              alongside it.
             </p>
           </>
         )}
@@ -297,11 +297,11 @@ export function IPAdapterControls({
           <div className="button-row">
             <button type="button" disabled={busy || !engineStopped} onClick={() => void run(onActivate)}>
               <Power size={14} />
-              {status.state === 'error' ? 'Retry reference-tool activation' : 'Activate reviewed reference tools'}
+              {status.state === 'error' ? 'Try turning it on again' : 'Turn on image reference'}
             </button>
             {!engineStopped && (
               <span className="muted small">
-                Stop the image engine and finish or cancel its queue first. Activation requires a fresh engine start.
+                Stop the engine first (and let the queue finish). It needs a fresh start to load.
               </span>
             )}
           </div>
@@ -320,8 +320,8 @@ export function IPAdapterControls({
         {status.state === 'error' && (
           <>
             <p className="muted small">
-              Repair preserves changed reviewed files and stages replacements. Stop the image engine and finish or
-              cancel its queue first; activate the repaired files afterward.
+              Repair downloads fresh copies of any broken files and keeps the old ones aside. Stop the engine first,
+              then turn image reference back on.
             </p>
             {canActivate && (
               <button type="button" disabled={busy || !engineStopped} onClick={() => void run(onStage)}>
@@ -331,11 +331,8 @@ export function IPAdapterControls({
           </>
         )}
         <details className="ipadapter-provenance">
-          <summary>Reviewed dependencies</summary>
-          <p className="muted small">
-            IP Adapter Plus SDXL with the matching ViT-H vision encoder. File checks are separate from visual and GPU
-            compatibility tests.
-          </p>
+          <summary>What gets installed</summary>
+          <p className="muted small">IP Adapter Plus SDXL with the matching ViT-H vision encoder.</p>
           <a href={IPADAPTER_RELEASE.modelCardUrl} target="_blank" rel="noreferrer">
             Adapter model card · Apache-2.0
           </a>

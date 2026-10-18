@@ -61,7 +61,7 @@ it.each(['qwen21'] as const)(
     );
     expect(host.querySelector('[aria-label="Qwen Image Station"]')).not.toBeNull();
     expect(host.querySelector('[role="dialog"]')).toBeNull();
-    expect(host.textContent).toContain('16.1 GiB');
+    expect(host.textContent).toContain('16.1 GB');
     const generate = [...host.querySelectorAll('button')].find(b => b.textContent === 'Generate image')!;
     expect(generate.disabled).toBe(false);
     await act(async () => generate.click());

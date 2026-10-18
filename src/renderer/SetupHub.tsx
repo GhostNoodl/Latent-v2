@@ -171,8 +171,8 @@ export function SetupHub({
         </div>
 
         <p className="small">
-          Image setup offers Illustrious XL 1.1. Qwen uses the Base editing bundle. Video uses the fused H3 profile.
-          Other models, faster editing profiles and optional tools remain available in their own tabs.
+          Each card installs a good starting point: Illustrious XL 1.1 for images, Qwen's standard editing model, and
+          the H3 video model. You can add other models and extra tools later from their own pages.
         </p>
 
         {checking && <p role="status">Checking hardware and available space…</p>}
