@@ -150,7 +150,7 @@ it('one-click refinement uses standard sampling and saved seed without changing 
   expect(d).toMatchObject({
     width: 2048,
     height: 2048,
-    steps: 20,
+    steps: 10,
     sampler: 'euler',
     scheduler: 'simple',
     seed: '4',

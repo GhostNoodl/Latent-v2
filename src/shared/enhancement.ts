@@ -167,7 +167,8 @@ export function prepareOneClickEnhancement(
   const next = prepareEnhancement(record, source, current, scale, 0.3);
   return draftSchema.parse({
     ...next,
-    steps: 20,
+    // At 0.3 denoise, 10 steps matched 20 on a 2048px refine (mean pixel diff ~1/255) in half the time.
+    steps: 10,
     sampler: 'euler',
     scheduler: 'simple',
     seed: record.actualSeed,

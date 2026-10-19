@@ -1021,7 +1021,7 @@ it.each([
     height,
     prompt: first.resolvedPrompt,
     seed: first.actualSeed,
-    steps: 20,
+    steps: 10,
     sampler: 'euler',
     scheduler: 'simple',
     enhance: { parentRecordId: first.id, standard: true },
