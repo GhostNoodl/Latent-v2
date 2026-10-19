@@ -142,6 +142,14 @@ it('leaves Enhance on source removal or workflow changes, preserving ordinary ed
   expect(reconcileEnhancementChange(prior, prior)).toBe(prior);
 });
 
+it('one-click refinement picks 8-10 steps by output size', async () => {
+  const { enhancementSteps } = await import('../src/shared/enhancement');
+  expect(enhancementSteps(1024, 1024)).toBe(10);
+  expect(enhancementSteps(1536, 1536)).toBe(9);
+  expect(enhancementSteps(1408, 2048)).toBe(9);
+  expect(enhancementSteps(2048, 2048)).toBe(8);
+});
+
 it('one-click refinement uses standard sampling and saved seed without changing legacy replay', async () => {
   const { prepareOneClickEnhancement, enhancementActionLabel } = await import('../src/shared/enhancement');
   const current = { ...DEFAULT_DRAFT, autoFace: { profile: 'illustrated' as const, strength: 0.45, classic: true } };
@@ -150,7 +158,7 @@ it('one-click refinement uses standard sampling and saved seed without changing 
   expect(d).toMatchObject({
     width: 2048,
     height: 2048,
-    steps: 10,
+    steps: 8,
     sampler: 'euler',
     scheduler: 'simple',
     seed: '4',

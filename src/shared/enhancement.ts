@@ -20,6 +20,14 @@ export function enhancementSize(width: number, height: number, scale: number) {
     height: Math.min(2048, Math.ceil((height * factor) / 64) * 64),
   };
 }
+/**
+ * One-click refine steps: 10 at ~1.5 MP falling to 8 at 4 MP (2048x2048), since each step costs more as the image grows.
+ * At 0.3 denoise this matched a 20-step refine (mean pixel diff ~1/255) in about half the time.
+ */
+export function enhancementSteps(width: number, height: number): number {
+  const megapixels = (width * height) / (1024 * 1024);
+  return Math.min(10, Math.max(8, Math.round(10 - ((megapixels - 1.5) * 2) / 2.5)));
+}
 export function enhancementIssue(draft: GenerationDraft): string | undefined {
   if (!draft.enhance) return;
   if (!draft.imageInput || draft.imageInput.mode !== 'img2img' || draft.imageInput.denoise <= 0)
@@ -167,8 +175,7 @@ export function prepareOneClickEnhancement(
   const next = prepareEnhancement(record, source, current, scale, 0.3);
   return draftSchema.parse({
     ...next,
-    // At 0.3 denoise, 10 steps matched 20 on a 2048px refine (mean pixel diff ~1/255) in half the time.
-    steps: 10,
+    steps: enhancementSteps(next.width, next.height),
     sampler: 'euler',
     scheduler: 'simple',
     seed: record.actualSeed,

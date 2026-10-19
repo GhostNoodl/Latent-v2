@@ -8,6 +8,7 @@ import type { AppSnapshot, GenerationDraft, GenerationRecord, LatentAPI, ModelAs
 import { VIDEO_AVAILABILITY } from '../src/shared/video-plan';
 import { createWildcardSnapshot, prepareDynamicPromptDraft } from '../src/shared/dynamic-prompt-recipe';
 import type { SourceImageAsset } from '../src/shared/source-types';
+import { enhancementSteps } from '../src/shared/enhancement';
 
 // Full React App with real Create/History components and controlled in-memory IPC.
 // No browser/Electron window, external service, file write, image decoding or inference.
@@ -1021,7 +1022,7 @@ it.each([
     height,
     prompt: first.resolvedPrompt,
     seed: first.actualSeed,
-    steps: 10,
+    steps: enhancementSteps(width, height),
     sampler: 'euler',
     scheduler: 'simple',
     enhance: { parentRecordId: first.id, standard: true },
