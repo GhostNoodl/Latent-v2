@@ -11,6 +11,8 @@ export interface AssistantStatus {
   receivedBytes?: number;
   totalBytes?: number;
   requestId?: string;
+  /** The reply as it is being written. */
+  reply?: { explanation?: string; prompt?: string };
   logTail: string[];
 }
 
@@ -19,6 +21,8 @@ export interface AssistantSuggestionRequest {
   videoContext?: import('./video-types').VideoDraft;
   instruction: string;
   draft: GenerationDraft;
+  /** Display names of the LoRAs in the draft. */
+  loraNames?: string[];
   history?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 
@@ -34,6 +38,8 @@ export interface AssistantSuggestion {
   completionTokens?: number;
   durationMs: number;
   historyTurnsUsed: number;
+  /** Trigger words, wildcards or choice groups from the prompt that the proposal left out. */
+  dropped?: string[];
 }
 
 export interface AssistantConversation {

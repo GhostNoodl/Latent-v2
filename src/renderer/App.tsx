@@ -2396,6 +2396,7 @@ export default function App() {
         <PromptAssistant
           status={snapshot.assistant}
           draft={draft}
+          loraNames={draft.loras.map(lora => models.find(model => model.id === lora.modelId)?.name ?? lora.modelId)}
           onClose={() => setAssistantOpen(false)}
           run={run}
           onApply={suggestion => {

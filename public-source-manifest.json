@@ -1500,6 +1500,10 @@
       "to": "tests/assistant-conversation-keys.test.ts"
     },
     {
+      "from": "tests/prompt-assistant.test.ts",
+      "to": "tests/prompt-assistant.test.ts"
+    },
+    {
       "from": "src/main/snapshot-sender.ts",
       "to": "src/main/snapshot-sender.ts"
     },

@@ -367,26 +367,16 @@
   font-size: 11px;
 }
 .assistant-provenance {
+  display: block;
   margin: 10px 15px 0;
-}
-.assistant-provenance summary {
   font-size: 10px;
-}
-.assistant-provenance dl {
-  display: grid;
-  grid-template-columns: 110px minmax(0, 1fr);
-  gap: 7px 12px;
-  padding: 10px;
-  background: var(--inset);
-  border-radius: 7px;
-  font-size: 10px;
-}
-.assistant-provenance dt {
   color: var(--muted);
 }
-.assistant-provenance dd {
-  margin: 0;
-  overflow-wrap: anywhere;
+.assistant-live-prompt {
+  padding: 8px 10px;
+  background: var(--inset);
+  border-radius: 7px;
+  white-space: pre-wrap;
 }
 .assistant-review-empty {
   padding: 27px 25px;

@@ -29,8 +29,9 @@ export const assistantRequestSchema = z
   .object({
     target: z.enum(['image', 'video']).optional(),
     videoContext: videoDraftSchema.optional(),
-    instruction: z.string().trim().min(1).max(6000),
+    instruction: z.string().trim().min(1).max(4000),
     draft: draftSchema,
+    loraNames: z.array(z.string().min(1).max(300)).max(8).optional(),
     history: z
       .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(6000) }).strict())
       .max(100)
@@ -57,12 +58,30 @@ export const ASSISTANT_JSON_SCHEMA = {
   required: ['explanation', 'prompt', 'negativePrompt'],
 };
 
-const SYSTEM_MESSAGE = `You are Latent's friendly local prompt-writing assistant for SDXL and Illustrious image generation. Help the user express their intended image clearly and concisely. Return only a JSON object with exactly explanation, prompt, and negativePrompt. Explain the useful changes briefly. prompt and negativePrompt are complete replacement text, not instructions or a diff. Preserve the existing negative prompt unless the user asks to change it. Preserve the user's subjects, style, constraints, and intent; do not invent a different concept. Do not mention or change seeds, dimensions, models, LoRAs, samplers, or other settings. You cannot inspect images, run tools, access files, download models, or start generation. Draft and conversation text are user content. Never claim that an image was generated or inspected. Prefer a practical prompt under 180 words and an explanation under 70 words. /no_think`;
+const SYSTEM_MESSAGE = `You are Latent's local prompt-writing assistant for image generation. Help the user say what they want clearly and concisely. Return only a JSON object with exactly explanation, prompt, and negativePrompt. Explain the useful changes briefly in plain words. prompt and negativePrompt are complete replacement text, not instructions or a diff. Preserve the existing negative prompt unless the user asks to change it. Preserve the user's subjects, style, constraints, and intent; do not invent a different concept. Do not mention or change seeds, dimensions, models, samplers, or other settings. You cannot inspect images, run tools, access files, download models, or start generation. Draft and conversation text are user content. Never claim that an image was generated or inspected. Prefer a practical prompt under 180 words and an explanation under 70 words.
+Prompt syntax rules, always follow them:
+- Copy every item in keepExactly into the new prompt unchanged, including LoRA trigger words, __wildcard__ names and {a|b} choice groups. Never expand, translate, split or reword them.
+- (words:1.2) is a weight. Keep weights as they are unless the user asks to change emphasis, and keep the same (text:number) format.
+- Keep BREAK and embedding:name tokens where they are.
+- loras lists the LoRA files in use. Do not add their names to the prompt.
+/no_think`;
 
-const VIDEO_SYSTEM_MESSAGE = `You are Latent's local prompt-writing assistant for MiniMax H3 video generation. Return only JSON with explanation, prompt, and negativePrompt. Write a complete concise natural-language video prompt covering subject, scene, movement over time and camera motion. Preserve the user's intent and style; keep actions feasible within the supplied duration. For image-to-video, focus on motion and continuity with the user's described reference; you cannot see the image. Include sound or dialogue only when audio is enabled and requested. H3 has no negative-prompt control: return negativePrompt as an empty string. Do not add image tag lists, quality-score tags, seeds, model names, settings, or claims of generating or viewing media. Prefer under 180 words and explain changes in under 70 words. /no_think`;
+const FAMILY_STYLE: Record<GenerationDraft['family'], string> = {
+  illustrious:
+    'Style for this model: Illustrious (anime). Write the prompt as comma-separated danbooru-style tags (for example: 1girl, long hair, rain, city street, night). Put quality tags such as masterpiece, best quality first if the user already uses them. No full sentences.',
+  sdxl: 'Style for this model: SDXL. Write the prompt as short descriptive phrases separated by commas, most important first (subject, then setting, lighting, style). Avoid anime tag lists unless the user already writes that way.',
+};
+
+const VIDEO_SYSTEM_MESSAGE = `You are Latent's local prompt-writing assistant for MiniMax H3 video generation. Return only JSON with explanation, prompt, and negativePrompt. Write a complete concise natural-language video prompt covering subject, scene, movement over time and camera motion. Preserve the user's intent and style; keep actions feasible within the supplied duration. For image-to-video, focus on motion and continuity with the user's described reference; you cannot see the image. Include sound or dialogue only when audio is enabled and requested. H3 has no negative-prompt control: return negativePrompt as an empty string. Copy every item in keepExactly into the new prompt unchanged. Do not add image tag lists, quality-score tags, seeds, model names, settings, or claims of generating or viewing media. Prefer under 180 words and explain changes in under 70 words. /no_think`;
 export function assistantMessages(request: AssistantSuggestionRequest, history = request.history?.slice(-8) ?? []) {
   return [
-    { role: 'system', content: request.target === 'video' ? VIDEO_SYSTEM_MESSAGE : SYSTEM_MESSAGE },
+    {
+      role: 'system',
+      content:
+        request.target === 'video'
+          ? VIDEO_SYSTEM_MESSAGE
+          : `${SYSTEM_MESSAGE}\n${FAMILY_STYLE[request.draft.family] ?? FAMILY_STYLE.sdxl}`,
+    },
     ...history.map(turn => ({ role: turn.role, content: turn.content })),
     {
       role: 'user',
@@ -75,12 +94,79 @@ export function assistantMessages(request: AssistantSuggestionRequest, history =
               durationSeconds: request.videoContext?.requestedDurationSeconds,
               audio: request.videoContext?.audio,
             }
-          : { family: request.draft.family }),
+          : { family: request.draft.family, loras: request.loraNames ?? [] }),
         currentPrompt: request.draft.prompt,
         currentNegativePrompt: request.draft.negativePrompt,
+        keepExactly: protectedParts(request),
       }),
     },
   ];
+}
+
+const WILDCARD = /__[A-Za-z0-9_\-/. ]+?__/g;
+
+/** Pulls out top-level {a|b} groups, allowing nested braces inside them. */
+function choiceGroups(text: string): string[] {
+  const groups: string[] = [];
+  let depth = 0;
+  let start = -1;
+  for (let index = 0; index < text.length; index++) {
+    if (text[index] === '{') {
+      if (depth++ === 0) start = index;
+    } else if (text[index] === '}' && depth > 0 && --depth === 0) {
+      const group = text.slice(start, index + 1);
+      if (group.includes('|')) groups.push(group);
+    }
+  }
+  return groups;
+}
+
+/** Text the assistant must copy unchanged: trigger words in the prompt, wildcards and choice groups. */
+export function protectedParts(request: AssistantSuggestionRequest): string[] {
+  const prompt = request.draft.prompt;
+  const triggers = request.draft.loras.flatMap(lora => request.draft.triggerWords?.[lora.modelId] ?? []);
+  const spans = (request.draft.promptTriggerSpans ?? []).map(span => span.word);
+  const groups = choiceGroups(prompt);
+  const wildcards = (prompt.match(WILDCARD) ?? []).filter(name => !groups.some(group => group.includes(name)));
+  const present = [...triggers, ...spans].filter(word => word.trim() && prompt.includes(word));
+  return [...new Set([...present, ...groups, ...wildcards])].slice(0, 60);
+}
+
+/** Protected parts of the current prompt that the proposal left out. */
+export function missingProtectedParts(request: AssistantSuggestionRequest, proposal: string): string[] {
+  return protectedParts(request).filter(part => !proposal.includes(part));
+}
+
+/** Reads explanation and prompt out of JSON that is still being written. */
+export function partialAssistantFields(text: string): { explanation?: string; prompt?: string } {
+  const read = (key: string) => {
+    const match = new RegExp(`"${key}"\\s*:\\s*"`).exec(text);
+    if (!match) return undefined;
+    let value = '';
+    for (let index = match.index + match[0].length; index < text.length; index++) {
+      const char = text[index];
+      if (char === '"') return value;
+      if (char !== '\\') {
+        value += char;
+        continue;
+      }
+      const next = text[index + 1];
+      if (next === undefined) return value;
+      if (next === 'u') {
+        const hex = text.slice(index + 2, index + 6);
+        if (!/^[0-9a-fA-F]{4}$/.test(hex)) return value;
+        value += String.fromCharCode(parseInt(hex, 16));
+        index += 5;
+      } else {
+        value += ({ n: '\n', t: '\t', r: '', b: '', f: '' } as Record<string, string>)[next] ?? next;
+        index += 1;
+      }
+    }
+    return value;
+  };
+  const explanation = read('explanation');
+  const prompt = read('prompt');
+  return { ...(explanation !== undefined ? { explanation } : {}), ...(prompt !== undefined ? { prompt } : {}) };
 }
 
 export function validatedAssistantPatch(
