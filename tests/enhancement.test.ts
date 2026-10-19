@@ -143,21 +143,27 @@ it('leaves Enhance on source removal or workflow changes, preserving ordinary ed
 });
 
 it('one-click refinement uses standard sampling and saved seed without changing legacy replay', async () => {
-  const { prepareOneClickEnhancement, enhancementActionLabel } = await import('../src/shared/enhancement');
+  const { prepareOneClickEnhancement, enhancementActionLabel, oneClickEnhancementSteps } =
+    await import('../src/shared/enhancement');
+  expect(oneClickEnhancementSteps(1024, 1024)).toBe(10);
   const current = { ...DEFAULT_DRAFT, autoFace: { profile: 'illustrated' as const, strength: 0.45, classic: true } };
   const before = JSON.stringify(current),
     d = prepareOneClickEnhancement(parent, source, current);
   expect(d).toMatchObject({
     width: 2048,
     height: 2048,
-    steps: 20,
+    steps: 8,
     sampler: 'euler',
     scheduler: 'simple',
     seed: '4',
     enhance: { standard: true },
     autoFace: { classic: true, cfg: 7, applyLoras: false },
   });
-  expect(prepareOneClickEnhancement(parent, source, current, 1.5)).toMatchObject({ width: 1536, height: 1536 });
+  expect(prepareOneClickEnhancement(parent, source, current, 1.5)).toMatchObject({
+    width: 1536,
+    height: 1536,
+    steps: 9,
+  });
   const graph = buildEnhancementWorkflow(buildWorkflow(d, [checkpoint], '4', 'one-click'), d, 'sources/example.png');
   expect(Object.values(graph).some(n => n.class_type === 'LatentUpscale')).toBe(false);
   const pixels = graph['4'].inputs.pixels as [string, number];
