@@ -113,13 +113,13 @@
     },
     {
       "path": "src/main/main.ts",
-      "bytes": 54467,
-      "sha256": "12a4cf436928036f6582c23077a30fccd89a69314ebbf6117daf4f9240cb6803"
+      "bytes": 55844,
+      "sha256": "efa63b066bc28ba83a934156f4d6e94300400dd19caf6fb23df0adeec4f26a2c"
     },
     {
       "path": "src/main/managed-backend.ts",
-      "bytes": 37848,
-      "sha256": "9def3c4bf2ec5fd169ed32a86cb04e339c90085d24b27d7e7e4713fc4532478f"
+      "bytes": 38058,
+      "sha256": "17a59432d94566f7f79b4d5f5332a243d31dee580fcabf6260a704151f820073"
     },
     {
       "path": "src/main/model-library-lease.ts",
@@ -208,8 +208,8 @@
     },
     {
       "path": "src/main/runtime-config.ts",
-      "bytes": 11443,
-      "sha256": "799030f28486acb43827874b2da904ffbeef6371433e0f5db4710d090365bbee"
+      "bytes": 12401,
+      "sha256": "99322aad791e0ae962388e5a91c646a9a33da3c8b4ecfe58219b58c9afcda0db"
     },
     {
       "path": "src/main/runtime-environment-command.ts",
@@ -243,8 +243,8 @@
     },
     {
       "path": "src/main/runtime-update-probe.ts",
-      "bytes": 5588,
-      "sha256": "fceaddd8c97569b8d110529703959cac866efedbd54c46b74241bc6966da666b"
+      "bytes": 5896,
+      "sha256": "b0d1a31a23f88b01200e3c6e48dbf1b87727c2529b2beb2fd4898289e1d0c564"
     },
     {
       "path": "src/main/runtime-update-storage.ts",
@@ -295,6 +295,11 @@
       "path": "src/main/storage-overview.ts",
       "bytes": 28788,
       "sha256": "dec2762b9b09372736b963c9fc00465e3036dd7f6fc66e2efc258b990ed2b448"
+    },
+    {
+      "path": "src/main/sage-attention.ts",
+      "bytes": 4943,
+      "sha256": "b85b6c19370e13afa8658de472a5c43d18507bc58648424441b229e4d106bc00"
     },
     {
       "path": "src/main/store.ts",
@@ -358,8 +363,8 @@
     },
     {
       "path": "src/preload/preload.ts",
-      "bytes": 9175,
-      "sha256": "6040b96f37118a9f7ce95b282c3019cd42e296fe8d93f213e8874f1f83c5b6a9"
+      "bytes": 9295,
+      "sha256": "ff2eb18378cefb85c933d5be0fda76e796db74b5214baf8aaf26247c8fd03980"
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
@@ -588,8 +593,8 @@
     },
     {
       "path": "src/renderer/Settings.tsx",
-      "bytes": 21841,
-      "sha256": "9b6bfee71fa5760d518d37349527bbf17ef616ae1e643a7ea66b4e40aaa5e713"
+      "bytes": 23039,
+      "sha256": "6c0bc3590a3ce2ac9b8279faa1e09628c480b3a8fe561be5ce3fbe9a6b6a77bd"
     },
     {
       "path": "src/renderer/SharedBackendActivity.tsx",
@@ -918,8 +923,8 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 20125,
-      "sha256": "cf3edf7f98b0c33407f73b34a21b6ab1c374c1f7e8dafcb9c5bb2433fa542bf4"
+      "bytes": 20422,
+      "sha256": "eb34ce49053057eff1163afbaf1dcad515def6dd271c1a9f2c008b5855753191"
     },
     {
       "path": "src/shared/validation.ts",
@@ -1019,12 +1024,12 @@
     {
       "path": "package.json",
       "bytes": 4517,
-      "sha256": "830ff1ed29ea3fa78996f15f31a39fefb4ca96c22d3e7826620623feb0f3c82a"
+      "sha256": "562cc1ba2c5a8dc85086ec1bd3192195b9161cd00d3567cccb75e104a2e42221"
     },
     {
       "path": "package-lock.json",
       "bytes": 252660,
-      "sha256": "f89a4e6141f88089fc6267d47b3422d2f94ec3f42967dcb67bac6a104aef2918"
+      "sha256": "8b04568fecb36c99b3c11504bad6780aaa623603066691951415d11fc9900bcc"
     },
     {
       "path": "tsconfig.json",
@@ -1087,6 +1092,11 @@
       "sha256": "de063b75d559d1349e3f9bf77f2973e147bbf83960dd1ad2e88070ca4287eb27"
     },
     {
+      "path": "tests/sage-attention.test.ts",
+      "bytes": 4130,
+      "sha256": "fcd40015fac30fb70bf5c65625d066980b2a2a24905ca17c505e5104d632c1e2"
+    },
+    {
       "path": "tests/runtime-isolation.test.ts",
       "bytes": 12131,
       "sha256": "2d07b613eef84ee9139465089d2674d0b5d8b5c70881a470ec1c6f6778a10630"
@@ -1113,8 +1123,8 @@
     },
     {
       "path": "tests/runtime-install-packages.test.ts",
-      "bytes": 8699,
-      "sha256": "f1fa38f8a66b0cb8d3f11a145d06d1c3ca1e6271d1ffd4fda924b1206de4eaf1"
+      "bytes": 8820,
+      "sha256": "2f718c59027c70c9c0c70543a807d434779f890a89da95926a72477f445a2492"
     },
     {
       "path": "tests/runtime-command-error.test.ts",

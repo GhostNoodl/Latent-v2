@@ -13,6 +13,7 @@ import {
   modelPathsYaml,
   RUNTIME_RELEASE,
   runtimeEnvironment,
+  SAGE_ATTENTION_PACKAGES,
   validateRuntimePaths,
 } from './runtime-config';
 import type { BackendModelRoot } from '../shared/model-locations';
@@ -619,7 +620,12 @@ export class ManagedBackend {
       await this.command(uv, ['pip', 'check', '--python', this.paths.python]);
       await verifyUpdateEnvironment(
         this.paths,
-        { pythonVersion: RUNTIME_RELEASE.pythonVersion, packages: REVIEWED_RUNTIME_PACKAGES },
+        {
+          pythonVersion: RUNTIME_RELEASE.pythonVersion,
+          packages: REVIEWED_RUNTIME_PACKAGES,
+          // Re-running setup keeps an installed SageAttention add-on.
+          optionalPackageSets: [SAGE_ATTENTION_PACKAGES.map(pin => ({ ...pin }))],
+        },
         this.abort.signal,
         'setup',
       );

@@ -58,6 +58,13 @@ async function privateProbe(paths: AppPaths, source: string, args: string[], sig
 const packagesSource = `import importlib.metadata,json,platform,re
 packages=sorted([{'name':re.sub('[-_.]+','-',d.metadata['Name']).lower(),'version':d.version} for d in importlib.metadata.distributions()],key=lambda x:x['name'])
 print(json.dumps({'pythonVersion':platform.python_version(),'packages':packages}))`;
+/** Installed packages of the private Python, with normalized names. */
+export async function probeInstalledPackages(
+  paths: AppPaths,
+  signal?: AbortSignal,
+): Promise<{ pythonVersion: string; packages: { name: string; version: string }[] }> {
+  return privateProbe(paths, packagesSource, [], signal);
+}
 export function reviewedPackagesForObservation(
   set: Pick<ReviewedRuntimeSet, 'packages' | 'optionalPackageSets'>,
   observed: Array<{ name: string; version: string }>,

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ManagedBackend } from '../src/main/managed-backend';
-import { RUNTIME_RELEASE } from '../src/main/runtime-config';
+import { RUNTIME_RELEASE, SAGE_ATTENTION_PACKAGES } from '../src/main/runtime-config';
 import { REVIEWED_RUNTIME_PACKAGES } from '../src/main/runtime-update-packages';
 import { verifyUpdateEnvironment } from '../src/main/runtime-update-probe';
 import { RuntimeCommandFailure } from '../src/main/runtime-command-error';
@@ -95,7 +95,11 @@ it('installs every reviewed package, including transitive pins, and verifies bef
   );
   expect(verifyUpdateEnvironment).toHaveBeenCalledWith(
     paths,
-    { pythonVersion: RUNTIME_RELEASE.pythonVersion, packages: REVIEWED_RUNTIME_PACKAGES },
+    {
+      pythonVersion: RUNTIME_RELEASE.pythonVersion,
+      packages: REVIEWED_RUNTIME_PACKAGES,
+      optionalPackageSets: [SAGE_ATTENTION_PACKAGES.map(pin => ({ ...pin }))],
+    },
     expect.any(AbortSignal),
     'setup',
   );
