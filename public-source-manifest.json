@@ -238,6 +238,10 @@
       "to": "src/main/storage-overview.ts"
     },
     {
+      "from": "src/main/sage-attention.ts",
+      "to": "src/main/sage-attention.ts"
+    },
+    {
       "from": "src/main/store.ts",
       "to": "src/main/store.ts"
     },
@@ -868,6 +872,10 @@
     {
       "from": "scripts/public-source.mjs",
       "to": "scripts/public-source.mjs"
+    },
+    {
+      "from": "tests/sage-attention.test.ts",
+      "to": "tests/sage-attention.test.ts"
     },
     {
       "from": "tests/runtime-isolation.test.ts",

@@ -57,6 +57,7 @@ import { SourceImageService } from './source-images';
 import { SegmentationService } from './segmentation';
 import { CivitaiCatalog } from './civitai-catalog';
 import { UpscalerService } from './upscaler';
+import { SageAttentionService } from './sage-attention';
 import { WildcardStore } from './wildcards';
 import { ControlNetService } from './controlnet';
 import { CollectionService } from './collections';
@@ -125,6 +126,7 @@ let sources: SourceImageService;
 let segmentation: SegmentationService;
 let civitai: CivitaiCatalog;
 let upscaler: UpscalerService;
+let sageAttention: SageAttentionService;
 let wildcards: WildcardStore;
 let controlNet: ControlNetService;
 let collections: CollectionService;
@@ -231,6 +233,7 @@ function lightSnapshot(): LightSnapshot {
     collections: collections.snapshot(),
     controlNet: controlNet.status(),
     upscaler: upscaler.status(),
+    sageAttention: sageAttention.status(),
     wildcards: wildcards.snapshot(),
     backend: backend.status(),
     assistant: assistant.status(),
@@ -318,6 +321,7 @@ function appUpdateBusyReason(): string | undefined {
       upscaler.status(),
       controlNet.status(),
       ipAdapter.status(),
+      sageAttention.status(),
     ].some(value =>
       ['installing', 'starting', 'thinking', 'segmenting', 'detecting', 'activating'].includes(value.state),
     )
@@ -683,6 +687,7 @@ async function initialize() {
     },
   });
   upscaler = new UpscalerService(paths, store, broadcast);
+  sageAttention = new SageAttentionService(paths, broadcast);
   wildcards = new WildcardStore(store, broadcast);
   controlNet = new ControlNetService(paths, store, broadcast);
   qwenEdit = new QwenEditAssetsService(paths, store, broadcast);
@@ -988,6 +993,34 @@ async function initialize() {
           { allowRetainedJobs: true },
         ),
       ),
+    checkSageAttention: async () => sageAttention.refresh(),
+    installSageAttention: async () => {
+      let restart = false;
+      try {
+        await models.library.withShared('installing SageAttention', async () => {
+          assertModelLocationsReady();
+          if (['not-installed', 'installing'].includes(backend.status().state))
+            throw new Error('Set up the engine first.');
+          await jobs.withRuntimeMaintenance(
+            async () => {
+              await backendActivity.assertIdle('install SageAttention');
+              if (backend.status().state !== 'stopped') {
+                restart = true;
+                await backend.stop();
+                await backendActivity.refresh();
+              }
+              await sageAttention.install();
+            },
+            { allowRetainedJobs: false },
+          );
+          store.saveSettings({ sageAttention: true });
+        });
+      } finally {
+        broadcast();
+        // Bring the engine back even when the install fails; it simply starts without the add-on.
+        if (restart) await startEngine();
+      }
+    },
     openComfyUI: async () => {
       assertModelLocationsReady();
       const url = backend.getUrl();
@@ -1260,6 +1293,7 @@ async function initialize() {
       if (window && !window.isDestroyed())
         await fs.writeFile(process.env.LATENT_CAPTURE_PATH!, (await window.webContents.capturePage()).toPNG());
     }, 2000);
+  void sageAttention.refresh();
   if (
     store.settings().backendAutoStart &&
     backend.status().state === 'stopped' &&

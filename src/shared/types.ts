@@ -206,6 +206,10 @@ export interface HardwareInfo {
   vramMiB?: number;
   driver?: string;
 }
+export interface SageAttentionStatus {
+  state: 'checking' | 'unsupported' | 'unavailable' | 'missing' | 'installing' | 'installed' | 'error';
+  message: string;
+}
 export interface BackendStatus {
   state: 'not-installed' | 'installing' | 'stopped' | 'starting' | 'ready' | 'error';
   message: string;
@@ -334,6 +338,7 @@ export interface AppSnapshot {
   controlNet: ControlNetStatus;
   wildcards: WildcardSnapshot;
   upscaler: UpscalerStatus;
+  sageAttention: SageAttentionStatus;
   segmentation: SegmentationStatus;
   sourceImages: SourceImageInventory;
   assistant: AssistantStatus;
@@ -462,6 +467,8 @@ export interface LatentAPI {
   setupBackend(): Promise<void>;
   startBackend(): Promise<void>;
   stopBackend(): Promise<void>;
+  checkSageAttention(): Promise<SageAttentionStatus>;
+  installSageAttention(): Promise<void>;
   openComfyUI(): Promise<void>;
   refreshModels(): Promise<AppSnapshot>;
   importModels(kind: ModelKind): Promise<AppSnapshot>;

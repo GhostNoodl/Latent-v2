@@ -3,6 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import type { AppPaths, AppSettings } from '../shared/types';
 import type { BackendModelRoot } from '../shared/model-locations';
+import type { AssistantAsset } from './assistant-download';
 
 /** Reviewed against the official release and wheel metadata on 2026-09-04. */
 export const RUNTIME_RELEASE = {
@@ -26,6 +27,22 @@ export const SAGE_ATTENTION_PACKAGES = [
   { name: 'sageattention', version: '2.2.0+cu130torch2.10.0andhigher.post6' },
   { name: 'triton-windows', version: '3.6.0.post26' },
 ] as const;
+
+/** Pinned Windows wheels for the SageAttention add-on, installed offline after a hash check. */
+export const SAGE_ATTENTION_WHEELS: readonly AssistantAsset[] = [
+  {
+    url: 'https://files.pythonhosted.org/packages/62/1e/8d9814e67ba3f20094cf3c69e7815a491f20beb86469a647550ba86728b0/triton_windows-3.6.0.post26-cp312-cp312-win_amd64.whl',
+    filename: 'triton_windows-3.6.0.post26-cp312-cp312-win_amd64.whl',
+    bytes: 47402104,
+    sha256: '189d8c57911aa9d2ff983a715e5c967b325f576307db60924cab22b501a36515',
+  },
+  {
+    url: 'https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windows.post6/sageattention-2.2.0%2Bcu130torch2.10.0andhigher.post6-cp310-abi3-win_amd64.whl',
+    filename: 'sageattention-2.2.0+cu130torch2.10.0andhigher.post6-cp310-abi3-win_amd64.whl',
+    bytes: 16656067,
+    sha256: '1635283f5c01ec3cda58a784d0d7eabbcaffaf9511d1b263db4750e1ed7958bb',
+  },
+];
 
 /** True only when every reviewed SageAttention package is installed at its exact version. */
 export function hasSageAttention(packages: readonly { name: string; version: string }[]): boolean {

@@ -2,7 +2,7 @@ import { SetupActivityPanel } from './SetupActivityPanel';
 import { AppUpdates } from './AppUpdates';
 import { TelegramRemote } from './TelegramRemote';
 import { PackageSetupStorage } from './PackageSetupStorage';
-import { useState, type KeyboardEvent } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import { ArrowUpRight, Check, Copy, Download, Play, RotateCcw, Square, Terminal } from 'lucide-react';
 import type { AppSettings, AppSnapshot } from '../shared/types';
 import { DEFAULT_SETTINGS } from '../shared/defaults';
@@ -52,6 +52,10 @@ export function StudioSettings({
   hardwareActions: Omit<HardwareRecommendationsProps, 'status' | 'busy'>;
 }) {
   const { settings, backend, paths } = snapshot;
+  const sage = snapshot.sageAttention ?? { state: 'checking', message: 'Checking…' };
+  useEffect(() => {
+    void window.latent.checkSageAttention().catch(() => undefined);
+  }, [backend.state]);
   const imageVersions = settings.imageVersions ?? DEFAULT_IMAGE_VERSIONS;
   const settingsBusy = busy.settings || busy.hardware;
   const [confirmReset, setConfirmReset] = useState(false);
@@ -197,11 +201,39 @@ export function StudioSettings({
           <div>
             <h3>SageAttention</h3>
             <p>
-              Speeds up image, Qwen and video models on NVIDIA cards. If the SageAttention add-on isn't installed, the
-              engine just starts normally without it. Takes effect the next time the engine starts.
+              Speeds up image, Qwen and video models on NVIDIA cards. It needs a small add-on (about 64 MB). Takes
+              effect the next time the engine starts.
             </p>
+            <p className="muted">
+              {sage.state === 'installed' ? (
+                <>
+                  <Check size={14} /> Installed
+                </>
+              ) : (
+                sage.message
+              )}
+            </p>
+            {['missing', 'error'].includes(sage.state) && (
+              <button
+                type="button"
+                className="secondary"
+                disabled={busy.sage || runtimeWorking}
+                title="The engine restarts while the add-on installs."
+                onClick={() =>
+                  void run('sage', () => window.latent.installSageAttention(), 'SageAttention is installed and on.')
+                }
+              >
+                <Busy active={busy.sage} />
+                {!busy.sage && <Download size={16} />}Install SageAttention
+              </button>
+            )}
+            {sage.state === 'installing' && <Busy active />}
           </div>
-          <fieldset disabled={settingsBusy || settings.deviceMode === 'cpu'}>
+          <fieldset
+            disabled={
+              settingsBusy || settings.deviceMode === 'cpu' || (sage.state !== 'installed' && !settings.sageAttention)
+            }
+          >
             <Toggle
               label="SageAttention"
               checked={settings.sageAttention ?? false}
