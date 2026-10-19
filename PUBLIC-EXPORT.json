@@ -1024,12 +1024,12 @@
     {
       "path": "package.json",
       "bytes": 4517,
-      "sha256": "562cc1ba2c5a8dc85086ec1bd3192195b9161cd00d3567cccb75e104a2e42221"
+      "sha256": "67a803cb4bf03ca0be4f3a4b63e6838725452a3a080c20ba037bff3db06658ea"
     },
     {
       "path": "package-lock.json",
       "bytes": 252660,
-      "sha256": "8b04568fecb36c99b3c11504bad6780aaa623603066691951415d11fc9900bcc"
+      "sha256": "be8ce4106f2be86550c8d01cf253d5f2799490721b58432ab3cdea2d1552b767"
     },
     {
       "path": "tsconfig.json",
@@ -1263,8 +1263,8 @@
     },
     {
       "path": "tests/app-history-dom.test.tsx",
-      "bytes": 42935,
-      "sha256": "642299fe0188bd0ee4cad139b590393dd0c2c9fa13685b1d4b9f1259a80b6cec"
+      "bytes": 42944,
+      "sha256": "7ac3c99556cb90dd3854120e97e75398ff08c616fb51c33e656ce198b2a299e5"
     },
     {
       "path": "tests/image-versions.test.tsx",
@@ -1433,8 +1433,8 @@
     },
     {
       "path": "src/shared/enhancement.ts",
-      "bytes": 7388,
-      "sha256": "3fed1efeeb74bd4269e2027bbf101ee732c8f0afa1b12c83c6e5d91732e1d820"
+      "bytes": 7744,
+      "sha256": "9eacdd7ecb267ca0bbeff84b53bca003352bd0d1a5e8a7aed0852818ca296fce"
     },
     {
       "path": "src/renderer/EnhanceDialog.tsx",
@@ -1443,8 +1443,8 @@
     },
     {
       "path": "tests/enhancement.test.ts",
-      "bytes": 8330,
-      "sha256": "d91bddbcbc5a9854410405009075d92664c0be3ad246f430dd82afb3498b0c5b"
+      "bytes": 8441,
+      "sha256": "fdfebe5cedfbda61fecc482ad9d6c4e96da6a1bd37e40633a53ddccd4335a67c"
     },
     {
       "path": "tests/enhance-dialog.test.tsx",

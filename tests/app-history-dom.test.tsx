@@ -989,9 +989,9 @@ describe('Create history, draft and asynchronous acceptance', () => {
 });
 
 it.each([
-  [2, 1408, 2048],
-  [1.5, 1280, 1856],
-])('one click at %sx queues the selected image without replacing the draft', async (scale, width, height) => {
+  [2, 1408, 2048, 9],
+  [1.5, 1280, 1856, 9],
+])('one click at %sx queues the selected image without replacing the draft', async (scale, width, height, steps) => {
   const selector = host.querySelector<HTMLSelectElement>('[aria-label="Enhancement scale"]')!;
   expect(selector.value).toBe('2');
   if (scale !== 2)
@@ -1021,7 +1021,7 @@ it.each([
     height,
     prompt: first.resolvedPrompt,
     seed: first.actualSeed,
-    steps: 20,
+    steps,
     sampler: 'euler',
     scheduler: 'simple',
     enhance: { parentRecordId: first.id, standard: true },

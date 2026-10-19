@@ -158,6 +158,11 @@ export function reconcileEnhancementChange(
 }
 
 /** One-click authoring is separate from historical recipe replay. */
+/** Light 0.3-strength refinement looks the same from about 8 steps; bigger images get fewer, slower steps. */
+export function oneClickEnhancementSteps(width: number, height: number): number {
+  const megapixels = (width * height) / (1024 * 1024);
+  return megapixels >= 3 ? 8 : megapixels >= 1.5 ? 9 : 10;
+}
 export function prepareOneClickEnhancement(
   record: GenerationRecord,
   source: SourceImageAsset,
@@ -167,7 +172,7 @@ export function prepareOneClickEnhancement(
   const next = prepareEnhancement(record, source, current, scale, 0.3);
   return draftSchema.parse({
     ...next,
-    steps: 20,
+    steps: oneClickEnhancementSteps(next.width, next.height),
     sampler: 'euler',
     scheduler: 'simple',
     seed: record.actualSeed,
