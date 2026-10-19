@@ -14,6 +14,7 @@ const suggestion = z
     completionTokens: z.number().int().nonnegative().optional(),
     durationMs: z.number().nonnegative(),
     historyTurnsUsed: z.number().int().nonnegative(),
+    dropped: z.array(z.string().max(600)).max(60).optional(),
   })
   .strict();
 export const assistantConversationSchema = z

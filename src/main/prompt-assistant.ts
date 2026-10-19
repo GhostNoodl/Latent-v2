@@ -15,6 +15,8 @@ import {
   assistantOwnerSource,
   assistantPaths,
   assistantRequestSchema,
+  missingProtectedParts,
+  partialAssistantFields,
   validatedAssistantPatch,
 } from './assistant-config';
 import { assistantHash, downloadAssistantAsset } from './assistant-download';
@@ -32,6 +34,8 @@ interface Installation {
 }
 const wait = (milliseconds: number) => new Promise<void>(resolve => setTimeout(resolve, milliseconds));
 const canceled = () => new Error('Assistant request canceled.');
+/** The model holds about 2.5 GB of memory, so it unloads after this long without a request. */
+export const ASSISTANT_IDLE_MS = 10 * 60_000;
 
 /** CPU-only assistant. Its sole output is a reviewable proposal; it cannot mutate the draft. */
 export class PromptAssistant {
@@ -47,6 +51,7 @@ export class PromptAssistant {
   private token?: string;
   private epoch = 0;
   private disposed = false;
+  private idleTimer?: NodeJS.Timeout;
 
   constructor(
     private paths: AppPaths,
@@ -60,9 +65,7 @@ export class PromptAssistant {
     this.current = {
       installationAvailable: installed,
       state: installed ? 'stopped' : 'not-installed',
-      message: installed
-        ? 'Local assistant installed. Start when needed.'
-        : 'Install the optional local prompt assistant (2.50 GB).',
+      message: installed ? 'Ready. It loads when you send a message.' : 'Not installed yet.',
       model: RELEASE.modelId,
       device: 'cpu',
       logTail: [],
@@ -147,13 +150,9 @@ export class PromptAssistant {
       .catch(error => {
         const failure =
           error?.code === 'ENOSPC'
-            ? new Error(
-                'Not enough disk space to finish assistant setup. Existing files and staged data were retained. Free disk space, then use Verify / repair installation.',
-                { cause: error },
-              )
+            ? new Error('Not enough disk space. Free some space, then press Repair.', { cause: error })
             : error;
-        if (!controller.signal.aborted)
-          this.update({ state: 'error', message: `Assistant setup failed: ${failure.message}` });
+        if (!controller.signal.aborted) this.update({ state: 'error', message: `Install failed: ${failure.message}` });
         throw failure;
       })
       .finally(() => {
@@ -182,7 +181,7 @@ export class PromptAssistant {
         signal,
       );
     }
-    this.update({ state: 'installing', message: 'Verifying the private CPU assistant runtime…', installProgress: 0 });
+    this.update({ state: 'installing', message: 'Checking files…', installProgress: 0 });
     const archive = await downloadAssistantAsset(
       {
         filename: RELEASE.archiveFilename,
@@ -194,7 +193,7 @@ export class PromptAssistant {
       signal,
       (received, total, verifying) =>
         this.update({
-          message: verifying ? 'Verifying CPU runtime checksum…' : 'Downloading the private CPU runtime…',
+          message: verifying ? 'Checking the download…' : 'Downloading the assistant…',
           installProgress: (5 * received) / total,
           receivedBytes: received,
           totalBytes: total,
@@ -223,9 +222,7 @@ export class PromptAssistant {
       signal,
       (received, total, verifying) =>
         this.update({
-          message: verifying
-            ? 'Verifying the complete Qwen3 model checksum…'
-            : 'Downloading Qwen3-4B (local CPU assistant)…',
+          message: verifying ? 'Checking the download…' : 'Downloading the assistant…',
           installProgress: 5 + (95 * received) / total,
           receivedBytes: received,
           totalBytes: total,
@@ -252,20 +249,20 @@ export class PromptAssistant {
     const marker = `${this.files.marker}.${randomUUID()}.tmp`;
     await fs.promises.writeFile(marker, JSON.stringify(installation, null, 2), { flag: 'wx' });
     this.validatePaths();
-    this.update({ message: 'Activating the verified CPU assistant runtime…' });
+    this.update({ message: 'Finishing up…' });
     await activateAssistantRuntime(binaryStage, this.files.binaries, signal, () =>
       renameAssistantFile(marker, this.files.marker, signal),
     );
     this.store.setState('assistant.installation', installation);
     this.update({
       state: 'stopped',
-      message: 'Qwen3 is installed locally. Ready to start on CPU.',
+      message: 'Ready. It loads when you send a message.',
       installProgress: 100,
     });
   }
   start(): Promise<void> {
     if (this.disposed) return Promise.reject(new Error('Assistant was disposed.'));
-    if (this.stopPromise) return Promise.reject(new Error('Wait for the assistant to finish stopping.'));
+    if (this.stopPromise) return Promise.reject(new Error('The assistant is still stopping. Try again in a moment.'));
     if (this.startPromise) return this.startPromise;
     if (this.child && this.url && ['ready', 'thinking'].includes(this.current.state)) return Promise.resolve();
     const epoch = this.epoch;
@@ -286,8 +283,8 @@ export class PromptAssistant {
     if (this.setupPromise) await this.setupPromise;
     this.validatePaths();
     const marker = this.installation();
-    if (!marker) throw new Error('Install the local assistant before starting it.');
-    this.update({ state: 'starting', message: 'Checking and loading Qwen3 on CPU…' });
+    if (!marker) throw new Error('Install the assistant first.');
+    this.update({ state: 'starting', message: 'Loading the assistant…' });
     for (const [relative, hash] of Object.entries(marker.runtimeFiles)) {
       const filename = containedPath(this.files.binaries, path.join(this.files.binaries, relative));
       if (
@@ -295,13 +292,13 @@ export class PromptAssistant {
         fs.lstatSync(filename).isSymbolicLink() ||
         (await assistantHash(filename)) !== hash
       )
-        throw new Error('A CPU runtime file changed after installation. Run setup to restore the pinned runtime.');
+        throw new Error('Some assistant files changed. Press Repair to fix them.');
     }
     if (
       (await assistantHash(this.files.executable)) !== marker.executableSha256 ||
       (await assistantHash(this.files.model)) !== RELEASE.modelSha256
     )
-      throw new Error('Assistant files changed after installation. Run setup to verify them.');
+      throw new Error('Some assistant files changed. Press Repair to fix them.');
     if (epoch !== this.epoch) throw canceled();
     await fs.promises.writeFile(this.files.wrapper, assistantOwnerSource());
     const port = await reserveBackendPort();
@@ -334,7 +331,7 @@ export class PromptAssistant {
         this.update({
           state: 'error',
           requestId: undefined,
-          message: `Local assistant exited (${code ?? 'unknown'}). Start it again to retry.`,
+          message: `The assistant crashed (code ${code ?? 'unknown'}). Send again to restart it.`,
         });
       }
     });
@@ -343,7 +340,7 @@ export class PromptAssistant {
       if (epoch !== this.epoch) throw canceled();
       if (spawnError) throw spawnError;
       if (this.child !== child || child.exitCode !== null)
-        throw new Error(`The CPU server exited before it was ready. ${this.current.logTail.slice(-3).join(' ')}`);
+        throw new Error(`The assistant closed while loading. ${this.current.logTail.slice(-3).join(' ')}`);
       try {
         const health = await this.json('/health', undefined, AbortSignal.timeout(1200));
         if (health.status === 'ok') {
@@ -351,7 +348,8 @@ export class PromptAssistant {
           if (!Array.isArray(models.data) || !models.data.some((model: { id?: string }) => model.id === RELEASE.alias))
             throw new Error('Unexpected local assistant model.');
           if (epoch !== this.epoch || this.child !== child) throw canceled();
-          this.update({ state: 'ready', message: 'Qwen3 is ready on CPU. Suggestions require your review.' });
+          this.update({ state: 'ready', message: 'Ready.' });
+          this.armIdleStop();
           return;
         }
       } catch {
@@ -359,10 +357,13 @@ export class PromptAssistant {
       }
       await wait(250);
     }
-    throw new Error('The CPU assistant did not become ready within two minutes.');
+    throw new Error('The assistant took more than two minutes to load.');
   }
   private async json(endpoint: string, body: unknown, signal: AbortSignal): Promise<any> {
-    if (!this.url || !this.token) throw new Error('The local assistant is not running.');
+    return (await this.post(endpoint, body, signal)).json();
+  }
+  private async post(endpoint: string, body: unknown, signal: AbortSignal): Promise<Response> {
+    if (!this.url || !this.token) throw new Error('The assistant is not running.');
     let response: Response;
     try {
       response = await fetch(`${this.url}${endpoint}`, {
@@ -373,17 +374,69 @@ export class PromptAssistant {
       });
     } catch (error) {
       signal.throwIfAborted();
-      throw new Error(
-        'The local assistant connection was interrupted. Start the assistant again, then retry your instruction.',
-        { cause: error },
-      );
+      throw new Error('Lost the connection to the assistant. Send again to retry.', { cause: error });
     }
-    if (!response.ok) throw new Error(`Local assistant returned HTTP ${response.status}.`);
-    return response.json();
+    if (!response.ok) throw new Error(`The assistant returned an error (HTTP ${response.status}).`);
+    return response;
+  }
+  /** Reads an OpenAI-style event stream, passing each text piece on as it arrives. */
+  private async stream(endpoint: string, body: unknown, signal: AbortSignal, onText: (text: string) => void) {
+    const response = await this.post(endpoint, body, signal);
+    if (!response.body) throw new Error('The assistant sent an empty reply.');
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let content = '';
+    let finishReason: string | undefined;
+    let completionTokens: number | undefined;
+    let toolCalls = false;
+    const handle = (line: string) => {
+      if (!line.startsWith('data:')) return;
+      const data = line.slice(5).trim();
+      if (!data || data === '[DONE]') return;
+      const chunk = JSON.parse(data);
+      if (chunk.error) throw new Error(`The assistant hit an error: ${chunk.error.message ?? 'unknown'}`);
+      const choice = chunk.choices?.[0];
+      if (choice?.delta?.tool_calls?.length) toolCalls = true;
+      if (typeof choice?.delta?.content === 'string' && choice.delta.content) {
+        content += choice.delta.content;
+        onText(content);
+      }
+      if (choice?.finish_reason) finishReason = choice.finish_reason;
+      if (Number.isInteger(chunk.usage?.completion_tokens)) completionTokens = chunk.usage.completion_tokens;
+    };
+    try {
+      for await (const piece of response.body as unknown as AsyncIterable<Uint8Array>) {
+        buffer += decoder.decode(piece, { stream: true });
+        let newline: number;
+        while ((newline = buffer.indexOf('\n')) >= 0) {
+          handle(buffer.slice(0, newline).trim());
+          buffer = buffer.slice(newline + 1);
+        }
+      }
+      handle(buffer.trim());
+    } catch (error) {
+      signal.throwIfAborted();
+      if (error instanceof SyntaxError) throw new Error('The assistant sent a garbled reply. Try again.');
+      if (error instanceof Error && error.message.startsWith('The assistant hit an error')) throw error;
+      throw new Error('Lost the connection to the assistant. Send again to retry.', { cause: error });
+    }
+    return { content, finishReason, completionTokens, toolCalls };
+  }
+  private armIdleStop() {
+    clearTimeout(this.idleTimer);
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = undefined;
+      if (this.request || !this.child || this.current.state !== 'ready') return;
+      void this.stop('Unloaded after 10 quiet minutes to free memory. It loads again when you send.').catch(
+        () => undefined,
+      );
+    }, ASSISTANT_IDLE_MS);
+    this.idleTimer.unref?.();
   }
   suggest(input: AssistantSuggestionRequest): Promise<AssistantSuggestion> {
     if (this.disposed) return Promise.reject(new Error('Assistant was disposed.'));
-    if (this.request) return Promise.reject(new Error('Wait for the current suggestion, or cancel it first.'));
+    if (this.request) return Promise.reject(new Error('Wait for the current reply, or cancel it first.'));
+    clearTimeout(this.idleTimer);
     const parsed = assistantRequestSchema.safeParse(input);
     if (!parsed.success) return Promise.reject(parsed.error);
     const request = structuredClone(parsed.data);
@@ -397,9 +450,12 @@ export class PromptAssistant {
         if (this.current.state === 'thinking')
           this.update({
             state: this.child ? 'ready' : 'stopped',
-            message: controller.signal.aborted ? 'Suggestion canceled.' : 'Ready for another prompt suggestion.',
+            message: controller.signal.aborted ? 'Reply cancelled.' : 'Ready.',
             requestId: undefined,
+            reply: undefined,
           });
+        else if (this.current.reply) this.update({ reply: undefined });
+        if (this.child) this.armIdleStop();
       }
     });
     return task.promise;
@@ -419,7 +475,7 @@ export class PromptAssistant {
     });
     task.controller.signal.throwIfAborted();
     const signal = AbortSignal.any([task.controller.signal, AbortSignal.timeout(180_000)]);
-    this.update({ state: 'thinking', message: 'Writing a local prompt suggestion…', requestId: task.id });
+    this.update({ state: 'thinking', message: 'Writing…', requestId: task.id, reply: {} });
     const history = request.history?.slice(-8) ?? [];
     let messages = assistantMessages(request, history);
     let promptTokens = 0;
@@ -439,18 +495,18 @@ export class PromptAssistant {
       promptTokens = tokenized.tokens.length;
       if (promptTokens <= RELEASE.inputTokens) break;
       if (!history.length)
-        throw new Error(
-          'This request exceeds the assistant context. Shorten the instruction or current prompts and retry.',
-        );
+        throw new Error('That is too much text for the assistant. Shorten your message or prompt and try again.');
       history.shift();
       messages = assistantMessages(request, history);
     }
-    const response = await this.json(
+    let shown = '';
+    const response = await this.stream(
       '/v1/chat/completions',
       {
         model: RELEASE.alias,
         messages,
-        stream: false,
+        stream: true,
+        stream_options: { include_usage: true },
         max_tokens: RELEASE.outputTokens,
         temperature: 0.7,
         top_p: 0.8,
@@ -462,23 +518,27 @@ export class PromptAssistant {
         response_format: { type: 'json_object', schema: ASSISTANT_JSON_SCHEMA },
       },
       signal,
+      text => {
+        if (this.request?.id !== task.id) return;
+        const reply = partialAssistantFields(text);
+        const key = `${reply.explanation ?? ''}\u0000${reply.prompt ?? ''}`;
+        if (key === shown) return;
+        shown = key;
+        this.update({ reply });
+      },
     );
     signal.throwIfAborted();
-    const choice = response.choices?.[0];
-    if (
-      choice?.finish_reason !== 'stop' ||
-      typeof choice.message?.content !== 'string' ||
-      choice.message.tool_calls?.length
-    )
-      throw new Error('The assistant did not finish a valid suggestion. Try a shorter request.');
+    if (response.finishReason !== 'stop' || response.toolCalls)
+      throw new Error('The assistant ran out of room before finishing. Try a shorter message.');
     let raw: unknown;
     try {
-      raw = JSON.parse(choice.message.content);
+      raw = JSON.parse(response.content);
     } catch {
-      throw new Error('The assistant returned malformed JSON. Try the request again.');
+      throw new Error('The assistant sent a garbled reply. Try again.');
     }
     const patch = validatedAssistantPatch(raw, request.draft);
     if (request.target === 'video') patch.proposedDraft.negativePrompt = request.draft.negativePrompt;
+    const dropped = missingProtectedParts(request, patch.proposedDraft.prompt);
     signal.throwIfAborted();
     if (this.request?.id !== task.id) throw canceled();
     return {
@@ -489,11 +549,10 @@ export class PromptAssistant {
       modelId: RELEASE.modelId,
       modelRevision: RELEASE.modelRevision,
       promptTokens,
-      completionTokens: Number.isInteger(response.usage?.completion_tokens)
-        ? response.usage.completion_tokens
-        : undefined,
+      completionTokens: response.completionTokens,
       durationMs: Date.now() - started,
       historyTurnsUsed: history.length,
+      ...(dropped.length ? { dropped } : {}),
     };
   }
   async cancel(): Promise<void> {
@@ -502,8 +561,9 @@ export class PromptAssistant {
     task.controller.abort(canceled());
     await task.promise.catch(() => undefined);
   }
-  stop(): Promise<void> {
+  stop(message = 'Stopped.'): Promise<void> {
     if (this.stopPromise) return this.stopPromise;
+    clearTimeout(this.idleTimer);
     this.epoch += 1;
     this.setupController?.abort(canceled());
     this.request?.controller.abort(canceled());
@@ -512,8 +572,9 @@ export class PromptAssistant {
       await Promise.allSettled([this.setupPromise, this.startPromise, this.request?.promise].filter(Boolean));
       this.update({
         state: this.installation() ? 'stopped' : 'not-installed',
-        message: 'Local assistant stopped.',
+        message,
         requestId: undefined,
+        reply: undefined,
       });
     })().finally(() => {
       this.stopPromise = undefined;
@@ -541,8 +602,7 @@ export class PromptAssistant {
     } else child.kill('SIGTERM');
     const deadline = Date.now() + 10_000;
     while (this.child === child && child.exitCode === null && Date.now() < deadline) await wait(50);
-    if (this.child === child && child.exitCode === null)
-      throw new Error('The owned assistant process did not stop. Retry Stop.');
+    if (this.child === child && child.exitCode === null) throw new Error('The assistant did not stop. Try Stop again.');
     if (this.child === child) this.child = undefined;
   }
   async dispose(): Promise<void> {

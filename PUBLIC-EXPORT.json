@@ -3,8 +3,8 @@
   "files": [
     {
       "path": "src/main/assistant-config.ts",
-      "bytes": 8272,
-      "sha256": "f2663ca17c01f2224cc2fd6d2b8ce9342652f600cb9c35c95350481cd17f2a94"
+      "bytes": 12407,
+      "sha256": "5c4996ddf1228092d6b42d7c065970fa8143a51125abc7d7bc7f4f1653ffbe70"
     },
     {
       "path": "src/main/assistant-download.ts",
@@ -163,8 +163,8 @@
     },
     {
       "path": "src/main/prompt-assistant.ts",
-      "bytes": 23012,
-      "sha256": "3da887fc0f42e53d2f4e5b808a2b1e2dc1e66d6ac69ffe2292d8a17f4ba46413"
+      "bytes": 25793,
+      "sha256": "6de02120dee3bc09ad483ef51a40103dc967d06ba2d1b3961898eef5b064ea53"
     },
     {
       "path": "src/main/python-home.ts",
@@ -368,13 +368,13 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 116396,
-      "sha256": "37423a99c5a7196a7500e2ef8d164a8054f25f9a57283f5b247564e323ff221e"
+      "bytes": 116513,
+      "sha256": "a6e151ec257466575c1930dd190fb2a7824b81fedea383584187c8b91ca87801"
     },
     {
       "path": "src/renderer/assistant.css",
-      "bytes": 11345,
-      "sha256": "1d36279cab22dbd3cce51164196b82835754085bab19e6656a473844f9bbb9f6"
+      "bytes": 11158,
+      "sha256": "345fe6f9fff41903f3d31d26db3d52eda577c0ba93d40ef251eff6f2419989cb"
     },
     {
       "path": "src/renderer/CanvasViewport.tsx",
@@ -548,8 +548,8 @@
     },
     {
       "path": "src/renderer/PromptAssistant.tsx",
-      "bytes": 32868,
-      "sha256": "c0837afdf4dd244824115b593c11631b8665c4d15b6c2d854df6359230bf4ead"
+      "bytes": 31462,
+      "sha256": "e3066c0a6d482ea899fca104d86c7eca1c630b977e1f83e38080aa98c692eb99"
     },
     {
       "path": "src/renderer/queue-view.ts",
@@ -698,13 +698,13 @@
     },
     {
       "path": "src/shared/assistant-conversation.ts",
-      "bytes": 1140,
-      "sha256": "ec00714eca64ef3cc85d9fbb80fa96ff46cd0dad08a4979d1f901210478ccacb"
+      "bytes": 1202,
+      "sha256": "52c9ada9046fded3a4839da3183ff0545c078728fca5015af85da0e72d295700"
     },
     {
       "path": "src/shared/assistant-types.ts",
-      "bytes": 1351,
-      "sha256": "2d5314a50b2152690a4ca0f6f03f4cce2736dd816f1309ae0b9bd0e8161285e2"
+      "bytes": 1638,
+      "sha256": "cb82bb706aed0c3fec118c5a3dbc4af6e18c88a8b708a85378b2602655a59420"
     },
     {
       "path": "src/shared/backend-activity-types.ts",
@@ -1855,6 +1855,11 @@
       "path": "tests/assistant-conversation-keys.test.ts",
       "bytes": 2541,
       "sha256": "229b44561a2519944082d9aa265a1f20563b9bc0080ae12480a2538b360af82a"
+    },
+    {
+      "path": "tests/prompt-assistant.test.ts",
+      "bytes": 5492,
+      "sha256": "b3c05116405f8c7583ab3b37511470fce6cf0029aaa981cf2824ea7a45c15f1e"
     },
     {
       "path": "src/main/snapshot-sender.ts",

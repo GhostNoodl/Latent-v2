@@ -8,7 +8,6 @@ import {
   Download,
   LoaderCircle,
   MessageCircle,
-  Play,
   RotateCcw,
   Send,
   Sparkles,
@@ -23,6 +22,8 @@ import { actionErrorMessage as message } from '../shared/action-error';
 interface PromptAssistantProps {
   target?: 'image' | 'video';
   videoContext?: import('../shared/video-types').VideoDraft;
+  /** Names of the LoRAs in the draft, so the assistant knows what is loaded. */
+  loraNames?: string[];
   status: AssistantStatus;
   draft: GenerationDraft;
   onApply: (suggestion: AssistantSuggestion) => void;
@@ -36,6 +37,7 @@ const samePrompts = (a: GenerationDraft, b: GenerationDraft) =>
 export function PromptAssistant({
   target = 'image',
   videoContext,
+  loraNames,
   status,
   draft,
   onApply,
@@ -120,7 +122,7 @@ export function PromptAssistant({
     const epoch = ++loadEpoch.current;
     if (!window.latent?.getAssistantConversation) {
       setLoading(false);
-      setError('The desktop assistant bridge is unavailable. Open this panel in the updated desktop app.');
+      setError('The assistant only works in the desktop app.');
       return;
     }
     setLoading(true);
@@ -133,8 +135,7 @@ export function PromptAssistant({
       hydrated.current = true;
       setLoaded(true);
     } catch (reason) {
-      if (mounted.current && epoch === loadEpoch.current)
-        setError(`Conversation could not be loaded: ${message(reason)}`);
+      if (mounted.current && epoch === loadEpoch.current) setError(`Couldn't load the chat: ${message(reason)}`);
     } finally {
       if (mounted.current && epoch === loadEpoch.current) setLoading(false);
     }
@@ -229,8 +230,9 @@ export function PromptAssistant({
   const alreadyMatches = selected ? samePrompts(draft, selected.proposedDraft) : false;
   const applied = selected?.id === conversation.appliedSuggestionId && alreadyMatches;
   const thinking = pending.suggest || status.state === 'thinking';
-  const changingRuntime =
-    pending.setup || pending.start || pending.stop || status.state === 'installing' || status.state === 'starting';
+  const changingRuntime = pending.setup || pending.stop || status.state === 'installing';
+  // Sending loads the assistant if it isn't running yet.
+  const canSend = status.installationAvailable && ['ready', 'stopped', 'error', 'starting'].includes(status.state);
   const disabled = !loaded || pending.close || pending.apply || pending.clear;
   const progress = Math.max(0, Math.min(100, status.installProgress ?? 0));
 
@@ -256,7 +258,7 @@ export function PromptAssistant({
     await action('cancel', async () => {
       await window.latent.cancelAssistant();
       await requesting.current;
-      setNotice('Reply cancelled. Your conversation and instruction are kept.');
+      setNotice('Reply cancelled.');
     });
   }
   function submit(event: FormEvent) {
@@ -267,7 +269,8 @@ export function PromptAssistant({
       !instruction ||
       instruction.length > 4000 ||
       disabled ||
-      currentStatus.current.state !== 'ready' ||
+      !currentStatus.current.installationAvailable ||
+      !['ready', 'stopped', 'error', 'starting'].includes(currentStatus.current.state) ||
       requesting.current ||
       changingRuntime ||
       ['close', 'apply', 'clear'].some(key => actions.current.has(key))
@@ -303,6 +306,7 @@ export function PromptAssistant({
         const suggestion = await window.latent.suggestPrompt({
           instruction,
           draft: requestDraft,
+          loraNames: loraNames?.length ? loraNames.slice(0, 8) : undefined,
           history,
           target,
           videoContext,
@@ -343,9 +347,7 @@ export function PromptAssistant({
     await action('apply', async () => {
       await flush();
       if (closing.current)
-        throw new Error(
-          "Latent is closing, so the prompts weren't applied. The suggestion is still here for next time.",
-        );
+        throw new Error('Latent is closing, so nothing was applied. The suggestion is still here next time.');
       // The proposal stays immutable in conversation history. Apply its two text
       // fields to the current draft, including edits made after the request began.
       onApply({
@@ -358,11 +360,7 @@ export function PromptAssistant({
       });
       changeConversation({ ...current.current, appliedSuggestionId: selected.id });
       await flush();
-      setNotice(
-        target === 'video'
-          ? 'Prompt applied to Video. Undo is available in Video.'
-          : 'Prompts applied to Create. Undo is available in Create.',
-      );
+      setNotice(target === 'video' ? 'Applied. You can undo it in Video.' : 'Applied. You can undo it in Create.');
     });
   }
   async function clear() {
@@ -370,7 +368,7 @@ export function PromptAssistant({
     await action('clear', async () => {
       changeConversation(emptyConversation());
       await flush();
-      setNotice('Conversation cleared.');
+      setNotice('Chat cleared.');
       instructionInput.current?.focus();
     });
   }
@@ -378,7 +376,7 @@ export function PromptAssistant({
   return (
     <div className="prompt-assistant">
       <Modal
-        title={target === 'video' ? 'Shape your video prompt' : 'Your prompt, a little more possibility'}
+        title={target === 'video' ? 'Help me write the video prompt' : 'Help me write'}
         onClose={() => {
           void close();
         }}
@@ -388,16 +386,22 @@ export function PromptAssistant({
             <Sparkles size={22} />
           </span>
           <div>
-            <p>Talk through an idea with Qwen3, then review the words together.</p>
-            <span>Local assistant · CPU · no paid API</span>
+            <p>Tell the assistant what to change. You check the result before it touches your prompt.</p>
+            <span>Runs on your PC, offline</span>
           </div>
           <span className={`assistant-state state-${status.state}`}>
             <Cpu size={14} />
-            {status.state === 'ready'
-              ? 'Ready when you are'
-              : status.state === 'thinking'
-                ? 'Writing a proposal'
-                : status.state.replaceAll('-', ' ')}
+            {
+              {
+                'not-installed': 'Not installed',
+                installing: 'Installing',
+                stopped: 'Not loaded',
+                starting: 'Loading',
+                ready: 'Ready',
+                thinking: 'Writing',
+                error: 'Problem',
+              }[status.state]
+            }
           </span>
         </div>
         {['not-installed', 'error', 'installing'].includes(status.state) && (
@@ -406,9 +410,7 @@ export function PromptAssistant({
         <section className="assistant-runtime" aria-label="Local assistant controls">
           <div className="assistant-runtime-message">
             <strong>{status.message}</strong>
-            {status.state === 'not-installed' && (
-              <p>One-time download: about 2.5 GB. Install the model, then start it when you want help.</p>
-            )}
+            {status.state === 'not-installed' && <p>One-time download, about 2.5 GB.</p>}
             {status.state === 'installing' && (
               <>
                 <progress value={progress} max={100} aria-label="Assistant installation progress" />
@@ -429,26 +431,7 @@ export function PromptAssistant({
                 }}
               >
                 <Download size={15} />
-                {status.state === 'error' ? 'Verify / repair installation' : 'Install · 2.5 GB'}
-              </button>
-            )}
-            {['not-installed', 'stopped', 'error'].includes(status.state) && (
-              <button
-                className="soft-button"
-                title={!status.installationAvailable ? 'Finish or repair installation before starting.' : undefined}
-                disabled={
-                  !status.installationAvailable ||
-                  status.state === 'not-installed' ||
-                  changingRuntime ||
-                  thinking ||
-                  disabled
-                }
-                onClick={() => {
-                  void action('start', () => window.latent.startAssistant());
-                }}
-              >
-                <Play size={15} />
-                Start assistant
+                {status.state === 'error' ? 'Repair' : 'Install · 2.5 GB'}
               </button>
             )}
             {['ready', 'thinking', 'starting', 'installing'].includes(status.state) && (
@@ -459,16 +442,11 @@ export function PromptAssistant({
                   void action('stop', async () => {
                     await window.latent.stopAssistant();
                     await requesting.current;
-                    setNotice('Local assistant stopped.');
                   });
                 }}
               >
                 <CircleStop size={15} />
-                {status.state === 'installing'
-                  ? 'Cancel installation'
-                  : status.state === 'starting'
-                    ? 'Cancel startup'
-                    : 'Stop assistant'}
+                {status.state === 'installing' ? 'Cancel install' : 'Unload'}
               </button>
             )}
           </div>
@@ -484,14 +462,14 @@ export function PromptAssistant({
                 }}
               >
                 <RotateCcw size={13} />
-                Retry loading conversation
+                Try again
               </button>
             )}
           </Notice>
         )}
         {saveError && (
           <Notice error>
-            Conversation could not be saved: {saveError}{' '}
+            Couldn't save the chat: {saveError}{' '}
             <button
               className="text-button"
               onClick={() => {
@@ -499,7 +477,7 @@ export function PromptAssistant({
               }}
               disabled={pending.save}
             >
-              Retry save
+              Try again
             </button>
           </Notice>
         )}
@@ -513,12 +491,12 @@ export function PromptAssistant({
             <div className="assistant-section-title">
               <h4>
                 <MessageCircle size={16} />
-                Let's shape the idea
+                Chat
               </h4>
               <button
                 className="icon-button"
-                title="Clear conversation"
-                aria-label="Clear conversation"
+                title="Clear chat"
+                aria-label="Clear chat"
                 disabled={disabled || thinking || (!conversation.messages.length && !conversation.instruction)}
                 onClick={() => {
                   void clear();
@@ -531,7 +509,7 @@ export function PromptAssistant({
               className="assistant-messages"
               ref={log}
               role="log"
-              aria-label="Prompt conversation"
+              aria-label="Chat with the assistant"
               aria-live="polite"
               aria-relevant="additions text"
               tabIndex={0}
@@ -539,16 +517,15 @@ export function PromptAssistant({
               {loading ? (
                 <div className="assistant-chat-empty">
                   <LoaderCircle className="spin" size={20} />
-                  <p>Opening your conversation…</p>
+                  <p>Loading chat…</p>
                 </div>
               ) : !conversation.messages.length ? (
                 <div className="assistant-chat-empty">
                   <Sparkles size={27} />
-                  <h4>A second pair of words.</h4>
                   <p>
                     {target === 'video'
-                      ? 'Describe the action and camera movement, or refine your current video prompt.'
-                      : 'Describe the scene, ask for a mood, or refine the prompt already in Create.'}
+                      ? 'Describe what happens and how the camera moves, or ask it to improve your current prompt.'
+                      : 'Describe a scene, ask for a mood, or ask it to improve your current prompt.'}
                   </p>
                   <button
                     disabled={disabled}
@@ -557,13 +534,13 @@ export function PromptAssistant({
                         ...current.current,
                         instruction:
                           target === 'video'
-                            ? 'Help me refine the motion and camera movement while preserving my subjects and style.'
-                            : 'Help me refine the atmosphere and lighting while preserving my subjects and style.',
+                            ? 'Improve the motion and camera movement. Keep my subjects and style.'
+                            : 'Improve the mood and lighting. Keep my subjects and style.',
                       });
                       instructionInput.current?.focus();
                     }}
                   >
-                    {target === 'video' ? 'Refine motion & camera' : 'Refine atmosphere & lighting'}{' '}
+                    {target === 'video' ? 'Improve motion and camera' : 'Improve mood and lighting'}{' '}
                     <ArrowRight size={13} />
                   </button>
                 </div>
@@ -571,7 +548,7 @@ export function PromptAssistant({
                 conversation.messages.map(entry => (
                   <article key={entry.id} className={`assistant-message message-${entry.role}`}>
                     <div className="assistant-message-meta">
-                      <strong>{entry.role === 'user' ? 'You' : 'Qwen3'}</strong>
+                      <strong>{entry.role === 'user' ? 'You' : 'Assistant'}</strong>
                       <time dateTime={entry.createdAt}>{shortDate(entry.createdAt)}</time>
                     </div>
                     <p>{entry.content}</p>
@@ -589,22 +566,33 @@ export function PromptAssistant({
                         }
                       >
                         <Sparkles size={13} />
-                        {entry.suggestion.id === selected?.id ? 'Reviewing this proposal' : 'Review this proposal'}
+                        {entry.suggestion.id === selected?.id ? 'Showing this one' : 'Show this one'}
                         <ArrowRight size={12} />
                       </button>
                     )}
                   </article>
                 ))
               )}
-              {thinking && (
-                <div className="assistant-thinking" role="status">
-                  <LoaderCircle className="spin" size={16} />
-                  <span>Qwen3 is writing on your CPU…</span>
-                </div>
+              {thinking && (status.reply?.explanation || status.reply?.prompt) ? (
+                <article className="assistant-message message-assistant assistant-live" aria-busy="true">
+                  <div className="assistant-message-meta">
+                    <strong>Assistant</strong>
+                    <LoaderCircle className="spin" size={13} />
+                  </div>
+                  {status.reply.explanation && <p>{status.reply.explanation}</p>}
+                  {status.reply.prompt && <p className="assistant-live-prompt">{status.reply.prompt}</p>}
+                </article>
+              ) : (
+                thinking && (
+                  <div className="assistant-thinking" role="status">
+                    <LoaderCircle className="spin" size={16} />
+                    <span>{status.state === 'starting' ? 'Loading the assistant…' : 'Writing…'}</span>
+                  </div>
+                )
               )}
             </div>
             <form className="assistant-composer" onSubmit={submit}>
-              <label htmlFor="assistant-instruction">What would you like to change?</label>
+              <label htmlFor="assistant-instruction">What should change?</label>
               <textarea
                 id="assistant-instruction"
                 ref={instructionInput}
@@ -612,7 +600,7 @@ export function PromptAssistant({
                 maxLength={4000}
                 disabled={!loaded || pending.close || pending.clear}
                 onChange={event => changeConversation({ ...current.current, instruction: event.target.value })}
-                placeholder="Make the scene feel like a quiet, rainy afternoon…"
+                placeholder="Make it a quiet, rainy afternoon"
                 rows={3}
                 onKeyDown={event => {
                   if (
@@ -643,21 +631,18 @@ export function PromptAssistant({
                   <button
                     type="submit"
                     className="primary"
-                    disabled={
-                      disabled || changingRuntime || status.state !== 'ready' || !conversation.instruction.trim()
-                    }
+                    disabled={disabled || changingRuntime || !canSend || !conversation.instruction.trim()}
                   >
                     <Send size={14} />
-                    Ask Qwen3
+                    Send
                   </button>
                 )}
               </div>
-              {status.state !== 'ready' && !thinking && (
-                <small className="assistant-composer-help">
-                  {status.state === 'not-installed'
-                    ? 'Install and start the assistant above to send a message.'
-                    : 'Start the assistant when you are ready to send.'}
-                </small>
+              {!status.installationAvailable && !thinking && status.state !== 'installing' && (
+                <small className="assistant-composer-help">Install the assistant above to start chatting.</small>
+              )}
+              {status.state === 'stopped' && !thinking && (
+                <small className="assistant-composer-help">It takes a little while to load on the first message.</small>
               )}
             </form>
           </section>
@@ -665,7 +650,7 @@ export function PromptAssistant({
             <div className="assistant-section-title">
               <h4>
                 <Sparkles size={16} />
-                Review before applying
+                Check before applying
               </h4>
               {applied && (
                 <span className="assistant-applied">
@@ -678,14 +663,14 @@ export function PromptAssistant({
               <>
                 {diverged && !applied && (
                   <div className="assistant-divergence" role="status">
-                    Create has changed since this proposal began. Applying replaces the positive and negative prompts
-                    currently shown in the middle column.
+                    {target === 'video' ? 'Video' : 'Create'} changed after you asked. Applying replaces what's in the
+                    middle column.
                   </div>
                 )}
                 <div className="assistant-compare-head" aria-hidden="true">
-                  <span>Original at request</span>
-                  <span>Current in Create</span>
-                  <span className="assistant-proposal-label">Proposed by Qwen3</span>
+                  <span>When you asked</span>
+                  <span>{target === 'video' ? 'Now in Video' : 'Now in Create'}</span>
+                  <span className="assistant-proposal-label">Suggested</span>
                 </div>
                 <PromptComparison
                   target={target}
@@ -702,11 +687,17 @@ export function PromptAssistant({
                     proposed={selected.proposedDraft.negativePrompt}
                   />
                 )}
+                {!!selected.dropped?.length && (
+                  <div className="assistant-divergence" role="status">
+                    This suggestion left out: {selected.dropped.join(', ')}. Add them back after applying if you still
+                    want them.
+                  </div>
+                )}
                 <div className="assistant-apply-row">
                   <p>
-                    {target === 'video' ? 'Applies the motion prompt to Video.' : 'Applies both prompts to Create.'}
+                    {target === 'video' ? 'Replaces the prompt in Video.' : 'Replaces both prompts in Create.'}
                     <br />
-                    <span>Undo is available after applying.</span>
+                    <span>You can undo it.</span>
                   </p>
                   <button
                     className="primary"
@@ -721,51 +712,25 @@ export function PromptAssistant({
                       : applied
                         ? `Applied to ${target === 'video' ? 'Video' : 'Create'}`
                         : alreadyMatches
-                          ? 'Already matches'
-                          : diverged
-                            ? 'Apply to current draft'
-                            : 'Apply prompts'}
+                          ? 'Already applied'
+                          : 'Apply'}
                   </button>
                 </div>
-                <details className="assistant-provenance">
-                  <summary>About this proposal</summary>
-                  <dl>
-                    <dt>Model</dt>
-                    <dd>{selected.modelId}</dd>
-                    <dt>Revision</dt>
-                    <dd>{selected.modelRevision}</dd>
-                    <dt>Created</dt>
-                    <dd>{shortDate(selected.createdAt)}</dd>
-                    <dt>Local generation</dt>
-                    <dd>
-                      {(selected.durationMs / 1000).toFixed(1)} seconds · {selected.promptTokens.toLocaleString()} input
-                      tokens
-                      {selected.completionTokens !== undefined
-                        ? ` · ${selected.completionTokens.toLocaleString()} output tokens`
-                        : ''}
-                    </dd>
-                    <dt>Conversation context</dt>
-                    <dd>{selected.historyTurnsUsed} earlier messages used</dd>
-                  </dl>
-                </details>
+                <small className="assistant-provenance">Took {(selected.durationMs / 1000).toFixed(0)} s</small>
               </>
             ) : (
               <div className="assistant-review-empty">
                 <div className="assistant-review-swatch">
                   <Sparkles size={32} />
                 </div>
-                <h4>Every change gets a preview.</h4>
-                <p>
-                  Your original, current, and proposed prompts will appear side by side here. Choose Apply when the
-                  wording feels right.
-                </p>
+                <p>Suggestions show up here next to your current prompt. Nothing changes until you press Apply.</p>
                 <div className="assistant-current-preview">
                   <span>{target === 'video' ? 'Current video prompt' : 'Current positive prompt'}</span>
-                  <p>{draft.prompt || 'No positive prompt yet.'}</p>
+                  <p>{draft.prompt || 'Empty'}</p>
                   {target !== 'video' && (
                     <>
                       <span>Current negative prompt</span>
-                      <p>{draft.negativePrompt || 'No negative prompt yet.'}</p>
+                      <p>{draft.negativePrompt || 'Empty'}</p>
                     </>
                   )}
                 </div>
@@ -777,18 +742,16 @@ export function PromptAssistant({
           <p>
             <span className={saveError ? 'assistant-save-error' : ''}>
               {loading
-                ? 'Loading conversation…'
+                ? 'Loading chat…'
                 : !loaded
-                  ? 'Conversation unavailable'
+                  ? "Chat didn't load"
                   : saveError
-                    ? 'Unsaved conversation'
-                    : saveState === 'saving'
-                      ? 'Saving locally…'
-                      : saveState === 'pending'
-                        ? 'Changes waiting to save'
-                        : 'Conversation saved locally'}
+                    ? 'Not saved'
+                    : saveState === 'saved'
+                      ? 'Saved'
+                      : 'Saving…'}
             </span>
-            <small>Keeps your last 30 messages until you clear the chat. Image and video have separate chats.</small>
+            <small>Keeps the last 30 messages.</small>
           </p>
           <button
             disabled={pending.close || pending.apply || pending.clear}
@@ -802,7 +765,7 @@ export function PromptAssistant({
         </footer>
         {!!status.logTail.length && (
           <details className="assistant-logs">
-            <summary>Assistant activity</summary>
+            <summary>Log</summary>
             <pre>{status.logTail.slice(-20).join('\n')}</pre>
           </details>
         )}
@@ -829,9 +792,9 @@ function PromptComparison({
       <legend>{title}</legend>
       <div className="assistant-comparison-grid">
         {[
-          { label: 'Original at request', text: original },
-          { label: target === 'video' ? 'Current in Video' : 'Current in Create', text: current },
-          { label: 'Proposed by Qwen3', text: proposed },
+          { label: 'When you asked', text: original },
+          { label: target === 'video' ? 'Now in Video' : 'Now in Create', text: current },
+          { label: 'Suggested', text: proposed },
         ].map((item, index) => (
           <label key={item.label} className={index === 2 ? 'assistant-proposed' : ''}>
             <span>{item.label}</span>
