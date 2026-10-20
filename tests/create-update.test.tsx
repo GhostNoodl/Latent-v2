@@ -12,7 +12,7 @@ import {
 } from '../src/shared/advanced-image-workflow';
 import type { HiresFixSettings } from '../src/shared/advanced-image-types';
 import { SizePresets } from '../src/renderer/SizePresets';
-import { useDismissiblePanel } from '../src/renderer/useDismissiblePanel';
+import { useDismissiblePanel, useTuneFlyouts } from '../src/renderer/useDismissiblePanel';
 const hires: HiresFixSettings = {
   method: 'latent',
   workflowVersion: 'sdxl-hires-latent@1',
@@ -576,4 +576,46 @@ it.each(['lora', 'checkpoint'] as const)('filters the Create %s picker with fold
     host.remove();
     vi.unstubAllGlobals();
   }
+});
+it('keeps one Tune flyout open and closes it on Escape or an outside click', async () => {
+  function Flyouts() {
+    useTuneFlyouts();
+    return (
+      <div>
+        <details className="tune-flyout" id="a">
+          <summary>A</summary>
+          <input />
+        </details>
+        <details className="tune-flyout" id="b">
+          <summary>B</summary>
+        </details>
+        <button type="button">Outside</button>
+      </div>
+    );
+  }
+  const host = document.body.appendChild(document.createElement('div'));
+  const root = createRoot(host);
+  await act(async () => root.render(<Flyouts />));
+  const [a, b] = [...host.querySelectorAll('details')];
+  a.open = true;
+  b.open = true;
+  await act(async () => {
+    b.dispatchEvent(new Event('toggle'));
+  });
+  expect([a.open, b.open]).toEqual([false, true]);
+  await act(async () => {
+    host.querySelector('input')!.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+  });
+  expect(b.open).toBe(true);
+  await act(async () => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  });
+  expect(b.open).toBe(false);
+  a.open = true;
+  await act(async () => {
+    host.querySelector('button')!.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+  });
+  expect(a.open).toBe(false);
+  await act(async () => root.unmount());
+  host.remove();
 });

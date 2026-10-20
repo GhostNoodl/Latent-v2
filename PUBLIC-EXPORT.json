@@ -368,13 +368,13 @@
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
-      "bytes": 14194,
-      "sha256": "ab1a722e50894207d3de21e8bacdc6dea73232298c2479d4cdb99d20223076ac"
+      "bytes": 14185,
+      "sha256": "0bb7a1c01705256e584004a6426fa8310a0fe26b25eee66babe28fd0f610f524"
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 120963,
-      "sha256": "f526099de50ad6cb3be1172d1f030b7ea136b0e705ab5305b86622a43550538d"
+      "bytes": 120848,
+      "sha256": "87b7fa85c09ecfbd0b2dd0c8eb03614bfa67975dc5583b8bb878ad76fcabf97b"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -418,8 +418,8 @@
     },
     {
       "path": "src/renderer/ControlNetControls.tsx",
-      "bytes": 10186,
-      "sha256": "14ab16183864075e3e040c6daaad5dbc0edf25f0ed5c861a028959c51052b892"
+      "bytes": 10191,
+      "sha256": "a0f61bc6fa9d9611dda7baf025863493eaa1f64427301097493a70fb806fb858"
     },
     {
       "path": "src/renderer/DownloadStorage.tsx",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 49999,
-      "sha256": "1a303c3eb1b8b202e3cb070138424705e51d7bb87fb541b835ecde0d931803bd"
+      "bytes": 55340,
+      "sha256": "eee46584b93d5f53b9ed017f8d06d1c22f0444abcb99257faf29a2e3359e2663"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -488,8 +488,8 @@
     },
     {
       "path": "src/renderer/IPAdapterControls.tsx",
-      "bytes": 13568,
-      "sha256": "a81ab1def392b581429753a93c86a6d6ec859751239e77b46cad941344b395f8"
+      "bytes": 13570,
+      "sha256": "bd3209cd190da1da1572e1d700418dbefd9678b21956c588a6b6582bb7e4e2b1"
     },
     {
       "path": "src/renderer/LibraryDetail.tsx",
@@ -618,8 +618,8 @@
     },
     {
       "path": "src/renderer/SourceInput.tsx",
-      "bytes": 18284,
-      "sha256": "942848a0405d57b9281643a619c1db3d299472914a0575c88db96dd33bb23864"
+      "bytes": 18304,
+      "sha256": "3df135b19228ad962ee7024dda8426515e8bdd93ae73513629147523facb027c"
     },
     {
       "path": "src/renderer/storage-overview.css",
@@ -1353,13 +1353,13 @@
     },
     {
       "path": "src/renderer/useDismissiblePanel.ts",
-      "bytes": 943,
-      "sha256": "cdbc6bed7a9b3a970d1b04f7666252677a7b6788b3089d8fdfce5096b4a3eff8"
+      "bytes": 2586,
+      "sha256": "632a0f64503df8be4faaf4f4a9ad985e1f5810fc0583970b340ccafc086e3841"
     },
     {
       "path": "tests/create-update.test.tsx",
-      "bytes": 21430,
-      "sha256": "8029199786efd5b13141d261abb0a49186d0d5fdd1bf6a404f4fb45bdb6e772e"
+      "bytes": 22811,
+      "sha256": "04672bbc2eb4f29b358a72bd6f529209c342327fa373b473681de700947e68f1"
     },
     {
       "path": "docs/UPDATE-0.2.md",
@@ -1468,8 +1468,8 @@
     },
     {
       "path": "src/renderer/AutomaticFaceControls.tsx",
-      "bytes": 6609,
-      "sha256": "39bb3f9fd8f5b03a933b093a6e57f074aac05597bbac465b9494ecf369122979"
+      "bytes": 6731,
+      "sha256": "dd4a973ec660d7478f36cdaaeceee97b199bc5c4bdc2606974350efd1c0fdec1"
     },
     {
       "path": "tests/automatic-faces.test.ts",

@@ -16,7 +16,7 @@ import { PreviewMenu } from './PreviewMenu';
 import { draftFieldLabel } from './draft-field-label';
 import { hiddenAdvancedSettings } from '../shared/create-mode';
 import { applySnapshotChanges, type SnapshotChanges } from '../shared/snapshot-changes';
-import { useDismissiblePanel } from './useDismissiblePanel';
+import { useDismissiblePanel, useTuneFlyouts } from './useDismissiblePanel';
 import { imageSetupReason } from '../shared/setup';
 import { SetupHub } from './SetupHub';
 import { queueClearKey } from './queue-view';
@@ -197,6 +197,7 @@ export default function App() {
   const [previewMenu, setPreviewMenu] = useState<{ record: GenerationRecord; x: number; y: number }>();
   const closePreviewMenu = useCallback(() => setPreviewMenu(undefined), []);
   const [loraPopover, setLoraPopover] = useState<number>();
+  useTuneFlyouts();
   useDismissiblePanel(
     loraPopover !== undefined,
     useCallback(() => setLoraPopover(undefined), []),
@@ -1252,7 +1253,7 @@ export default function App() {
                       <summary>Generation settings</summary>
                       <div className="advanced-grid">
                         {createMode === 'advanced' && (
-                          <div className="two-columns">
+                          <div className="two-columns size-fields">
                             <Field label="Width">
                               <input
                                 type="number"
@@ -1363,7 +1364,7 @@ export default function App() {
                           </div>
                         </Field>
                         {createMode === 'advanced' && (
-                          <details>
+                          <details className="tune-flyout sampling-flyout">
                             <summary>Model sampling</summary>
                             <Field label="Prediction type">
                               <select
@@ -1445,12 +1446,7 @@ export default function App() {
                         />
                       </>
                     )}
-                    <details
-                      className="extra-row"
-                      open={
-                        Boolean(draft.dynamicPrompts?.enabled || draft.regionalPrompts?.settings.enabled) || undefined
-                      }
-                    >
+                    <details className="extra-row tune-flyout">
                       <summary>
                         {createMode === 'advanced' ? 'Regions and wildcards' : 'Wildcards'}
                         {(draft.dynamicPrompts?.enabled || draft.regionalPrompts?.settings.enabled) && (

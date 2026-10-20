@@ -2127,3 +2127,200 @@
   font-size: 12px;
   color: var(--muted);
 }
+
+/* Everything on one screen: extras are one-line rows in the drawer and open as a panel beside it. */
+.studio .workspace {
+  --tune-width: 340px;
+}
+@media (max-width: 1100px) {
+  .studio .workspace {
+    --tune-width: 300px;
+  }
+}
+.studio .workspace .composer-fields {
+  gap: 14px;
+}
+.studio .workspace .composer-fields .two-columns:has(.slider-field) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.studio .workspace .composer-fields .size-fields {
+  gap: 8px;
+}
+.studio .workspace .composer-fields .size-fields > .field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.studio .workspace .composer-fields .size-fields > .field > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.studio .workspace .composer-fields .size-fields > .field::before {
+  content: 'W';
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .workspace .composer-fields .size-fields > .field + .field::before {
+  content: 'H';
+}
+.studio .workspace .composer-fields #negative-area textarea {
+  min-height: 60px;
+  height: 60px;
+}
+.studio .workspace .composer-fields .advanced-image-controls {
+  gap: 4px;
+}
+.studio .workspace .composer-fields > :is(.advanced-image-controls, .source-input, details.advanced, .extra-row) {
+  margin-top: -10px;
+}
+.studio .workspace .composer-fields > .advanced-image-controls {
+  margin-top: 0;
+}
+.studio .workspace .composer-fields details.tune-flyout {
+  border: 0;
+  border-radius: 10px;
+  background: var(--inset);
+  padding: 0;
+}
+.studio .workspace .composer-fields details.tune-flyout > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+}
+.studio .workspace .composer-fields details.tune-flyout > summary::-webkit-details-marker {
+  display: none;
+}
+.studio .workspace .composer-fields details.tune-flyout > summary:hover {
+  background: var(--raised);
+}
+.studio .workspace .composer-fields details.tune-flyout[open] > summary {
+  border-color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: var(--raised);
+}
+.studio .workspace .composer-fields details.tune-flyout > summary::after {
+  content: 'Off';
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .workspace .composer-fields details.tune-flyout > summary:has(.extra-status)::after,
+.studio .workspace .composer-fields details.tune-flyout[open] > summary::after {
+  content: '›';
+  margin-left: 0;
+  font-size: 16px;
+}
+.studio .workspace .composer-fields details.tune-flyout[open] > summary::after {
+  margin-left: auto;
+  color: var(--accent);
+}
+.studio .workspace .composer-fields details.tune-flyout .extra-status {
+  font-size: 12px;
+}
+.studio .workspace .composer-fields details.tune-flyout > summary svg {
+  display: none;
+}
+.studio .workspace .composer-fields details.tune-flyout[open]::details-content {
+  position: fixed;
+  z-index: 40;
+  top: 68px;
+  right: calc(var(--tune-width) + 8px);
+  width: min(380px, calc(100vw - var(--tune-width) - 120px));
+  max-height: calc(100vh - 84px);
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 20px 60px var(--shadow);
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+.studio .workspace .composer-fields details.tune-flyout > :not(summary) {
+  margin: 0;
+}
+.studio .workspace .composer-fields details.sampling-flyout {
+  background: transparent;
+}
+.studio .workspace .composer-fields details.sampling-flyout > summary {
+  min-height: 28px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .workspace .composer-fields details.sampling-flyout > summary::after {
+  content: '›';
+  margin-left: 6px;
+}
+.studio .workspace .composer-fields details.sampling-flyout[open] > summary {
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent);
+}
+.studio .workspace .composer-fields details.face-flyout .checkbox-label {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+.studio .workspace .composer-fields > .source-input {
+  border-top: 0;
+  padding-top: 0;
+}
+.studio .workspace .composer-fields .size-fields > label.field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.studio .workspace .composer-fields .size-fields > label.field > input {
+  flex: 1;
+  min-width: 0;
+}
+.studio .workspace .composer-fields .slider-field {
+  grid-template-columns: minmax(0, 1fr) 40px;
+}
+.studio .workspace .composer-fields .slider-field > span {
+  white-space: nowrap;
+}
+.studio .workspace .composer-fields {
+  padding-bottom: 16px;
+}
+.studio .workspace .composer-fields .size-presets button {
+  min-height: 44px;
+  padding: 4px;
+}
+@media (max-height: 940px) {
+  .studio .workspace .composer-fields {
+    gap: 12px;
+  }
+  .studio .workspace .composer-fields .size-presets button {
+    min-height: 40px;
+  }
+  .studio .workspace .composer-fields #negative-area textarea {
+    min-height: 52px;
+    height: 52px;
+  }
+}
+@media (max-height: 940px) {
+  .studio .workspace .composer-fields {
+    padding-top: 12px;
+  }
+  .studio .workspace .composer-fields details.tune-flyout > summary {
+    min-height: 36px;
+  }
+}

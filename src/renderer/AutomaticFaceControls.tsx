@@ -31,7 +31,8 @@ export function AutomaticFaceControls({
     value = draft.autoFace;
   const compatible = !draft.faceDetailer && !draft.autoFaceParentRecordId && !draft.upscale && !draft.qwenEdit;
   return (
-    <section aria-label="Automatic face refinement">
+    <details className="tune-flyout face-flyout" aria-label="Automatic face refinement">
+      <summary>Fix faces{value && <span className="extra-status">On</span>}</summary>
       <label className="checkbox-label">
         <input
           type="checkbox"
@@ -191,6 +192,6 @@ export function AutomaticFaceControls({
           </Field>
         </>
       )}
-    </section>
+    </details>
   );
 }
