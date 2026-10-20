@@ -261,3 +261,62 @@ it('rejects malformed signatures and keys', () => {
 it('derives the same raw public key the keygen prints, so CI can confirm a key is trusted', () => {
   expect(rawPublicKey(publisher.pem)).toBe(publisher.raw);
 });
+it('lets a slow download finish but gives up once data stops arriving', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'latent-update-test-'));
+  const values = new Map<string, unknown>();
+  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  let body: (init?: RequestInit) => ReadableStream<Uint8Array> = () => new ReadableStream();
+  const request = vi.fn(async (url: string, init?: RequestInit) =>
+    url === APP_RELEASE_API
+      ? Response.json(release())
+      : isSignature(url)
+        ? new Response(signature + '\n')
+        : new Response(body(init)),
+  );
+  const s = new AppUpdateService(
+    root,
+    {
+      getState: <T>(key: string, fallback: T) => (values.get(key) ?? fallback) as T,
+      setState: (key, value) => {
+        values.set(key, value);
+      },
+    },
+    '0.1.1',
+    true,
+    () => {},
+    request as unknown as typeof fetch,
+    [publisher.raw],
+    300,
+  );
+  try {
+    await s.check();
+    // Four slices 150 ms apart take longer than the idle limit in total, but never go quiet for it.
+    body = () => {
+      const slices = [0, 10, 20, 30].map((start, i, all) => bytes.subarray(start, all[i + 1]));
+      return new ReadableStream({
+        async pull(controller) {
+          await wait(150);
+          const next = slices.shift();
+          if (next) controller.enqueue(next);
+          else controller.close();
+        },
+      });
+    };
+    await s.download();
+    expect(s.status().state).toBe('ready');
+    await fs.rm(path.join(root, 'app-updates'), { recursive: true, force: true });
+    await s.check();
+    body = init =>
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(bytes.subarray(0, 10));
+          init?.signal?.addEventListener('abort', () => controller.error(init.signal!.reason), { once: true });
+        },
+      });
+    await expect(s.download()).rejects.toThrow('stopped receiving data');
+    expect(s.status().state).toBe('error');
+  } finally {
+    await s.dispose();
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});

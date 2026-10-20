@@ -34,6 +34,7 @@ export class AppUpdateService {
     private changed: () => void,
     private request: typeof fetch = fetch,
     private publicKeys: readonly string[] = APP_RELEASE_PUBLIC_KEYS,
+    private stallMs = 60_000,
   ) {
     const saved = appUpdateSettingsSchema.safeParse(
       store.getState('app-updates.settings', DEFAULT_APP_UPDATE_SETTINGS),
@@ -107,7 +108,28 @@ export class AppUpdateService {
       });
     await this.task;
   }
+  /** Gives up only when no data arrives for a while, so slow connections can still finish big downloads. */
   private async response(url: string, signal: AbortSignal) {
+    const idle = new AbortController();
+    let timer: NodeJS.Timeout | undefined;
+    const touch = () => {
+      clearTimeout(timer);
+      timer = setTimeout(
+        () => idle.abort(Error('The update download stopped receiving data. Check your connection and try again.')),
+        this.stallMs,
+      );
+      timer.unref?.();
+    };
+    const done = () => clearTimeout(timer);
+    touch();
+    try {
+      return { response: await this.follow(url, AbortSignal.any([signal, idle.signal])), touch, done };
+    } catch (error) {
+      done();
+      throw error;
+    }
+  }
+  private async follow(url: string, signal: AbortSignal) {
     for (let hop = 0; hop < 5; hop++) {
       const parsed = new URL(url);
       if (
@@ -129,7 +151,7 @@ export class AppUpdateService {
           'User-Agent': 'Latent-v2-updater',
           Accept: parsed.hostname === 'api.github.com' ? 'application/vnd.github+json' : 'application/octet-stream',
         },
-        signal: AbortSignal.any([signal, AbortSignal.timeout(120000)]),
+        signal,
       });
       if ([301, 302, 303, 307, 308].includes(response.status)) {
         const next = response.headers.get('location');
@@ -153,16 +175,21 @@ export class AppUpdateService {
     throw Error('The update download redirected too many times.');
   }
   private async text(url: string, signal: AbortSignal, limit: number, label: string) {
-    const response = await this.response(url, signal);
-    const chunks: Uint8Array[] = [];
-    let bytes = 0;
-    if (!response.body) throw Error(`Empty ${label} response.`);
-    for await (const chunk of response.body) {
-      bytes += chunk.length;
-      if (bytes > limit) throw Error(`The ${label} response is too large.`);
-      chunks.push(chunk);
+    const { response, touch, done } = await this.response(url, signal);
+    try {
+      const chunks: Uint8Array[] = [];
+      let bytes = 0;
+      if (!response.body) throw Error(`Empty ${label} response.`);
+      for await (const chunk of response.body) {
+        touch();
+        bytes += chunk.length;
+        if (bytes > limit) throw Error(`The ${label} response is too large.`);
+        chunks.push(chunk);
+      }
+      return Buffer.concat(chunks).toString('utf8');
+    } finally {
+      done();
     }
-    return Buffer.concat(chunks).toString('utf8');
   }
   async check() {
     this.nextCheck = Date.now() + 24 * 60 * 60_000;
@@ -220,6 +247,7 @@ export class AppUpdateService {
         file = path.join(dir, release.name),
         temp = path.join(dir, `${randomUUID()}.part`);
       let handle: Awaited<ReturnType<typeof fs.open>> | undefined;
+      let finished: (() => void) | undefined;
       try {
         await fs.lstat(file);
         await this.verify(file, release);
@@ -243,13 +271,15 @@ export class AppUpdateService {
         const disk = await fs.statfs(dir);
         if (disk.bavail * disk.bsize < release.bytes * 2 + 128 * 1024 * 1024)
           throw Error('Free some disk space before downloading this update.');
-        const response = await this.response(release.url, signal);
+        const { response, touch, done } = await this.response(release.url, signal);
+        finished = done;
         if (!response.body) throw Error('Empty installer response.');
         handle = await fs.open(temp, 'wx');
         let received = 0,
           last = -1;
         const hash = createHash('sha256');
         for await (const chunk of response.body) {
+          touch();
           signal.throwIfAborted();
           received += chunk.length;
           if (received > release.bytes) throw Error('Installer size does not match the release.');
@@ -277,6 +307,7 @@ export class AppUpdateService {
           message: 'Update downloaded and verified. Install when you are ready.',
         });
       } finally {
+        finished?.();
         await handle?.close();
         await fs.unlink(temp).catch(() => {});
       }

@@ -1024,12 +1024,12 @@
     {
       "path": "package.json",
       "bytes": 4517,
-      "sha256": "67a803cb4bf03ca0be4f3a4b63e6838725452a3a080c20ba037bff3db06658ea"
+      "sha256": "8add785964ae1f5f36875e73a09c0b9c1570c9c12116dfe127efe7e815105635"
     },
     {
       "path": "package-lock.json",
       "bytes": 252660,
-      "sha256": "be8ce4106f2be86550c8d01cf253d5f2799490721b58432ab3cdea2d1552b767"
+      "sha256": "12bec034fd54c142144add876ff2f5f988e99ac06a958240d26eaad5072ff48b"
     },
     {
       "path": "tsconfig.json",
@@ -1503,8 +1503,8 @@
     },
     {
       "path": "src/main/app-updates.ts",
-      "bytes": 12856,
-      "sha256": "e467e7316574af5252a0c99358b3139166bb5ac824a7d6542a7ed172298e16e1"
+      "bytes": 13801,
+      "sha256": "cea5f7cede6bdf5c3bb8da595063d2347aa549aca755838a79155445d93faaad"
     },
     {
       "path": "src/renderer/AppUpdates.tsx",
@@ -1513,8 +1513,8 @@
     },
     {
       "path": "tests/app-updates.test.ts",
-      "bytes": 11190,
-      "sha256": "e934bec1c4d89eafe8b54823d49ffc039b3cfb147a6f314c0a579fd988e317a2"
+      "bytes": 13277,
+      "sha256": "bb91a48dce40ee78a28228badab84deec22d718c5029043bff9a6bc4e4ce537f"
     },
     {
       "path": "tests/app-updates-ui.test.tsx",
