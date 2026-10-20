@@ -299,46 +299,46 @@ export function Models({
                       {model.status === 'missing' && <span className="inline-error">File missing</span>}
                     </div>
                     {model.triggers.length > 0 && (
-                      <p className="trigger-preview">Prompt prefixes: {model.triggers.join(', ')}</p>
-                    )}
-                    {collectionActions && (
-                      <div className="model-folder-actions">
-                        <select
-                          aria-label={`Move ${model.name} to folder`}
-                          value=""
-                          disabled={folderPending || !folders.some(folder => folder.id !== collectionId)}
-                          onChange={event => {
-                            void moveToFolder(model.id, event.target.value);
-                          }}
-                        >
-                          <option value="">{collectionId ? 'Move to folder…' : 'Add to folder…'}</option>
-                          {folders
-                            .filter(folder => folder.id !== collectionId)
-                            .map(folder => (
-                              <option key={folder.id} value={folder.id}>
-                                {folder.name}
-                              </option>
-                            ))}
-                        </select>
-                        {collectionId && (
-                          <button
-                            type="button"
-                            disabled={folderPending}
-                            aria-label={`Remove ${model.name} from folder`}
-                            onClick={() => {
-                              void folderMutation(async () =>
-                                onCollectionChange!(await collectionActions.removeMembers(collectionId, [model.id])),
-                              );
-                            }}
-                          >
-                            Remove from folder
-                          </button>
-                        )}
-                      </div>
+                      <p className="trigger-preview">Trigger words: {model.triggers.join(', ')}</p>
                     )}
                     <details className="model-management">
                       <summary>Manage</summary>
                       <p className="model-filename">{model.filename}</p>
+                      {collectionActions && (
+                        <div className="model-folder-actions">
+                          <select
+                            aria-label={`Move ${model.name} to folder`}
+                            value=""
+                            disabled={folderPending || !folders.some(folder => folder.id !== collectionId)}
+                            onChange={event => {
+                              void moveToFolder(model.id, event.target.value);
+                            }}
+                          >
+                            <option value="">{collectionId ? 'Move to folder…' : 'Add to folder…'}</option>
+                            {folders
+                              .filter(folder => folder.id !== collectionId)
+                              .map(folder => (
+                                <option key={folder.id} value={folder.id}>
+                                  {folder.name}
+                                </option>
+                              ))}
+                          </select>
+                          {collectionId && (
+                            <button
+                              type="button"
+                              disabled={folderPending}
+                              aria-label={`Remove ${model.name} from folder`}
+                              onClick={() => {
+                                void folderMutation(async () =>
+                                  onCollectionChange!(await collectionActions.removeMembers(collectionId, [model.id])),
+                                );
+                              }}
+                            >
+                              Remove from folder
+                            </button>
+                          )}
+                        </div>
+                      )}
                       <button className="text-button" onClick={() => setContextModel(model)}>
                         Details / manage file
                       </button>

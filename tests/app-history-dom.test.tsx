@@ -543,6 +543,16 @@ describe('Create history, draft and asynchronous acceptance', () => {
     });
     expect(api.queueGeneration).toHaveBeenCalledOnce();
   });
+  it('shows a picked Library image beside the grid and sends its settings to Create', async () => {
+    await click(button('Library'));
+    await click(preview(second.resolvedPrompt));
+    expect(host.querySelector('.library-history')).not.toBeNull();
+    expect(savedSelection).toBe(second.id);
+    const detail = host.querySelector<HTMLElement>('[aria-label="Image details"]')!;
+    expect(detail.textContent).toContain(second.actualSeed);
+    await click(button('Use these settings'));
+    expect(host.querySelector('#prompt')).not.toBeNull();
+  });
   it('previews without editing the composer and explicitly restores all ordinary values with full Undo', async () => {
     const original = normalized(savedDraft),
       records = structuredClone(snapshot.history);

@@ -78,10 +78,10 @@ export function VideoHistory({
     >
       <aside className="video-history-rail">
         <div className="section-heading">
-          <h2>{title}</h2>
+          <h2>{studio ? 'Clips' : title}</h2>
           {onRefresh && (
             <button type="button" disabled={loading} onClick={onRefresh}>
-              {loading ? 'Refreshing videos…' : error ? 'Retry video history' : 'Refresh video history'}
+              {loading ? 'Refreshing…' : error ? 'Try again' : 'Refresh'}
             </button>
           )}
         </div>
@@ -96,7 +96,7 @@ export function VideoHistory({
           </Notice>
         )}
         {loading && <p role="status">Loading saved videos…</p>}
-        {!records.length && !loading && !error && <p>No saved videos yet. Your generated videos will appear here.</p>}
+        {!records.length && !loading && !error && <p>No clips yet. Videos you make show up here.</p>}
         {selectedId && !selected && !loading && (
           <Notice>
             The selected video is unavailable in this history listing. Its saved selection is retained; refresh to check

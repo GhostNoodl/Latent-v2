@@ -27,6 +27,7 @@ import { ModelPicker, ModelArtwork, modelDisplayName } from './ModelPicker';
 import './civitai.css';
 import { variationDescription } from './variation-description';
 import { ImagePreview } from './ImagePreview';
+import { LibraryDetail } from './LibraryDetail';
 import { Suspense, lazy, memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowDown,
@@ -2075,19 +2076,36 @@ export default function App() {
           )}
           {page === 'library' && (
             <ErrorBoundary label="Library" resetKey={page}>
-              <div className="page-content library-content">
+              <div className={`page-content library-content ${selected ? 'has-detail' : ''}`}>
                 <History
                   {...collectionProps}
                   onVariation={variation}
                   library
                   records={snapshot.history}
                   selectedId={selected?.id}
-                  onSelect={selectImage}
+                  onSelect={record => selectPreview(record.id)}
                   onReuse={restore}
                   onCompare={compare}
                   imageVersions={imageVersions}
                   run={run}
                 />
+                {selected && (
+                  <LibraryDetail
+                    record={selected}
+                    records={snapshot.history}
+                    onSelect={record => selectPreview(record.id)}
+                    onReuse={record => {
+                      restore(record);
+                      setPage('create');
+                    }}
+                    onOpen={selectImage}
+                    onEdit={record => setQwenEditor({ record })}
+                    onVideo={record => {
+                      selectPreview(record.id);
+                      setPage('video');
+                    }}
+                  />
+                )}
               </div>
             </ErrorBoundary>
           )}

@@ -1159,210 +1159,8 @@ export function QwenEditor({
                       </div>
                     </div>
                   )}
-                  <div className="qwen-version-strip" aria-label="Saved versions">
-                    {records.length ? (
-                      records.map(record => (
-                        <button
-                          type="button"
-                          key={record.id}
-                          className={record.id === selected?.id && !showingLive ? 'selected' : ''}
-                          onClick={() => selectRecord(record)}
-                          aria-label={`Preview version ${record.qwenEdit!.lineage.version}, branch ${record.qwenEdit!.lineage.branchId.slice(0, 6)}; leave editor input unchanged`}
-                          aria-pressed={record.id === selected?.id && !showingLive}
-                        >
-                          <img src={record.imageUrl} alt="" />
-                          <span>
-                            v{record.qwenEdit!.lineage.version} · {record.qwenEdit!.lineage.branchId.slice(0, 4)}
-                          </span>
-                        </button>
-                      ))
-                    ) : (
-                      <p>
-                        <History size={16} />
-                        Generated versions will appear here with their exact edit recipes.
-                      </p>
-                    )}
-                  </div>
-                </section>
-                <section className="qwen-composer" aria-label="Next image edit">
-                  {draft ? (
-                    <>
-                      <Field
-                        label="Model"
-                        hint={`${steps} steps · CFG ${guidance}${draft.frozenRecipe ? ' · recorded recipe' : ''}`}
-                      >
-                        <select
-                          value={profile}
-                          disabled={locked || installing}
-                          onChange={event => {
-                            const profile = event.target.value as QwenEditProfile;
-                            edit({
-                              operation: 'edit',
-                              transparent: false,
-                              references: [],
-                              settings: {
-                                ...draft.settings,
-                                profile,
-                                steps: qwenProfileSteps(profile),
-                                guidance: isQwen21Profile(profile) || isFastQwenProfile(profile) ? 1 : 4,
-                              },
-                            });
-                          }}
-                        >
-                          <option value="qwen21">Qwen Image 2.1 · 25 steps</option>
-                          <option value="lightning8">Lightning · 8 steps</option>
-                          <option value="base">Base · {profile === 'base' ? steps : 40} steps</option>
-                          <option value="fast">Fast · 4 steps with Lightning adapter</option>
-                          <option value="compact">Compact · smaller model, 4 steps</option>
-                        </select>
-                      </Field>
-                      {isQwen21Profile(profile) && (
-                        <>
-                          <Field label="Task">
-                            <select
-                              aria-label="Qwen task"
-                              value={draft.operation ?? 'edit'}
-                              disabled={locked}
-                              onChange={event =>
-                                edit({
-                                  operation: event.target.value as 'edit' | 'create',
-                                  source: undefined,
-                                  references: [],
-                                })
-                              }
-                            >
-                              <option value="edit">Edit an image</option>
-                              <option value="create">Create from a prompt</option>
-                            </select>
-                          </Field>
-                          <label>
-                            <input
-                              type="checkbox"
-                              checked={draft.transparent ?? false}
-                              disabled={locked}
-                              onChange={event => edit({ transparent: event.target.checked })}
-                            />
-                            Transparent background
-                          </label>
-                          <p className="muted small">
-                            Qwen 2.1 model weights use the publisher’s Research License. Setup needs{' '}
-                            {bytes(profileBytes)} of models plus an engine update. Shared files are reused.
-                          </p>
-                        </>
-                      )}
-                      <Field label="Conversation name">
-                        <input
-                          value={draft.title}
-                          maxLength={80}
-                          disabled={locked}
-                          onChange={event => edit({ title: event.target.value || 'Untitled image edit' }, false)}
-                        />
-                      </Field>
-                      {draft.operation !== 'create' && (
-                        <div className="qwen-source">
-                          <div className="label-row">
-                            <strong>Input for the next edit</strong>
-                            <button
-                              type="button"
-                              disabled={locked}
-                              onClick={() => {
-                                void importImage();
-                              }}
-                            >
-                              <ImagePlus size={14} />
-                              Import image
-                            </button>
-                          </div>
-                          <Field label="Saved source">
-                            <select
-                              value={draft.source?.id ?? ''}
-                              disabled={locked}
-                              onChange={event => {
-                                const chosen = sources.find(item => item.id === event.target.value);
-                                if (!chosen) return;
-                                try {
-                                  const parent = chosen.originGenerationId
-                                    ? snapshot.history.find(record => record.id === chosen.originGenerationId)
-                                    : undefined;
-                                  assignSource(chosen, parent);
-                                } catch (reason) {
-                                  setError(errorMessage(reason));
-                                }
-                              }}
-                            >
-                              <option value="">Choose a starting image…</option>
-                              {draft.source && !source && (
-                                <option value={draft.source.id}>Missing source · {draft.source.id.slice(-8)}</option>
-                              )}
-                              {sources.map(item => (
-                                <option key={item.id} value={item.id}>
-                                  {item.name} · {item.normalized.width} × {item.normalized.height}
-                                </option>
-                              ))}
-                            </select>
-                          </Field>
-                          {source && (
-                            <div className="qwen-source-chip">
-                              <img src={sourceUrl(source.id)} alt="Current edit input" />
-                              <span>
-                                {source.name}
-                                <small>
-                                  {source.normalized.width} × {source.normalized.height}
-                                  {sourceParent?.qwenEdit
-                                    ? ` · version ${sourceParent.qwenEdit.lineage.version}`
-                                    : sourceParent
-                                      ? ' · saved studio image'
-                                      : ' · imported original'}
-                                </small>
-                              </span>
-                            </div>
-                          )}
-                          {sourceChanged && (
-                            <Notice error>
-                              The image this edit started from is missing or has changed. Pick the image you want to
-                              edit before generating.
-                            </Notice>
-                          )}
-                          <small>
-                            Choosing a version above previews it. Continue from that version to change this input.
-                          </small>
-                        </div>
-                      )}
-                      {isQwen21Profile(profile) && draft.operation !== 'create' && (
-                        <Field
-                          label="Second reference (optional)"
-                          hint="Refer to your input as <image1> and this reference as <image2>."
-                        >
-                          <select
-                            aria-label="Second reference"
-                            value={draft.references?.[0]?.sourceId ?? ''}
-                            disabled={locked}
-                            onChange={event => {
-                              const ref = sources.find(item => item.id === event.target.value);
-                              edit({ references: ref ? [{ sourceId: ref.id, sha256: ref.normalized.sha256 }] : [] });
-                            }}
-                          >
-                            <option value="">No second reference</option>
-                            {sources.map(item => (
-                              <option key={item.id} value={item.id}>
-                                {item.name}
-                              </option>
-                            ))}
-                          </select>
-                          <button type="button" disabled={locked} onClick={() => void importReference()}>
-                            Import reference
-                          </button>
-                        </Field>
-                      )}
-                      {draft.frozenRecipe && (
-                        <div className="qwen-frozen">
-                          <Check size={14} />
-                          <span>
-                            Exact recipe replay · source, seed and model hashes retained. Changing the edit or its
-                            settings clears the freeze.
-                          </span>
-                        </div>
-                      )}
+                  {draft && (
+                    <div className="qwen-dock">
                       <Field
                         label={draft.operation === 'create' ? 'Describe your image' : 'What should change?'}
                         hint={`${draft.instruction.length.toLocaleString()} / 4,000 characters · Ctrl+Enter to queue`}
@@ -1376,89 +1174,6 @@ export function QwenEditor({
                           placeholder="Keep the character and composition. Change the coat to deep red and make the background a rainy street…"
                         />
                       </Field>
-                      <details>
-                        <summary>Negative instruction</summary>
-                        <textarea
-                          aria-label="Negative instruction"
-                          value={draft.negativePrompt}
-                          maxLength={4000}
-                          rows={2}
-                          disabled={locked}
-                          onChange={event => edit({ negativePrompt: event.target.value })}
-                          placeholder="Unwanted changes or artifacts…"
-                        />
-                      </details>
-                      <div className="two-columns">
-                        <Field label="Saved width">
-                          <select
-                            value={draft.settings.width}
-                            disabled={locked}
-                            onChange={event =>
-                              edit({ settings: { ...draft.settings, width: Number(event.target.value) } })
-                            }
-                          >
-                            {sizes.map(size => (
-                              <option key={size}>{size}</option>
-                            ))}
-                          </select>
-                        </Field>
-                        <Field label="Saved height">
-                          <select
-                            value={draft.settings.height}
-                            disabled={locked}
-                            onChange={event =>
-                              edit({ settings: { ...draft.settings, height: Number(event.target.value) } })
-                            }
-                          >
-                            {sizes.map(size => (
-                              <option key={size}>{size}</option>
-                            ))}
-                          </select>
-                        </Field>
-                      </div>
-                      <Field label="Fit input to output">
-                        <select
-                          value={draft.settings.resize}
-                          disabled={locked}
-                          onChange={event =>
-                            edit({
-                              settings: { ...draft.settings, resize: event.target.value as 'stretch' | 'center-crop' },
-                            })
-                          }
-                        >
-                          <option value="center-crop">Center crop</option>
-                          <option value="stretch">Stretch to fit</option>
-                        </select>
-                      </Field>
-                      <Field label="Seed" hint="Random chooses a new actual seed when queued.">
-                        <div className="input-with-button">
-                          <input
-                            value={draft.settings.seed}
-                            maxLength={32}
-                            disabled={locked}
-                            onChange={event => edit({ settings: { ...draft.settings, seed: event.target.value } })}
-                          />
-                          <button
-                            type="button"
-                            disabled={locked}
-                            aria-label="Use random seed"
-                            onClick={() => edit({ settings: { ...draft.settings, seed: 'random' } })}
-                          >
-                            <Dices size={16} />
-                          </button>
-                        </div>
-                      </Field>
-                      {!seedValid && (
-                        <p className="qwen-image-error">
-                          Use random or a whole-number seed from 0 to {Number.MAX_SAFE_INTEGER.toLocaleString()}. Your
-                          unfinished text is saved.
-                        </p>
-                      )}
-                      <small>
-                        {draft.frozenRecipe?.workflowVersion === 'qwen-image-edit-2511-int8@1'
-                          ? `Legacy exact replay: samples at ${draft.settings.width} × ${draft.settings.height}; reference dimensions differ for most sizes and can change framing.`
-                          : `Native inference and reference: ${qwenInferenceSize(draft.settings.width, draft.settings.height).width} × ${qwenInferenceSize(draft.settings.width, draft.settings.height).height}. Source fitting uses this canvas; the decoded result is resized with Lanczos to the saved dimensions. A smaller saved size does not reduce sampling cost. Eight-pixel rounding can slightly adjust the aspect ratio.`}
-                      </small>
                       <div className="qwen-queue-action">
                         <small>
                           {snapshot.backend.state !== 'ready'
@@ -1493,20 +1208,315 @@ export function QwenEditor({
                               : 'Queue image edit'}
                         </button>
                       </div>
-                    </>
-                  ) : (
-                    <div className="qwen-no-draft">
-                      <p>
-                        Create a saved editor draft or open a conversation from history. Removing a draft keeps every
-                        generated version.
-                      </p>
-                      <button type="button" onClick={newConversation}>
-                        <Plus size={15} />
-                        New image edit
-                      </button>
                     </div>
                   )}
                 </section>
+                <aside className="qwen-side">
+                  <h2 className="qwen-side-heading">Steps</h2>
+                  <div className="qwen-version-strip" aria-label="Saved versions">
+                    {records.length ? (
+                      records.map(record => (
+                        <button
+                          type="button"
+                          key={record.id}
+                          className={record.id === selected?.id && !showingLive ? 'selected' : ''}
+                          onClick={() => selectRecord(record)}
+                          aria-label={`Preview version ${record.qwenEdit!.lineage.version}, branch ${record.qwenEdit!.lineage.branchId.slice(0, 6)}; leave editor input unchanged`}
+                          aria-pressed={record.id === selected?.id && !showingLive}
+                        >
+                          <img src={record.imageUrl} alt="" />
+                          <span>
+                            v{record.qwenEdit!.lineage.version} · {record.qwenEdit!.lineage.branchId.slice(0, 4)}
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <p>
+                        <History size={16} />
+                        Your edits show up here.
+                      </p>
+                    )}
+                  </div>
+                  <section className="qwen-composer" aria-label="Next image edit">
+                    {draft ? (
+                      <>
+                        <Field
+                          label="Model"
+                          hint={`${steps} steps · CFG ${guidance}${draft.frozenRecipe ? ' · recorded recipe' : ''}`}
+                        >
+                          <select
+                            value={profile}
+                            disabled={locked || installing}
+                            onChange={event => {
+                              const profile = event.target.value as QwenEditProfile;
+                              edit({
+                                operation: 'edit',
+                                transparent: false,
+                                references: [],
+                                settings: {
+                                  ...draft.settings,
+                                  profile,
+                                  steps: qwenProfileSteps(profile),
+                                  guidance: isQwen21Profile(profile) || isFastQwenProfile(profile) ? 1 : 4,
+                                },
+                              });
+                            }}
+                          >
+                            <option value="qwen21">Qwen Image 2.1 · 25 steps</option>
+                            <option value="lightning8">Lightning · 8 steps</option>
+                            <option value="base">Base · {profile === 'base' ? steps : 40} steps</option>
+                            <option value="fast">Fast · 4 steps with Lightning adapter</option>
+                            <option value="compact">Compact · smaller model, 4 steps</option>
+                          </select>
+                        </Field>
+                        {isQwen21Profile(profile) && (
+                          <>
+                            <Field label="Task">
+                              <select
+                                aria-label="Qwen task"
+                                value={draft.operation ?? 'edit'}
+                                disabled={locked}
+                                onChange={event =>
+                                  edit({
+                                    operation: event.target.value as 'edit' | 'create',
+                                    source: undefined,
+                                    references: [],
+                                  })
+                                }
+                              >
+                                <option value="edit">Edit an image</option>
+                                <option value="create">Create from a prompt</option>
+                              </select>
+                            </Field>
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={draft.transparent ?? false}
+                                disabled={locked}
+                                onChange={event => edit({ transparent: event.target.checked })}
+                              />
+                              Transparent background
+                            </label>
+                            <p className="muted small">
+                              Qwen 2.1 model weights use the publisher’s Research License. Setup needs{' '}
+                              {bytes(profileBytes)} of models plus an engine update. Shared files are reused.
+                            </p>
+                          </>
+                        )}
+                        <Field label="Conversation name">
+                          <input
+                            value={draft.title}
+                            maxLength={80}
+                            disabled={locked}
+                            onChange={event => edit({ title: event.target.value || 'Untitled image edit' }, false)}
+                          />
+                        </Field>
+                        {draft.operation !== 'create' && (
+                          <div className="qwen-source">
+                            <div className="label-row">
+                              <strong>Input for the next edit</strong>
+                              <button
+                                type="button"
+                                disabled={locked}
+                                onClick={() => {
+                                  void importImage();
+                                }}
+                              >
+                                <ImagePlus size={14} />
+                                Import image
+                              </button>
+                            </div>
+                            <Field label="Saved source">
+                              <select
+                                value={draft.source?.id ?? ''}
+                                disabled={locked}
+                                onChange={event => {
+                                  const chosen = sources.find(item => item.id === event.target.value);
+                                  if (!chosen) return;
+                                  try {
+                                    const parent = chosen.originGenerationId
+                                      ? snapshot.history.find(record => record.id === chosen.originGenerationId)
+                                      : undefined;
+                                    assignSource(chosen, parent);
+                                  } catch (reason) {
+                                    setError(errorMessage(reason));
+                                  }
+                                }}
+                              >
+                                <option value="">Choose a starting image…</option>
+                                {draft.source && !source && (
+                                  <option value={draft.source.id}>Missing source · {draft.source.id.slice(-8)}</option>
+                                )}
+                                {sources.map(item => (
+                                  <option key={item.id} value={item.id}>
+                                    {item.name} · {item.normalized.width} × {item.normalized.height}
+                                  </option>
+                                ))}
+                              </select>
+                            </Field>
+                            {source && (
+                              <div className="qwen-source-chip">
+                                <img src={sourceUrl(source.id)} alt="Current edit input" />
+                                <span>
+                                  {source.name}
+                                  <small>
+                                    {source.normalized.width} × {source.normalized.height}
+                                    {sourceParent?.qwenEdit
+                                      ? ` · version ${sourceParent.qwenEdit.lineage.version}`
+                                      : sourceParent
+                                        ? ' · saved studio image'
+                                        : ' · imported original'}
+                                  </small>
+                                </span>
+                              </div>
+                            )}
+                            {sourceChanged && (
+                              <Notice error>
+                                The image this edit started from is missing or has changed. Pick the image you want to
+                                edit before generating.
+                              </Notice>
+                            )}
+                            <small>
+                              Choosing a version above previews it. Continue from that version to change this input.
+                            </small>
+                          </div>
+                        )}
+                        {isQwen21Profile(profile) && draft.operation !== 'create' && (
+                          <Field
+                            label="Second reference (optional)"
+                            hint="Refer to your input as <image1> and this reference as <image2>."
+                          >
+                            <select
+                              aria-label="Second reference"
+                              value={draft.references?.[0]?.sourceId ?? ''}
+                              disabled={locked}
+                              onChange={event => {
+                                const ref = sources.find(item => item.id === event.target.value);
+                                edit({ references: ref ? [{ sourceId: ref.id, sha256: ref.normalized.sha256 }] : [] });
+                              }}
+                            >
+                              <option value="">No second reference</option>
+                              {sources.map(item => (
+                                <option key={item.id} value={item.id}>
+                                  {item.name}
+                                </option>
+                              ))}
+                            </select>
+                            <button type="button" disabled={locked} onClick={() => void importReference()}>
+                              Import reference
+                            </button>
+                          </Field>
+                        )}
+                        {draft.frozenRecipe && (
+                          <div className="qwen-frozen">
+                            <Check size={14} />
+                            <span>
+                              Exact recipe replay · source, seed and model hashes retained. Changing the edit or its
+                              settings clears the freeze.
+                            </span>
+                          </div>
+                        )}
+                        <details>
+                          <summary>Negative instruction</summary>
+                          <textarea
+                            aria-label="Negative instruction"
+                            value={draft.negativePrompt}
+                            maxLength={4000}
+                            rows={2}
+                            disabled={locked}
+                            onChange={event => edit({ negativePrompt: event.target.value })}
+                            placeholder="Unwanted changes or artifacts…"
+                          />
+                        </details>
+                        <div className="two-columns">
+                          <Field label="Saved width">
+                            <select
+                              value={draft.settings.width}
+                              disabled={locked}
+                              onChange={event =>
+                                edit({ settings: { ...draft.settings, width: Number(event.target.value) } })
+                              }
+                            >
+                              {sizes.map(size => (
+                                <option key={size}>{size}</option>
+                              ))}
+                            </select>
+                          </Field>
+                          <Field label="Saved height">
+                            <select
+                              value={draft.settings.height}
+                              disabled={locked}
+                              onChange={event =>
+                                edit({ settings: { ...draft.settings, height: Number(event.target.value) } })
+                              }
+                            >
+                              {sizes.map(size => (
+                                <option key={size}>{size}</option>
+                              ))}
+                            </select>
+                          </Field>
+                        </div>
+                        <Field label="Fit input to output">
+                          <select
+                            value={draft.settings.resize}
+                            disabled={locked}
+                            onChange={event =>
+                              edit({
+                                settings: {
+                                  ...draft.settings,
+                                  resize: event.target.value as 'stretch' | 'center-crop',
+                                },
+                              })
+                            }
+                          >
+                            <option value="center-crop">Center crop</option>
+                            <option value="stretch">Stretch to fit</option>
+                          </select>
+                        </Field>
+                        <Field label="Seed" hint="Random chooses a new actual seed when queued.">
+                          <div className="input-with-button">
+                            <input
+                              value={draft.settings.seed}
+                              maxLength={32}
+                              disabled={locked}
+                              onChange={event => edit({ settings: { ...draft.settings, seed: event.target.value } })}
+                            />
+                            <button
+                              type="button"
+                              disabled={locked}
+                              aria-label="Use random seed"
+                              onClick={() => edit({ settings: { ...draft.settings, seed: 'random' } })}
+                            >
+                              <Dices size={16} />
+                            </button>
+                          </div>
+                        </Field>
+                        {!seedValid && (
+                          <p className="qwen-image-error">
+                            Use random or a whole-number seed from 0 to {Number.MAX_SAFE_INTEGER.toLocaleString()}. Your
+                            unfinished text is saved.
+                          </p>
+                        )}
+                        <small>
+                          {draft.frozenRecipe?.workflowVersion === 'qwen-image-edit-2511-int8@1'
+                            ? `Legacy exact replay: samples at ${draft.settings.width} × ${draft.settings.height}; reference dimensions differ for most sizes and can change framing.`
+                            : `Native inference and reference: ${qwenInferenceSize(draft.settings.width, draft.settings.height).width} × ${qwenInferenceSize(draft.settings.width, draft.settings.height).height}. Source fitting uses this canvas; the decoded result is resized with Lanczos to the saved dimensions. A smaller saved size does not reduce sampling cost. Eight-pixel rounding can slightly adjust the aspect ratio.`}
+                        </small>
+                      </>
+                    ) : (
+                      <div className="qwen-no-draft">
+                        <p>
+                          Create a saved editor draft or open a conversation from history. Removing a draft keeps every
+                          generated version.
+                        </p>
+                        <button type="button" onClick={newConversation}>
+                          <Plus size={15} />
+                          New image edit
+                        </button>
+                      </div>
+                    )}
+                  </section>
+                </aside>
               </div>
               {(currentJobs.length > 0 || failedJobs.length > 0) && (
                 <div className="qwen-jobs" aria-label="Image edit queue">
