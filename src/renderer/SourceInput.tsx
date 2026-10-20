@@ -118,7 +118,9 @@ export function SourceInput({ snapshot, draft, onChange, selected, run }: Source
   return (
     <section className="source-input" aria-label="Source image">
       <details open={Boolean(input)}>
-        <summary>Source image</summary>
+        <summary>
+          Source image{input && <span className="extra-status">{input.mode === 'inpaint' ? 'Inpaint' : 'On'}</span>}
+        </summary>
         <div className="source-input-heading">
           {input && (
             <button

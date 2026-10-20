@@ -68,6 +68,9 @@ export function SizePresets({
               style={{ width: size.width >= size.height ? 17 : 12, height: size.height >= size.width ? 17 : 12 }}
             />
             {size.name}
+            <small>
+              {size.width}×{size.height}
+            </small>
           </button>
         ))}
       </div>

@@ -87,7 +87,7 @@ export function ControlNetControls({
     <details className="advanced">
       <summary>
         <ScanLine size={15} />
-        Composition guidance · ControlNet{settings && ' · Enabled'}
+        Composition guidance · ControlNet{settings && <span className="extra-status">On</span>}
       </summary>
       <div className="advanced-grid">
         <p className="muted small">

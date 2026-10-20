@@ -34,7 +34,6 @@ import {
   ArrowUpRight,
   Boxes,
   Compass,
-  ChevronDown,
   CircleHelp,
   Dices,
   Film,
@@ -52,6 +51,7 @@ import {
   Sprout,
   Trash2,
   Undo2,
+  MoreHorizontal,
   X,
   ZoomIn,
   ZoomOut,
@@ -195,6 +195,12 @@ export default function App() {
   const [activityPanel, setActivityPanel] = useState<'queue' | 'notifications'>();
   const [previewMenu, setPreviewMenu] = useState<{ record: GenerationRecord; x: number; y: number }>();
   const closePreviewMenu = useCallback(() => setPreviewMenu(undefined), []);
+  const [loraPopover, setLoraPopover] = useState<number>();
+  useDismissiblePanel(
+    loraPopover !== undefined,
+    useCallback(() => setLoraPopover(undefined), []),
+    '.lora-popover, .dock-chip-lora',
+  );
   useDismissiblePanel(
     Boolean(activityPanel),
     useCallback(() => setActivityPanel(undefined), []),
@@ -728,6 +734,10 @@ export default function App() {
   const historicalAssets = snapshot.history
     .flatMap(record => [record.checkpoint, ...record.loras])
     .filter(presentAsset);
+  const openLora =
+    loraPopover !== undefined && draft.loras[loraPopover]
+      ? { index: loraPopover, lora: draft.loras[loraPopover] }
+      : undefined;
   const findAsset = (id: string) =>
     models.find(model => model.id === id) ?? historicalAssets.find(model => model.id === id);
   const checkpoint = findAsset(draft.checkpointId);
@@ -1160,22 +1170,25 @@ export default function App() {
                   }}
                 >
                   <div className="composer-fields">
-                    <div className="create-mode" role="group" aria-label="How many controls to show">
-                      {(['simple', 'advanced'] as const).map(mode => (
-                        <button
-                          key={mode}
-                          type="button"
-                          aria-pressed={createMode === mode}
-                          disabled={busy.settings}
-                          onClick={() =>
-                            void run('settings', async () =>
-                              receive(await window.latent.updateSettings({ createMode: mode })),
-                            )
-                          }
-                        >
-                          {mode === 'simple' ? 'Simple' : 'Advanced'}
-                        </button>
-                      ))}
+                    <div className="tune-heading">
+                      <h2>Tune</h2>
+                      <div className="create-mode" role="group" aria-label="How many controls to show">
+                        {(['simple', 'advanced'] as const).map(mode => (
+                          <button
+                            key={mode}
+                            type="button"
+                            aria-pressed={createMode === mode}
+                            disabled={busy.settings}
+                            onClick={() =>
+                              void run('settings', async () =>
+                                receive(await window.latent.updateSettings({ createMode: mode })),
+                              )
+                            }
+                          >
+                            {mode === 'simple' ? 'Simple' : 'Advanced'}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     {createMode === 'simple' && hiddenSettings.length > 0 && (
                       <Notice>
@@ -1202,221 +1215,6 @@ export default function App() {
                         receive(await window.latent.updateSettings({ sizePresets }));
                       }}
                     />
-                    <section className="model-settings">
-                      <div className="label-row">
-                        <h2>Models</h2>
-                        <button type="button" className="text-button" onClick={() => setPage('models')}>
-                          <Boxes size={12} />
-                          Manage
-                        </button>
-                      </div>
-                      <label className="parameter-label" htmlFor="checkpoint">
-                        Checkpoint
-                      </label>
-                      <button
-                        type="button"
-                        id="checkpoint"
-                        aria-haspopup="dialog"
-                        className="selected-model"
-                        onClick={() => setCheckpointOpen(true)}
-                      >
-                        {checkpoint ? (
-                          <>
-                            <ModelArtwork
-                              model={checkpoint}
-                              showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
-                              history={snapshot.history}
-                            />
-                            <span>
-                              <strong>
-                                {modelDisplayName(checkpoint, snapshot.settings.civitaiDisplayMetadata !== false)}
-                              </strong>
-                              <small>{checkpoint.family} · Change checkpoint</small>
-                            </span>
-                          </>
-                        ) : (
-                          <span>Choose a checkpoint…</span>
-                        )}
-                        <ChevronDown size={15} className="model-picker-chevron" />
-                      </button>
-                      {familyMismatch && (
-                        <p className="inline-error">
-                          {checkpoint.family === 'unknown'
-                            ? 'Set this checkpoint’s family in Models before generating.'
-                            : 'Select the family matching your checkpoint.'}
-                        </p>
-                      )}
-                      {missing.length > 0 && (
-                        <Notice error>
-                          Missing assets: {missing.map(id => findAsset(id)?.name || id).join(', ')}. Their selections
-                          are preserved.
-                        </Notice>
-                      )}
-                      {changedAssets.length > 0 && (
-                        <Notice error>
-                          These model files changed since this image was made:{' '}
-                          {changedAssets.map(id => findAsset(id)?.name || id).join(', ')}. Put the original files back,
-                          or pick a different checkpoint (or remove and re-add the LoRA) to use the new version.
-                        </Notice>
-                      )}
-                      <div className="lora-section">
-                        <div className="label-row">
-                          <label>
-                            LoRAs <span className="muted">{draft.loras.length || ''}</span>
-                          </label>
-                          <button
-                            type="button"
-                            className="text-button"
-                            disabled={draft.loras.length >= 8}
-                            onClick={() => setLoraOpen(true)}
-                          >
-                            <Plus size={13} />
-                            Add
-                          </button>
-                        </div>
-                        {!draft.loras.length && (
-                          <button
-                            type="button"
-                            className="empty-lora-picker"
-                            aria-haspopup="dialog"
-                            onClick={() => setLoraOpen(true)}
-                          >
-                            <Plus size={14} />
-                            Choose LoRAs<span>Optional</span>
-                          </button>
-                        )}
-                        <div className="lora-list">
-                          {draft.loras.map((lora, index) => {
-                            const asset = findAsset(lora.modelId);
-                            return (
-                              <div className="lora-card" key={`${lora.modelId}-${index}`}>
-                                <div className="label-row">
-                                  <div className="selected-lora-heading">
-                                    {asset && (
-                                      <ModelArtwork
-                                        model={asset}
-                                        history={snapshot.history}
-                                        showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
-                                      />
-                                    )}
-                                    <strong title={asset?.filename ?? lora.modelId}>
-                                      {asset
-                                        ? modelDisplayName(asset, snapshot.settings.civitaiDisplayMetadata !== false)
-                                        : `Missing: ${lora.modelId}`}
-                                    </strong>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    className="icon-button"
-                                    aria-label={`Remove ${asset?.name ?? 'LoRA'}`}
-                                    onClick={() => changeDraft({ loras: draft.loras.filter((_, i) => i !== index) })}
-                                  >
-                                    <X size={14} />
-                                  </button>
-                                </div>
-                                <div className="two-columns">
-                                  <Field label="Model weight">
-                                    <input
-                                      type="number"
-                                      step={0.05}
-                                      value={lora.weight}
-                                      onChange={event => updateLora(index, { weight: Number(event.target.value) })}
-                                    />
-                                  </Field>
-                                  <Field label="CLIP weight">
-                                    <input
-                                      type="number"
-                                      step={0.05}
-                                      value={lora.clipWeight}
-                                      onChange={event => updateLora(index, { clipWeight: Number(event.target.value) })}
-                                    />
-                                  </Field>
-                                </div>
-                                {asset?.family !== draft.family && (
-                                  <p className="muted small">
-                                    Tagged {asset?.family}; check compatibility with your checkpoint.
-                                  </p>
-                                )}
-                                {draft.triggerResolutionVersion === 'visible@3' && (
-                                  <LoraTriggerChoices
-                                    words={asset?.triggers ?? []}
-                                    selected={draft.triggerWords?.[lora.modelId] ?? []}
-                                    onChange={words =>
-                                      changeDraft({
-                                        autoTriggers: true,
-                                        triggerWords: { ...draft.triggerWords, [lora.modelId]: words },
-                                      })
-                                    }
-                                  />
-                                )}{' '}
-                                {draft.triggerResolutionVersion !== 'visible@3' &&
-                                  Object.hasOwn(draft.triggerWords ?? {}, lora.modelId) && (
-                                    <div>
-                                      <p className="muted small">
-                                        {draft.triggerWords![lora.modelId].length
-                                          ? 'Using trigger words saved with this draft.'
-                                          : 'No automatic additions for this LoRA in this draft.'}
-                                      </p>
-                                      <button
-                                        type="button"
-                                        className="text-button"
-                                        disabled={
-                                          !models.some(model => model.id === lora.modelId && model.status === 'ready')
-                                        }
-                                        onClick={() => resetLoraTriggers(lora.modelId)}
-                                      >
-                                        Use current model triggers
-                                      </button>
-                                    </div>
-                                  )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {draft.loras.length > 0 && draft.triggerResolutionVersion !== 'visible@3' && (
-                          <>
-                            <Toggle
-                              label="Include trigger words automatically"
-                              checked={draft.autoTriggers}
-                              onChange={autoTriggers => changeDraft({ autoTriggers })}
-                            />
-                            <p className="trigger-preview">
-                              {triggers.length
-                                ? triggerSummary
-                                : draft.loras.some(lora => Object.hasOwn(draft.triggerWords ?? {}, lora.modelId))
-                                  ? 'This draft has no automatic trigger additions. Your prompt text is kept as written.'
-                                  : 'No saved trigger words for these LoRAs.'}
-                            </p>
-                            <div>
-                              <button
-                                type="button"
-                                className="text-button"
-                                disabled={busy['edit-triggers']}
-                                onClick={editAutomaticTriggers}
-                              >
-                                <Busy active={busy['edit-triggers']} />
-                                Use visible trigger choices
-                              </button>
-                              <p className="muted small">
-                                Keep this older recipe as-is, or switch to visible trigger choices. Existing additions
-                                become your prompt text and stay when a LoRA is removed.
-                                {draft.dynamicPrompts?.enabled
-                                  ? ' Keeps the current variation and its expressions; Random chooses a seed first.'
-                                  : ''}
-                              </p>
-                            </div>
-                            {!draft.dynamicPrompts?.enabled &&
-                              draft.autoTriggers &&
-                              resolvedPrompt !== draft.prompt && (
-                                <details className="resolved-prompt">
-                                  <summary>Full prompt with trigger words</summary>
-                                  <p>{resolvedPrompt}</p>
-                                </details>
-                              )}
-                          </>
-                        )}
-                      </div>
-                    </section>
                     <div id="negative-area" hidden={false}>
                       <Field label="Negative prompt">
                         <TagPrompt
@@ -1448,7 +1246,7 @@ export default function App() {
                       </Notice>
                     )}
 
-                    <details className="advanced" open>
+                    <details className="advanced generation-settings" open>
                       <summary>Generation settings</summary>
                       <div className="advanced-grid">
                         {createMode === 'advanced' && (
@@ -1476,7 +1274,7 @@ export default function App() {
                           </div>
                         )}
                         <div className="two-columns">
-                          <Field label="Steps">
+                          <Field label="Steps" className="slider-field">
                             <input
                               type="number"
                               min={1}
@@ -1484,14 +1282,31 @@ export default function App() {
                               value={draft.steps}
                               onChange={event => changeDraft({ steps: Number(event.target.value) })}
                             />
+                            <input
+                              type="range"
+                              min={1}
+                              max={60}
+                              aria-label="Steps slider"
+                              value={Math.min(60, draft.steps)}
+                              onChange={event => changeDraft({ steps: Number(event.target.value) })}
+                            />
                           </Field>
-                          <Field label="Guidance (CFG)">
+                          <Field label="Guidance (CFG)" className="slider-field">
                             <input
                               type="number"
                               min={0}
                               max={30}
                               step={0.5}
                               value={draft.cfg}
+                              onChange={event => changeDraft({ cfg: Number(event.target.value) })}
+                            />
+                            <input
+                              type="range"
+                              min={1}
+                              max={15}
+                              step={0.5}
+                              aria-label="Guidance slider"
+                              value={Math.min(15, draft.cfg)}
                               onChange={event => changeDraft({ cfg: Number(event.target.value) })}
                             />
                           </Field>
@@ -1588,15 +1403,6 @@ export default function App() {
                             </Field>
                           </>
                         )}
-                        <Field label="Images per batch">
-                          <input
-                            type="number"
-                            min={1}
-                            max={4}
-                            value={draft.batchSize}
-                            onChange={event => changeDraft({ batchSize: Number(event.target.value) })}
-                          />
-                        </Field>
                       </div>
                     </details>
                     <AdvancedImageControls draft={draft} snapshot={snapshot} onChange={changeDraft} run={run} />
@@ -1616,13 +1422,6 @@ export default function App() {
                           onChange={changeDraft}
                           run={run}
                         />
-                        <RegionalPrompts
-                          value={draft.regionalPrompts?.settings}
-                          width={draft.width}
-                          height={draft.height}
-                          disabledReason={regionalDisabledReason}
-                          onChange={settings => changeDraft({ regionalPrompts: settings ? { settings } : undefined })}
-                        />
                         <IPAdapterControls
                           draftRevision={draft}
                           family={draft.family}
@@ -1640,6 +1439,42 @@ export default function App() {
                         />
                       </>
                     )}
+                    <details
+                      className="extra-row"
+                      open={
+                        Boolean(draft.dynamicPrompts?.enabled || draft.regionalPrompts?.settings.enabled) || undefined
+                      }
+                    >
+                      <summary>
+                        {createMode === 'advanced' ? 'Regions and wildcards' : 'Wildcards'}
+                        {(draft.dynamicPrompts?.enabled || draft.regionalPrompts?.settings.enabled) && (
+                          <span className="extra-status">On</span>
+                        )}
+                      </summary>
+                      {createMode === 'advanced' && (
+                        <RegionalPrompts
+                          value={draft.regionalPrompts?.settings}
+                          width={draft.width}
+                          height={draft.height}
+                          disabledReason={regionalDisabledReason}
+                          onChange={settings => changeDraft({ regionalPrompts: settings ? { settings } : undefined })}
+                        />
+                      )}
+                      <DynamicPrompts
+                        draft={draft}
+                        wildcards={snapshot.wildcards}
+                        onChange={dynamicPrompts => changeDraft({ dynamicPrompts })}
+                        onReroll={() => {
+                          const seedBytes = crypto.getRandomValues(new Uint32Array(2));
+                          const seed = String(seedBytes[0] * 65536 + (seedBytes[1] & 65535));
+                          changeDraft({
+                            dynamicPrompts: { enabled: true, selections: draft.dynamicPrompts?.selections },
+                            seed,
+                          });
+                        }}
+                        onSaveWildcards={entries => window.latent.saveWildcards(entries)}
+                      />
+                    </details>
                     <button
                       type="button"
                       className="presets-button"
@@ -1653,6 +1488,143 @@ export default function App() {
                     </button>
                   </div>
                   <div className="prompt-dock">
+                    {openLora && (
+                      <div className="lora-popover" role="group" aria-label="LoRA settings">
+                        {(() => {
+                          const index = openLora.index;
+                          const lora = openLora.lora;
+                          const asset = findAsset(lora.modelId);
+                          return (
+                            <div className="lora-card">
+                              <div className="label-row">
+                                <div className="selected-lora-heading">
+                                  {asset && (
+                                    <ModelArtwork
+                                      model={asset}
+                                      history={snapshot.history}
+                                      showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
+                                    />
+                                  )}
+                                  <strong title={asset?.filename ?? lora.modelId}>
+                                    {asset
+                                      ? modelDisplayName(asset, snapshot.settings.civitaiDisplayMetadata !== false)
+                                      : `Missing: ${lora.modelId}`}
+                                  </strong>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="icon-button"
+                                  aria-label={`Remove ${asset?.name ?? 'LoRA'}`}
+                                  onClick={() => {
+                                    changeDraft({ loras: draft.loras.filter((_, i) => i !== index) });
+                                    setLoraPopover(undefined);
+                                  }}
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                              <div className="two-columns">
+                                <Field label="Model weight">
+                                  <input
+                                    type="number"
+                                    step={0.05}
+                                    value={lora.weight}
+                                    onChange={event => updateLora(index, { weight: Number(event.target.value) })}
+                                  />
+                                </Field>
+                                <Field label="CLIP weight">
+                                  <input
+                                    type="number"
+                                    step={0.05}
+                                    value={lora.clipWeight}
+                                    onChange={event => updateLora(index, { clipWeight: Number(event.target.value) })}
+                                  />
+                                </Field>
+                              </div>
+                              {asset?.family !== draft.family && (
+                                <p className="muted small">
+                                  Tagged {asset?.family}; check compatibility with your checkpoint.
+                                </p>
+                              )}
+                              {draft.triggerResolutionVersion === 'visible@3' && (
+                                <LoraTriggerChoices
+                                  words={asset?.triggers ?? []}
+                                  selected={draft.triggerWords?.[lora.modelId] ?? []}
+                                  onChange={words =>
+                                    changeDraft({
+                                      autoTriggers: true,
+                                      triggerWords: { ...draft.triggerWords, [lora.modelId]: words },
+                                    })
+                                  }
+                                />
+                              )}{' '}
+                              {draft.triggerResolutionVersion !== 'visible@3' &&
+                                Object.hasOwn(draft.triggerWords ?? {}, lora.modelId) && (
+                                  <div>
+                                    <p className="muted small">
+                                      {draft.triggerWords![lora.modelId].length
+                                        ? 'Using trigger words saved with this draft.'
+                                        : 'No automatic additions for this LoRA in this draft.'}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      className="text-button"
+                                      disabled={
+                                        !models.some(model => model.id === lora.modelId && model.status === 'ready')
+                                      }
+                                      onClick={() => resetLoraTriggers(lora.modelId)}
+                                    >
+                                      Use current model triggers
+                                    </button>
+                                  </div>
+                                )}
+                            </div>
+                          );
+                        })()}
+                        {draft.loras.length > 0 && draft.triggerResolutionVersion !== 'visible@3' && (
+                          <>
+                            <Toggle
+                              label="Include trigger words automatically"
+                              checked={draft.autoTriggers}
+                              onChange={autoTriggers => changeDraft({ autoTriggers })}
+                            />
+                            <p className="trigger-preview">
+                              {triggers.length
+                                ? triggerSummary
+                                : draft.loras.some(lora => Object.hasOwn(draft.triggerWords ?? {}, lora.modelId))
+                                  ? 'This draft has no automatic trigger additions. Your prompt text is kept as written.'
+                                  : 'No saved trigger words for these LoRAs.'}
+                            </p>
+                            <div>
+                              <button
+                                type="button"
+                                className="text-button"
+                                disabled={busy['edit-triggers']}
+                                onClick={editAutomaticTriggers}
+                              >
+                                <Busy active={busy['edit-triggers']} />
+                                Use visible trigger choices
+                              </button>
+                              <p className="muted small">
+                                Keep this older recipe as-is, or switch to visible trigger choices. Existing additions
+                                become your prompt text and stay when a LoRA is removed.
+                                {draft.dynamicPrompts?.enabled
+                                  ? ' Keeps the current variation and its expressions; Random chooses a seed first.'
+                                  : ''}
+                              </p>
+                            </div>
+                            {!draft.dynamicPrompts?.enabled &&
+                              draft.autoTriggers &&
+                              resolvedPrompt !== draft.prompt && (
+                                <details className="resolved-prompt">
+                                  <summary>Full prompt with trigger words</summary>
+                                  <p>{resolvedPrompt}</p>
+                                </details>
+                              )}
+                          </>
+                        )}
+                      </div>
+                    )}
                     <div className="prompt-workspace">
                       {' '}
                       <section>
@@ -1680,26 +1652,105 @@ export default function App() {
                           placeholder="A quiet greenhouse at dusk, fireflies between the flowers, delicate anime illustration…"
                         />
                       </section>
-                      <details className="prompt-extras">
-                        <summary>
-                          Wildcards &amp; choices
-                          <span>Automatic · {Object.keys(snapshot.wildcards.entries).length} saved lists</span>
-                        </summary>
-                        <DynamicPrompts
-                          draft={draft}
-                          wildcards={snapshot.wildcards}
-                          onChange={dynamicPrompts => changeDraft({ dynamicPrompts })}
-                          onReroll={() => {
-                            const seedBytes = crypto.getRandomValues(new Uint32Array(2));
-                            const seed = String(seedBytes[0] * 65536 + (seedBytes[1] & 65535));
-                            changeDraft({
-                              dynamicPrompts: { enabled: true, selections: draft.dynamicPrompts?.selections },
-                              seed,
-                            });
-                          }}
-                          onSaveWildcards={entries => window.latent.saveWildcards(entries)}
-                        />
-                      </details>
+                    </div>
+                    {(familyMismatch || missing.length > 0 || changedAssets.length > 0) && (
+                      <div className="dock-notices">
+                        {familyMismatch && (
+                          <p className="inline-error">
+                            {checkpoint.family === 'unknown'
+                              ? 'Set this checkpoint’s family in Models before generating.'
+                              : 'Select the family matching your checkpoint.'}
+                          </p>
+                        )}
+                        {missing.length > 0 && (
+                          <Notice error>
+                            Missing assets: {missing.map(id => findAsset(id)?.name || id).join(', ')}. Their selections
+                            are preserved.
+                          </Notice>
+                        )}
+                        {changedAssets.length > 0 && (
+                          <Notice error>
+                            These model files changed since this image was made:{' '}
+                            {changedAssets.map(id => findAsset(id)?.name || id).join(', ')}. Put the original files
+                            back, or pick a different checkpoint (or remove and re-add the LoRA) to use the new version.
+                          </Notice>
+                        )}
+                      </div>
+                    )}
+                    <div className="dock-chips">
+                      <button
+                        type="button"
+                        id="checkpoint"
+                        className="dock-chip"
+                        aria-haspopup="dialog"
+                        title="Change checkpoint"
+                        onClick={() => setCheckpointOpen(true)}
+                      >
+                        {checkpoint ? (
+                          <>
+                            <ModelArtwork
+                              model={checkpoint}
+                              showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
+                              history={snapshot.history}
+                            />
+                            {modelDisplayName(checkpoint, snapshot.settings.civitaiDisplayMetadata !== false)}
+                          </>
+                        ) : (
+                          'Choose a checkpoint'
+                        )}
+                      </button>
+                      {draft.loras.map((lora, index) => {
+                        const asset = findAsset(lora.modelId);
+                        return (
+                          <button
+                            type="button"
+                            key={`${lora.modelId}-${index}`}
+                            className="dock-chip dock-chip-lora"
+                            aria-expanded={loraPopover === index}
+                            title="LoRA settings"
+                            onClick={() => setLoraPopover(loraPopover === index ? undefined : index)}
+                          >
+                            {asset
+                              ? modelDisplayName(asset, snapshot.settings.civitaiDisplayMetadata !== false)
+                              : 'Missing LoRA'}
+                            <span className="dock-chip-value">{lora.weight}</span>
+                          </button>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        className="dock-chip"
+                        aria-haspopup="dialog"
+                        disabled={draft.loras.length >= 8}
+                        onClick={() => setLoraOpen(true)}
+                      >
+                        <Plus size={13} />
+                        LoRA
+                      </button>
+                      <button
+                        type="button"
+                        className="dock-chip"
+                        title="Image size"
+                        onClick={() =>
+                          document
+                            .querySelector('.composer-fields .image-size-section')
+                            ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                        }
+                      >
+                        {draft.width}×{draft.height}
+                      </button>
+                      <Field label="Images per batch" className="dock-chip-field">
+                        <select
+                          value={draft.batchSize}
+                          onChange={event => changeDraft({ batchSize: Number(event.target.value) })}
+                        >
+                          {[1, 2, 3, 4].map(count => (
+                            <option key={count} value={count}>
+                              {count === 1 ? '1 image' : `${count} images`}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
                     </div>
                     <div className="generate-area">
                       {draft.enhance && (
@@ -1775,49 +1826,7 @@ export default function App() {
                           ? `Preview · ${selected.width} × ${selected.height}`
                           : 'Canvas'}
                     </span>
-                    <div className="button-row">
-                      {selected && !livePreview && (
-                        <button
-                          type="button"
-                          aria-haspopup="menu"
-                          onClick={event => {
-                            const r = event.currentTarget.getBoundingClientRect();
-                            setPreviewMenu({ record: selected, x: r.left, y: r.bottom });
-                          }}
-                        >
-                          Image actions
-                        </button>
-                      )}
-                      {selected && !livePreview && (
-                        <div className="enhance-action">
-                          <select
-                            aria-label="Enhancement scale"
-                            value={enhanceScale}
-                            disabled={busy['enhance-image'] || Math.max(selected.width, selected.height) >= 2048}
-                            title="Enlargement is limited to 2048 pixels per side."
-                            onChange={event => setEnhanceScale(event.target.value === '1.5' ? 1.5 : 2)}
-                          >
-                            <option value="1.5">1.5×</option>
-                            <option value="2">2×</option>
-                          </select>
-                          <button
-                            type="button"
-                            disabled={busy['enhance-image']}
-                            title={`Enlarge up to ${enhanceScale}× and refine immediately (maximum 2048 pixels per side). Keeps the original image.`}
-                            onClick={() => enhanceImage(selected)}
-                          >
-                            {busy['enhance-image'] ? 'Queueing...' : enhancementActionLabel(selected)}
-                          </button>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        className="text-button qwen-preview-action"
-                        onClick={() => setQwenEditor({ record: selected })}
-                      >
-                        <WandSparkles size={14} />
-                        Edit
-                      </button>
+                    <div className="button-row zoom-controls" role="group" aria-label="Zoom">
                       <button
                         className="icon-button"
                         disabled={!canvasUrl || zoom === 0.25}
@@ -1835,9 +1844,14 @@ export default function App() {
                       >
                         <ZoomIn size={16} />
                       </button>
-                      <button disabled={!canvasUrl} onClick={() => setZoom(0)}>
+                      <button
+                        className="icon-button"
+                        disabled={!canvasUrl}
+                        aria-label="Fit to view"
+                        title="Fit to view"
+                        onClick={() => setZoom(0)}
+                      >
                         <Maximize size={14} />
-                        Fit to view
                       </button>
                     </div>
                   </div>
@@ -1886,6 +1900,59 @@ export default function App() {
                       </div>
                     )}
                   </CanvasViewport>
+                  {selected && !livePreview && (
+                    <div className="stage-actions">
+                      <div className="enhance-action">
+                        <select
+                          aria-label="Enhancement scale"
+                          value={enhanceScale}
+                          disabled={busy['enhance-image'] || Math.max(selected.width, selected.height) >= 2048}
+                          title="Enlargement is limited to 2048 pixels per side."
+                          onChange={event => setEnhanceScale(event.target.value === '1.5' ? 1.5 : 2)}
+                        >
+                          <option value="1.5">1.5×</option>
+                          <option value="2">2×</option>
+                        </select>
+                        <button
+                          type="button"
+                          disabled={busy['enhance-image']}
+                          title={`Enlarge up to ${enhanceScale}× and refine immediately (maximum 2048 pixels per side). Keeps the original image.`}
+                          onClick={() => enhanceImage(selected)}
+                        >
+                          {busy['enhance-image'] ? 'Queueing...' : enhancementActionLabel(selected)}
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        className="qwen-preview-action"
+                        onClick={() => setQwenEditor({ record: selected })}
+                      >
+                        <WandSparkles size={14} />
+                        Edit
+                      </button>
+                      {(selected.faceDetailer?.source || selected.imageInput?.source || selected.baseRecordId) && (
+                        <button type="button" onClick={() => compare(selected)}>
+                          Compare
+                        </button>
+                      )}
+                      <button type="button" onClick={() => restore(selected)}>
+                        <RotateCcw size={13} />
+                        Reuse parameters
+                      </button>
+                      <button
+                        type="button"
+                        aria-haspopup="menu"
+                        aria-label="Image actions"
+                        title="More"
+                        onClick={event => {
+                          const r = event.currentTarget.getBoundingClientRect();
+                          setPreviewMenu({ record: selected, x: r.left, y: r.bottom });
+                        }}
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+                    </div>
+                  )}
                   {activeJob && !runningJob && (
                     <div className="generation-progress">
                       <div className="label-row">
@@ -1961,15 +2028,6 @@ export default function App() {
                       <p title={selected.resolvedPrompt ?? selected.draft.prompt}>
                         {(selected.resolvedPrompt ?? selected.draft.prompt) || 'Untitled image'}
                       </p>
-                      {(selected.faceDetailer?.source || selected.imageInput?.source || selected.baseRecordId) && (
-                        <button className="text-button" onClick={() => compare(selected)}>
-                          Compare
-                        </button>
-                      )}
-                      <button className="text-button" onClick={() => restore(selected)}>
-                        <RotateCcw size={13} />
-                        Reuse parameters
-                      </button>
                     </div>
                   )}
                   {selected && !livePreview && selectedVersions && selectedVersions.versions.length > 1 && (

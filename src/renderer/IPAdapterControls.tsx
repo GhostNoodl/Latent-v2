@@ -140,7 +140,7 @@ export function IPAdapterControls({
     <details className="advanced ipadapter-controls">
       <summary>
         <Paintbrush size={15} />
-        Image reference · IP Adapter{value && ' · Enabled'}
+        Image reference · IP Adapter{value && <span className="extra-status">On</span>}
       </summary>
       <div className="advanced-grid">
         <p className="muted small">
