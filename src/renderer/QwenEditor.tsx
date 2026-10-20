@@ -1298,8 +1298,8 @@ export function QwenEditor({
                               Transparent background
                             </label>
                             <p className="muted small">
-                              Qwen 2.1 model weights use the publisher’s Research License. Setup needs{' '}
-                              {bytes(profileBytes)} of models plus an engine update. Shared files are reused.
+                              Uses the publisher’s Research License. Needs {bytes(profileBytes)} of models and an engine
+                              update.
                             </p>
                           </>
                         )}
@@ -1473,7 +1473,7 @@ export function QwenEditor({
                             <option value="stretch">Stretch to fit</option>
                           </select>
                         </Field>
-                        <Field label="Seed" hint="Random chooses a new actual seed when queued.">
+                        <Field label="Seed">
                           <div className="input-with-button">
                             <input
                               value={draft.settings.seed}
@@ -1499,8 +1499,8 @@ export function QwenEditor({
                         )}
                         <small>
                           {draft.frozenRecipe?.workflowVersion === 'qwen-image-edit-2511-int8@1'
-                            ? `Legacy exact replay: samples at ${draft.settings.width} × ${draft.settings.height}; reference dimensions differ for most sizes and can change framing.`
-                            : `Native inference and reference: ${qwenInferenceSize(draft.settings.width, draft.settings.height).width} × ${qwenInferenceSize(draft.settings.width, draft.settings.height).height}. Source fitting uses this canvas; the decoded result is resized with Lanczos to the saved dimensions. A smaller saved size does not reduce sampling cost. Eight-pixel rounding can slightly adjust the aspect ratio.`}
+                            ? `Older recipe: renders at ${draft.settings.width} × ${draft.settings.height}, so framing can differ.`
+                            : `Renders at ${qwenInferenceSize(draft.settings.width, draft.settings.height).width} × ${qwenInferenceSize(draft.settings.width, draft.settings.height).height}, then resizes to the saved size.`}
                         </small>
                       </>
                     ) : (

@@ -2324,3 +2324,59 @@
     min-height: 36px;
   }
 }
+
+/* Edit on one screen: the station is exactly the window, the picture takes what's left,
+   the prompt dock stays visible, and the side panel keeps its own fallback scroll. */
+.studio .qwen-station {
+  height: calc(100vh - 56px);
+  min-height: 0;
+  overflow: hidden;
+}
+.studio .qwen-station .qwen-workspace {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+.studio .qwen-station .qwen-viewer {
+  min-height: 0;
+  overflow: hidden;
+}
+.studio .qwen-station .qwen-preview {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.studio .qwen-station .qwen-dock {
+  flex-shrink: 0;
+}
+.studio .qwen-station .qwen-side {
+  max-height: none;
+  height: 100%;
+  min-height: 0;
+  position: static;
+}
+.studio .qwen-station .qwen-composer {
+  gap: 10px;
+  padding: 14px;
+}
+.studio .qwen-station .qwen-composer :is(input:not([type='checkbox']), select) {
+  min-height: 34px;
+  height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 13px;
+}
+.studio .qwen-station .qwen-composer > small,
+.studio .qwen-station .qwen-composer .muted.small {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.studio .qwen-station .qwen-runtime {
+  padding: 8px 14px;
+}
+.studio .qwen-station .qwen-dock textarea {
+  height: auto;
+  min-height: 48px;
+  max-height: 22vh;
+  field-sizing: content;
+}

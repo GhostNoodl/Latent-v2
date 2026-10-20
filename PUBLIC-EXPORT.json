@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 55340,
-      "sha256": "eee46584b93d5f53b9ed017f8d06d1c22f0444abcb99257faf29a2e3359e2663"
+      "bytes": 56632,
+      "sha256": "b04b4d73a07308bb574bade5848771af202cc3af25410686c0c59fdd6e5d870a"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -578,8 +578,8 @@
     },
     {
       "path": "src/renderer/QwenEditor.tsx",
-      "bytes": 69568,
-      "sha256": "c26e162888f88b2d482e5a8d48b88693e29c2c5cac207916042fae3db5726b7e"
+      "bytes": 69204,
+      "sha256": "bd125fc5aa3c2e2ccd11d58109a520bb8d59ccd863e38480aefecb2020cad86c"
     },
     {
       "path": "src/renderer/RecipeExtras.tsx",
