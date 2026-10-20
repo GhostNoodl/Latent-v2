@@ -84,10 +84,10 @@ export function ControlNetControls({
     }
   }
   return (
-    <details className="advanced">
+    <details className="advanced tune-flyout">
       <summary>
         <ScanLine size={15} />
-        Composition guidance · ControlNet{settings && <span className="extra-status">On</span>}
+        Pose and edges (ControlNet){settings && <span className="extra-status">On</span>}
       </summary>
       <div className="advanced-grid">
         <p className="muted small">

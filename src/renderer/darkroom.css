@@ -1940,3 +1940,482 @@
 .studio .setting-line > fieldset:not(.setting-toggles):has(> .toggle:only-child) {
   min-width: 0;
 }
+
+/* Create, tidied: the picture and its buttons read as one group, the dock is one compact block,
+   and the recent strip is a quiet column. Same spacing everywhere: 8 / 12 / 16 / 22. */
+.studio .main-create .workspace,
+.studio .workspace {
+  grid-template-columns: minmax(0, 1fr) 76px 340px;
+}
+.studio .workspace .stage {
+  padding: 16px 22px 12px;
+  gap: 12px;
+}
+.studio .workspace .stagebar {
+  top: 16px;
+  right: 22px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.studio .workspace .stage:hover .stagebar,
+.studio .workspace .stagebar:focus-within {
+  opacity: 1;
+}
+@media (hover: none) {
+  .studio .workspace .stagebar {
+    opacity: 1;
+  }
+}
+.studio .workspace .preview-caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.studio .workspace .preview-versions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: -4px 0 0;
+  font-size: 12px;
+}
+.studio .workspace .preview-versions > span {
+  margin-right: 4px;
+}
+.studio .workspace .preview-versions .text-button {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .workspace .preview-versions .text-button[aria-pressed='true'] {
+  border-color: var(--border);
+  background: var(--raised);
+  color: var(--text);
+}
+
+/* Recent strip */
+.studio .create-history {
+  padding: 16px 8px 20px 0;
+  scrollbar-width: none;
+}
+.studio .create-history::-webkit-scrollbar {
+  display: none;
+}
+.studio .create-history::before {
+  content: 'Recent';
+  display: block;
+  margin-bottom: 8px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+.studio .create-history .history-grid {
+  gap: 6px;
+}
+.studio .workspace .create-history .history-preview img,
+.studio .create-history .history-thumbnail {
+  height: 80px;
+}
+
+/* Prompt dock */
+.studio .workspace .prompt-dock {
+  margin: 0 22px 16px;
+  padding: 12px 16px 14px;
+  border-radius: 16px;
+  row-gap: 12px;
+  column-gap: 16px;
+}
+.studio .workspace .prompt-workspace .label-row {
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+}
+.studio .workspace .prompt-workspace .label-row .text-button {
+  min-height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .workspace .prompt-workspace .label-row .text-button:hover {
+  color: var(--text);
+}
+.studio .tag-source-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .tag-source-picker select {
+  width: auto;
+  min-height: 24px;
+  height: 24px;
+  padding: 0 24px 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background-color: var(--inset);
+  font-size: 12px;
+}
+.studio .workspace .prompt-workspace #prompt,
+.studio .workspace .prompt-workspace .tag-prompt textarea {
+  height: auto;
+  min-height: 48px;
+  padding: 6px 0 0;
+  resize: none;
+  field-sizing: content;
+  max-height: 24vh;
+}
+.studio .workspace .prompt-workspace .label-row label {
+  margin-right: 8px;
+}
+.studio .workspace .prompt-dock > .generate-area {
+  align-self: center;
+  gap: 4px;
+}
+.studio .workspace .generate-area .generate {
+  min-height: 40px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+.studio .workspace .generate-area .hint {
+  max-width: 220px;
+  text-align: right;
+}
+
+/* Tune drawer */
+.studio .workspace .composer-fields {
+  padding: 16px 18px 28px;
+  gap: 18px;
+}
+.studio .workspace .composer-fields .field > span,
+.studio .workspace .composer-fields .section-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .workspace .composer-fields .generation-settings .advanced-grid {
+  gap: 14px;
+}
+.studio .workspace .composer-fields :is(input:not([type='range'], [type='checkbox']), select) {
+  min-height: 34px;
+  height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 13px;
+  line-height: 32px;
+}
+.studio .workspace .composer-fields .input-with-button button {
+  width: 34px;
+  min-height: 34px;
+  height: 34px;
+  padding: 0;
+  justify-content: center;
+}
+.studio .workspace .composer-fields #negative-area textarea {
+  min-height: 72px;
+  font-size: 13px;
+}
+.studio .workspace .prompt-workspace .label-row .tag-source-picker {
+  margin: 0 auto 0 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Everything on one screen: extras are one-line rows in the drawer and open as a panel beside it. */
+.studio .workspace {
+  --tune-width: 340px;
+}
+@media (max-width: 1100px) {
+  .studio .workspace {
+    --tune-width: 300px;
+  }
+}
+.studio .workspace .composer-fields {
+  gap: 14px;
+}
+.studio .workspace .composer-fields .two-columns:has(.slider-field) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.studio .workspace .composer-fields .size-fields {
+  gap: 8px;
+}
+.studio .workspace .composer-fields .size-fields > .field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.studio .workspace .composer-fields .size-fields > .field > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.studio .workspace .composer-fields .size-fields > .field::before {
+  content: 'W';
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .workspace .composer-fields .size-fields > .field + .field::before {
+  content: 'H';
+}
+.studio .workspace .composer-fields #negative-area textarea {
+  min-height: 60px;
+  height: 60px;
+}
+.studio .workspace .composer-fields .advanced-image-controls {
+  gap: 4px;
+}
+.studio .workspace .composer-fields > :is(.advanced-image-controls, .source-input, details.advanced, .extra-row) {
+  margin-top: -10px;
+}
+.studio .workspace .composer-fields > .advanced-image-controls {
+  margin-top: 0;
+}
+.studio .workspace .composer-fields details.tune-flyout {
+  border: 0;
+  border-radius: 10px;
+  background: var(--inset);
+  padding: 0;
+}
+.studio .workspace .composer-fields details.tune-flyout > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+}
+.studio .workspace .composer-fields details.tune-flyout > summary::-webkit-details-marker {
+  display: none;
+}
+.studio .workspace .composer-fields details.tune-flyout > summary:hover {
+  background: var(--raised);
+}
+.studio .workspace .composer-fields details.tune-flyout[open] > summary {
+  border-color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: var(--raised);
+}
+.studio .workspace .composer-fields details.tune-flyout > summary::after {
+  content: 'Off';
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .workspace .composer-fields details.tune-flyout > summary:has(.extra-status)::after,
+.studio .workspace .composer-fields details.tune-flyout[open] > summary::after {
+  content: '›';
+  margin-left: 0;
+  font-size: 16px;
+}
+.studio .workspace .composer-fields details.tune-flyout[open] > summary::after {
+  margin-left: auto;
+  color: var(--accent);
+}
+.studio .workspace .composer-fields details.tune-flyout .extra-status {
+  font-size: 12px;
+}
+.studio .workspace .composer-fields details.tune-flyout > summary svg {
+  display: none;
+}
+.studio .workspace .composer-fields details.tune-flyout[open]::details-content {
+  position: fixed;
+  z-index: 40;
+  top: 68px;
+  right: calc(var(--tune-width) + 8px);
+  width: min(380px, calc(100vw - var(--tune-width) - 120px));
+  max-height: calc(100vh - 84px);
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 20px 60px var(--shadow);
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+.studio .workspace .composer-fields details.tune-flyout > :not(summary) {
+  margin: 0;
+}
+.studio .workspace .composer-fields details.sampling-flyout {
+  background: transparent;
+}
+.studio .workspace .composer-fields details.sampling-flyout > summary {
+  min-height: 28px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .workspace .composer-fields details.sampling-flyout > summary::after {
+  content: '›';
+  margin-left: 6px;
+}
+.studio .workspace .composer-fields details.sampling-flyout[open] > summary {
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent);
+}
+.studio .workspace .composer-fields details.face-flyout .checkbox-label {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+.studio .workspace .composer-fields > .source-input {
+  border-top: 0;
+  padding-top: 0;
+}
+.studio .workspace .composer-fields .size-fields > label.field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.studio .workspace .composer-fields .size-fields > label.field > input {
+  flex: 1;
+  min-width: 0;
+}
+.studio .workspace .composer-fields .slider-field {
+  grid-template-columns: minmax(0, 1fr) 40px;
+}
+.studio .workspace .composer-fields .slider-field > span {
+  white-space: nowrap;
+}
+.studio .workspace .composer-fields {
+  padding-bottom: 16px;
+}
+.studio .workspace .composer-fields .size-presets button {
+  min-height: 44px;
+  padding: 4px;
+}
+@media (max-height: 940px) {
+  .studio .workspace .composer-fields {
+    gap: 12px;
+  }
+  .studio .workspace .composer-fields .size-presets button {
+    min-height: 40px;
+  }
+  .studio .workspace .composer-fields #negative-area textarea {
+    min-height: 52px;
+    height: 52px;
+  }
+}
+@media (max-height: 940px) {
+  .studio .workspace .composer-fields {
+    padding-top: 12px;
+  }
+  .studio .workspace .composer-fields details.tune-flyout > summary {
+    min-height: 36px;
+  }
+}
+
+/* Edit on one screen: the station is exactly the window, the picture takes what's left,
+   the prompt dock stays visible, and the side panel keeps its own fallback scroll. */
+.studio .qwen-station {
+  height: calc(100vh - 56px);
+  min-height: 0;
+  overflow: hidden;
+}
+.studio .qwen-station .qwen-workspace {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+.studio .qwen-station .qwen-viewer {
+  min-height: 0;
+  overflow: hidden;
+}
+.studio .qwen-station .qwen-preview {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.studio .qwen-station .qwen-dock {
+  flex-shrink: 0;
+}
+.studio .qwen-station .qwen-side {
+  max-height: none;
+  height: 100%;
+  min-height: 0;
+  position: static;
+}
+.studio .qwen-station .qwen-composer {
+  gap: 10px;
+  padding: 14px;
+}
+.studio .qwen-station .qwen-composer :is(input:not([type='checkbox']), select) {
+  min-height: 34px;
+  height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 13px;
+}
+.studio .qwen-station .qwen-composer > small,
+.studio .qwen-station .qwen-composer .muted.small {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.studio .qwen-station .qwen-runtime {
+  padding: 8px 14px;
+}
+.studio .qwen-station .qwen-dock textarea {
+  height: auto;
+  min-height: 48px;
+  max-height: 22vh;
+  field-sizing: content;
+}
+
+/* The panel opens right beside the row that opened it, with a small pointer back to the row. */
+.studio .workspace .composer-fields details.tune-flyout[open]::details-content {
+  right: calc(100vw - var(--flyout-left, 100vw) + 14px);
+}
+.studio .workspace .composer-fields details.tune-flyout[data-flyout-side='down'][open]::details-content {
+  top: max(64px, calc(var(--flyout-top) - 6px));
+  bottom: auto;
+  max-height: calc(100vh - max(64px, calc(var(--flyout-top) - 6px)) - 12px);
+}
+.studio .workspace .composer-fields details.tune-flyout[data-flyout-side='up'][open]::details-content {
+  top: auto;
+  bottom: max(12px, calc(var(--flyout-bottom) - 6px));
+  max-height: calc(100vh - max(12px, calc(var(--flyout-bottom) - 6px)) - 68px);
+}
+.studio .workspace .composer-fields details.tune-flyout > summary {
+  position: relative;
+}
+.studio .workspace .composer-fields details.tune-flyout[open] > summary::before {
+  content: '';
+  position: absolute;
+  left: -15px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  margin-top: -7px;
+  border: 7px solid transparent;
+  border-right-color: var(--accent);
+}
+.studio .workspace .composer-fields details.sampling-flyout > summary {
+  display: inline-flex;
+  gap: 0;
+}
+.studio .workspace .composer-fields details.sampling-flyout[open] > summary::after {
+  margin-left: 6px;
+}
+.studio .workspace .composer-fields details.sampling-flyout[open] > summary::before {
+  left: -17px;
+}

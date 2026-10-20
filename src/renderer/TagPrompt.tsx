@@ -38,16 +38,39 @@ function setSource(value: TagSource) {
   for (const listener of listeners) listener();
 }
 
+/** Where tag suggestions come from. One setting, shared by every prompt box. */
+export function TagSourcePicker() {
+  const selectedSource = useSyncExternalStore(subscribe, () => source);
+  return (
+    <label className="tag-source-picker">
+      Tags{' '}
+      <select
+        aria-label="Tag autocomplete source"
+        value={selectedSource}
+        onChange={event => setSource(event.target.value as TagSource)}
+      >
+        <option value="both">e621 + Danbooru</option>
+        <option value="e621">e621</option>
+        <option value="danbooru">Danbooru</option>
+        <option value="off">Off</option>
+      </select>
+    </label>
+  );
+}
+
 export function TagPrompt({
   value,
   onChange,
   wildcards,
   wildcardSelections,
   onWildcardSelections,
+  sourcePicker = true,
   ...props
 }: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange'> & {
   value: string;
   onChange: (value: string) => void;
+  /** Off when the page shows its own TagSourcePicker. */
+  sourcePicker?: boolean;
   wildcards?: Record<string, string[]>;
   wildcardSelections?: Record<string, string[]>;
   onWildcardSelections?: (value: Record<string, string[]>) => void;
@@ -330,22 +353,12 @@ export function TagPrompt({
           </button>
         </Modal>
       )}
-      <div className="tag-prompt-tools">
-        <label>
-          Tags{' '}
-          <select
-            aria-label="Tag autocomplete source"
-            value={selectedSource}
-            onChange={event => setSource(event.target.value as TagSource)}
-          >
-            <option value="both">e621 + Danbooru</option>
-            <option value="e621">e621</option>
-            <option value="danbooru">Danbooru</option>
-            <option value="off">Off</option>
-          </select>
-        </label>
-        {error && <span role="status">Tag lookup unavailable; you can still type.</span>}
-      </div>
+      {(sourcePicker || error) && (
+        <div className="tag-prompt-tools">
+          {sourcePicker && <TagSourcePicker />}
+          {error && <span role="status">Tag lookup unavailable; you can still type.</span>}
+        </div>
+      )}
       {open &&
         createPortal(
           <div

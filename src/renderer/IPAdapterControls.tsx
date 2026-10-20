@@ -137,10 +137,10 @@ export function IPAdapterControls({
     }
   }
   return (
-    <details className="advanced ipadapter-controls">
+    <details className="advanced ipadapter-controls tune-flyout">
       <summary>
         <Paintbrush size={15} />
-        Image reference · IP Adapter{value && <span className="extra-status">On</span>}
+        Style from an image{value && <span className="extra-status">On</span>}
       </summary>
       <div className="advanced-grid">
         <p className="muted small">

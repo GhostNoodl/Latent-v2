@@ -1,7 +1,7 @@
 import { SetupActivityPanel } from './SetupActivityPanel';
 import { ErrorBoundary } from './ErrorBoundary';
 import { isLoraFamilyCompatible } from '../shared/types';
-import { TagPrompt } from './TagPrompt';
+import { TagPrompt, TagSourcePicker } from './TagPrompt';
 import brandIcon from '../../resources/latent-icon.svg';
 import {
   prepareOneClickEnhancement,
@@ -16,7 +16,7 @@ import { PreviewMenu } from './PreviewMenu';
 import { draftFieldLabel } from './draft-field-label';
 import { hiddenAdvancedSettings } from '../shared/create-mode';
 import { applySnapshotChanges, type SnapshotChanges } from '../shared/snapshot-changes';
-import { useDismissiblePanel } from './useDismissiblePanel';
+import { useDismissiblePanel, useTuneFlyouts } from './useDismissiblePanel';
 import { imageSetupReason } from '../shared/setup';
 import { SetupHub } from './SetupHub';
 import { queueClearKey } from './queue-view';
@@ -197,6 +197,7 @@ export default function App() {
   const [previewMenu, setPreviewMenu] = useState<{ record: GenerationRecord; x: number; y: number }>();
   const closePreviewMenu = useCallback(() => setPreviewMenu(undefined), []);
   const [loraPopover, setLoraPopover] = useState<number>();
+  useTuneFlyouts();
   useDismissiblePanel(
     loraPopover !== undefined,
     useCallback(() => setLoraPopover(undefined), []),
@@ -1225,7 +1226,8 @@ export default function App() {
                             changeDraft({ dynamicPrompts: { enabled: true, selections } })
                           }
                           aria-label="Negative prompt"
-                          rows={5}
+                          sourcePicker={false}
+                          rows={3}
                           maxLength={16000}
                           value={draft.negativePrompt}
                           onChange={negativePrompt => changeDraft({ negativePrompt })}
@@ -1251,7 +1253,7 @@ export default function App() {
                       <summary>Generation settings</summary>
                       <div className="advanced-grid">
                         {createMode === 'advanced' && (
-                          <div className="two-columns">
+                          <div className="two-columns size-fields">
                             <Field label="Width">
                               <input
                                 type="number"
@@ -1312,6 +1314,38 @@ export default function App() {
                             />
                           </Field>
                         </div>
+                        {createMode === 'advanced' && (
+                          <>
+                            <div className="two-columns">
+                              <Field label="Sampler">
+                                <select
+                                  value={draft.sampler}
+                                  onChange={event => changeDraft({ sampler: event.target.value })}
+                                >
+                                  {!SAMPLERS.includes(draft.sampler) && (
+                                    <option value={draft.sampler}>{draft.sampler} (unavailable)</option>
+                                  )}
+                                  {SAMPLERS.map(value => (
+                                    <option key={value}>{value}</option>
+                                  ))}
+                                </select>
+                              </Field>
+                              <Field label="Scheduler">
+                                <select
+                                  value={draft.scheduler}
+                                  onChange={event => changeDraft({ scheduler: event.target.value })}
+                                >
+                                  {!SCHEDULERS.includes(draft.scheduler) && (
+                                    <option value={draft.scheduler}>{draft.scheduler} (unavailable)</option>
+                                  )}
+                                  {SCHEDULERS.map(value => (
+                                    <option key={value}>{value}</option>
+                                  ))}
+                                </select>
+                              </Field>
+                            </div>
+                          </>
+                        )}
                         <Field label="Seed">
                           <div className="input-with-button">
                             <input
@@ -1330,79 +1364,51 @@ export default function App() {
                           </div>
                         </Field>
                         {createMode === 'advanced' && (
-                          <>
-                            <details>
-                              <summary>Model sampling</summary>
-                              <Field label="Prediction type">
-                                <select
-                                  value={draft.modelSampling?.prediction ?? 'auto'}
+                          <details className="tune-flyout sampling-flyout">
+                            <summary>Model sampling</summary>
+                            <Field label="Prediction type">
+                              <select
+                                value={draft.modelSampling?.prediction ?? 'auto'}
+                                onChange={event =>
+                                  changeDraft({
+                                    modelSampling:
+                                      event.target.value === 'auto'
+                                        ? undefined
+                                        : {
+                                            prediction: event.target.value as 'eps' | 'v_prediction' | 'lcm' | 'x0',
+                                            zeroTerminalSnr: event.target.value === 'v_prediction',
+                                          },
+                                  })
+                                }
+                              >
+                                <option value="auto">Automatic (checkpoint default)</option>
+                                <option value="eps">Epsilon / standard SDXL</option>
+                                <option value="v_prediction">V-prediction / NoobAI V-pred</option>
+                                <option value="lcm">LCM</option>
+                                <option value="x0">X0 / one-step Lightning</option>
+                              </select>
+                            </Field>
+                            {draft.modelSampling && (
+                              <label className="checkbox-label">
+                                <input
+                                  type="checkbox"
+                                  checked={draft.modelSampling.zeroTerminalSnr}
                                   onChange={event =>
                                     changeDraft({
-                                      modelSampling:
-                                        event.target.value === 'auto'
-                                          ? undefined
-                                          : {
-                                              prediction: event.target.value as 'eps' | 'v_prediction' | 'lcm' | 'x0',
-                                              zeroTerminalSnr: event.target.value === 'v_prediction',
-                                            },
+                                      modelSampling: {
+                                        ...draft.modelSampling!,
+                                        zeroTerminalSnr: event.target.checked,
+                                      },
                                     })
                                   }
-                                >
-                                  <option value="auto">Automatic (checkpoint default)</option>
-                                  <option value="eps">Epsilon / standard SDXL</option>
-                                  <option value="v_prediction">V-prediction / NoobAI V-pred</option>
-                                  <option value="lcm">LCM</option>
-                                  <option value="x0">X0 / one-step Lightning</option>
-                                </select>
-                              </Field>
-                              {draft.modelSampling && (
-                                <label className="checkbox-label">
-                                  <input
-                                    type="checkbox"
-                                    checked={draft.modelSampling.zeroTerminalSnr}
-                                    onChange={event =>
-                                      changeDraft({
-                                        modelSampling: {
-                                          ...draft.modelSampling!,
-                                          zeroTerminalSnr: event.target.checked,
-                                        },
-                                      })
-                                    }
-                                  />
-                                  Zero terminal SNR
-                                </label>
-                              )}
-                              <p className="muted small">
-                                Use the model author's recommended steps, guidance and sampler.
-                              </p>
-                            </details>
-                            <Field label="Sampler">
-                              <select
-                                value={draft.sampler}
-                                onChange={event => changeDraft({ sampler: event.target.value })}
-                              >
-                                {!SAMPLERS.includes(draft.sampler) && (
-                                  <option value={draft.sampler}>{draft.sampler} (unavailable)</option>
-                                )}
-                                {SAMPLERS.map(value => (
-                                  <option key={value}>{value}</option>
-                                ))}
-                              </select>
-                            </Field>
-                            <Field label="Scheduler">
-                              <select
-                                value={draft.scheduler}
-                                onChange={event => changeDraft({ scheduler: event.target.value })}
-                              >
-                                {!SCHEDULERS.includes(draft.scheduler) && (
-                                  <option value={draft.scheduler}>{draft.scheduler} (unavailable)</option>
-                                )}
-                                {SCHEDULERS.map(value => (
-                                  <option key={value}>{value}</option>
-                                ))}
-                              </select>
-                            </Field>
-                          </>
+                                />
+                                Zero terminal SNR
+                              </label>
+                            )}
+                            <p className="muted small">
+                              Use the model author's recommended steps, guidance and sampler.
+                            </p>
+                          </details>
                         )}
                       </div>
                     </details>
@@ -1440,12 +1446,7 @@ export default function App() {
                         />
                       </>
                     )}
-                    <details
-                      className="extra-row"
-                      open={
-                        Boolean(draft.dynamicPrompts?.enabled || draft.regionalPrompts?.settings.enabled) || undefined
-                      }
-                    >
+                    <details className="extra-row tune-flyout">
                       <summary>
                         {createMode === 'advanced' ? 'Regions and wildcards' : 'Wildcards'}
                         {(draft.dynamicPrompts?.enabled || draft.regionalPrompts?.settings.enabled) && (
@@ -1630,7 +1631,8 @@ export default function App() {
                       {' '}
                       <section>
                         <div className="label-row">
-                          <label htmlFor="prompt">Positive prompt</label>
+                          <label htmlFor="prompt">Prompt</label>
+                          <TagSourcePicker />
                           <button type="button" className="text-button" onClick={() => setAssistantOpen(true)}>
                             <Sparkles size={13} />
                             Help me write
@@ -1646,7 +1648,8 @@ export default function App() {
                             changeDraft({ dynamicPrompts: { enabled: true, selections } })
                           }
                           id="prompt"
-                          rows={5}
+                          sourcePicker={false}
+                          rows={2}
                           maxLength={16000}
                           value={draft.prompt}
                           onChange={prompt => changeDraft({ prompt })}
@@ -1773,6 +1776,7 @@ export default function App() {
                       <button
                         className="primary generate"
                         type="submit"
+                        title="Ctrl + Enter"
                         disabled={Boolean(cannotGenerate) || busy.generate}
                       >
                         <Busy active={busy.generate} />
@@ -1789,12 +1793,9 @@ export default function App() {
                                 ? 'Generate and refine'
                                 : 'Generate image'}
                       </button>
-                      <p className="hint">
-                        {cannotGenerate ||
-                          (foreignJobs
-                            ? 'Starts once the ComfyUI work ahead of it finishes.'
-                            : 'Ctrl + Enter to generate')}
-                      </p>
+                      {Boolean(cannotGenerate || foreignJobs) && (
+                        <p className="hint">{cannotGenerate || 'Starts once the ComfyUI work ahead of it finishes.'}</p>
+                      )}
                       {saveState === 'error' && (
                         <p className="draft-status inline-error" role="alert">
                           <button type="button" onClick={() => void run('save-draft', flushDraft)}>

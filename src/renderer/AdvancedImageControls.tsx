@@ -48,7 +48,7 @@ export function AdvancedImageControls({
   const source = snapshot.sourceImages.sources.find(source => source.id === draft.imageInput?.sourceId);
   return (
     <section className="advanced-image-controls">
-      <details open={Boolean(hires || upscale)}>
+      <details className="tune-flyout">
         <summary>
           Upscale and refine
           {(hires || upscale) && (
