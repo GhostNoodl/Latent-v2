@@ -29,7 +29,7 @@ describe('0.2 authoring preferences', () => {
   it('restores old settings and accepts new accents and user sizes', () => {
     const old = { ...DEFAULT_SETTINGS };
     delete old.sizePresets;
-    expect(settingsSchema.parse(old).accent).toBe('iris');
+    expect(settingsSchema.parse(old).accent).toBe('amber');
     expect(
       settingsSchema.parse({
         ...old,

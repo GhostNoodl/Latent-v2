@@ -303,8 +303,8 @@
     },
     {
       "path": "src/main/store.ts",
-      "bytes": 15483,
-      "sha256": "58e2a99210bd5cff26ba870a4365613db3f447d212af5c626814466e2ac45aff"
+      "bytes": 15873,
+      "sha256": "b5f8a9763751d4cf842887dedbcab1562f8e5ed20bc19b01428e88326f78de3f"
     },
     {
       "path": "src/main/upscaler.ts",
@@ -373,8 +373,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 116513,
-      "sha256": "a6e151ec257466575c1930dd190fb2a7824b81fedea383584187c8b91ca87801"
+      "bytes": 117395,
+      "sha256": "c980a3c30a4e11ef0c4bf8ba6151b84145e3ec91731bd50c4b1cc12ef3878c04"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -425,6 +425,11 @@
       "path": "src/renderer/DownloadStorage.tsx",
       "bytes": 3506,
       "sha256": "ef9936840915aaef20f4b021173078459b6c08fc9414f580708fc8ec80119c49"
+    },
+    {
+      "path": "src/renderer/darkroom.css",
+      "bytes": 10766,
+      "sha256": "e5ad1a1c50c3eb29db0a3a9dd7e7afdda82b7d73858db388cdbb188de0e85551"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -493,8 +498,8 @@
     },
     {
       "path": "src/renderer/main.tsx",
-      "bytes": 372,
-      "sha256": "4762bd87878fc95e8fb25e2f3c4c1940cc912899dc964b14d033cab1071e4b10"
+      "bytes": 397,
+      "sha256": "279d318c25d1eee9f54caee971cc7d56b4d90fa0928a340f21a7dde14632137f"
     },
     {
       "path": "src/renderer/mask-transform.ts",
@@ -753,8 +758,8 @@
     },
     {
       "path": "src/shared/defaults.ts",
-      "bytes": 2307,
-      "sha256": "61929752f2b81fe75e80316c1ae37839dfdfbd38bc95f2a14dca4391a196f0c5"
+      "bytes": 2306,
+      "sha256": "28e70d9316ea2792d954248b418ea8ed94b9e14dd7b1c255518243519c581e27"
     },
     {
       "path": "src/shared/dynamic-prompt-recipe.ts",
@@ -1348,8 +1353,8 @@
     },
     {
       "path": "tests/create-update.test.tsx",
-      "bytes": 21420,
-      "sha256": "d27bf4a1c1364519135e47c848d78068c4c3df000a04bdf5b3f9920abb81a4a9"
+      "bytes": 21421,
+      "sha256": "9f2dc0c0eb3cf9d66f3f0c70138b68c4f608941a3214b9dec71e56d80d7a1cea"
     },
     {
       "path": "docs/UPDATE-0.2.md",
@@ -1888,8 +1893,8 @@
     },
     {
       "path": "tests/store-records-cache.test.ts",
-      "bytes": 3866,
-      "sha256": "a2c339f1afbb2960d5f66b011fa07742413a4b76e311257fab3ecca7e55bf691"
+      "bytes": 4426,
+      "sha256": "3e4eaa62bb516420b681a5747752cb6fe2e7ef60be979b486b30217f729be08b"
     },
     {
       "path": "tests/backend-log-pruning.test.ts",

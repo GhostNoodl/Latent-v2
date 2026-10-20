@@ -35,7 +35,6 @@ import {
   Boxes,
   Compass,
   ChevronDown,
-  ChevronUp,
   CircleHelp,
   Dices,
   Film,
@@ -118,8 +117,8 @@ const VideoStudio = lazy(() =>
 
 type Page = 'qwen' | 'create' | 'library' | 'video' | 'models' | 'discover' | 'settings';
 const pages = {
-  qwen: ['Qwen', 'Edit images by describing the change, or make new ones from text.'],
-  discover: ['Discover', 'Browse Civitai for checkpoints and LoRAs, and download them here.'],
+  qwen: ['Edit', 'Change a picture by describing it, or make a new one from text.'],
+  discover: ['Models', 'Find checkpoints and LoRAs on Civitai.'],
   create: ['Create', 'Type a prompt, pick a model and generate.'],
   library: ['Library', 'Everything you have made, with the settings behind it.'],
   video: ['Video', 'Turn an idea or an image into a short clip.'],
@@ -1059,46 +1058,26 @@ export default function App() {
       onKeyDown={onKeyDown}
     >
       <SetupActivityPanel compact items={snapshot.setupActivity} />
-      <header className="titlebar">
-        <div className="brand">
-          <span className="brand-mark">
-            <img src={brandIcon} alt="" />
-          </span>
-          latent <small>v2</small>
-        </div>
-        <button className="runtime" onClick={() => setPage('settings')}>
-          <span className={`status-dot ${snapshot.backend.state}`} />
-          <span>
-            {snapshot.backend.state === 'ready'
-              ? engineLabel
-              : snapshot.backend.state === 'not-installed'
-                ? 'Setup needed'
-                : snapshot.backend.state === 'installing'
-                  ? 'Setting up…'
-                  : snapshot.backend.state === 'starting'
-                    ? 'Starting…'
-                    : snapshot.backend.state === 'error'
-                      ? 'Engine needs attention'
-                      : 'Engine stopped'}
-          </span>
-          <ChevronDown size={13} />
-        </button>
-      </header>
       <div className="shell">
         <nav className="navigation" aria-label="Studio navigation">
+          <span className="brand-mark rail-brand" title="Latent">
+            <img src={brandIcon} alt="" />
+          </span>
           {(
             [
               ['create', Sparkles, 'Create'],
+              ['qwen', WandSparkles, 'Edit'],
               ['video', Film, 'Video'],
-              ['qwen', WandSparkles, 'Qwen'],
               ['library', Images, 'Library'],
               ['models', Boxes, 'Models'],
-              ['discover', Compass, 'Discover'],
-              ['settings', Settings2, 'Settings'],
             ] as const
           ).map(([key, Icon, label]) => (
-            <button key={key} aria-current={page === key ? 'page' : undefined} onClick={() => setPage(key)}>
-              <Icon size={21} />
+            <button
+              key={key}
+              aria-current={page === key || (key === 'models' && page === 'discover') ? 'page' : undefined}
+              onClick={() => setPage(key)}
+            >
+              <Icon size={20} />
               <span>{label}</span>
             </button>
           ))}
@@ -1106,16 +1085,64 @@ export default function App() {
             <CircleHelp size={19} />
             <span>Help</span>
           </button>
+          <button aria-current={page === 'settings' ? 'page' : undefined} onClick={() => setPage('settings')}>
+            <Settings2 size={20} />
+            <span>Settings</span>
+          </button>
         </nav>
         <main className={`main ${page === 'create' ? 'main-create' : page === 'video' ? 'main-video' : ''}`}>
-          {page === 'create' || page === 'video' ? (
-            <h1 className="create-page-title">{pages[page][0]}</h1>
-          ) : (
-            <div className="page-heading">
+          <header className={`page-top ${page === 'create' || page === 'video' ? 'page-top-compact' : ''}`}>
+            <div className="page-top-title">
               <h1>{pages[page][0]}</h1>
-              <p>{pages[page][1]}</p>
+              {page !== 'create' && page !== 'video' && <p>{pages[page][1]}</p>}
             </div>
-          )}
+            {(page === 'models' || page === 'discover') && (
+              <div className="page-tabs" role="group" aria-label="Models">
+                <button aria-pressed={page === 'models'} onClick={() => setPage('models')}>
+                  On this PC
+                </button>
+                <button aria-pressed={page === 'discover'} onClick={() => setPage('discover')}>
+                  <Compass size={14} />
+                  Discover
+                </button>
+              </div>
+            )}
+            <div className="page-top-actions">
+              <NotificationCenter
+                open={activityPanel === 'notifications'}
+                onOpenChange={open =>
+                  setActivityPanel(previous =>
+                    open ? 'notifications' : previous === 'notifications' ? undefined : previous,
+                  )
+                }
+                snapshot={snapshot}
+                refresh={async () => receive(await window.latent.getSnapshot())}
+                onQueue={() => setQueueOpen(true)}
+              />
+              <button className="queue-toggle" onClick={() => setQueueOpen(!queueOpen)} aria-expanded={queueOpen}>
+                <ListOrdered size={15} />
+                Queue <span className="count">{activeJobs.length + foreignJobs}</span>
+                {foreignJobs > 0 && <span> · ComfyUI</span>}
+                {snapshot.backend.state === 'ready' && activity.state !== 'ready' && <span> · checking</span>}
+              </button>
+              <button className="runtime" onClick={() => setPage('settings')}>
+                <span className={`status-dot ${snapshot.backend.state}`} />
+                <span>
+                  {snapshot.backend.state === 'ready'
+                    ? engineLabel
+                    : snapshot.backend.state === 'not-installed'
+                      ? 'Setup needed'
+                      : snapshot.backend.state === 'installing'
+                        ? 'Setting up…'
+                        : snapshot.backend.state === 'starting'
+                          ? 'Starting…'
+                          : snapshot.backend.state === 'error'
+                            ? 'Engine needs attention'
+                            : 'Engine stopped'}
+                </span>
+              </button>
+            </div>
+          </header>
           {page === 'create' && (
             <ErrorBoundary label="Create" resetKey={page}>
               <div className="workspace">
@@ -1384,6 +1411,23 @@ export default function App() {
                         )}
                       </div>
                     </section>
+                    <div id="negative-area" hidden={false}>
+                      <Field label="Negative prompt">
+                        <TagPrompt
+                          wildcards={snapshot.wildcards.entries}
+                          wildcardSelections={draft.dynamicPrompts?.selections}
+                          onWildcardSelections={selections =>
+                            changeDraft({ dynamicPrompts: { enabled: true, selections } })
+                          }
+                          aria-label="Negative prompt"
+                          rows={5}
+                          maxLength={16000}
+                          value={draft.negativePrompt}
+                          onChange={negativePrompt => changeDraft({ negativePrompt })}
+                          placeholder="Unwanted details or styles"
+                        />
+                      </Field>
+                    </div>
                     {draft.enhance && (
                       <Notice>
                         Enhancing a saved image. The original will be preserved.
@@ -1602,120 +1646,105 @@ export default function App() {
                       Presets<span>{snapshot.presets.length}</span>
                     </button>
                   </div>
-                  <div className="prompt-workspace">
-                    {' '}
-                    <section>
-                      <div className="label-row">
-                        <label htmlFor="prompt">Positive prompt</label>
-                        <button type="button" className="text-button" onClick={() => setAssistantOpen(true)}>
-                          <Sparkles size={13} />
-                          Help me write
+                  <div className="prompt-dock">
+                    <div className="prompt-workspace">
+                      {' '}
+                      <section>
+                        <div className="label-row">
+                          <label htmlFor="prompt">Positive prompt</label>
+                          <button type="button" className="text-button" onClick={() => setAssistantOpen(true)}>
+                            <Sparkles size={13} />
+                            Help me write
+                          </button>
+                          <button type="button" className="text-button" onClick={() => changeDraft({ prompt: '' })}>
+                            Clear
+                          </button>
+                        </div>
+                        <TagPrompt
+                          wildcards={snapshot.wildcards.entries}
+                          wildcardSelections={draft.dynamicPrompts?.selections}
+                          onWildcardSelections={selections =>
+                            changeDraft({ dynamicPrompts: { enabled: true, selections } })
+                          }
+                          id="prompt"
+                          rows={5}
+                          maxLength={16000}
+                          value={draft.prompt}
+                          onChange={prompt => changeDraft({ prompt })}
+                          placeholder="A quiet greenhouse at dusk, fireflies between the flowers, delicate anime illustration…"
+                        />
+                      </section>
+                      <details className="prompt-extras">
+                        <summary>
+                          Wildcards &amp; choices
+                          <span>Automatic · {Object.keys(snapshot.wildcards.entries).length} saved lists</span>
+                        </summary>
+                        <DynamicPrompts
+                          draft={draft}
+                          wildcards={snapshot.wildcards}
+                          onChange={dynamicPrompts => changeDraft({ dynamicPrompts })}
+                          onReroll={() => {
+                            const seedBytes = crypto.getRandomValues(new Uint32Array(2));
+                            const seed = String(seedBytes[0] * 65536 + (seedBytes[1] & 65535));
+                            changeDraft({
+                              dynamicPrompts: { enabled: true, selections: draft.dynamicPrompts?.selections },
+                              seed,
+                            });
+                          }}
+                          onSaveWildcards={entries => window.latent.saveWildcards(entries)}
+                        />
+                      </details>
+                    </div>
+                    <div className="generate-area">
+                      {draft.enhance && (
+                        <button
+                          type="button"
+                          className="soft-button"
+                          onClick={() =>
+                            changeDraft({
+                              enhance: undefined,
+                              imageInput: undefined,
+                              upscale: undefined,
+                              variationOfRecordId: undefined,
+                            })
+                          }
+                        >
+                          Exit Enhance
                         </button>
-                        <button type="button" className="text-button" onClick={() => changeDraft({ prompt: '' })}>
-                          Clear
-                        </button>
-                      </div>
-                      <TagPrompt
-                        wildcards={snapshot.wildcards.entries}
-                        wildcardSelections={draft.dynamicPrompts?.selections}
-                        onWildcardSelections={selections =>
-                          changeDraft({ dynamicPrompts: { enabled: true, selections } })
-                        }
-                        id="prompt"
-                        rows={5}
-                        maxLength={16000}
-                        value={draft.prompt}
-                        onChange={prompt => changeDraft({ prompt })}
-                        placeholder="A quiet greenhouse at dusk, fireflies between the flowers, delicate anime illustration…"
-                      />
-                      <div id="negative-area" hidden={false}>
-                        <Field label="Negative prompt">
-                          <TagPrompt
-                            wildcards={snapshot.wildcards.entries}
-                            wildcardSelections={draft.dynamicPrompts?.selections}
-                            onWildcardSelections={selections =>
-                              changeDraft({ dynamicPrompts: { enabled: true, selections } })
-                            }
-                            aria-label="Negative prompt"
-                            rows={5}
-                            maxLength={16000}
-                            value={draft.negativePrompt}
-                            onChange={negativePrompt => changeDraft({ negativePrompt })}
-                            placeholder="Unwanted details or styles"
-                          />
-                        </Field>
-                      </div>
-                    </section>
-                    <details className="prompt-extras">
-                      <summary>
-                        Wildcards &amp; choices
-                        <span>Automatic · {Object.keys(snapshot.wildcards.entries).length} saved lists</span>
-                      </summary>
-                      <DynamicPrompts
-                        draft={draft}
-                        wildcards={snapshot.wildcards}
-                        onChange={dynamicPrompts => changeDraft({ dynamicPrompts })}
-                        onReroll={() => {
-                          const seedBytes = crypto.getRandomValues(new Uint32Array(2));
-                          const seed = String(seedBytes[0] * 65536 + (seedBytes[1] & 65535));
-                          changeDraft({
-                            dynamicPrompts: { enabled: true, selections: draft.dynamicPrompts?.selections },
-                            seed,
-                          });
-                        }}
-                        onSaveWildcards={entries => window.latent.saveWildcards(entries)}
-                      />
-                    </details>
-                  </div>
-                  <div className="generate-area">
-                    {draft.enhance && (
+                      )}
                       <button
-                        type="button"
-                        className="soft-button"
-                        onClick={() =>
-                          changeDraft({
-                            enhance: undefined,
-                            imageInput: undefined,
-                            upscale: undefined,
-                            variationOfRecordId: undefined,
-                          })
-                        }
+                        className="primary generate"
+                        type="submit"
+                        disabled={Boolean(cannotGenerate) || busy.generate}
                       >
-                        Exit Enhance
+                        <Busy active={busy.generate} />
+                        {!busy.generate && <Sparkles size={18} />}
+                        {activeJobs.length || foreignJobs
+                          ? 'Add to queue'
+                          : draft.enhance
+                            ? 'Enhance image'
+                            : draft.upscale
+                              ? draft.upscale.mode === 'resize'
+                                ? 'Resize image'
+                                : 'Enhance image'
+                              : draft.hiresFix
+                                ? 'Generate and refine'
+                                : 'Generate image'}
                       </button>
-                    )}
-                    <button
-                      className="primary generate"
-                      type="submit"
-                      disabled={Boolean(cannotGenerate) || busy.generate}
-                    >
-                      <Busy active={busy.generate} />
-                      {!busy.generate && <Sparkles size={18} />}
-                      {activeJobs.length || foreignJobs
-                        ? 'Add to queue'
-                        : draft.enhance
-                          ? 'Enhance image'
-                          : draft.upscale
-                            ? draft.upscale.mode === 'resize'
-                              ? 'Resize image'
-                              : 'Enhance image'
-                            : draft.hiresFix
-                              ? 'Generate and refine'
-                              : 'Generate image'}
-                    </button>
-                    <p className="hint">
-                      {cannotGenerate ||
-                        (foreignJobs
-                          ? 'Starts once the ComfyUI work ahead of it finishes.'
-                          : 'Ctrl + Enter to generate')}
-                    </p>
-                    {saveState === 'error' && (
-                      <p className="draft-status inline-error" role="alert">
-                        <button type="button" onClick={() => void run('save-draft', flushDraft)}>
-                          Draft not saved · Retry
-                        </button>
+                      <p className="hint">
+                        {cannotGenerate ||
+                          (foreignJobs
+                            ? 'Starts once the ComfyUI work ahead of it finishes.'
+                            : 'Ctrl + Enter to generate')}
                       </p>
-                    )}
+                      {saveState === 'error' && (
+                        <p className="draft-status inline-error" role="alert">
+                          <button type="button" onClick={() => void run('save-draft', flushDraft)}>
+                            Draft not saved · Retry
+                          </button>
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </form>
                 <div
@@ -1781,7 +1810,7 @@ export default function App() {
                         onClick={() => setQwenEditor({ record: selected })}
                       >
                         <WandSparkles size={14} />
-                        Edit with Qwen
+                        Edit
                       </button>
                       <button
                         className="icon-button"
@@ -2347,25 +2376,6 @@ export default function App() {
           </div>
         </section>
       )}
-      <footer className="bottom-bar">
-        <NotificationCenter
-          open={activityPanel === 'notifications'}
-          onOpenChange={open =>
-            setActivityPanel(previous => (open ? 'notifications' : previous === 'notifications' ? undefined : previous))
-          }
-          snapshot={snapshot}
-          refresh={async () => receive(await window.latent.getSnapshot())}
-          onQueue={() => setQueueOpen(true)}
-        />
-        <button className="queue-toggle" onClick={() => setQueueOpen(!queueOpen)} aria-expanded={queueOpen}>
-          <ListOrdered size={15} />
-          Queue <span className="count">{activeJobs.length + foreignJobs}</span>
-          {foreignJobs > 0 && <span> · ComfyUI</span>}
-          {snapshot.backend.state === 'ready' && activity.state !== 'ready' && <span> · checking</span>}
-          {queueOpen ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-        </button>
-        <span>Everything runs on your PC</span>
-      </footer>
       {(notice || previousDraft) && (
         <div className={`toast ${notice?.error ? 'error' : ''}`} role={notice?.error ? 'alert' : 'status'}>
           <span tabIndex={notice?.error ? 0 : undefined} aria-label={notice?.error ? 'Error details' : undefined}>

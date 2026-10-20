@@ -342,6 +342,10 @@
       "to": "src/renderer/DownloadStorage.tsx"
     },
     {
+      "from": "src/renderer/darkroom.css",
+      "to": "src/renderer/darkroom.css"
+    },
+    {
       "from": "src/renderer/dynamic-prompts.css",
       "to": "src/renderer/dynamic-prompts.css"
     },
