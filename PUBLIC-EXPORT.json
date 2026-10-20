@@ -1029,12 +1029,12 @@
     {
       "path": "package.json",
       "bytes": 4517,
-      "sha256": "8add785964ae1f5f36875e73a09c0b9c1570c9c12116dfe127efe7e815105635"
+      "sha256": "244ab4c2803231de620e4f7587f559f0a215cdf973bb4e3d16a6e6b938064af2"
     },
     {
       "path": "package-lock.json",
       "bytes": 252660,
-      "sha256": "12bec034fd54c142144add876ff2f5f988e99ac06a958240d26eaad5072ff48b"
+      "sha256": "404454e9a38901da24bfae873905a1ab7a63d91d7c6ee836d80edbc06bd96676"
     },
     {
       "path": "tsconfig.json",
