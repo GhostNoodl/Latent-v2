@@ -260,9 +260,10 @@ export class StudioStore {
     if (freezeCached) deepFreeze(cached);
     const existing = cache.byId.get(record.id);
     cache.byId.set(record.id, cached);
+    // Each change makes a new list, so callers that cache by array identity see the change.
     if (existing) {
       // An update keeps the row's original created_at, so the record keeps its place.
-      cache.list[cache.list.indexOf(existing)] = cached;
+      cache.list = cache.list.map(item => (item === existing ? cached : item));
       return;
     }
     cache.rowTime.set(record.id, record.createdAt);
@@ -272,7 +273,7 @@ export class StudioStore {
     };
     let at = 0;
     while (at < cache.list.length && newer(cache.list[at].id)) at++;
-    cache.list.splice(at, 0, cached);
+    cache.list = [...cache.list.slice(0, at), cached, ...cache.list.slice(at)];
   }
   videoRecords(): unknown[] {
     return this.db
