@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 56632,
-      "sha256": "b04b4d73a07308bb574bade5848771af202cc3af25410686c0c59fdd6e5d870a"
+      "bytes": 58047,
+      "sha256": "a6b29970039e249067c5af91b706f02db84c9a42fba38bcd043b5b55168c96ba"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -1353,8 +1353,8 @@
     },
     {
       "path": "src/renderer/useDismissiblePanel.ts",
-      "bytes": 2586,
-      "sha256": "632a0f64503df8be4faaf4f4a9ad985e1f5810fc0583970b340ccafc086e3841"
+      "bytes": 3544,
+      "sha256": "3dfd8ee568c5d44a0a40f635a8a7b9c72fa45ac683b07c9cc0a2ce3009eefacc"
     },
     {
       "path": "tests/create-update.test.tsx",

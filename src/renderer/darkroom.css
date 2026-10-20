@@ -2380,3 +2380,42 @@
   max-height: 22vh;
   field-sizing: content;
 }
+
+/* The panel opens right beside the row that opened it, with a small pointer back to the row. */
+.studio .workspace .composer-fields details.tune-flyout[open]::details-content {
+  right: calc(100vw - var(--flyout-left, 100vw) + 14px);
+}
+.studio .workspace .composer-fields details.tune-flyout[data-flyout-side='down'][open]::details-content {
+  top: max(64px, calc(var(--flyout-top) - 6px));
+  bottom: auto;
+  max-height: calc(100vh - max(64px, calc(var(--flyout-top) - 6px)) - 12px);
+}
+.studio .workspace .composer-fields details.tune-flyout[data-flyout-side='up'][open]::details-content {
+  top: auto;
+  bottom: max(12px, calc(var(--flyout-bottom) - 6px));
+  max-height: calc(100vh - max(12px, calc(var(--flyout-bottom) - 6px)) - 68px);
+}
+.studio .workspace .composer-fields details.tune-flyout > summary {
+  position: relative;
+}
+.studio .workspace .composer-fields details.tune-flyout[open] > summary::before {
+  content: '';
+  position: absolute;
+  left: -15px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  margin-top: -7px;
+  border: 7px solid transparent;
+  border-right-color: var(--accent);
+}
+.studio .workspace .composer-fields details.sampling-flyout > summary {
+  display: inline-flex;
+  gap: 0;
+}
+.studio .workspace .composer-fields details.sampling-flyout[open] > summary::after {
+  margin-left: 6px;
+}
+.studio .workspace .composer-fields details.sampling-flyout[open] > summary::before {
+  left: -17px;
+}
