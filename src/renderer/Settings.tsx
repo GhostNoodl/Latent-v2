@@ -2,7 +2,7 @@ import { SetupActivityPanel } from './SetupActivityPanel';
 import { AppUpdates } from './AppUpdates';
 import { TelegramRemote } from './TelegramRemote';
 import { PackageSetupStorage } from './PackageSetupStorage';
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { ArrowUpRight, Check, Copy, Download, Play, RotateCcw, Square, Terminal } from 'lucide-react';
 import type { AppSettings, AppSnapshot } from '../shared/types';
 import { DEFAULT_SETTINGS } from '../shared/defaults';
@@ -36,6 +36,86 @@ function scrollBackendLogs(event: KeyboardEvent<HTMLPreElement>) {
   panel.scrollTop = Math.max(0, Math.min(panel.scrollHeight - panel.clientHeight, positions[event.key]));
 }
 
+// Short names for the section list. Sections not listed here use their own heading.
+const SECTION_NAMES: Record<string, string> = {
+  'Studio setup': 'Setup',
+  'Image engine': 'Engine',
+  'Download and setup activity': 'Downloads',
+  'Telegram remote': 'Telegram',
+  Appearance: 'Look',
+  'Where files are stored': 'Folders',
+  'Previews, drafts, and notifications': 'Previews and alerts',
+  'Your hardware & starting presets': 'Hardware',
+  'Studio storage': 'Storage',
+  'Reset settings': 'Reset',
+};
+
+/** The list on the left of Settings. Reads the sections from the page, so new ones show up on their own. */
+function SettingsSections({ content }: { content: RefObject<HTMLDivElement | null> }) {
+  const [sections, setSections] = useState<{ id: string; name: string }[]>([]);
+  const [current, setCurrent] = useState('');
+  useEffect(() => {
+    const root = content.current;
+    if (!root) return;
+    let seen: HTMLElement[] = [];
+    const visible = new Map<string, boolean>();
+    const watcher = new IntersectionObserver(
+      entries => {
+        for (const entry of entries) visible.set(entry.target.id, entry.isIntersecting);
+        const first = seen.find(section => visible.get(section.id));
+        if (first) setCurrent(first.id);
+      },
+      { rootMargin: '-64px 0px -55% 0px' },
+    );
+    const read = () => {
+      seen = [...root.querySelectorAll<HTMLElement>(':scope > section')];
+      watcher.disconnect();
+      const next = seen.map((section, index) => {
+        const heading =
+          section.querySelector('h2')?.textContent?.trim() ||
+          section.getAttribute('aria-label') ||
+          section.querySelector('h3')?.textContent?.trim() ||
+          '';
+        section.id ||= `settings-section-${index}`;
+        watcher.observe(section);
+        return { id: section.id, name: SECTION_NAMES[heading] ?? heading };
+      });
+      setSections(previous =>
+        previous.length === next.length && previous.every((item, index) => item.name === next[index].name)
+          ? previous
+          : next,
+      );
+    };
+    read();
+    const changes = new MutationObserver(read);
+    changes.observe(root, { childList: true });
+    return () => {
+      changes.disconnect();
+      watcher.disconnect();
+    };
+  }, [content]);
+  return (
+    <nav className="settings-sections" aria-label="Settings sections">
+      {sections
+        .filter(section => section.name)
+        .map(section => (
+          <a
+            key={section.id}
+            href={`#${section.id}`}
+            aria-current={current === section.id ? 'true' : undefined}
+            onClick={event => {
+              event.preventDefault();
+              document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              setCurrent(section.id);
+            }}
+          >
+            {section.name}
+          </a>
+        ))}
+    </nav>
+  );
+}
+
 export function StudioSettings({
   snapshot,
   receive,
@@ -59,6 +139,7 @@ export function StudioSettings({
   const imageVersions = settings.imageVersions ?? DEFAULT_IMAGE_VERSIONS;
   const settingsBusy = busy.settings || busy.hardware;
   const [confirmReset, setConfirmReset] = useState(false);
+  const content = useRef<HTMLDivElement>(null);
   const runtimeWorking =
     ['applying', 'rolling-back', 'recovering'].includes(snapshot.runtimeUpdates.state) ||
     snapshot.ipAdapter.state === 'activating';
@@ -83,7 +164,8 @@ export function StudioSettings({
     error: 'Needs attention',
   };
   return (
-    <div className="page-content settings-content">
+    <div className="page-content settings-content" ref={content}>
+      <SettingsSections content={content} />
       {onSetup && (
         <section className="settings-card">
           <h2>Studio setup</h2>

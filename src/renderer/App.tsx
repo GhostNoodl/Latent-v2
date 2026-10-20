@@ -1107,6 +1107,12 @@ export default function App() {
                 </button>
               </div>
             )}
+            {page === 'library' && (
+              <div className="page-tabs" role="group" aria-label="Library">
+                <button aria-pressed>Images</button>
+                <button onClick={() => setPage('video')}>Videos</button>
+              </div>
+            )}
             <div className="page-top-actions">
               <NotificationCenter
                 open={activityPanel === 'notifications'}
@@ -2011,11 +2017,7 @@ export default function App() {
           )}
           {page === 'library' && (
             <ErrorBoundary label="Library" resetKey={page}>
-              <div className="page-content">
-                <div className="family" aria-label="Library media">
-                  <button aria-pressed>Images</button>
-                  <button onClick={() => setPage('video')}>Videos · open video history</button>
-                </div>
+              <div className="page-content library-content">
                 <History
                   {...collectionProps}
                   onVariation={variation}
