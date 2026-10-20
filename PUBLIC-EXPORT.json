@@ -373,8 +373,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 117395,
-      "sha256": "c980a3c30a4e11ef0c4bf8ba6151b84145e3ec91731bd50c4b1cc12ef3878c04"
+      "bytes": 117443,
+      "sha256": "528eaca498e062970e782039f989726e42ca46f5805a213019d9f9cad90a3226"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 10766,
-      "sha256": "e5ad1a1c50c3eb29db0a3a9dd7e7afdda82b7d73858db388cdbb188de0e85551"
+      "bytes": 28701,
+      "sha256": "dbdc16af8ebf679d491d695aa6eaf3b50003586915377286eaddb704c2a7f541"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -598,8 +598,8 @@
     },
     {
       "path": "src/renderer/Settings.tsx",
-      "bytes": 23039,
-      "sha256": "6c0bc3590a3ce2ac9b8279faa1e09628c480b3a8fe561be5ce3fbe9a6b6a77bd"
+      "bytes": 26069,
+      "sha256": "fc6e8177812ecf3169bc51534564c390aa3c4866200d2ae9f6d6aab330b0c67f"
     },
     {
       "path": "src/renderer/SharedBackendActivity.tsx",
