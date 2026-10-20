@@ -61,10 +61,10 @@ describe('image library cache', () => {
   it('hands out copies of settings and presets, refreshed after each save', () => {
     const { store } = open();
     const settings = store.settings();
-    settings.theme = 'dark';
-    expect(store.settings().theme).not.toBe('dark');
-    store.saveSettings({ theme: 'dark' });
-    expect(store.settings().theme).toBe('dark');
+    settings.theme = 'light';
+    expect(store.settings().theme).not.toBe('light');
+    store.saveSettings({ theme: 'light' });
+    expect(store.settings().theme).toBe('light');
     const revision = store.presetsRevision;
     expect(store.presets()).toEqual([]);
     store.savePreset({ id: 'p', name: 'Mine', draft: store.draft() });
@@ -91,5 +91,15 @@ it('opens with settings saved by a newer version instead of refusing to start', 
   store.setState('settings', { theme: 'dark', someFutureOption: true });
   expect(store.settings().theme).toBe('dark');
   store.setState('settings', { theme: 'neon' });
-  expect(store.settings().theme).toBe('system');
+  expect(store.settings().theme).toBe('dark');
+});
+
+it('moves an existing studio to the dark amber look once, then respects later choices', () => {
+  const first = open();
+  first.store.setState('settings', { theme: 'system', accent: 'iris', createMode: 'simple' });
+  first.store.setState('darkroomLook', false);
+  const { store, file } = open(first.file);
+  expect(store.settings()).toMatchObject({ theme: 'dark', accent: 'amber', createMode: 'simple' });
+  store.saveSettings({ theme: 'light', accent: 'rose' });
+  expect(open(file).store.settings()).toMatchObject({ theme: 'light', accent: 'rose' });
 });

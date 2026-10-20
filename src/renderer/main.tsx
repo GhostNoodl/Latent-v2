@@ -4,6 +4,7 @@ import App from './App';
 import { ErrorBoundary } from './ErrorBoundary';
 import './styles.css';
 import './usability.css';
+import './darkroom.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

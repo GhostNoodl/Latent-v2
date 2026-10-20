@@ -54,6 +54,12 @@ export class StudioStore {
       CREATE TABLE IF NOT EXISTS video_records (id TEXT PRIMARY KEY, job_id TEXT NOT NULL, created_at TEXT NOT NULL, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS presets (id TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS model_metadata (id TEXT PRIMARY KEY, value TEXT NOT NULL);`);
+    // The Darkroom look is dark with an amber accent. Move existing studios over once; Settings can switch back.
+    if (!this.getState('darkroomLook', false)) {
+      const stored = this.getState<Record<string, unknown> | null>('settings', null);
+      if (stored) this.setState('settings', { ...stored, theme: 'dark', accent: 'amber' });
+      this.setState('darkroomLook', true);
+    }
   }
   getState<T>(key: string, fallback: T): T {
     const row = this.db.prepare('SELECT value FROM state WHERE key=?').get(key);

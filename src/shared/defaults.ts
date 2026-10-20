@@ -27,8 +27,8 @@ export const DEFAULT_DRAFT: GenerationDraft = {
 export const DEFAULT_SETTINGS: AppSettings = {
   showGenerationPreview: true,
   sizePresets: SIZE_PRESETS,
-  theme: 'system',
-  accent: 'iris',
+  theme: 'dark',
+  accent: 'amber',
   rememberPositivePrompt: true,
   rememberNegativePrompt: false,
   civitaiAutoMetadata: false,
