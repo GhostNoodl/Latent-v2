@@ -15,7 +15,7 @@
   --shadow: #00000059;
   --ok: #5fd08a;
   --radius: 12px;
-  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Geist Variable', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
 }
 .studio[data-theme='light'] {
   --bg: #f4f4f5;
@@ -430,6 +430,349 @@
   border-radius: 10px;
 }
 
+/* Stage: zoom tucked in the corner, picture actions as buttons under the picture. */
+.studio .workspace .stage {
+  position: relative;
+  padding-top: 14px;
+}
+.studio .workspace .stagebar {
+  position: absolute;
+  top: 12px;
+  right: 22px;
+  z-index: 2;
+}
+.studio .workspace .stagebar .zoom-controls {
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+.studio .workspace .stagebar .zoom-controls .icon-button {
+  width: 28px;
+  min-height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.studio .workspace .stagebar .zoom-controls .icon-button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--inset);
+}
+.studio .workspace .stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.studio .workspace .stage-actions button,
+.studio .workspace .stage-actions select {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+}
+.studio .workspace .stage-actions button:hover:not(:disabled) {
+  background: var(--raised);
+}
+.studio .workspace .stage-actions .enhance-action {
+  display: flex;
+}
+.studio .workspace .stage-actions .enhance-action select {
+  border-radius: 10px 0 0 10px;
+  border-right: 0;
+  padding: 0 6px 0 10px;
+  width: auto;
+}
+.studio .workspace .stage-actions .enhance-action button {
+  border-radius: 0 10px 10px 0;
+}
+.studio .workspace .stage-actions button[aria-haspopup='menu'] {
+  width: 36px;
+  padding: 0;
+}
+.studio .workspace .preview-caption {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Prompt dock: prompt on top, model and size chips under it, Generate on the right. */
+.studio .workspace .prompt-dock {
+  position: relative;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  row-gap: 10px;
+}
+.studio .workspace .prompt-dock > .prompt-workspace {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+.studio .workspace .prompt-dock > .dock-notices {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.studio .workspace .prompt-dock > .dock-chips {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+.studio .workspace .prompt-dock > .generate-area {
+  grid-column: 2;
+  grid-row: auto;
+  align-self: end;
+}
+.studio .dock-chip,
+.studio .dock-chip-field select {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  min-height: 34px;
+  max-width: 240px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--inset);
+  color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.studio .dock-chip:hover:not(:disabled),
+.studio .dock-chip[aria-expanded='true'] {
+  border-color: var(--accent);
+}
+.studio .dock-chip .model-artwork {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.studio .dock-chip-value {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.studio .dock-chip-field {
+  margin: 0;
+  display: block;
+}
+.studio .dock-chip-field > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.studio .dock-chip-field select {
+  width: auto;
+  padding-right: 28px;
+}
+.studio .lora-popover {
+  position: absolute;
+  left: 16px;
+  bottom: calc(100% + 8px);
+  z-index: 5;
+  width: min(360px, calc(100% - 32px));
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 16px 48px var(--shadow);
+  display: grid;
+  gap: 10px;
+}
+.studio .lora-popover .lora-card {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Tune drawer: a title with Simple / Advanced, compact sizes, sliders, and extras as On / Off rows. */
+.studio .tune-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.studio .tune-heading h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+.studio .tune-heading .create-mode {
+  width: 180px;
+}
+.studio .workspace .composer-fields .image-size-section h2,
+.studio .workspace .composer-fields .advanced > summary,
+.studio .workspace .composer-fields label.field > span,
+.studio .workspace .composer-fields .field > span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.studio .workspace .composer-fields .size-presets {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.studio .workspace .composer-fields .size-presets button {
+  min-height: 48px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+.studio .workspace .composer-fields .size-presets button .shape {
+  display: none;
+}
+.studio .workspace .composer-fields .size-presets button small {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.studio .workspace .composer-fields .size-presets button[aria-pressed='true'] {
+  background: var(--soft);
+  border-color: var(--accent);
+}
+.studio .workspace .composer-fields .size-presets button[aria-pressed='true'] small {
+  color: var(--accent);
+}
+.studio .workspace .composer-fields .image-size-section .dimensions {
+  display: none;
+}
+.studio .slider-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 4px 8px;
+}
+.studio .workspace .composer-fields .slider-field > input[type='number'] {
+  grid-column: 2;
+  grid-row: 1;
+  height: 26px;
+  min-height: 26px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  text-align: right;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.studio .slider-field > input[type='range'] {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+}
+.studio .slider-field > small {
+  grid-column: 1 / -1;
+}
+.studio .workspace .composer-fields .two-columns:has(.slider-field) {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+.studio
+  .workspace
+  .composer-fields
+  :is(details.advanced, details.extra-row, .advanced-image-controls > details, .source-input > details) {
+  border: 0;
+  border-radius: 12px;
+  background: var(--inset);
+  padding: 0;
+}
+.studio
+  .workspace
+  .composer-fields
+  :is(details.advanced, details.extra-row, .advanced-image-controls > details, .source-input > details)
+  > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+}
+.studio
+  .workspace
+  .composer-fields
+  :is(details.advanced, details.extra-row, .advanced-image-controls > details, .source-input > details)
+  > summary::-webkit-details-marker {
+  display: none;
+}
+.studio
+  .workspace
+  .composer-fields
+  :is(details.advanced, details.extra-row, .advanced-image-controls > details, .source-input > details)[open]
+  > summary {
+  border-bottom: 1px solid var(--border);
+}
+.studio
+  .workspace
+  .composer-fields
+  :is(details.advanced, details.extra-row, .advanced-image-controls > details, .source-input > details)
+  > :not(summary) {
+  margin: 12px 14px;
+}
+.studio .extra-status {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 13px;
+}
+.studio .workspace .composer-fields :is(details.advanced, details.extra-row) > summary::after,
+.studio .workspace .composer-fields :is(.advanced-image-controls, .source-input) > details > summary::after {
+  content: 'Off';
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+.studio .workspace .composer-fields details > summary:has(.extra-status)::after,
+.studio .workspace .composer-fields details[open] > summary::after {
+  content: none;
+}
+.studio .workspace .composer-fields > details.generation-settings {
+  background: transparent;
+}
+.studio .workspace .composer-fields > details.generation-settings > summary {
+  display: none;
+}
+.studio .workspace .composer-fields > details.generation-settings > :not(summary) {
+  margin: 0;
+}
+.studio .workspace .composer-fields .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--inset);
+  font-size: 14px;
+  font-weight: 400;
+}
+.studio .workspace .composer-fields .checkbox-label input[type='checkbox'] {
+  order: 2;
+  margin-left: auto;
+}
+
 /* Recent: a slim strip of thumbnails. Hover shows the prompt. */
 .studio .create-history {
   grid-column: 2;
@@ -553,9 +896,14 @@
   font-size: 12px;
 }
 .studio .library-history .history-grid {
+  display: block;
   margin-top: 18px;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 12px;
+  columns: 170px;
+  column-gap: 12px;
+}
+.studio .library-history .history-item {
+  break-inside: avoid;
+  margin-bottom: 12px;
 }
 .studio .library-history .history-preview {
   position: relative;
@@ -571,7 +919,8 @@
 }
 .studio .library-history .history-preview img {
   height: auto;
-  aspect-ratio: 3 / 4;
+  min-height: 120px;
+  aspect-ratio: auto;
 }
 .studio .library-history .history-title,
 .studio .library-history .history-date {
@@ -634,8 +983,122 @@
   }
 }
 
+/* Library detail: the picked image and its settings, on the right. */
+.studio .library-content.has-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 22px;
+  align-items: start;
+}
+.studio .library-detail {
+  position: sticky;
+  top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  padding: 2px;
+}
+.studio .library-detail-image {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--inset);
+  cursor: zoom-in;
+}
+.studio .library-detail-image img {
+  display: block;
+  width: 100%;
+  max-height: 46vh;
+  object-fit: contain;
+}
+.studio .library-versions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .library-versions > span {
+  margin-right: 4px;
+}
+.studio .library-versions button {
+  width: 34px;
+  height: 34px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.studio .library-versions button[aria-pressed='true'] {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+.studio .library-versions img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.studio .library-prompt {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.studio .library-facts {
+  margin: 0;
+  font-size: 12px;
+}
+.studio .library-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.studio .library-facts dt {
+  color: var(--muted);
+}
+.studio .library-facts dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.studio .library-detail > .primary {
+  min-height: 40px;
+}
+.studio .library-detail-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.studio .library-detail-actions button {
+  min-height: 36px;
+  border: 1px solid var(--border);
+  background: var(--inset);
+  font-size: 13px;
+  justify-content: center;
+}
+@media (max-width: 1100px) {
+  .studio .library-content.has-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .studio .library-detail {
+    position: static;
+    max-height: none;
+  }
+}
+
 /* On/off options look like switches. They are still checkboxes underneath. */
-.studio .toggle input[type='checkbox'] {
+.studio :is(.toggle, .composer-fields .checkbox-label, .qwen-composer > label) input[type='checkbox'] {
   appearance: none;
   flex-shrink: 0;
   width: 36px;
@@ -648,7 +1111,7 @@
   cursor: pointer;
   transition: background 0.15s ease;
 }
-.studio .toggle input[type='checkbox']::after {
+.studio :is(.toggle, .composer-fields .checkbox-label, .qwen-composer > label) input[type='checkbox']::after {
   content: '';
   position: absolute;
   top: 2px;
@@ -659,19 +1122,19 @@
   background: var(--muted);
   transition: transform 0.15s ease;
 }
-.studio .toggle input[type='checkbox']:checked {
+.studio :is(.toggle, .composer-fields .checkbox-label, .qwen-composer > label) input[type='checkbox']:checked {
   background: var(--accent);
   border-color: var(--accent);
 }
-.studio .toggle input[type='checkbox']:checked::after {
+.studio :is(.toggle, .composer-fields .checkbox-label, .qwen-composer > label) input[type='checkbox']:checked::after {
   transform: translateX(16px);
   background: var(--accent-text);
 }
-.studio .toggle input[type='checkbox']:focus-visible {
+.studio :is(.toggle, .composer-fields .checkbox-label, .qwen-composer > label) input[type='checkbox']:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-.studio .toggle input[type='checkbox']:disabled {
+.studio :is(.toggle, .composer-fields .checkbox-label, .qwen-composer > label) input[type='checkbox']:disabled {
   opacity: 0.5;
   cursor: default;
 }
@@ -845,6 +1308,37 @@
   background: var(--accent);
   color: var(--accent-text);
 }
+.studio .models-content .model-card > button {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.studio .models-content .model-card:is(:hover, :focus-within) > button {
+  opacity: 1;
+}
+@media (hover: none) {
+  .studio .models-content .model-card > button {
+    opacity: 1;
+  }
+}
+.studio .models-content .model-badges {
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .models-content .model-badges .badge {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .models-content .model-badges .badge::after {
+  content: ' ·';
+}
+.studio .models-content .model-management > summary {
+  font-size: 12px;
+  color: var(--muted);
+}
 .studio .models-content .model-folder-actions select {
   font-size: 12px;
   padding: 6px 8px;
@@ -1013,7 +1507,7 @@
 
 /* Video: the clip gets the stage, the prompt floats under it, clips on the side, settings on the right. */
 .studio .video-studio.video-create-layout {
-  grid-template-columns: minmax(0, 1fr) 220px 320px;
+  grid-template-columns: minmax(0, 1fr) 320px 240px;
   grid-template-rows: minmax(0, 1fr) auto;
   height: calc(100vh - 56px);
   min-height: 560px;
@@ -1058,7 +1552,7 @@
   border-color: var(--accent);
 }
 .studio .video-create-layout .video-history-rail {
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 1 / 3;
   border-left: 1px solid var(--border);
   padding: 16px 12px;
@@ -1081,8 +1575,33 @@
   border-radius: 10px;
   height: 110px;
 }
+@media (min-width: 861px) {
+  .studio .video-create-layout .video-history-rail .history-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .studio .video-create-layout .video-history-rail .history-grid button {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 10px;
+    align-items: center;
+    padding: 6px;
+    text-align: left;
+  }
+  .studio .video-create-layout .video-history-rail .history-grid button > .video-thumbnail {
+    grid-row: 1 / 3;
+    height: 44px;
+    border-radius: 6px;
+  }
+  .studio .video-create-layout .video-history-rail .history-grid button:hover {
+    background: var(--inset);
+  }
+}
+.studio .video-create-layout .video-history-rail .section-heading button {
+  font-size: 12px;
+}
 .studio .video-create-layout .video-controls {
-  grid-column: 3;
+  grid-column: 2;
   grid-row: 1 / 3;
   border-right: 0;
   border-left: 1px solid var(--border);
@@ -1090,15 +1609,15 @@
 }
 .studio .video-create-layout > .notice {
   left: 22px;
-  right: 562px;
+  right: 582px;
   top: 12px;
 }
 @media (max-width: 1200px) {
   .studio .video-studio.video-create-layout {
-    grid-template-columns: minmax(0, 1fr) 170px 280px;
+    grid-template-columns: minmax(0, 1fr) 280px 190px;
   }
   .studio .video-create-layout > .notice {
-    right: 472px;
+    right: 492px;
   }
 }
 @media (max-width: 860px) {
@@ -1224,14 +1743,122 @@
   background: transparent;
   outline-color: var(--accent);
 }
+.studio .qwen-station .qwen-viewer {
+  overflow: visible;
+}
+.studio .qwen-station .qwen-preview {
+  min-height: 360px;
+}
+.studio .qwen-station .qwen-dock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px 14px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: 0 10px 30px var(--shadow);
+}
+.studio .qwen-station .qwen-dock > .field {
+  grid-column: 1 / -1;
+}
+.studio .qwen-station .qwen-dock textarea {
+  min-height: 64px;
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  font-size: 14px;
+  resize: none;
+}
+.studio .qwen-station .qwen-dock textarea:focus-visible {
+  outline: none;
+}
+.studio .qwen-station .qwen-dock .field > small {
+  display: none;
+}
+.studio .qwen-station .qwen-composer > label:not(.field) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.studio .qwen-station .qwen-queue-action {
+  grid-column: 1 / -1;
+  position: static;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.studio .qwen-station .qwen-queue-action small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .qwen-station .qwen-queue-action .primary {
+  width: auto;
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0 18px;
+}
+.studio .qwen-station .qwen-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  max-height: calc(100vh - 150px);
+  position: sticky;
+  top: 12px;
+  overflow-y: auto;
+}
+.studio .qwen-station .qwen-side-heading {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.studio .qwen-station .qwen-side .qwen-version-strip {
+  flex-direction: column;
+  overflow: visible;
+  padding: 0;
+  gap: 6px;
+}
+.studio .qwen-station .qwen-side .qwen-version-strip > button {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  padding: 6px;
+  border-radius: 10px;
+  text-align: left;
+  outline: 0;
+}
+.studio .qwen-station .qwen-side .qwen-version-strip > button:hover {
+  background: var(--inset);
+}
+.studio .qwen-station .qwen-side .qwen-version-strip > button.selected {
+  background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.studio .qwen-station .qwen-side .qwen-version-strip img {
+  width: 46px;
+  height: 46px;
+  border-radius: 6px;
+}
+.studio .qwen-station .qwen-side .qwen-version-strip span {
+  font-size: 13px;
+  color: var(--text);
+}
 .studio .qwen-station .qwen-composer {
+  overflow: visible;
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 16px;
   gap: 14px;
-  max-height: calc(100vh - 150px);
-  position: sticky;
-  top: 12px;
 }
 .studio .qwen-station .qwen-composer .field > span {
   font-size: 12px;
@@ -1245,11 +1872,71 @@
   }
 }
 @media (max-width: 760px) {
-  .studio .qwen-station .qwen-composer {
+  .studio .qwen-station .qwen-side {
     position: static;
     max-height: none;
   }
   .studio .qwen-station .qwen-conversation-bar > label {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Tune drawer order: basics first, extras last. */
+.studio .workspace .composer-fields > .tune-heading {
+  order: -1;
+}
+.studio .workspace .composer-fields > .notice {
+  order: 0;
+}
+.studio .workspace .composer-fields > .image-size-section {
+  order: 1;
+}
+.studio .workspace .composer-fields > .generation-settings {
+  order: 2;
+}
+.studio .workspace .composer-fields > #negative-area {
+  order: 3;
+}
+.studio .workspace .composer-fields > .advanced-image-controls {
+  order: 4;
+}
+.studio .workspace .composer-fields > .advanced:not(.generation-settings) {
+  order: 5;
+}
+.studio .workspace .composer-fields > .source-input,
+.studio .workspace .composer-fields > .extra-row {
+  order: 5;
+}
+.studio .workspace .composer-fields > .presets-button {
+  order: 6;
+}
+.studio .workspace .composer-fields input[type='number']::-webkit-inner-spin-button,
+.studio .workspace .composer-fields input[type='number']::-webkit-outer-spin-button {
+  opacity: 0.4;
+}
+.studio .slider-field > input[type='number']::-webkit-inner-spin-button,
+.studio .slider-field > input[type='number']::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.studio .workspace .composer-fields .advanced-image-controls {
+  display: grid;
+  gap: 8px;
+}
+
+:root {
+  font-family: 'Geist Variable', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* A setting row already names the switch, so the switch's own text is for screen readers only. */
+.studio .setting-line > fieldset:not(.setting-toggles) > .toggle:only-child > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.studio .setting-line > fieldset:not(.setting-toggles):has(> .toggle:only-child) {
+  min-width: 0;
 }

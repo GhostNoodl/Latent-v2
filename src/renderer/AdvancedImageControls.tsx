@@ -49,7 +49,14 @@ export function AdvancedImageControls({
   return (
     <section className="advanced-image-controls">
       <details open={Boolean(hires || upscale)}>
-        <summary>Upscale and refine</summary>
+        <summary>
+          Upscale and refine
+          {(hires || upscale) && (
+            <span className="extra-status">
+              {hires ? `On · ${hires.scaleFactor ?? 1.5}×` : upscale?.mode === 'learned' ? 'Enhance' : 'Resize'}
+            </span>
+          )}
+        </summary>
         <Toggle
           label="Resize or enhance a source"
           checked={Boolean(upscale)}

@@ -368,13 +368,13 @@
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
-      "bytes": 13947,
-      "sha256": "d53dce496e52b1e5a75717edf5e379208107ed67fb22c5a8294750cb27e2273b"
+      "bytes": 14194,
+      "sha256": "ab1a722e50894207d3de21e8bacdc6dea73232298c2479d4cdb99d20223076ac"
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 117443,
-      "sha256": "528eaca498e062970e782039f989726e42ca46f5805a213019d9f9cad90a3226"
+      "bytes": 120713,
+      "sha256": "9c50da52dffbb09e8c99d415e2e081cb7d08e22a03f439d558ee8cacd5929edc"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -418,8 +418,8 @@
     },
     {
       "path": "src/renderer/ControlNetControls.tsx",
-      "bytes": 10159,
-      "sha256": "2825291029fe99d694c7622eb907f2055f5d01bf58880d8b809535e7a458f7cf"
+      "bytes": 10186,
+      "sha256": "14ab16183864075e3e040c6daaad5dbc0edf25f0ed5c861a028959c51052b892"
     },
     {
       "path": "src/renderer/DownloadStorage.tsx",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 28701,
-      "sha256": "dbdc16af8ebf679d491d695aa6eaf3b50003586915377286eaddb704c2a7f541"
+      "bytes": 45670,
+      "sha256": "65af8b58bfcf377de81b87c858b4908d06d73cea3a8172be5686c4c83ab2ce17"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -488,8 +488,13 @@
     },
     {
       "path": "src/renderer/IPAdapterControls.tsx",
-      "bytes": 13541,
-      "sha256": "032405cfce0ef0beb22ef696173f35640fe1df771c675a331fabc74733690f2c"
+      "bytes": 13568,
+      "sha256": "a81ab1def392b581429753a93c86a6d6ec859751239e77b46cad941344b395f8"
+    },
+    {
+      "path": "src/renderer/LibraryDetail.tsx",
+      "bytes": 3227,
+      "sha256": "883f57a4b52fd426129beb23d3467ca2c39fe997e0b352f6f3b75df9d397efce"
     },
     {
       "path": "src/renderer/LocalModelMetadata.tsx",
@@ -498,8 +503,8 @@
     },
     {
       "path": "src/renderer/main.tsx",
-      "bytes": 397,
-      "sha256": "279d318c25d1eee9f54caee971cc7d56b4d90fa0928a340f21a7dde14632137f"
+      "bytes": 434,
+      "sha256": "09a4df662e5970f22a6cb34f888c0cc293fb9a6e1245761b784cea34d37de926"
     },
     {
       "path": "src/renderer/mask-transform.ts",
@@ -533,8 +538,8 @@
     },
     {
       "path": "src/renderer/Models.tsx",
-      "bytes": 19061,
-      "sha256": "5b81ece544f4712150e2e7a3676187173cb51a718ba43990392742f8ad1be3d3"
+      "bytes": 19129,
+      "sha256": "ec5b9c1749d9864453c488a7813f87b308a2ddb5b4415cffb92e78876d94ca9a"
     },
     {
       "path": "src/renderer/ModelTransfers.tsx",
@@ -573,8 +578,8 @@
     },
     {
       "path": "src/renderer/QwenEditor.tsx",
-      "bytes": 68697,
-      "sha256": "c15d266fcb1e1b0eed7cd4466b8bf33a49fe310b750265136b5f0973d7ef4fd7"
+      "bytes": 69568,
+      "sha256": "c26e162888f88b2d482e5a8d48b88693e29c2c5cac207916042fae3db5726b7e"
     },
     {
       "path": "src/renderer/RecipeExtras.tsx",
@@ -598,8 +603,8 @@
     },
     {
       "path": "src/renderer/Settings.tsx",
-      "bytes": 26069,
-      "sha256": "fc6e8177812ecf3169bc51534564c390aa3c4866200d2ae9f6d6aab330b0c67f"
+      "bytes": 26035,
+      "sha256": "3b8138b3aaf73368390badd61cab4074ec99bff02bebc88e2a2ef9846dc984b7"
     },
     {
       "path": "src/renderer/SharedBackendActivity.tsx",
@@ -613,8 +618,8 @@
     },
     {
       "path": "src/renderer/SourceInput.tsx",
-      "bytes": 18170,
-      "sha256": "e0bcd57bc94a56387c33d4fe7b995f1c328a98efe36d58571cca5ad2480944b1"
+      "bytes": 18284,
+      "sha256": "942848a0405d57b9281643a619c1db3d299472914a0575c88db96dd33bb23864"
     },
     {
       "path": "src/renderer/storage-overview.css",
@@ -678,8 +683,8 @@
     },
     {
       "path": "src/renderer/VideoHistory.tsx",
-      "bytes": 11683,
-      "sha256": "293e0e4285f23ae3c11f2b4d24aaf868ead176a5ed5aa5868f3e771d6a7c1d15"
+      "bytes": 11654,
+      "sha256": "568cbec93476ee44c5fd6d7712ead9dabdedf27ffb21430d7c391c98984544b7"
     },
     {
       "path": "src/renderer/VideoPlanner.tsx",
@@ -1028,13 +1033,13 @@
     },
     {
       "path": "package.json",
-      "bytes": 4517,
-      "sha256": "244ab4c2803231de620e4f7587f559f0a215cdf973bb4e3d16a6e6b938064af2"
+      "bytes": 4562,
+      "sha256": "fa62159c4e6377da21d3a2885f0e24df5615e537f24ee20b46b91e7a46d91a3b"
     },
     {
       "path": "package-lock.json",
-      "bytes": 252660,
-      "sha256": "404454e9a38901da24bfae873905a1ab7a63d91d7c6ee836d80edbc06bd96676"
+      "bytes": 253120,
+      "sha256": "f356496950e5238438ca307e852717962333ce4f5fb078cf6b03f7cf913cd06c"
     },
     {
       "path": "tsconfig.json",
@@ -1268,8 +1273,8 @@
     },
     {
       "path": "tests/app-history-dom.test.tsx",
-      "bytes": 42944,
-      "sha256": "7ac3c99556cb90dd3854120e97e75398ff08c616fb51c33e656ce198b2a299e5"
+      "bytes": 43497,
+      "sha256": "f0b73cfa4a0a137580632031a690ee5b7d3d372b2b041783cd29a95aeb640db4"
     },
     {
       "path": "tests/image-versions.test.tsx",
@@ -1293,8 +1298,8 @@
     },
     {
       "path": "THIRD-PARTY-NOTICES.txt",
-      "bytes": 103823,
-      "sha256": "f4e581eef6072d366dd88737ed10b0152dd3a37898cbec8aa194a94c8616af0b"
+      "bytes": 108584,
+      "sha256": "d05d029f75f36d31eeb95562bf6f0db2a0943f28f036c8f29122ea7a60b2cd79"
     },
     {
       "path": "README-WINDOWS.txt",
@@ -1338,8 +1343,8 @@
     },
     {
       "path": "src/renderer/SizePresets.tsx",
-      "bytes": 4892,
-      "sha256": "16ee11e772d933fe35313ad2bfea49d8330564cc4a4f06c7d167474a1b715e27"
+      "bytes": 4975,
+      "sha256": "b6b243bf5abda7f12319909fae98abf276a74567aaac66b5146a3c756926b355"
     },
     {
       "path": "src/renderer/PreviewMenu.tsx",
@@ -1353,8 +1358,8 @@
     },
     {
       "path": "tests/create-update.test.tsx",
-      "bytes": 21421,
-      "sha256": "9f2dc0c0eb3cf9d66f3f0c70138b68c4f608941a3214b9dec71e56d80d7a1cea"
+      "bytes": 21430,
+      "sha256": "8029199786efd5b13141d261abb0a49186d0d5fdd1bf6a404f4fb45bdb6e772e"
     },
     {
       "path": "docs/UPDATE-0.2.md",

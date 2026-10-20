@@ -146,7 +146,7 @@ it('keeps edited size presets available when saving fails and can retry', async 
         />,
       ),
     );
-    await act(async () => button('Personal').click());
+    await act(async () => button('Personal768×1344').click());
     expect(choose).toHaveBeenCalledWith({ name: 'Personal', width: 768, height: 1344 });
     await act(async () => button('Edit sizes').click());
     await act(async () => button('Save sizes').click());

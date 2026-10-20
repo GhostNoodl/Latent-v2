@@ -186,7 +186,9 @@ export function StudioSettings({
             {stateLabel[backend.state]}
           </span>
         </div>
-        <Notice error={backend.state === 'error'}>{backend.message || 'Waiting to hear from the engine…'}</Notice>
+        {backend.state !== 'ready' && (
+          <Notice error={backend.state === 'error'}>{backend.message || 'Waiting to hear from the engine…'}</Notice>
+        )}
         {backend.state === 'installing' && <progress value={backend.installProgress} max={100} />}
         {['not-installed', 'error', 'installing'].includes(backend.state) && (
           <PackageSetupStorage packageId="backend" />
@@ -267,8 +269,8 @@ export function StudioSettings({
           <div>
             <h3>Turbo math</h3>
             <p>
-              Faster sampling on NVIDIA RTX cards using lower-precision math. Images can differ very slightly from the
-              same seed. Takes effect the next time the engine starts.
+              Faster on NVIDIA RTX cards. The same seed can look a tiny bit different. Applies after the engine
+              restarts.
             </p>
           </div>
           <fieldset disabled={settingsBusy || settings.deviceMode === 'cpu'}>
@@ -283,8 +285,8 @@ export function StudioSettings({
           <div>
             <h3>SageAttention</h3>
             <p>
-              Speeds up image, Qwen and video models on NVIDIA cards. It needs a small add-on (about 64 MB). Takes
-              effect the next time the engine starts.
+              Another speed boost on NVIDIA cards. Needs a small add-on (about 64 MB). Applies after the engine
+              restarts.
             </p>
             <p className="muted">
               {sage.state === 'installed' ? (

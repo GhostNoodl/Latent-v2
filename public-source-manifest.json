@@ -394,6 +394,10 @@
       "to": "src/renderer/IPAdapterControls.tsx"
     },
     {
+      "from": "src/renderer/LibraryDetail.tsx",
+      "to": "src/renderer/LibraryDetail.tsx"
+    },
+    {
       "from": "src/renderer/LocalModelMetadata.tsx",
       "to": "src/renderer/LocalModelMetadata.tsx"
     },
