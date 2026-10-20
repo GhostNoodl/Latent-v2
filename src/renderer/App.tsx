@@ -35,7 +35,6 @@ import {
   Boxes,
   Compass,
   ChevronDown,
-  ChevronUp,
   CircleHelp,
   Dices,
   Film,

@@ -373,8 +373,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 117408,
-      "sha256": "c5eae2f4dca48459b43d1fa40bd37e5359284fb77abdd02be4cee245e209560f"
+      "bytes": 117395,
+      "sha256": "c980a3c30a4e11ef0c4bf8ba6151b84145e3ec91731bd50c4b1cc12ef3878c04"
     },
     {
       "path": "src/renderer/assistant.css",
