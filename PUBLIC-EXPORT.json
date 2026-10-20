@@ -373,8 +373,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 120713,
-      "sha256": "9c50da52dffbb09e8c99d415e2e081cb7d08e22a03f439d558ee8cacd5929edc"
+      "bytes": 120963,
+      "sha256": "f526099de50ad6cb3be1172d1f030b7ea136b0e705ab5305b86622a43550538d"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 45670,
-      "sha256": "65af8b58bfcf377de81b87c858b4908d06d73cea3a8172be5686c4c83ab2ce17"
+      "bytes": 49999,
+      "sha256": "1a303c3eb1b8b202e3cb070138424705e51d7bb87fb541b835ecde0d931803bd"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -1034,12 +1034,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "fa62159c4e6377da21d3a2885f0e24df5615e537f24ee20b46b91e7a46d91a3b"
+      "sha256": "d64aa77b1407e7338b5068e24ec8da5f905b3e071b91fd6002e15fc13f12dac1"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "f356496950e5238438ca307e852717962333ce4f5fb078cf6b03f7cf913cd06c"
+      "sha256": "57f6d95ce03ce34d67e7d1bf5c63fbaef79f9c633b2e2bdeb12a8f9ec656c5ce"
     },
     {
       "path": "tsconfig.json",
@@ -1568,8 +1568,8 @@
     },
     {
       "path": "src/renderer/TagPrompt.tsx",
-      "bytes": 13917,
-      "sha256": "636c4cac33f74a6167e6920b94397f990da3cea009f5e4166759513890bbe672"
+      "bytes": 14309,
+      "sha256": "3afd818788433c2a842a8c500e42fd12eb275a8e0a9946a6894ba74cfb21b174"
     },
     {
       "path": "src/renderer/tag-search.ts",

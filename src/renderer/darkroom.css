@@ -1940,3 +1940,190 @@
 .studio .setting-line > fieldset:not(.setting-toggles):has(> .toggle:only-child) {
   min-width: 0;
 }
+
+/* Create, tidied: the picture and its buttons read as one group, the dock is one compact block,
+   and the recent strip is a quiet column. Same spacing everywhere: 8 / 12 / 16 / 22. */
+.studio .main-create .workspace,
+.studio .workspace {
+  grid-template-columns: minmax(0, 1fr) 76px 340px;
+}
+.studio .workspace .stage {
+  padding: 16px 22px 12px;
+  gap: 12px;
+}
+.studio .workspace .stagebar {
+  top: 16px;
+  right: 22px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.studio .workspace .stage:hover .stagebar,
+.studio .workspace .stagebar:focus-within {
+  opacity: 1;
+}
+@media (hover: none) {
+  .studio .workspace .stagebar {
+    opacity: 1;
+  }
+}
+.studio .workspace .preview-caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.studio .workspace .preview-versions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: -4px 0 0;
+  font-size: 12px;
+}
+.studio .workspace .preview-versions > span {
+  margin-right: 4px;
+}
+.studio .workspace .preview-versions .text-button {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .workspace .preview-versions .text-button[aria-pressed='true'] {
+  border-color: var(--border);
+  background: var(--raised);
+  color: var(--text);
+}
+
+/* Recent strip */
+.studio .create-history {
+  padding: 16px 8px 20px 0;
+  scrollbar-width: none;
+}
+.studio .create-history::-webkit-scrollbar {
+  display: none;
+}
+.studio .create-history::before {
+  content: 'Recent';
+  display: block;
+  margin-bottom: 8px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+.studio .create-history .history-grid {
+  gap: 6px;
+}
+.studio .workspace .create-history .history-preview img,
+.studio .create-history .history-thumbnail {
+  height: 80px;
+}
+
+/* Prompt dock */
+.studio .workspace .prompt-dock {
+  margin: 0 22px 16px;
+  padding: 12px 16px 14px;
+  border-radius: 16px;
+  row-gap: 12px;
+  column-gap: 16px;
+}
+.studio .workspace .prompt-workspace .label-row {
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+}
+.studio .workspace .prompt-workspace .label-row .text-button {
+  min-height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .workspace .prompt-workspace .label-row .text-button:hover {
+  color: var(--text);
+}
+.studio .tag-source-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .tag-source-picker select {
+  width: auto;
+  min-height: 24px;
+  height: 24px;
+  padding: 0 24px 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background-color: var(--inset);
+  font-size: 12px;
+}
+.studio .workspace .prompt-workspace #prompt,
+.studio .workspace .prompt-workspace .tag-prompt textarea {
+  height: auto;
+  min-height: 48px;
+  padding: 6px 0 0;
+  resize: none;
+  field-sizing: content;
+  max-height: 24vh;
+}
+.studio .workspace .prompt-workspace .label-row label {
+  margin-right: 8px;
+}
+.studio .workspace .prompt-dock > .generate-area {
+  align-self: center;
+  gap: 4px;
+}
+.studio .workspace .generate-area .generate {
+  min-height: 40px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+.studio .workspace .generate-area .hint {
+  max-width: 220px;
+  text-align: right;
+}
+
+/* Tune drawer */
+.studio .workspace .composer-fields {
+  padding: 16px 18px 28px;
+  gap: 18px;
+}
+.studio .workspace .composer-fields .field > span,
+.studio .workspace .composer-fields .section-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .workspace .composer-fields .generation-settings .advanced-grid {
+  gap: 14px;
+}
+.studio .workspace .composer-fields :is(input:not([type='range'], [type='checkbox']), select) {
+  min-height: 34px;
+  height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 13px;
+  line-height: 32px;
+}
+.studio .workspace .composer-fields .input-with-button button {
+  width: 34px;
+  min-height: 34px;
+  height: 34px;
+  padding: 0;
+  justify-content: center;
+}
+.studio .workspace .composer-fields #negative-area textarea {
+  min-height: 72px;
+  font-size: 13px;
+}
+.studio .workspace .prompt-workspace .label-row .tag-source-picker {
+  margin: 0 auto 0 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
