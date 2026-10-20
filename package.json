@@ -1,6 +1,6 @@
 {
   "name": "latent-v2",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "private": true,
   "description": "A local desktop image studio with a separately managed ComfyUI backend",
   "type": "module",

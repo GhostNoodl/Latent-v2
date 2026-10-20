@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { MissingOutputs } from '../src/main/missing-outputs';
 import { StudioStore } from '../src/main/store';
 import type { GenerationRecord } from '../src/shared/types';
 
@@ -56,6 +57,22 @@ describe('image library cache', () => {
     expect(store.recordsRevision).toBe(before + 1);
     expect(store.record('a')).toMatchObject({ prompt: 'a' });
     expect(Object.isFrozen(store.record('a'))).toBe(true);
+  });
+
+  it('shows a newly saved image in the gallery list, not a stale copy', () => {
+    const { store } = open();
+    store.saveRecord(record('a', 'job1', 1));
+    // Wired the way the studio builds its history: present images only, cached per list.
+    const missing = new MissingOutputs(
+      () => store.records(),
+      item => item.id,
+      () => undefined,
+    );
+    expect(missing.visible(store.records()).map(item => item.id)).toEqual(['a']);
+    store.saveRecord(record('b', 'job1', 2));
+    expect(missing.visible(store.records()).map(item => item.id)).toEqual(['b', 'a']);
+    store.saveRecord({ ...record('a', 'job1', 1), prompt: 'face fix linked' } as unknown as GenerationRecord);
+    expect(missing.visible(store.records())[1]).toMatchObject({ prompt: 'face fix linked' });
   });
 
   it('hands out copies of settings and presets, refreshed after each save', () => {

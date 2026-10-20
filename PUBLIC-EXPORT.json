@@ -303,8 +303,8 @@
     },
     {
       "path": "src/main/store.ts",
-      "bytes": 15873,
-      "sha256": "b5f8a9763751d4cf842887dedbcab1562f8e5ed20bc19b01428e88326f78de3f"
+      "bytes": 16031,
+      "sha256": "def5025de1c754ed01f8a42e3a0c737bac80c2eb550a44c77da398c397d2a617"
     },
     {
       "path": "src/main/upscaler.ts",
@@ -1034,12 +1034,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "d64aa77b1407e7338b5068e24ec8da5f905b3e071b91fd6002e15fc13f12dac1"
+      "sha256": "462f6ac2b2396e68d03fdacb69de885a1cfdd84ecdfe8496da33376993f2d0c9"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "57f6d95ce03ce34d67e7d1bf5c63fbaef79f9c633b2e2bdeb12a8f9ec656c5ce"
+      "sha256": "f39403fa90d44e5d98e2fd69ea8a0b56d1090b2168ca18810eb2c4f54ca18012"
     },
     {
       "path": "tsconfig.json",
@@ -1898,8 +1898,8 @@
     },
     {
       "path": "tests/store-records-cache.test.ts",
-      "bytes": 4426,
-      "sha256": "3e4eaa62bb516420b681a5747752cb6fe2e7ef60be979b486b30217f729be08b"
+      "bytes": 5283,
+      "sha256": "ddd23ecf27a477eb42098dcb4ee8e04c4e8639f3e69894439a0c855766bef1a8"
     },
     {
       "path": "tests/backend-log-pruning.test.ts",
