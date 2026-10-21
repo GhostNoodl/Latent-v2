@@ -270,7 +270,7 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
       const result = applyVideoHistoryRestore(current.current, proposal, id, captured, revision.current, makeSession);
       commit(result.conversation);
       setPrevious(result.previous);
-      setMessage('Saved video parameters restored with the actual seed. Undo restores your previous settings.');
+      setMessage('Video settings loaded, seed included.');
     });
   const attachSource = (load: () => ReturnType<typeof window.latent.importSourceImage>) =>
     action('source', async () => {

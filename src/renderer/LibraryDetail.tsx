@@ -69,7 +69,7 @@ export function LibraryDetail({
         ))}
       </dl>
       <button type="button" className="primary" onClick={() => onReuse(record)}>
-        Use these settings
+        Reuse settings
       </button>
       <div className="library-detail-actions">
         <button type="button" onClick={() => onOpen(record)}>

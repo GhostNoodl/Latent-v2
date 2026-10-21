@@ -522,15 +522,29 @@ export function CivitaiBrowser({
         </Field>
         <Field label="Sort">
           <select value={sort} onChange={e => setSort(e.target.value as typeof sort)}>
-            {['Most Downloaded', 'Highest Rated', 'Newest'].map(value => (
-              <option key={value}>{value}</option>
+            {[
+              ['Most Downloaded', 'Most downloaded'],
+              ['Highest Rated', 'Highest rated'],
+              ['Newest', 'Newest'],
+            ].map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
             ))}
           </select>
         </Field>
         <Field label="Period">
           <select value={period} onChange={e => setPeriod(e.target.value as typeof period)}>
-            {['AllTime', 'Year', 'Month', 'Week', 'Day'].map(value => (
-              <option key={value}>{value}</option>
+            {[
+              ['AllTime', 'All time'],
+              ['Year', 'Past year'],
+              ['Month', 'Past month'],
+              ['Week', 'Past week'],
+              ['Day', 'Today'],
+            ].map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
             ))}
           </select>
         </Field>
@@ -553,14 +567,9 @@ export function CivitaiBrowser({
       </form>
       <label className="toggle">
         <input type="checkbox" checked={compatibleOnly} onChange={e => setCompatibleOnly(e.target.checked)} />
-        Only show loaded results with a Create-supported version
+        Only show models Create can use
       </label>
-      {compatibleOnly && (
-        <p className="muted small">
-          This filters loaded results. Load more to check further matches; supported workflow does not guarantee
-          download availability.
-        </p>
-      )}
+      {compatibleOnly && <p className="muted small">Filters what's loaded so far. Load more to check further.</p>}
       {error && <Notice error>{error}</Notice>}
       {message && <Notice>{message}</Notice>}
       {results && (

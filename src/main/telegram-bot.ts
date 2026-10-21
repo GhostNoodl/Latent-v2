@@ -82,7 +82,12 @@ interface RemoteJob {
   prompt: string;
   /** The image finished; its automatic face fix is still on the way. */
   waitingFaces?: boolean;
+  /** Sending failed; try again at `at` (ms), skipping the `sent` pictures that already went out. */
+  retry?: { attempts: number; at: number; sent: number };
 }
+/** A dropped connection should not lose the picture: a failed send is tried this many times in all. */
+const DELIVERY_ATTEMPTS = 4;
+const RETRY_DELAY_MS = 30_000;
 interface ChatState {
   overrides: TelegramOverrides;
   lastPrompt?: string;
@@ -158,6 +163,8 @@ export class TelegramBotService {
   private sweepTimer?: NodeJS.Timeout;
   private sweeping = false;
   private disposed = false;
+  /** Jobs being sent right now, so a repeated finish or a sweep never sends them twice. */
+  private delivering = new Set<string>();
   constructor(private ports: TelegramBotPorts) {}
 
   settings(): TelegramSettings {
@@ -213,21 +220,27 @@ export class TelegramBotService {
   jobFinished(job: StudioJob) {
     if (!['completed', 'failed', 'cancelled'].includes(job.status)) return;
     const remote = this.remoteJobs()[job.id];
-    if (!remote || remote.waitingFaces) return;
+    if (!remote || remote.waitingFaces || remote.retry || this.delivering.has(job.id)) return;
     if (job.status === 'completed' && isImageJob(job) && job.draft.autoFace && !job.autoFaceFinished) {
       this.remember(job.id, { ...remote, waitingFaces: true });
       return;
     }
-    this.forget(job.id);
-    void this.deliver(job, remote).catch(error => this.ports.log(`Telegram delivery: ${this.redact(message(error))}`));
+    void this.sendResult(job, remote);
   }
   /** Sends images whose face fixes have all settled, falling back to the original when none ran. */
   async sweep() {
-    if (this.sweeping) return;
+    if (this.sweeping || !this.settings().enabled) return;
     this.sweeping = true;
     try {
       const jobs = this.ports.jobs();
       for (const [id, remote] of Object.entries(this.remoteJobs())) {
+        if (this.delivering.has(id)) continue;
+        if (remote.retry) {
+          const job = jobs.find(item => item.id === id);
+          if (!job) this.forget(id);
+          else if (Date.now() >= remote.retry.at) await this.sendResult(job, remote);
+          continue;
+        }
         if (!remote.waitingFaces) continue;
         const job = jobs.find(item => item.id === id);
         if (!job || !isImageJob(job)) {
@@ -239,10 +252,7 @@ export class TelegramBotService {
           .map(result => result.jobId && jobs.find(item => item.id === result.jobId))
           .filter((child): child is StudioJob => Boolean(child));
         if (children.some(child => ['queued', 'running'].includes(child.status))) continue;
-        this.forget(id);
-        await this.deliver(job, remote).catch(error =>
-          this.ports.log(`Telegram delivery: ${this.redact(message(error))}`),
-        );
+        await this.sendResult(job, { ...remote, waitingFaces: false });
       }
     } finally {
       this.sweeping = false;
@@ -687,7 +697,31 @@ export class TelegramBotService {
     const done = records.filter(record => record.outputRole !== 'base' && record.outputRole !== 'face-pass');
     return done.length ? done : records;
   }
-  private async deliver(job: StudioJob, remote: RemoteJob) {
+  /** Sends a finished job, and keeps it for another try when the connection drops part way. */
+  private async sendResult(job: StudioJob, remote: RemoteJob) {
+    this.delivering.add(job.id);
+    let sent = remote.retry?.sent ?? 0;
+    try {
+      await this.deliver(job, remote, sent, () => sent++);
+      this.forget(job.id);
+    } catch (error) {
+      const attempts = (remote.retry?.attempts ?? 0) + 1;
+      const again = attempts < DELIVERY_ATTEMPTS && !this.disposed;
+      this.ports.log(
+        `Telegram delivery${again ? `, trying again in ${(RETRY_DELAY_MS * attempts) / 1000}s` : ', giving up'}: ${this.redact(message(error))}`,
+      );
+      if (again)
+        this.remember(job.id, {
+          ...remote,
+          waitingFaces: false,
+          retry: { attempts, at: Date.now() + RETRY_DELAY_MS * attempts, sent },
+        });
+      else this.forget(job.id);
+    } finally {
+      this.delivering.delete(job.id);
+    }
+  }
+  private async deliver(job: StudioJob, remote: RemoteJob, skip = 0, onSent: () => void = () => undefined) {
     const token = this.token();
     if (!token || !this.settings().enabled) return;
     const signal = this.controller?.signal ?? new AbortController().signal;
@@ -712,12 +746,14 @@ export class TelegramBotService {
       .slice(0, 10);
     if (!pictures.length) return this.send(token, remote.chatId, 'Done, but no saved image was found.', signal);
     for (const [index, record] of pictures.entries()) {
+      if (index < skip) continue;
       const bytes = await this.ports.readOutput(record);
       const caption =
         index === 0
           ? `${remote.prompt.slice(0, 900)}\nSeed ${record.actualSeed} · ${record.width}×${record.height}`
           : '';
       await this.upload(token, remote.chatId, bytes, `latent-${record.id}.png`, caption, signal);
+      onSent();
     }
   }
   private async upload(

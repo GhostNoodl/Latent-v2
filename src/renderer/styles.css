@@ -414,7 +414,7 @@ strong {
 }
 .edition {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.25px;
   padding: 3px 7px;
   border: 1px solid var(--border);
@@ -558,7 +558,7 @@ strong {
   overflow-wrap: anywhere;
 }
 .lora-card .field {
-  font-size: 10px;
+  font-size: 11px;
   gap: 4px;
 }
 .lora-card input {
@@ -578,7 +578,7 @@ strong {
   margin-top: 8px;
 }
 .resolved-prompt summary {
-  font-size: 10px;
+  font-size: 11px;
 }
 .resolved-prompt p {
   font-size: 11px;
@@ -660,7 +660,7 @@ strong {
 }
 .presets-button span {
   margin-left: auto;
-  font-size: 10px;
+  font-size: 11px;
   border-radius: 4px;
   padding: 1px 5px;
   background: var(--inset);
@@ -686,13 +686,13 @@ strong {
   align-items: center;
   gap: 3px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   margin-top: 7px;
   opacity: 0.8;
   min-height: 16px;
 }
 .draft-status button {
-  font-size: 10px;
+  font-size: 11px;
   padding: 0;
   min-height: 16px;
 }
@@ -847,7 +847,7 @@ strong {
   gap: 7px;
 }
 .generation-progress small {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   display: block;
   margin-top: 6px;
@@ -932,7 +932,7 @@ strong {
   border-radius: 6px;
   background: var(--panel);
   box-shadow: 0 2px 4px #0002;
-  font-size: 10px;
+  font-size: 11px;
   pointer-events: none;
 }
 .preview-versions {
@@ -959,7 +959,7 @@ strong {
   border-radius: 6px;
 }
 .history-hint {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   margin-top: 11px;
 }
@@ -995,7 +995,7 @@ strong {
   display: block;
   padding: 0 8px 9px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .context-menu {
   z-index: 90;
@@ -1021,7 +1021,7 @@ strong {
 }
 .context-heading small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   display: block;
   margin-top: 5px;
 }
@@ -1117,7 +1117,7 @@ strong {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .log-details {
@@ -1323,7 +1323,7 @@ strong {
   overflow-wrap: anywhere;
 }
 .model-filename {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   line-height: 1.7;
   margin-top: 5px;
@@ -1335,7 +1335,7 @@ strong {
   gap: 8px;
   align-items: center;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   margin-top: 9px;
 }
 .model-badges .badge {
@@ -1405,7 +1405,7 @@ strong {
   text-overflow: ellipsis;
 }
 .queue-job-info p {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   margin-top: 5px;
   line-height: 1.7;
@@ -1555,7 +1555,7 @@ strong {
   overflow-wrap: anywhere;
 }
 .preset-card p {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   margin-top: 5px;
 }
@@ -2105,7 +2105,7 @@ strong {
   font-size: 11px;
 }
 .history-thumbnail-unavailable small {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .image-preview-unavailable {

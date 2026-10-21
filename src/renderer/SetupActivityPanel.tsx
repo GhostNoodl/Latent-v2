@@ -16,11 +16,11 @@ export function SetupActivityPanel({
       {!compact && (
         <>
           <p>
-            Files and Python dependencies prepared by Latent. Share the relevant entry with the Windows warning. Paths
-            may include your Windows username.
+            What Latent downloaded and installed. If something breaks, copy this and send it along. Paths can show your
+            Windows username.
           </p>
           <button onClick={onCopy} disabled={!items.length}>
-            Copy diagnostic history
+            Copy history
           </button>
         </>
       )}

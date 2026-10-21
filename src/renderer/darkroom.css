@@ -146,9 +146,15 @@
   margin-top: auto;
 }
 .studio .main {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+}
+/* The window itself never scrolls; only the page inside it does. */
+html:has(.studio),
+body:has(.studio) {
+  overflow: clip;
 }
 
 /* Page top: title on the left, queue and engine on the right. */
@@ -236,8 +242,11 @@
 .studio .queue-panel {
   position: fixed;
   z-index: 90;
+  left: auto;
   right: 16px;
   top: 64px;
+  bottom: auto;
+  height: auto;
   width: min(470px, calc(100vw - 32px));
   max-height: calc(100vh - 90px);
   overflow: auto;
@@ -246,8 +255,13 @@
   box-shadow: 0 16px 60px var(--shadow);
 }
 .studio .toast {
-  bottom: 20px;
-  left: 96px;
+  /* Top middle, clear of the prompt dock and its model chips. */
+  top: 68px;
+  bottom: auto;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  max-width: min(720px, calc(100vw - 120px));
 }
 .studio .page-heading {
   display: none;
@@ -896,14 +910,15 @@
   font-size: 12px;
 }
 .studio .library-history .history-grid {
-  display: block;
+  /* Rows, not columns: newest first reads left to right, and a short page never leaves a gap. */
+  display: grid;
   margin-top: 18px;
-  columns: 170px;
-  column-gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  align-items: start;
+  gap: 12px;
 }
 .studio .library-history .history-item {
-  break-inside: avoid;
-  margin-bottom: 12px;
+  margin: 0;
 }
 .studio .library-history .history-preview {
   position: relative;
@@ -2328,7 +2343,8 @@
 /* Edit on one screen: the station is exactly the window, the picture takes what's left,
    the prompt dock stays visible, and the side panel keeps its own fallback scroll. */
 .studio .qwen-station {
-  height: calc(100vh - 56px);
+  flex: 1 1 0;
+  height: auto;
   min-height: 0;
   overflow: hidden;
 }
@@ -2379,6 +2395,15 @@
   min-height: 48px;
   max-height: 22vh;
   field-sizing: content;
+}
+@media (max-height: 940px) {
+  .studio .qwen-station .qwen-side {
+    gap: 8px;
+  }
+  .studio .qwen-station .qwen-composer {
+    gap: 6px;
+    padding: 12px;
+  }
 }
 
 /* The panel opens right beside the row that opened it, with a small pointer back to the row. */

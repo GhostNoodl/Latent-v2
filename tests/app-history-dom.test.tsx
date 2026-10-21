@@ -550,7 +550,7 @@ describe('Create history, draft and asynchronous acceptance', () => {
     expect(savedSelection).toBe(second.id);
     const detail = host.querySelector<HTMLElement>('[aria-label="Image details"]')!;
     expect(detail.textContent).toContain(second.actualSeed);
-    await click(button('Use these settings'));
+    await click(button('Reuse settings'));
     expect(host.querySelector('#prompt')).not.toBeNull();
   });
   it('previews without editing the composer and explicitly restores all ordinary values with full Undo', async () => {
@@ -560,7 +560,7 @@ describe('Create history, draft and asynchronous acceptance', () => {
     expect(host.querySelector<HTMLTextAreaElement>('#prompt')!.value).toBe(authored().prompt);
     expect(api.saveDraft).not.toHaveBeenCalled();
     expect(savedSelection).toBe(second.id);
-    await click(button('Reuse parameters'));
+    await click(button('Reuse settings'));
     await closeAndCancel();
     expect(normalized(savedDraft)).toEqual(
       normalized({
@@ -753,12 +753,12 @@ describe('Create history, draft and asynchronous acceptance', () => {
     expect(savedSelection).toBe(second.id);
   });
   it('preserves Undo when restore and Undo are clicked after close acknowledgement', async () => {
-    await click(button('Reuse parameters'));
+    await click(button('Reuse settings'));
     await act(async () => {
       await Promise.all([...closeHandlers].map(handler => handler()));
     });
     await click(button('Undo restore'));
-    await click(button('Reuse parameters'));
+    await click(button('Reuse settings'));
     expect(button('Undo restore')).toBeDefined();
     expect(host.querySelector<HTMLTextAreaElement>('#prompt')!.value).toBe(first.draft.prompt);
     await act(async () => {
@@ -795,7 +795,7 @@ describe('Create history, draft and asynchronous acceptance', () => {
   });
   it('reopens the saved composer and explicit preview independently after reuse and a later edit', async () => {
     await click(preview(second.resolvedPrompt));
-    await click(button('Reuse parameters'));
+    await click(button('Reuse settings'));
     await prompt('Continue this recipe later');
     await click(preview(first.resolvedPrompt));
     await closeAndCancel();
@@ -834,7 +834,7 @@ describe('Create history, draft and asynchronous acceptance', () => {
     };
     snapshot = { ...snapshot, draft: previous };
     await render();
-    await click(button('Reuse parameters'));
+    await click(button('Reuse settings'));
     await closeAndCancel();
     expect(savedDraft.imageInput).toBeUndefined();
     expect(savedDraft.dynamicPrompts).toBeUndefined();
@@ -850,7 +850,7 @@ describe('Create history, draft and asynchronous acceptance', () => {
     await act(async () => {
       snapshotReceiver(snapshot);
     });
-    await click(button('Reuse parameters'));
+    await click(button('Reuse settings'));
     expect(button('Generate image').disabled).toBe(true);
     await act(async () => {
       host
@@ -864,7 +864,7 @@ describe('Create history, draft and asynchronous acceptance', () => {
   });
   it('preserves the draft and earlier Undo when conflicting hires metadata prevents reuse or variation', async () => {
     await click(preview(second.resolvedPrompt));
-    await click(button('Reuse parameters'));
+    await click(button('Reuse settings'));
     await closeAndCancel();
     const before = normalized(savedDraft);
     first.draft.hiresFix = {
@@ -884,8 +884,8 @@ describe('Create history, draft and asynchronous acceptance', () => {
       snapshotReceiver({ ...snapshot });
     });
     await click(preview(first.resolvedPrompt));
-    await click(button('Reuse parameters'));
-    expect(host.textContent).toContain('Could not restore these parameters');
+    await click(button('Reuse settings'));
+    expect(host.textContent).toContain('Could not load these settings');
     await closeAndCancel();
     expect(normalized(savedDraft)).toEqual(before);
     await act(async () => {
@@ -918,7 +918,7 @@ describe('Create history, draft and asynchronous acceptance', () => {
       await act(async () => {
         snapshotReceiver({ ...snapshot });
       });
-      await click(button('Reuse parameters'));
+      await click(button('Reuse settings'));
       await closeAndCancel();
       expect(savedDraft.hiresFix?.workflowVersion).toBe(version);
       expect(savedDraft.hiresFix?.seed).toBe('42');
@@ -940,9 +940,9 @@ describe('Create history, draft and asynchronous acceptance', () => {
     await act(async () => {
       snapshotReceiver({ ...snapshot });
     });
-    await click(button('Reuse parameters'));
+    await click(button('Reuse settings'));
     await closeAndCancel();
-    expect(host.textContent).toContain('Could not restore these parameters');
+    expect(host.textContent).toContain('Could not load these settings');
     expect(normalized(savedDraft)).toEqual(normalized(authored()));
     expect(api.queueGeneration).not.toHaveBeenCalled();
   });
@@ -953,7 +953,7 @@ describe('Create history, draft and asynchronous acceptance', () => {
     await act(async () => {
       snapshotReceiver({ ...snapshot });
     });
-    await click(button('Reuse parameters'));
+    await click(button('Reuse settings'));
     await closeAndCancel();
     expect(host.textContent).toContain('The saved wildcard choices are missing');
     expect(normalized(savedDraft)).toEqual(normalized(authored()));
@@ -966,7 +966,7 @@ describe('Create history, draft and asynchronous acceptance', () => {
     await act(async () => {
       snapshotReceiver({ ...snapshot });
     });
-    await click(button('Reuse parameters'));
+    await click(button('Reuse settings'));
     await closeAndCancel();
     expect(savedDraft.dynamicPrompts?.frozen).toEqual(prepared.recipe);
     expect(savedDraft.prompt).toBe('{red|blue} teapot');
@@ -975,7 +975,7 @@ describe('Create history, draft and asynchronous acceptance', () => {
 
   it('keeps the earlier Undo when a saved LoRA lacks trigger metadata', async () => {
     await click(preview(second.resolvedPrompt));
-    await click(button('Reuse parameters'));
+    await click(button('Reuse settings'));
     await closeAndCancel();
     const before = normalized(savedDraft);
     Reflect.deleteProperty(first.loras[0], 'triggers');
@@ -983,7 +983,7 @@ describe('Create history, draft and asynchronous acceptance', () => {
       snapshotReceiver({ ...snapshot });
     });
     await click(preview(first.resolvedPrompt));
-    await click(button('Reuse parameters'));
+    await click(button('Reuse settings'));
     await closeAndCancel();
     expect(host.textContent).toContain('The saved LoRA trigger metadata is incomplete');
     const details = host.querySelector<HTMLElement>('[aria-label="Error details"]')!;

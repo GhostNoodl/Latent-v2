@@ -206,8 +206,8 @@ export function VideoHistory({
       {!selected && studio && (
         <div className="video-preview-empty">
           <FilmPlaceholder />
-          <h2>A little room for motion</h2>
-          <p>Describe your video and generate, or select a recent video to play it here.</p>
+          <h2>No clip yet</h2>
+          <p>Describe a clip below, or pick one from Clips to play it here.</p>
         </div>
       )}
       {selected && (

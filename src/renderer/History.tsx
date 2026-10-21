@@ -384,7 +384,7 @@ export function History({
           </p>
         </div>
       )}
-      {!library && <p className="history-hint">Click to preview · Right-click or use ⋯ to reuse parameters</p>}
+      {!library && <p className="history-hint">Click to preview · Right-click or use ⋯ to reuse settings</p>}
       {menu && (
         <div
           ref={menuRef}
@@ -429,7 +429,7 @@ export function History({
             }}
           >
             <RotateCcw size={16} />
-            Reuse parameters
+            Reuse settings
           </button>
           {onVariation && !menu.record.draft.upscale && !menu.record.qwenEdit && !menu.record.faceDetailer && (
             <button
@@ -481,7 +481,7 @@ export function History({
             }}
           >
             <Search size={16} />
-            Inspect parameters
+            Show settings
           </button>
           {onCompare && canCompare(menu.record) && (
             <button
@@ -586,7 +586,7 @@ export function History({
         </ConfirmDialog>
       )}
       {details && (
-        <Modal title="Image parameters" onClose={() => setDetails(undefined)}>
+        <Modal title="Image settings" onClose={() => setDetails(undefined)}>
           <div className="image-details">
             <ImagePreview
               key={details.imageUrl}
@@ -777,7 +777,7 @@ export function History({
                 }}
               >
                 <RotateCcw size={16} />
-                Reuse parameters
+                Reuse settings
               </button>
               <button
                 type="button"

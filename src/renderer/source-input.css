@@ -28,24 +28,24 @@
 }
 .source-import-actions button,
 .source-mask-actions button {
-  font-size: 10px;
+  font-size: 11px;
   min-height: 30px;
   padding: 6px 8px;
 }
 .source-input .field {
   gap: 5px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .source-input .field select {
-  font-size: 10px;
+  font-size: 11px;
   padding: 8px;
 }
 .source-input .field small {
-  font-size: 9px;
+  font-size: 11px;
 }
 .source-input-help {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.65;
   margin: 0;
 }
@@ -70,14 +70,14 @@
   gap: 8px;
 }
 .source-input-preview strong {
-  font-size: 10px;
+  font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
 }
 .source-input-preview span {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -90,7 +90,7 @@
 }
 .source-mode button {
   flex: 1;
-  font-size: 10px;
+  font-size: 11px;
   min-height: 28px;
   padding: 5px 8px;
   color: var(--muted);
@@ -112,18 +112,18 @@
 }
 .source-batch-warning p {
   color: var(--accent);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
 }
 .source-batch-warning button {
   padding: 3px 0;
   margin-top: 3px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--accent);
   min-height: 25px;
 }
 .source-input .inline-error {
-  font-size: 10px;
+  font-size: 11px;
   margin: 0;
 }
 .mask-editor .modal {
@@ -149,12 +149,12 @@
   overflow-wrap: anywhere;
 }
 .mask-editor-intro p > span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .mask-legend {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -184,7 +184,7 @@
 }
 .mask-tool-group button {
   min-height: 31px;
-  font-size: 10px;
+  font-size: 11px;
   padding: 6px 8px;
 }
 .mask-tool-group button[aria-pressed='true'] {
@@ -198,7 +198,7 @@
   gap: 8px;
 }
 .mask-brush-size > span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
   min-width: 74px;
@@ -214,18 +214,18 @@
 }
 .mask-view-controls button {
   min-height: 27px;
-  font-size: 10px;
+  font-size: 11px;
   padding: 4px 7px;
 }
 .mask-view-controls .button-row > span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   min-width: 66px;
   text-align: center;
 }
 .mask-view-controls label {
   margin: 0;
-  font-size: 10px;
+  font-size: 11px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -333,7 +333,7 @@
   align-items: center;
   gap: 14px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.6;
 }
 .mask-editor-footer {
@@ -350,7 +350,7 @@
 .mask-editor-footer small {
   display: block;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   margin-top: 3px;
   max-width: 640px;
 }
@@ -376,7 +376,7 @@
   color: var(--muted);
 }
 .mask-close-warning button {
-  font-size: 10px;
+  font-size: 11px;
 }
 .mask-smart {
   border: 1px solid var(--border);
@@ -398,7 +398,7 @@
   font-size: 11px;
 }
 .mask-smart-toggle > span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .mask-smart-toggle > span:last-child {
@@ -426,7 +426,7 @@
   line-height: 1.6;
 }
 .mask-smart-runtime small {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--muted);
 }
 .mask-smart-runtime progress {
@@ -434,7 +434,7 @@
   max-width: 400px;
 }
 .mask-smart button {
-  font-size: 10px;
+  font-size: 11px;
   min-height: 29px;
 }
 .mask-smart-guidance {
@@ -455,7 +455,7 @@
   gap: 15px;
 }
 .mask-smart-request p {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   line-height: 1.6;
   max-width: 720px;
@@ -466,7 +466,7 @@
 .mask-smart-note,
 .mask-smart-error,
 .mask-smart-warning {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
 }
 .mask-smart-note {
@@ -504,7 +504,7 @@
   font-size: 11px;
 }
 .mask-suggestion-review > p {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
   color: var(--muted);
 }
@@ -519,14 +519,14 @@
   flex-wrap: wrap;
 }
 .mask-suggestion-apply small {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--muted);
 }
 .mask-smart-details summary {
-  font-size: 9px;
+  font-size: 11px;
 }
 .mask-smart-details p {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.7;
   overflow-wrap: anywhere;
   color: var(--muted);
@@ -538,7 +538,7 @@
   border-radius: 8px;
   background: var(--soft);
   color: var(--accent);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
 }
 .mask-surface.tool-smart-box > canvas {
@@ -615,7 +615,7 @@
 }
 .mask-transform button {
   min-height: 31px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .mask-transform-heading {
   display: flex;
@@ -630,7 +630,7 @@
 .mask-transform-heading span,
 .mask-transform > p {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
 }
 .mask-transform-settings {
@@ -647,7 +647,7 @@
   gap: 6px;
 }
 .mask-transform-settings label > span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .mask-transform-settings select {

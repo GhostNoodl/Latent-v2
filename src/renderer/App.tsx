@@ -647,7 +647,7 @@ export default function App() {
       };
     } catch (error) {
       setNotice({
-        text: `Could not restore these parameters: ${actionErrorMessage(error)} Your draft and Undo are unchanged.`,
+        text: `Could not load these settings: ${actionErrorMessage(error)} Your draft and Undo are unchanged.`,
         error: true,
       });
       return false;
@@ -659,7 +659,7 @@ export default function App() {
     setZoom(0);
     setPage('create');
     setNotice({
-      text: 'Image parameters restored, including the exact seed. Your previous draft is available with Undo.',
+      text: 'Settings loaded, seed included. Undo brings back what you had.',
     });
     return true;
   };
@@ -700,7 +700,7 @@ export default function App() {
     setPreviousDraft(copyDraft(draftRef.current));
     changeDraft(applyCurrentModelTriggers(draftRef.current, modelId));
     setNotice({
-      text: 'This LoRA now uses its current model trigger words. Your prompt text is unchanged. Undo restores the previous draft.',
+      text: 'This LoRA now uses its current trigger words. Your prompt is unchanged.',
     });
   }
 
@@ -1046,7 +1046,7 @@ export default function App() {
           setZoom(0);
         }
       },
-      'Added to the generation queue.',
+      'Queued.',
     );
   };
   const onKeyDown = (event: React.KeyboardEvent) => {
@@ -1939,7 +1939,7 @@ export default function App() {
                       )}
                       <button type="button" onClick={() => restore(selected)}>
                         <RotateCcw size={13} />
-                        Reuse parameters
+                        Reuse settings
                       </button>
                       <button
                         type="button"
@@ -2458,7 +2458,7 @@ export default function App() {
       {(notice || previousDraft) && (
         <div className={`toast ${notice?.error ? 'error' : ''}`} role={notice?.error ? 'alert' : 'status'}>
           <span tabIndex={notice?.error ? 0 : undefined} aria-label={notice?.error ? 'Error details' : undefined}>
-            {notice?.text || 'Parameters restored.'}
+            {notice?.text || 'Settings loaded.'}
           </span>
           <div className="button-row">
             {previousDraft && (
