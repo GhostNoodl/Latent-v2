@@ -689,7 +689,7 @@
   font-size: 12px;
 }
 .model-settings .selected-model small {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .model-picker-chevron {
@@ -713,7 +713,7 @@
 .empty-lora-picker span {
   margin-left: auto;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .prompt-extras {
   margin-top: 8px;
@@ -728,7 +728,7 @@
 }
 .prompt-extras > summary > span {
   float: right;
-  font-size: 10px;
+  font-size: 11px;
 }
 .studio .workspace .prompt-extras .dynamic-prompts {
   margin-top: 6px;
@@ -866,7 +866,7 @@
 }
 .video-generate small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .video-create-layout .video-prompt {
   grid-column: 2;
@@ -891,7 +891,7 @@
   margin: 0;
 }
 .video-create-layout .video-history-rail .section-heading button {
-  font-size: 10px;
+  font-size: 11px;
   padding: 3px 0;
   background: none;
 }
@@ -924,7 +924,7 @@
 }
 .video-create-layout .history-grid span,
 .video-create-layout .history-grid small {
-  font-size: 10px;
+  font-size: 11px;
   padding: 0 7px 5px;
 }
 .video-create-layout .video-preview,

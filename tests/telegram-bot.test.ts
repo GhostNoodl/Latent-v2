@@ -299,3 +299,44 @@ it('waits for face fixes and sends the fixed picture instead of the original', a
   expect(photos).toHaveLength(1);
   expect((photos[0].body.photo as File).name).toBe('latent-fixed.png');
 });
+
+it('keeps a picture whose send failed and tries again later instead of dropping it', async () => {
+  const h = harness();
+  const base = h.ports.fetch;
+  let failures = 1;
+  h.ports.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    if (String(input).endsWith('/sendPhoto') && failures > 0) {
+      failures--;
+      throw new TypeError('fetch failed');
+    }
+    return base(input, init);
+  }) as typeof fetch;
+  bot = new TelegramBotService(h.ports);
+  await bot.setToken(TOKEN);
+  await bot.saveSettings({ enabled: true, allowedUserIds: [String(OWNER)] });
+  await h.until(() => bot!.status().state === 'online');
+  h.push(h.message(OWNER, 'a stormy harbor'));
+  await h.until(() => h.queued.length === 1);
+  const job = h.jobs[0];
+  h.records.push({ id: 'pic', jobId: job.id, actualSeed: '7', width: 512, height: 512 } as GenerationRecord);
+  job.status = 'completed';
+  bot.jobFinished(job);
+  await h.until(() => {
+    const saved = h.state.get('telegram.jobs.v1') as Record<string, { retry?: unknown }> | undefined;
+    return Boolean(saved?.[job.id]?.retry);
+  });
+  // Not due yet: nothing goes out early, and a repeated finish doesn't jump the queue.
+  bot.jobFinished(job);
+  await bot.sweep();
+  expect(h.calls.filter(call => call.method === 'sendPhoto')).toHaveLength(0);
+
+  const now = Date.now;
+  Date.now = () => now() + 60_000;
+  try {
+    await bot.sweep();
+  } finally {
+    Date.now = now;
+  }
+  expect(h.calls.filter(call => call.method === 'sendPhoto')).toHaveLength(1);
+  expect((h.state.get('telegram.jobs.v1') as Record<string, unknown>)[job.id]).toBeUndefined();
+});

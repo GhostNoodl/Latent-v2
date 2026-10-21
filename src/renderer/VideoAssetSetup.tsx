@@ -67,12 +67,7 @@ export function VideoAssetSetup({
       <p>
         Selected draft profile: <strong>{profileLabel(profile)}</strong>
       </p>
-      {!status && (
-        <Notice>
-          Video asset status is unavailable. Reopen the studio when status is available; setup and verification remain
-          disabled.
-        </Notice>
-      )}
+      {!status && <Notice>Can't check the video files right now. Restart Latent to try again.</Notice>}
       {status?.message && <Notice error={status.state === 'error'}>{status.message}</Notice>}
       {status && !status.canAcquire && (
         <Notice>

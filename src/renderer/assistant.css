@@ -79,7 +79,7 @@
 }
 .assistant-runtime-message p,
 .assistant-runtime-message small {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .assistant-runtime-message progress {
@@ -170,7 +170,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   margin-bottom: 7px;
 }
@@ -178,7 +178,7 @@
   color: var(--text);
 }
 .assistant-message-meta time {
-  font-size: 9px;
+  font-size: 11px;
 }
 .assistant-message > p {
   white-space: pre-wrap;
@@ -191,7 +191,7 @@
   min-height: 27px;
   padding: 5px 0;
   color: var(--accent);
-  font-size: 10px;
+  font-size: 11px;
   border-top: 1px solid var(--border);
   border-radius: 0;
 }
@@ -224,7 +224,7 @@
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--accent);
-  font-size: 10px;
+  font-size: 11px;
   text-align: left;
   margin-top: 3px;
 }
@@ -232,7 +232,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--accent);
   padding: 0 7px;
 }
@@ -263,7 +263,7 @@
 .assistant-composer-actions small,
 .assistant-composer-help {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.5;
 }
 .assistant-composer-actions button {
@@ -283,7 +283,7 @@
   display: inline-flex;
   gap: 5px;
   align-items: center;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--accent);
 }
 .assistant-compare-head {
@@ -292,7 +292,7 @@
   gap: 10px;
   padding: 16px 15px 4px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .assistant-proposal-label {
   color: var(--accent);
@@ -323,7 +323,7 @@
   clip-path: inset(50%);
 }
 .assistant-comparison-grid textarea {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
   min-height: 128px;
   padding: 9px;
@@ -339,7 +339,7 @@
   background: var(--soft);
   border-radius: 7px;
   color: var(--accent);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
 }
 .assistant-apply-row {
@@ -356,12 +356,12 @@
   border-top: 1px solid var(--border);
 }
 .assistant-apply-row p {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
 }
 .assistant-apply-row p span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
 }
 .assistant-apply-row button {
   font-size: 11px;
@@ -369,7 +369,7 @@
 .assistant-provenance {
   display: block;
   margin: 10px 15px 0;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .assistant-live-prompt {
@@ -413,7 +413,7 @@
   margin-top: 9px;
 }
 .assistant-current-preview span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .assistant-current-preview p {
@@ -431,7 +431,7 @@
   gap: 20px;
 }
 .assistant-footer p {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
 }
 .assistant-footer p > span {
@@ -440,7 +440,7 @@
 .assistant-footer small {
   display: block;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   max-width: 750px;
 }
 .assistant-save-error {
@@ -452,7 +452,7 @@
   font-size: 11px;
 }
 .assistant-logs summary {
-  font-size: 10px;
+  font-size: 11px;
 }
 .assistant-logs pre {
   margin: 5px 0 0;
@@ -460,7 +460,7 @@
   background: var(--inset);
   border: 1px solid var(--border);
   border-radius: 7px;
-  font-size: 9px;
+  font-size: 11px;
   max-height: 150px;
   overflow: auto;
   white-space: pre-wrap;
@@ -471,7 +471,7 @@
     grid-template-columns: minmax(245px, 0.85fr) minmax(0, 1.3fr);
   }
   .assistant-state {
-    font-size: 10px;
+    font-size: 11px;
   }
   .assistant-compare-head {
     display: none;
@@ -487,7 +487,7 @@
     clip-path: none;
     display: block;
     color: var(--muted);
-    font-size: 9px;
+    font-size: 11px;
     margin-bottom: 5px;
   }
   .assistant-comparison-grid label.assistant-proposed > span {

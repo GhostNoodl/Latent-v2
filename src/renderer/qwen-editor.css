@@ -31,7 +31,7 @@
   margin-left: auto;
   white-space: nowrap;
   color: var(--accent);
-  font-size: 10px;
+  font-size: 11px;
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -57,7 +57,7 @@
   overflow-wrap: anywhere;
 }
 .qwen-runtime small {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
   color: var(--muted);
 }
@@ -136,7 +136,7 @@
   font-weight: 500;
 }
 .qwen-preview-heading button {
-  font-size: 10px;
+  font-size: 11px;
 }
 .qwen-preview {
   display: flex;
@@ -190,7 +190,7 @@
   font-weight: 500;
 }
 .qwen-version-detail small {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   overflow-wrap: anywhere;
   line-height: 1.5;
@@ -209,7 +209,7 @@
   flex-wrap: wrap;
 }
 .qwen-version-detail button {
-  font-size: 10px;
+  font-size: 11px;
   padding: 6px 8px;
 }
 .qwen-version-strip {
@@ -240,7 +240,7 @@
   border-radius: 4px;
 }
 .qwen-version-strip span {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--muted);
 }
 .qwen-version-strip > p {
@@ -285,11 +285,11 @@
   font-weight: 500;
 }
 .qwen-source .label-row button {
-  font-size: 10px;
+  font-size: 11px;
 }
 .qwen-source > small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
 }
 .qwen-source-chip {
@@ -316,13 +316,13 @@
 }
 .qwen-source-chip small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
 }
 .qwen-frozen {
   display: flex;
   gap: 7px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
   padding: 9px;
   background: var(--soft);
@@ -344,7 +344,7 @@
   background: var(--panel);
 }
 .qwen-queue-action small {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   line-height: 1.5;
 }
@@ -395,7 +395,7 @@
 .qwen-job small {
   color: var(--muted);
   overflow-wrap: anywhere;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
 }
 .qwen-footer {
@@ -407,7 +407,7 @@
   flex: 1;
   min-width: 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
 }
 @media (max-width: 950px) {

@@ -373,13 +373,13 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 120848,
-      "sha256": "87b7fa85c09ecfbd0b2dd0c8eb03614bfa67975dc5583b8bb878ad76fcabf97b"
+      "bytes": 120735,
+      "sha256": "62529b45a95656bbcfd361561d34a6c736f8f94755a82bba8c65fef6e8a54bad"
     },
     {
       "path": "src/renderer/assistant.css",
-      "bytes": 11158,
-      "sha256": "345fe6f9fff41903f3d31d26db3d52eda577c0ba93d40ef251eff6f2419989cb"
+      "bytes": 11164,
+      "sha256": "ee259a26ad57e920921b69b401b7f98366d046b4ac33ee82e213b7987cc2a1d7"
     },
     {
       "path": "src/renderer/CanvasViewport.tsx",
@@ -389,27 +389,27 @@
     {
       "path": "src/renderer/civitai.css",
       "bytes": 5460,
-      "sha256": "f418615563f6e2ceb0e2b72692c7c6e2a53100f405cf891d54b6e6e26c50d07a"
+      "sha256": "0ff87b89f9d48b689e585cb009843cae3144947106dbe4fa777cc897524aed57"
     },
     {
       "path": "src/renderer/CivitaiBrowser.tsx",
-      "bytes": 34159,
-      "sha256": "6fea9c1cf3f600e7f7a8b57dac3af0a3838a9123d04625bd0735a266d2aee155"
+      "bytes": 34397,
+      "sha256": "81e19d0b4914201aca8951f941384f63725a19ea458ca4f3179db2d6ee000eca"
     },
     {
       "path": "src/renderer/collections.css",
-      "bytes": 4480,
-      "sha256": "2813d7ce80b515fc2da3c05bd95f1ac732c559b05044deacdd31ed26cb22f620"
+      "bytes": 4475,
+      "sha256": "780ba3cca5f9afa9da835d9a85e45eb612dfd4ba51aa88d4bb694b8ec8bbc846"
     },
     {
       "path": "src/renderer/Collections.tsx",
-      "bytes": 18788,
-      "sha256": "53eeacb9543c50dfb68a873572276637a767701dcc38db630276c7f3b7bdb8dd"
+      "bytes": 18652,
+      "sha256": "ee7fb56585f5a89f7ec26919c40fecb95c12f50f9978d1b3ad899c015a69a100"
     },
     {
       "path": "src/renderer/compare-image.css",
       "bytes": 4197,
-      "sha256": "8d5e9f8ee230316f59a330d4a0bfeaec87f2f46f91c0a02e43047dc88be3029d"
+      "sha256": "b692056d088b85b8a640e906827f0d9ad0fcf6103d81aaba866df6bd26bcb6af"
     },
     {
       "path": "src/renderer/CompareImage.tsx",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 58047,
-      "sha256": "a6b29970039e249067c5af91b706f02db84c9a42fba38bcd043b5b55168c96ba"
+      "bytes": 58703,
+      "sha256": "a04aab584c4c2e4c764f109d0b1ea96ed85ec7c4b66c67155a66135184a24ebf"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -468,8 +468,8 @@
     },
     {
       "path": "src/renderer/History.tsx",
-      "bytes": 33071,
-      "sha256": "ec07ae3b1f8563ca2d876c4b866bc6b914686ab82c647b115d946cd9f6af57b1"
+      "bytes": 33058,
+      "sha256": "948e1c11b055cb7c15d6fca288eebb178f2efeb7b7893e249796aa4466d4bb13"
     },
     {
       "path": "src/renderer/image-preview-recovery.ts",
@@ -493,8 +493,8 @@
     },
     {
       "path": "src/renderer/LibraryDetail.tsx",
-      "bytes": 3227,
-      "sha256": "883f57a4b52fd426129beb23d3467ca2c39fe997e0b352f6f3b75df9d397efce"
+      "bytes": 3223,
+      "sha256": "6fc4748e8bd09b834af75438ec2249591219748c9f2ee22ea0ea590cdf971f7e"
     },
     {
       "path": "src/renderer/LocalModelMetadata.tsx",
@@ -524,7 +524,7 @@
     {
       "path": "src/renderer/model-locations.css",
       "bytes": 4741,
-      "sha256": "bea6c5c7fba396da88e26f0d61d9da7e30d57c4d716a0b75937ecced47bb6172"
+      "sha256": "ebd743df298be54af67284f6953a4d0902257d0a19a694ea4d03722e1fa8398c"
     },
     {
       "path": "src/renderer/ModelLocationsUI.tsx",
@@ -573,8 +573,8 @@
     },
     {
       "path": "src/renderer/qwen-editor.css",
-      "bytes": 8553,
-      "sha256": "ef272a884ad6063754244ba71120c1770784e979f802ca71e85d29e2ef6373ab"
+      "bytes": 8554,
+      "sha256": "cb724383f2a3d92905787e6af5402d24c47bd1d774523a8026a7c8b20b07910f"
     },
     {
       "path": "src/renderer/QwenEditor.tsx",
@@ -613,8 +613,8 @@
     },
     {
       "path": "src/renderer/source-input.css",
-      "bytes": 13808,
-      "sha256": "b2af424ef39cbb237fd73a7d732951a56bf2a7ae857ac6000a9f5175ebcedb0d"
+      "bytes": 13816,
+      "sha256": "4e4e51063a748bf3c2a8d7487337a4cf1a2112c2e31e7bd38d12d812ac0bf629"
     },
     {
       "path": "src/renderer/SourceInput.tsx",
@@ -638,13 +638,13 @@
     },
     {
       "path": "src/renderer/StudioHelp.tsx",
-      "bytes": 5443,
-      "sha256": "519b4fef74f5cc931510df3c5b93376b7b12ccedbe3f62ae561c1e3c2f7ac0f9"
+      "bytes": 5441,
+      "sha256": "8d781cc432778a2aad3d29f14e39a832c2035757fa76ce5599215787a22ef7b7"
     },
     {
       "path": "src/renderer/styles.css",
       "bytes": 39132,
-      "sha256": "fca5e6f0d7bbfd473a70b53f1c1185fa63789340a8b92b2c799ee62ebe41243a"
+      "sha256": "b3ee20864886cb8c93abbb1a11855eb20f394adefb7301b7ddc8560545a62151"
     },
     {
       "path": "src/renderer/ui.tsx",
@@ -659,7 +659,7 @@
     {
       "path": "src/renderer/usability.css",
       "bytes": 30090,
-      "sha256": "9428b5907efe710a8f085154baab2648227b931412907b5ecd1358bbed2ea4db"
+      "sha256": "b60d4e147a84a3c4788bab960c517b7695b44eade273ee7b1a5d5855b4dc5bbe"
     },
     {
       "path": "src/renderer/variation-description.ts",
@@ -678,13 +678,13 @@
     },
     {
       "path": "src/renderer/VideoAssetSetup.tsx",
-      "bytes": 5928,
-      "sha256": "6763bd70e22dc403be36077fe27f32ac3ef506e8414954f32dd1ff1ceba9345a"
+      "bytes": 5829,
+      "sha256": "8cd728deccbeacff328135b887e012ebd79510ada8dc2dbf1d550b8740acac13"
     },
     {
       "path": "src/renderer/VideoHistory.tsx",
-      "bytes": 11654,
-      "sha256": "568cbec93476ee44c5fd6d7712ead9dabdedf27ffb21430d7c391c98984544b7"
+      "bytes": 11628,
+      "sha256": "c55f8b7166c686439d69f70f721da6c6aaf0f45152c746dca9aba370d801bcee"
     },
     {
       "path": "src/renderer/VideoPlanner.tsx",
@@ -693,8 +693,8 @@
     },
     {
       "path": "src/renderer/VideoStudio.tsx",
-      "bytes": 22614,
-      "sha256": "a838fbb4e72bc33f9e7505db62e0cec4b5a6132b120703b0a132844a7cd24ddc"
+      "bytes": 22560,
+      "sha256": "2ba656b16859cfac1da31cf6c056761d204e0044ea760496649125756af07e1e"
     },
     {
       "path": "src/shared/action-error.ts",
@@ -1034,12 +1034,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "462f6ac2b2396e68d03fdacb69de885a1cfdd84ecdfe8496da33376993f2d0c9"
+      "sha256": "b48c286245765d709883b89ab5e0b59dc48bb499b6ed700819e5838be6618ca6"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "f39403fa90d44e5d98e2fd69ea8a0b56d1090b2168ca18810eb2c4f54ca18012"
+      "sha256": "e359037fbbd54c49b438d549a7a0ec5dcfb25f5cc984fa2be883b0752ba0dfde"
     },
     {
       "path": "tsconfig.json",
@@ -1273,8 +1273,8 @@
     },
     {
       "path": "tests/app-history-dom.test.tsx",
-      "bytes": 43497,
-      "sha256": "f0b73cfa4a0a137580632031a690ee5b7d3d372b2b041783cd29a95aeb640db4"
+      "bytes": 43455,
+      "sha256": "50b61ee4314c6572e5eb7eb342c048dc4a36676359b6d98369443fd712ccf199"
     },
     {
       "path": "tests/image-versions.test.tsx",
@@ -1348,8 +1348,8 @@
     },
     {
       "path": "src/renderer/PreviewMenu.tsx",
-      "bytes": 3693,
-      "sha256": "828530547bfebdae67d2c6c62a44e29b0702902b30571cd7b89219d386e317cf"
+      "bytes": 3691,
+      "sha256": "0c312ce9f940148728f74f7cf313da3038a7a8471fe1cf94f0680171af8aee2c"
     },
     {
       "path": "src/renderer/useDismissiblePanel.ts",
@@ -1584,7 +1584,7 @@
     {
       "path": "src/renderer/tag-prompt.css",
       "bytes": 1976,
-      "sha256": "2bb7cf50356e31cf3ee83c91113f467e89e43268f0d907f4760a3df59a72ff0e"
+      "sha256": "71b58929d68853b42cb818605d912e848454b15611b31a4ba9321a293e064253"
     },
     {
       "path": "src/renderer/tag-data/e621.csv",
@@ -1698,8 +1698,8 @@
     },
     {
       "path": "src/renderer/SetupActivityPanel.tsx",
-      "bytes": 1855,
-      "sha256": "76462fe24f164072645d10295a7d33bcae9fb84dbc5a3212ff3a0e1343527481"
+      "bytes": 1828,
+      "sha256": "6469f601b2a937dd9a4d64998d3468ef01b9d228327f004a4dce3e54a70f867b"
     },
     {
       "path": "tests/setup-activity.test.ts",
@@ -1838,8 +1838,8 @@
     },
     {
       "path": "src/main/telegram-bot.ts",
-      "bytes": 31160,
-      "sha256": "d27e4d4862230e46e5fe785b71e142438c99daf21db4b3b6d5269c2d13dc5ae1"
+      "bytes": 32815,
+      "sha256": "070fc8a33b897475dd66e583fec21d747d8d33720569661b2b4fd719cfc6cea1"
     },
     {
       "path": "src/shared/telegram-types.ts",
@@ -1853,8 +1853,8 @@
     },
     {
       "path": "tests/telegram-bot.test.ts",
-      "bytes": 11849,
-      "sha256": "7dd1b60015e2f9cbd318d59603a6e185286f20caaa3680ccc15f603429b4add8"
+      "bytes": 13468,
+      "sha256": "448a103bd9bb11ab04c1fa2a212d5ba49876837bad9cc08461db435b954b96a6"
     },
     {
       "path": "src/main/telegram-controls.ts",

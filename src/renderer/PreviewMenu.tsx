@@ -112,7 +112,7 @@ export function PreviewMenu({
           onReuse();
         }}
       >
-        Reuse parameters
+        Reuse settings
       </button>
       <button
         type="button"

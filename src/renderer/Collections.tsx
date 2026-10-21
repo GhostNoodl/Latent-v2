@@ -144,8 +144,7 @@ export function CollectionToolbar({
         <Modal title={`${kind === 'model' ? 'Model' : 'Image'} collections`} onClose={() => setOpen(false)}>
           <div className="collection-manager">
             <p className="collection-explanation">
-              Keep {singular}s in named groups. Removing a collection or membership keeps its images, models, and saved
-              recipes.
+              Group your {singular}s. Removing a collection never deletes what's in it.
             </p>
             {error && <Notice error>{error}</Notice>}
             <div className="collection-create">
@@ -358,7 +357,6 @@ export function CollectionToolbar({
               </section>
             )}
             <div className="collection-footer">
-              <small>Collections organize references inside this studio.</small>
               <button type="button" onClick={() => setOpen(false)}>
                 Done
               </button>

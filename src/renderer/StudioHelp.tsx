@@ -19,7 +19,7 @@ export function StudioHelp() {
           <strong>Ctrl+Enter</strong>).
         </li>
         <li>
-          Click a thumbnail to look at it. Right-click it and choose <strong>Reuse parameters</strong> to load its exact
+          Click a thumbnail to look at it. Right-click it and choose <strong>Reuse settings</strong> to load its exact
           settings. <strong>Undo</strong> takes you back to what you had before.
         </li>
       </ol>
