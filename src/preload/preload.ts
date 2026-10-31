@@ -92,6 +92,7 @@ const api: LatentAPI = {
   civitaiSearch: request => invoke('civitaiSearch', request),
   civitaiDetail: id => invoke('civitaiDetail', id),
   civitaiDownload: request => invoke('civitaiDownload', request),
+  civitaiFindByHash: sha256 => invoke('civitaiFindByHash', sha256),
   cancelCivitai: () => invoke('cancelCivitai'),
   getCivitaiSettings: () => invoke('getCivitaiSettings'),
   setCivitaiKey: value => invoke('setCivitaiKey', value),

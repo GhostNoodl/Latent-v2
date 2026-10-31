@@ -61,6 +61,7 @@ export function libraryHandlers(ctx: HandlerContext) {
     },
     civitaiSearch: async request => ctx.civitai.search(request),
     civitaiDetail: async modelId => ctx.civitai.detail(modelId),
+    civitaiFindByHash: async sha256 => ctx.civitai.findByHash(sha256),
     civitaiDownload: async request => {
       try {
         const asset = await ctx.civitai.download(request);

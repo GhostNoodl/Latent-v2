@@ -26,6 +26,7 @@ import { SizePeek } from './SizePeek';
 import { SavedPrompts } from './SavedPrompts';
 import { PromptPieces } from './PromptPieces';
 import { GridSweepSetup, SweepGrid } from './GridSweep';
+import { MissingParts } from './MissingParts';
 import { NotificationCenter } from './NotificationCenter';
 import { ModelPicker, ModelArtwork, modelDisplayName } from './ModelPicker';
 // Heavy editors load on first use. Their stylesheets stay in the main bundle so the cascade order is unchanged.
@@ -1744,10 +1745,21 @@ export default function App() {
                           </p>
                         )}
                         {missing.length > 0 && (
-                          <Notice error>
-                            Missing assets: {missing.map(id => findAsset(id)?.name || id).join(', ')}. Their selections
-                            are preserved.
-                          </Notice>
+                          <MissingParts
+                            draft={draft}
+                            models={models}
+                            run={run}
+                            onChange={changeDraft}
+                            parts={missing.map(id => {
+                              const asset = findAsset(id);
+                              return {
+                                id,
+                                name: asset?.name || id.replace(/^[a-z]+:/, ''),
+                                kind: id === draft.checkpointId ? 'checkpoint' : 'lora',
+                                hash: asset?.sha256 ?? draft.assetHashes?.[id],
+                              };
+                            })}
+                          />
                         )}
                         {changedAssets.length > 0 && (
                           <Notice error>

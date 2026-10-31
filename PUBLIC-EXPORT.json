@@ -23,8 +23,8 @@
     },
     {
       "path": "src/main/civitai-catalog.ts",
-      "bytes": 12471,
-      "sha256": "0341c5df26a7f89ef87d7a8e22775d2b0311683aadf9a8d5eb5cf2165c68d278"
+      "bytes": 13826,
+      "sha256": "3839d42794a610f314f2757004c891f9cee59ffb354c4c70adafedd0e8f59ebe"
     },
     {
       "path": "src/main/civitai-transfer.ts",
@@ -363,8 +363,8 @@
     },
     {
       "path": "src/preload/preload.ts",
-      "bytes": 9295,
-      "sha256": "ff2eb18378cefb85c933d5be0fda76e796db74b5214baf8aaf26247c8fd03980"
+      "bytes": 9363,
+      "sha256": "d2d13f6524c3a4fb6eec8b4afe372e000e77acd92e6779e1194035f9c01d9c74"
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
@@ -373,8 +373,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 125682,
-      "sha256": "3c3fdf5d02684536df7f42d7d065be987f5cf7d3ca202bd2847e307509e1d084"
+      "bytes": 126237,
+      "sha256": "25f9ac35f1f754556aaa9b5a74cee1c06d472aa11f6139b97229ca15fbee2d69"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 68417,
-      "sha256": "e77cd56b1aae7764c9a531cf894f9925e1bab87b6618fda9b095c9edb36f0ba3"
+      "bytes": 69427,
+      "sha256": "83c3f30a690ba464306d889b9ca5ad54a9e8794edda47effee5b379afa895be0"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -728,8 +728,8 @@
     },
     {
       "path": "src/shared/civitai-types.ts",
-      "bytes": 2408,
-      "sha256": "72c0bf0f3518bdb7febbf1d4aef0a7fa08759f80882948fcc22f7f14fa07dbc9"
+      "bytes": 2668,
+      "sha256": "914c2c47ef69c460384dbd151f37b82042e4f104741759f1cae00439f32f4a69"
     },
     {
       "path": "src/shared/collections-types.ts",
@@ -933,8 +933,8 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 20860,
-      "sha256": "cc424de0f5b2913127f60a8255457e1214dffe08d865e9e0693d07ac9c89181d"
+      "bytes": 20951,
+      "sha256": "4ec06486dc09cdf7269903eb7e59823030ebe30d05efa546f31d9642a69a56af"
     },
     {
       "path": "src/shared/validation.ts",
@@ -1798,8 +1798,8 @@
     },
     {
       "path": "src/main/ipc/library.ts",
-      "bytes": 4085,
-      "sha256": "93764aac64490423c7773f3e40fc9b056c55c33b0e84d00c7e2d5a1f467dcec9"
+      "bytes": 4156,
+      "sha256": "90158e4d5714e40994dca2dfbe02c1b39792a397a15f18f531245945a9727a64"
     },
     {
       "path": "src/main/ipc/optional-tools.ts",
@@ -1917,6 +1917,11 @@
       "sha256": "2b4ac33cfde7d96aec7a056fb8126204cd07c7e72acfcb16884cf2430ae674fb"
     },
     {
+      "path": "tests/missing-parts.test.ts",
+      "bytes": 1952,
+      "sha256": "9fc1eec0975f70b944bd8ccd3ddd11674c1d1043600c57d72a25eb217138cee1"
+    },
+    {
       "path": "src/renderer/draft-field-label.ts",
       "bytes": 932,
       "sha256": "17904d4c7755db8056a21f615bb6f53fe9d7d2456f54a3f1aa5e740c884dfe86"
@@ -1940,6 +1945,11 @@
       "path": "src/renderer/lineage.ts",
       "bytes": 1964,
       "sha256": "520735847c5367b6294808464242561719d7e26681d09ba9cd87e85a42a1e516"
+    },
+    {
+      "path": "src/renderer/MissingParts.tsx",
+      "bytes": 6218,
+      "sha256": "270b406ee52a37ae5579439770e8b2ada3119ac3881666495b2b0c52b5ac5c92"
     },
     {
       "path": "src/renderer/PromptPieces.tsx",

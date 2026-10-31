@@ -8,6 +8,7 @@ import type {
 import type { SourceImageAsset, SourceImageInventory, SourceMaskAsset, SourceMaskSaveOptions } from './source-types';
 import type {
   CivitaiDownloadRequest,
+  CivitaiHashMatch,
   CivitaiModel,
   CivitaiPermissions,
   CivitaiReadResult,
@@ -449,6 +450,7 @@ export interface LatentAPI {
   civitaiSearch(request: CivitaiSearchRequest): Promise<CivitaiReadResult<CivitaiSearchPage>>;
   civitaiDetail(modelId: number): Promise<CivitaiReadResult<CivitaiModel>>;
   civitaiDownload(request: CivitaiDownloadRequest): Promise<ModelAsset>;
+  civitaiFindByHash(sha256: string): Promise<CivitaiHashMatch | null>;
   cancelCivitai(): Promise<void>;
   getCivitaiSettings(): Promise<CivitaiSettings>;
   setCivitaiKey(value: string | null): Promise<void>;

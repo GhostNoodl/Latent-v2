@@ -2923,3 +2923,52 @@ body:has(.studio) {
   height: 100%;
   object-fit: cover;
 }
+
+/* Missing models with one-click fixes */
+.studio .missing-parts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--danger-bg) 55%, transparent);
+  font-size: 13px;
+}
+.studio .missing-parts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.studio .missing-parts ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.studio .missing-parts li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.studio .missing-parts .missing-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio .missing-parts button {
+  min-height: 28px;
+  padding: 3px 10px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.studio .missing-parts .muted {
+  font-size: 12px;
+}
