@@ -106,6 +106,7 @@ const api: LatentAPI = {
   cancelSegmentation: () => invoke('cancelSegmentation'),
   importSourceImage: () => invoke('importSourceImage'),
   useOutputAsSource: id => invoke('useOutputAsSource', id),
+  importDroppedImage: (bytes, name) => invoke('importDroppedImage', bytes, name),
   saveSourceMask: (id, bytes, options) => invoke('saveSourceMask', id, bytes, options),
   setupAssistant: repair => invoke('setupAssistant', repair),
   startAssistant: () => invoke('startAssistant'),

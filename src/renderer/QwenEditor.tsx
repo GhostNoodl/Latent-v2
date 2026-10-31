@@ -1,3 +1,4 @@
+import { droppedImage, imageDropProps, sourceFromDrop, startRecordDrag, type DroppedImage } from './image-drag';
 import { PackageSetupStorage } from './PackageSetupStorage';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
@@ -52,6 +53,9 @@ export interface QwenEditorProps {
   onSnapshot?: (snapshot: AppSnapshot) => void;
   initialRecord?: GenerationRecord;
   initialMode?: 'preview' | 'reuse';
+  /** An image dropped on the Edit button in the side rail, used as the starting image once loaded. */
+  dropped?: DroppedImage;
+  onDroppedUsed?: () => void;
 }
 /** Live previews use accepted job values, never the previously selected saved version. */
 export function QwenLivePreviewDetails({ job }: { job: GenerationJob }) {
@@ -204,7 +208,10 @@ export function QwenEditor({
   onSnapshot,
   initialRecord,
   initialMode = 'preview',
+  dropped,
+  onDroppedUsed,
 }: QwenEditorProps) {
+  const [dropOver, setDropOver] = useState(false);
   const [saved, setSaved] = useState<QwenConversationStore>(emptyStore);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -441,6 +448,16 @@ export function QwenEditor({
     isQwen21Profile(profile) && ['staging', 'applying', 'checking'].includes(snapshot.runtimeUpdates?.state ?? '');
   const installing = snapshot.qwenEdit.state === 'installing' || pending.setup || engineSetup;
   const locked = !loaded || pending.close || pending.source || pending.reference || pending.queue;
+  const recent = snapshot.history.filter(record => record.imageUrl).slice(0, 8);
+  const usedDrop = useRef<DroppedImage>(undefined);
+  useEffect(() => {
+    if (!loaded || !dropped || usedDrop.current === dropped) return;
+    usedDrop.current = dropped;
+    onDroppedUsed?.();
+    void startFromDrop(dropped);
+    // Runs once per dropped image, after the saved drafts load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, dropped]);
   const profileLabel =
     profile === 'qwen21'
       ? 'Qwen Image 2.1'
@@ -744,6 +761,23 @@ export function QwenEditor({
       async () => {
         const source = await window.latent.useOutputAsSource(record.id);
         assignSource(source, record, branch);
+        await flush();
+        onSnapshot?.(await window.latent.getSnapshot());
+      },
+      undefined,
+      true,
+    );
+  }
+  async function startFromDrop(drop: DroppedImage) {
+    if (drop.kind === 'record') return applyRecord(drop.record);
+    if (!canAddConversation(undefined) && !(getDraft() && !getDraft()!.source)) {
+      setError('Remove an unused editor draft before starting another conversation. All versions are kept.');
+      return;
+    }
+    await action(
+      'source',
+      async () => {
+        assignSource(await sourceFromDrop(drop));
         await flush();
         onSnapshot?.(await window.latent.getSnapshot());
       },
@@ -1073,7 +1107,18 @@ export function QwenEditor({
                       </button>
                     )}
                   </div>
-                  <div className="qwen-preview">
+                  <div
+                    className={`qwen-preview ${dropOver ? 'drop-over' : ''}`}
+                    {...imageDropProps(
+                      setDropOver,
+                      transfer => {
+                        const drop = droppedImage(transfer, snapshot.history);
+                        if (drop) void startFromDrop(drop);
+                        else setError('Drop a PNG, JPG or WebP image.');
+                      },
+                      locked,
+                    )}
+                  >
                     {imageUrl ? (
                       <img
                         src={imageUrl}
@@ -1094,7 +1139,25 @@ export function QwenEditor({
                       <div>
                         <FileImage size={38} />
                         <strong>Start with an image.</strong>
-                        <p>Import an image or choose a saved version to edit.</p>
+                        <p>Drop one here, import a file, or pick a recent one.</p>
+                        {recent.length > 0 && (
+                          <div className="qwen-recent" aria-label="Recent images">
+                            {recent.map(record => (
+                              <button
+                                type="button"
+                                key={record.id}
+                                disabled={locked}
+                                title="Edit this image"
+                                aria-label={`Edit ${record.resolvedPrompt || record.draft.prompt || 'image'}`}
+                                draggable
+                                onDragStart={event => startRecordDrag(event, record)}
+                                onClick={() => void applyRecord(record)}
+                              >
+                                <img src={record.imageUrl} alt="" loading="lazy" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
