@@ -437,49 +437,69 @@ export class SourceImageService {
         throw new Error('Invalid source generation identity.');
       assertAbsoluteFile(absoluteFilePathFromMainDialog);
       const original = await readBoundedFile(absoluteFilePathFromMainDialog, SOURCE_IMAGE_LIMITS.maxInputBytes);
-      const mimeType = inspectContainer(original);
-      const decoded = await this.decoder(Buffer.from(original));
-      if (decoded.mimeType !== mimeType) throw new Error('The image decoder disagrees with the file format.');
-      assertDimensions(decoded.originalWidth, decoded.originalHeight);
-      if (!Number.isInteger(decoded.orientation) || decoded.orientation < 1 || decoded.orientation > 8)
-        throw new Error('The image has an invalid orientation.');
-      const normalizedPng = Buffer.from(decoded.normalizedPng);
-      if (inspectContainer(normalizedPng, MAX_NORMALIZED_BYTES) !== 'image/png')
-        throw new Error('The decoder did not produce a normalized PNG.');
-      const normalizedWidth = normalizedPng.readUInt32BE(16);
-      const normalizedHeight = normalizedPng.readUInt32BE(20);
-      const swapped = decoded.orientation >= 5;
-      if (
-        normalizedWidth !== (swapped ? decoded.originalHeight : decoded.originalWidth) ||
-        normalizedHeight !== (swapped ? decoded.originalWidth : decoded.originalHeight)
-      )
-        throw new Error('Normalization unexpectedly changed the source dimensions.');
-      const source: SourceImageAsset = {
-        ...(originGenerationId ? { originGenerationId } : {}),
-        schemaVersion: 1,
-        id: `src_${randomUUID()}`,
-        name: path.basename(absoluteFilePathFromMainDialog),
-        createdAt: new Date().toISOString(),
-        original: this.identity(original, mimeType, decoded.originalWidth, decoded.originalHeight),
-        normalized: {
-          ...this.identity(normalizedPng, 'image/png', normalizedWidth, normalizedHeight),
-          mimeType: 'image/png',
-        },
-        normalizedStoredSeparately: !original.equals(normalizedPng),
-        normalization: {
-          version: 1,
-          orientationApplied: decoded.orientation,
-          colorSpace: 'srgb',
-          metadataStripped: true,
-        },
-      };
-      const files: Record<string, Buffer> = { [`original.${extensions[mimeType]}`]: original };
-      if (source.normalizedStoredSeparately) files['image.png'] = normalizedPng;
-      const inventory = this.list();
-      inventory.sources.unshift(source);
-      await this.publish(source.id, files, inventory);
-      return structuredClone(source);
+      return this.importOriginal(original, path.basename(absoluteFilePathFromMainDialog), originGenerationId);
     });
+  }
+
+  /** An image dropped into the window: the renderer hands over the bytes, never a path. */
+  importBytes(bytes: Uint8Array, name: string): Promise<SourceImageAsset> {
+    return this.exclusive(async () => {
+      if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0) throw new Error('The dropped file is empty.');
+      if (bytes.byteLength > SOURCE_IMAGE_LIMITS.maxInputBytes) throw new Error('The dropped image is too large.');
+      const safeName =
+        typeof name === 'string'
+          ? path
+              .basename(name.replaceAll('\\', '/'))
+              .replace(/[\u0000-\u001f]/g, '')
+              .slice(0, 200)
+          : '';
+      return this.importOriginal(Buffer.from(bytes), safeName || 'Dropped image');
+    });
+  }
+
+  private async importOriginal(original: Buffer, name: string, originGenerationId?: string) {
+    const mimeType = inspectContainer(original);
+    const decoded = await this.decoder(Buffer.from(original));
+    if (decoded.mimeType !== mimeType) throw new Error('The image decoder disagrees with the file format.');
+    assertDimensions(decoded.originalWidth, decoded.originalHeight);
+    if (!Number.isInteger(decoded.orientation) || decoded.orientation < 1 || decoded.orientation > 8)
+      throw new Error('The image has an invalid orientation.');
+    const normalizedPng = Buffer.from(decoded.normalizedPng);
+    if (inspectContainer(normalizedPng, MAX_NORMALIZED_BYTES) !== 'image/png')
+      throw new Error('The decoder did not produce a normalized PNG.');
+    const normalizedWidth = normalizedPng.readUInt32BE(16);
+    const normalizedHeight = normalizedPng.readUInt32BE(20);
+    const swapped = decoded.orientation >= 5;
+    if (
+      normalizedWidth !== (swapped ? decoded.originalHeight : decoded.originalWidth) ||
+      normalizedHeight !== (swapped ? decoded.originalWidth : decoded.originalHeight)
+    )
+      throw new Error('Normalization unexpectedly changed the source dimensions.');
+    const source: SourceImageAsset = {
+      ...(originGenerationId ? { originGenerationId } : {}),
+      schemaVersion: 1,
+      id: `src_${randomUUID()}`,
+      name,
+      createdAt: new Date().toISOString(),
+      original: this.identity(original, mimeType, decoded.originalWidth, decoded.originalHeight),
+      normalized: {
+        ...this.identity(normalizedPng, 'image/png', normalizedWidth, normalizedHeight),
+        mimeType: 'image/png',
+      },
+      normalizedStoredSeparately: !original.equals(normalizedPng),
+      normalization: {
+        version: 1,
+        orientationApplied: decoded.orientation,
+        colorSpace: 'srgb',
+        metadataStripped: true,
+      },
+    };
+    const files: Record<string, Buffer> = { [`original.${extensions[mimeType]}`]: original };
+    if (source.normalizedStoredSeparately) files['image.png'] = normalizedPng;
+    const inventory = this.list();
+    inventory.sources.unshift(source);
+    await this.publish(source.id, files, inventory);
+    return structuredClone(source);
   }
 
   async resolve(id: string): Promise<ResolvedSourceImage> {

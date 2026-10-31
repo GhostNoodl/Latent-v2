@@ -22,6 +22,11 @@ export function assistantSourcesHandlers(ctx: HandlerContext) {
       ctx.broadcast();
       return source;
     },
+    importDroppedImage: async (bytes, name) => {
+      const source = await ctx.sources.importBytes(bytes, name);
+      ctx.broadcast();
+      return source;
+    },
     useOutputAsSource: async recordId => {
       const source = await ctx.sources.importFile(await ctx.outputPath(ctx.id.parse(recordId)), recordId);
       ctx.broadcast();

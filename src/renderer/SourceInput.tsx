@@ -3,6 +3,7 @@ import { ImagePlus, LoaderCircle, Paintbrush, Plus, X } from 'lucide-react';
 import type { AppSnapshot, GenerationDraft, GenerationRecord } from '../shared/types';
 import type { SourceImageAsset, SourceMaskAsset } from '../shared/source-types';
 import { Field, type RunAction } from './ui';
+import { droppedImage, imageDropProps, sourceFromDrop } from './image-drag';
 import { MaskEditor } from './MaskEditor';
 import './source-input.css';
 import { DEFAULT_CROP_INPAINT_SETTINGS } from '../shared/crop-inpaint-types';
@@ -20,6 +21,8 @@ export function SourceInput({ snapshot, draft, onChange, selected, run }: Source
   const [error, setError] = useState('');
   const [imageFailed, setImageFailed] = useState(false);
   const [previewAttempt, setPreviewAttempt] = useState(0);
+  const [dropOver, setDropOver] = useState(false);
+  const flyout = useRef<HTMLDetailsElement>(null);
   const [editor, setEditor] = useState<{ source: SourceImageAsset; mask?: SourceMaskAsset }>();
   const current = useRef(draft);
   current.current = draft;
@@ -65,7 +68,7 @@ export function SourceInput({ snapshot, draft, onChange, selected, run }: Source
     setError('');
     setImageFailed(false);
   }
-  async function importSource(useSelected = false) {
+  async function importSource(useSelected = false, load?: () => Promise<SourceImageAsset>) {
     if (importing.current || (useSelected && !selected)) return;
     importing.current = true;
     const request = ++importRequest.current,
@@ -77,9 +80,11 @@ export function SourceInput({ snapshot, draft, onChange, selected, run }: Source
     try {
       await run('source-import', async () => {
         try {
-          const result = useSelected
-            ? await window.latent.useOutputAsSource(selected!.id)
-            : await window.latent.importSourceImage();
+          const result = load
+            ? await load()
+            : useSelected
+              ? await window.latent.useOutputAsSource(selected!.id)
+              : await window.latent.importSourceImage();
           // Keep the imported file in saved sources, but never attach it over a later edit or restore.
           if (result && ownsDraft()) chooseSource(result);
         } catch (reason) {
@@ -116,8 +121,21 @@ export function SourceInput({ snapshot, draft, onChange, selected, run }: Source
   }
 
   return (
-    <section className="source-input" aria-label="Source image">
-      <details className="tune-flyout">
+    <section
+      className={`source-input ${dropOver ? 'drop-over' : ''}`}
+      aria-label="Source image"
+      {...imageDropProps(
+        setDropOver,
+        transfer => {
+          const drop = droppedImage(transfer, snapshot.history);
+          if (!drop) return setError('Drop a PNG, JPG or WebP image.');
+          if (flyout.current) flyout.current.open = true;
+          void importSource(false, () => sourceFromDrop(drop));
+        },
+        busy,
+      )}
+    >
+      <details className="tune-flyout" ref={flyout}>
         <summary>
           Start from an image
           {input && <span className="extra-status">{input.mode === 'inpaint' ? 'Inpaint' : 'On'}</span>}
@@ -187,7 +205,7 @@ export function SourceInput({ snapshot, draft, onChange, selected, run }: Source
             {error}
           </p>
         )}
-        {!input && <p className="source-input-help">PNG, JPEG or WebP</p>}
+        {!input && <p className="source-input-help">PNG, JPEG or WebP. You can also drop one here.</p>}
         {input && (
           <>
             {!source || sourceChanged ? (

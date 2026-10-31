@@ -1544,6 +1544,10 @@
       "to": "tests/create-extras.test.ts"
     },
     {
+      "from": "tests/image-drag.test.ts",
+      "to": "tests/image-drag.test.ts"
+    },
+    {
       "from": "tests/library-extras.test.ts",
       "to": "tests/library-extras.test.ts"
     },
@@ -1562,6 +1566,10 @@
     {
       "from": "src/renderer/GridSweep.tsx",
       "to": "src/renderer/GridSweep.tsx"
+    },
+    {
+      "from": "src/renderer/image-drag.ts",
+      "to": "src/renderer/image-drag.ts"
     },
     {
       "from": "src/renderer/library-filters.ts",

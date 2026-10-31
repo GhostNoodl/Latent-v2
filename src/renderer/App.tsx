@@ -1,3 +1,4 @@
+import { carriesImage, droppedImage, type DroppedImage } from './image-drag';
 import { SetupActivityPanel } from './SetupActivityPanel';
 import { ErrorBoundary } from './ErrorBoundary';
 import { isLoraFamilyCompatible } from '../shared/types';
@@ -34,7 +35,7 @@ import './civitai.css';
 import { variationDescription } from './variation-description';
 import { ImagePreview } from './ImagePreview';
 import { LibraryDetail } from './LibraryDetail';
-import { Suspense, lazy, memo, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, memo, useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -185,6 +186,8 @@ export default function App() {
   const [notice, setNotice] = useState<{ text: string; error?: boolean }>();
   const [checkpointOpen, setCheckpointOpen] = useState(false);
   const [page, setPage] = useState<Page>('create');
+  const [editDrop, setEditDrop] = useState<DroppedImage>();
+  const springTimer = useRef<number | undefined>(undefined);
   const [setupOpen, setSetupOpen] = useState(false);
   const previousImageIds = useRef<Set<string>>(undefined);
   const [videoOpened, setVideoOpened] = useState(false);
@@ -1131,6 +1134,28 @@ export default function App() {
               key={key}
               aria-current={page === key || (key === 'models' && page === 'discover') ? 'page' : undefined}
               onClick={() => setPage(key)}
+              {...((key === 'qwen' || key === 'create') && {
+                // Hold a dragged image over Create or Edit to open it; drop on Edit to start editing it.
+                onDragOver: (event: DragEvent) => {
+                  if (!carriesImage(event)) return;
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = key === 'qwen' ? 'copy' : 'none';
+                  springTimer.current ??= window.setTimeout(() => setPage(key), 600);
+                },
+                onDragLeave: () => {
+                  window.clearTimeout(springTimer.current);
+                  springTimer.current = undefined;
+                },
+                onDrop: (event: DragEvent) => {
+                  window.clearTimeout(springTimer.current);
+                  springTimer.current = undefined;
+                  if (key !== 'qwen' || !carriesImage(event)) return;
+                  event.preventDefault();
+                  const drop = droppedImage(event.dataTransfer, snapshot.history);
+                  if (drop) setEditDrop(drop);
+                  setPage('qwen');
+                },
+              })}
             >
               <Icon size={20} />
               <span>{label}</span>
@@ -2231,6 +2256,8 @@ export default function App() {
               <Suspense fallback={<Busy active />}>
                 <QwenEditor
                   embedded
+                  dropped={editDrop}
+                  onDroppedUsed={() => setEditDrop(undefined)}
                   snapshot={snapshot}
                   run={run}
                   busy={busy}

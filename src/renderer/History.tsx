@@ -27,6 +27,7 @@ import type { CollectionActions, CollectionSnapshot } from '../shared/collection
 import { ConfirmDialog, Modal, Notice, shortDate, type RunAction } from './ui';
 import { CollectionMembershipDialog, CollectionToolbar } from './Collections';
 import { RecipeExtras } from './RecipeExtras';
+import { startRecordDrag } from './image-drag';
 import { historyPageForSelection } from '../shared/history-selection';
 import {
   DEFAULT_IMAGE_VERSIONS,
@@ -424,6 +425,8 @@ export function History({
                 className="history-preview"
                 aria-pressed={record.id === (grouping ? selectedTileId : selectedId)}
                 onClick={() => onSelect(record)}
+                draggable
+                onDragStart={event => startRecordDrag(event, record)}
                 onContextMenu={event => {
                   event.preventDefault();
                   openMenu(record, event.currentTarget, event.clientX, event.clientY);
