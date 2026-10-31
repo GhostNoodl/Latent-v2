@@ -1034,12 +1034,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "1004fc537e43ea03dd7e5fcdba9495147919e5d3b3a47f3565fe1b6650244801"
+      "sha256": "2696078e9b5aa8c07f7c2338afc3ae040adab5225fae57d7020273f767f55244"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "7083dce45e35b80c0341fbb5dd8205790827cd36529a213492af5c0f93358da1"
+      "sha256": "3936733e1e2598a3b2199e51532789191769e88360b90afa023eb50a214f097c"
     },
     {
       "path": "tsconfig.json",
@@ -1299,7 +1299,7 @@
     {
       "path": "THIRD-PARTY-NOTICES.txt",
       "bytes": 108584,
-      "sha256": "d05d029f75f36d31eeb95562bf6f0db2a0943f28f036c8f29122ea7a60b2cd79"
+      "sha256": "4a1c1ef525d3d32c7c67e3fd39b92bff29b8df053ea2dcbd108f39f886832541"
     },
     {
       "path": "README-WINDOWS.txt",

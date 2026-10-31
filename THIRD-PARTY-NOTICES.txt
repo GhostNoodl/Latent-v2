@@ -1115,7 +1115,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ========================================================================
 
-zod 4.5.4
+zod 4.6.7
 Declared license: MIT
 Source: git+https://github.com/colinhacks/zod.git
 
