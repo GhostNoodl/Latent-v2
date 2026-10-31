@@ -21,6 +21,11 @@ import { imageSetupReason } from '../shared/setup';
 import { SetupHub } from './SetupHub';
 import { queueClearKey } from './queue-view';
 import { CanvasViewport } from './CanvasViewport';
+import { formatSeconds, useCountdown } from './generation-eta';
+import { SizePeek } from './SizePeek';
+import { SavedPrompts } from './SavedPrompts';
+import { PromptPieces } from './PromptPieces';
+import { GridSweepSetup, SweepGrid } from './GridSweep';
 import { NotificationCenter } from './NotificationCenter';
 import { ModelPicker, ModelArtwork, modelDisplayName } from './ModelPicker';
 // Heavy editors load on first use. Their stylesheets stay in the main bundle so the cascade order is unchanged.
@@ -50,6 +55,8 @@ import {
   Sparkles,
   WandSparkles,
   Sprout,
+  GripVertical,
+  LayoutGrid,
   Trash2,
   Undo2,
   MoreHorizontal,
@@ -131,6 +138,8 @@ function copyDraft(draft: GenerationDraft): GenerationDraft {
     ...restoreTriggerResolution(draft),
     autoFace: draft.autoFace ? structuredClone(draft.autoFace) : undefined,
     autoFaceParentRecordId: draft.autoFaceParentRecordId,
+    // A grid cell's marker belongs to that one run; reusing its settings starts a normal image.
+    sweep: undefined,
     enhance: draft.enhance ? structuredClone(draft.enhance) : undefined,
     promptTriggerSpans: draft.promptTriggerSpans ? structuredClone(draft.promptTriggerSpans) : undefined,
     faceDetailer: draft.faceDetailer ? structuredClone(draft.faceDetailer) : undefined,
@@ -704,6 +713,27 @@ export default function App() {
     });
   }
 
+  const countdownJob = snapshot ? runningImageJob(snapshot.jobs) : undefined;
+  const secondsLeft = useCountdown(
+    countdownJob?.queueState === 'running' ? countdownJob : undefined,
+    snapshot?.history ?? [],
+  );
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [sweepView, setSweepView] = useState<GenerationDraft['sweep']>();
+  // Outline the next image's shape on the stage while a size is hovered, and briefly after it changes.
+  const [hoveredSize, setHoveredSize] = useState<{ width: number; height: number }>();
+  const [sizeFlash, setSizeFlash] = useState(false);
+  const shownSize = useRef(`${draft.width}x${draft.height}`);
+  useEffect(() => {
+    const key = `${draft.width}x${draft.height}`;
+    if (key === shownSize.current) return;
+    shownSize.current = key;
+    setSizeFlash(true);
+    const timer = window.setTimeout(() => setSizeFlash(false), 1800);
+    return () => window.clearTimeout(timer);
+  }, [draft.width, draft.height]);
+  const sizePeek = hoveredSize ?? (sizeFlash ? { width: draft.width, height: draft.height } : undefined);
+
   if (!snapshot)
     return (
       <div className="boot">
@@ -1049,6 +1079,18 @@ export default function App() {
       'Queued.',
     );
   };
+  const queueSweep = (drafts: GenerationDraft[]) => {
+    if (!drafts.length) return;
+    void run(
+      'generate',
+      async () => {
+        await flushDraft();
+        for (const cell of drafts) await window.latent.queueGeneration(cell);
+        setSweepView(drafts[0].sweep);
+      },
+      `${drafts.length} images queued.`,
+    );
+  };
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (
       event.nativeEvent.isComposing ||
@@ -1213,6 +1255,7 @@ export default function App() {
                       width={draft.width}
                       height={draft.height}
                       onChoose={size => changeDraft({ width: size.width, height: size.height })}
+                      onPreview={size => setHoveredSize(size)}
                       onSave={async sizePresets => {
                         receive(await window.latent.updateSettings({ sizePresets }));
                       }}
@@ -1446,6 +1489,12 @@ export default function App() {
                         />
                       </>
                     )}
+                    <GridSweepSetup
+                      draft={draft}
+                      models={models}
+                      disabledReason={cannotGenerate || undefined}
+                      onQueue={queueSweep}
+                    />
                     <details className="extra-row tune-flyout">
                       <summary>
                         {createMode === 'advanced' ? 'Regions and wildcards' : 'Wildcards'}
@@ -1633,6 +1682,30 @@ export default function App() {
                         <div className="label-row">
                           <label htmlFor="prompt">Prompt</label>
                           <TagSourcePicker />
+                          <SavedPrompts
+                            prompt={draft.prompt}
+                            saved={snapshot.settings.savedPrompts ?? []}
+                            onUse={prompt => changeDraft({ prompt })}
+                            onSave={async savedPrompts => {
+                              receive(await window.latent.updateSettings({ savedPrompts }));
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="text-button"
+                            aria-pressed={Boolean(snapshot.settings.promptPieces)}
+                            title="Show the prompt as pieces you can drag around"
+                            onClick={() =>
+                              void run('prompt-pieces', async () =>
+                                receive(
+                                  await window.latent.updateSettings({ promptPieces: !snapshot.settings.promptPieces }),
+                                ),
+                              )
+                            }
+                          >
+                            <GripVertical size={13} />
+                            Pieces
+                          </button>
                           <button type="button" className="text-button" onClick={() => setAssistantOpen(true)}>
                             <Sparkles size={13} />
                             Help me write
@@ -1641,20 +1714,24 @@ export default function App() {
                             Clear
                           </button>
                         </div>
-                        <TagPrompt
-                          wildcards={snapshot.wildcards.entries}
-                          wildcardSelections={draft.dynamicPrompts?.selections}
-                          onWildcardSelections={selections =>
-                            changeDraft({ dynamicPrompts: { enabled: true, selections } })
-                          }
-                          id="prompt"
-                          sourcePicker={false}
-                          rows={2}
-                          maxLength={16000}
-                          value={draft.prompt}
-                          onChange={prompt => changeDraft({ prompt })}
-                          placeholder="A quiet greenhouse at dusk, fireflies between the flowers, delicate anime illustration…"
-                        />
+                        {snapshot.settings.promptPieces ? (
+                          <PromptPieces value={draft.prompt} onChange={prompt => changeDraft({ prompt })} />
+                        ) : (
+                          <TagPrompt
+                            wildcards={snapshot.wildcards.entries}
+                            wildcardSelections={draft.dynamicPrompts?.selections}
+                            onWildcardSelections={selections =>
+                              changeDraft({ dynamicPrompts: { enabled: true, selections } })
+                            }
+                            id="prompt"
+                            sourcePicker={false}
+                            rows={2}
+                            maxLength={16000}
+                            value={draft.prompt}
+                            onChange={prompt => changeDraft({ prompt })}
+                            placeholder="A quiet greenhouse at dusk, fireflies between the flowers, delicate anime illustration…"
+                          />
+                        )}
                       </section>
                     </div>
                     {(familyMismatch || missing.length > 0 || changedAssets.length > 0) && (
@@ -1792,6 +1869,11 @@ export default function App() {
                               : draft.hiresFix
                                 ? 'Generate and refine'
                                 : 'Generate image'}
+                        {secondsLeft !== undefined && (
+                          <span className="generate-countdown" title="Time left on the current image">
+                            {formatSeconds(secondsLeft)}
+                          </span>
+                        )}
                       </button>
                       {Boolean(cannotGenerate || foreignJobs) && (
                         <p className="hint">{cannotGenerate || 'Starts once the ComfyUI work ahead of it finishes.'}</p>
@@ -1808,6 +1890,7 @@ export default function App() {
                 </form>
                 <div
                   className="stage"
+                  ref={stageRef}
                   onContextMenu={event => {
                     if (
                       selected &&
@@ -1857,6 +1940,9 @@ export default function App() {
                       </button>
                     </div>
                   </div>
+                  {canvasUrl && sizePeek && (
+                    <SizePeek stage={stageRef} width={sizePeek.width} height={sizePeek.height} />
+                  )}
                   <CanvasViewport zoom={zoom} onZoom={setZoom} width={canvasWidth} hasImage={Boolean(canvasUrl)}>
                     {canvasUrl ? (
                       <ImagePreview
@@ -1937,6 +2023,12 @@ export default function App() {
                           Compare
                         </button>
                       )}
+                      {selected.draft.sweep && (
+                        <button type="button" onClick={() => setSweepView(selected.draft.sweep)}>
+                          <LayoutGrid size={13} />
+                          Grid
+                        </button>
+                      )}
                       <button type="button" onClick={() => restore(selected)}>
                         <RotateCcw size={13} />
                         Reuse settings
@@ -1981,6 +2073,9 @@ export default function App() {
                         <span>
                           <Busy active />
                           {runningJob.phase ?? 'Generating image'}
+                          {secondsLeft !== undefined && (
+                            <span className="seconds-left"> · {formatSeconds(secondsLeft)} left</span>
+                          )}
                         </span>
                         <button
                           className="text-button"
@@ -2226,6 +2321,19 @@ export default function App() {
           onClose={() => {
             setCompareRecord(undefined);
             setCompareAgainst(undefined);
+          }}
+        />
+      )}
+      {sweepView && (
+        <SweepGrid
+          sweep={sweepView}
+          history={snapshot.history}
+          jobs={snapshot.jobs}
+          onClose={() => setSweepView(undefined)}
+          onPick={record => {
+            setSweepView(undefined);
+            setPage('create');
+            selectImage(record);
           }}
         />
       )}

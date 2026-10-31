@@ -120,6 +120,15 @@ export interface GenerationDraft {
   regionalPrompts?: { settings: RegionalPromptSettings; frozen?: RegionalPromptPlan };
   qwenEdit?: QwenEditJobRequest;
   variationOfRecordId?: string;
+  /** Marks one cell of a Compare settings grid; every cell carries the grid's labels. */
+  sweep?: {
+    id: string;
+    index: number;
+    columnLabel: string;
+    columns: string[];
+    rowLabel?: string;
+    rows: string[];
+  };
   controlNet?: ControlNetSettings;
   dynamicPrompts?: DynamicPromptAuthoring;
   hiresFix?: HiresFixSettings;
@@ -183,6 +192,10 @@ export interface AppSettings {
   imageVersions?: { group: boolean; showOriginal: boolean; showRefined: boolean; showFaceSteps: boolean };
   /** Simple shows the everyday Create controls; Advanced shows every tool. */
   createMode?: 'simple' | 'advanced';
+  /** Prompts kept beside the prompt box in Create. */
+  savedPrompts?: { id: string; text: string }[];
+  /** Show the Create prompt as draggable pieces instead of plain text. */
+  promptPieces?: boolean;
 }
 export interface AppPaths {
   root: string;
