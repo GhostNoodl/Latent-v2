@@ -27,6 +27,12 @@ export function assistantSourcesHandlers(ctx: HandlerContext) {
       ctx.broadcast();
       return source;
     },
+    importLiveSketch: async bytes => ctx.sources.importLiveSketch(bytes),
+    discardLiveSketches: async ids => {
+      const removed = await ctx.sources.discardLiveSketches(ids);
+      if (removed) ctx.broadcast();
+      return removed;
+    },
     useOutputAsSource: async recordId => {
       const source = await ctx.sources.importFile(await ctx.outputPath(ctx.id.parse(recordId)), recordId);
       ctx.broadcast();

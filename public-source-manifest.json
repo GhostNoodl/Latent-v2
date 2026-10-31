@@ -1552,6 +1552,10 @@
       "to": "tests/library-extras.test.ts"
     },
     {
+      "from": "tests/live-paint.test.ts",
+      "to": "tests/live-paint.test.ts"
+    },
+    {
       "from": "tests/missing-parts.test.ts",
       "to": "tests/missing-parts.test.ts"
     },
@@ -1582,6 +1586,10 @@
     {
       "from": "src/renderer/lineage.ts",
       "to": "src/renderer/lineage.ts"
+    },
+    {
+      "from": "src/renderer/LivePaint.tsx",
+      "to": "src/renderer/LivePaint.tsx"
     },
     {
       "from": "src/renderer/MissingParts.tsx",
