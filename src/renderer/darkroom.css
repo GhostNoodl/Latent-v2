@@ -3139,3 +3139,46 @@ body:has(.studio) {
 .studio .live-strength input {
   width: 150px;
 }
+
+/* Phone remote */
+.studio .phone-pairing {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  margin: 12px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--inset);
+}
+.studio .phone-pairing > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.studio .phone-pairing small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .phone-pairing strong {
+  font-size: 16px;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+.studio .phone-pairing .phone-code {
+  font-size: 26px;
+  letter-spacing: 0.25em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.studio .phone-port {
+  margin-top: 14px;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.studio .phone-port label,
+.studio .phone-port .field {
+  max-width: 220px;
+}

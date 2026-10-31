@@ -1,3 +1,4 @@
+import { PhoneRemote } from './PhoneRemote';
 import { SetupActivityPanel } from './SetupActivityPanel';
 import { AppUpdates } from './AppUpdates';
 import { TelegramRemote } from './TelegramRemote';
@@ -42,6 +43,7 @@ const SECTION_NAMES: Record<string, string> = {
   'Image engine': 'Engine',
   'Download and setup activity': 'Downloads',
   'Telegram remote': 'Telegram',
+  'Phone remote': 'Phone',
   Appearance: 'Look',
   'Where files are stored': 'Folders',
   'Previews, drafts, and notifications': 'Previews and alerts',
@@ -378,6 +380,7 @@ export function StudioSettings({
         />
       )}
       {snapshot.telegram && <TelegramRemote status={snapshot.telegram} run={run} busy={Boolean(busy.telegram)} />}
+      {snapshot.phone && <PhoneRemote status={snapshot.phone} run={run} busy={Boolean(busy.phone)} />}
       <RuntimeUpdates
         onRepair={() => void run('runtime-update', () => window.latent.prepareRuntimeEnvironmentRepair())}
         status={snapshot.runtimeUpdates}

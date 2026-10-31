@@ -89,6 +89,7 @@ import { IPADAPTER_RELEASE } from '../shared/ipadapter-release';
 import { MODEL_CATALOG } from '../shared/model-catalog';
 import { draftSchema, parseSettingsPatch } from '../shared/validation';
 import { TelegramBotService } from './telegram-bot';
+import { PhoneRemoteService } from './phone-remote';
 import { SIZE_PRESETS } from '../shared/defaults';
 import type { AppSnapshot, GenerationDraft, HardwareInfo, LatentAPI } from '../shared/types';
 import { SnapshotSender, type LightSnapshot } from './snapshot-sender';
@@ -121,6 +122,7 @@ let models: ModelService;
 let backend: ManagedBackend;
 let jobs: JobService;
 let telegram: TelegramBotService;
+let phone: PhoneRemoteService;
 let assistant: PromptAssistant;
 let sources: SourceImageService;
 let segmentation: SegmentationService;
@@ -242,6 +244,7 @@ function lightSnapshot(): LightSnapshot {
     models: models.assets,
     previewSelectedRecordId: store.previewSelectionId(),
     telegram: telegram?.status(),
+    phone: phone?.status(),
     settings: store.settings(),
     draft,
     paths,
@@ -778,6 +781,24 @@ async function initialize() {
     changed: broadcast,
     log: text => void desktopLog(text),
   });
+  phone = new PhoneRemoteService({
+    store,
+    draft: () => draft,
+    models: () => models.assets,
+    history: () => missingOutputs.visible(store.records()),
+    jobs: () => jobs.jobs(),
+    queue: value =>
+      models.library.withShared('queueing an image from the phone page', async () => {
+        assertModelLocationsReady();
+        return jobs.enqueue(value);
+      }),
+    cancel: jobId => jobs.cancel(jobId),
+    blockedReason: () =>
+      ipcBlockedReason('queueGeneration', { closing, appInstallClosing, storageChanging, storageRestartPending }),
+    readOutput: async record => fs.readFile(await outputPath(record.id)),
+    changed: broadcast,
+    log: text => void desktopLog(text),
+  });
   runtimeCoordinator = new RuntimeUpdateCoordinator(models.library, backend, jobs, () => runtimeUpdates.status());
   runtimeUpdates = new RuntimeUpdateService(paths, store, broadcast, runtimeCoordinator.hooks);
   modelLocations = new ModelLocationService(
@@ -975,6 +996,9 @@ async function initialize() {
     },
     saveTelegramSettings: async value => telegram.saveSettings(value),
     setTelegramToken: async value => telegram.setToken(value),
+    savePhoneSettings: async value => phone.saveSettings(value),
+    newPhoneCode: async () => phone.newCode(),
+    forgetPhones: async () => phone.forgetPhones(),
     setupBackend: async () =>
       models.library.withShared('setting up the image engine', async () => {
         assertModelLocationsReady();
@@ -1280,6 +1304,7 @@ async function initialize() {
   if (closing || closed) return;
   jobs.start();
   telegram.start();
+  phone.start();
   runtimeCoordinator.finishStartup();
   void civitai.autoMetadata();
   runtimeUpdateTimer = setInterval(() => {
@@ -1427,6 +1452,7 @@ else {
         await appUpdates?.dispose();
         await runtimeUpdates?.dispose();
         await telegram?.dispose();
+        await phone?.dispose();
         await jobs?.dispose();
         const stoppedServices = await Promise.allSettled([
           backend?.dispose(),
