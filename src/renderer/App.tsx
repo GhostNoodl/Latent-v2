@@ -1,3 +1,4 @@
+import { LivePaint } from './LivePaint';
 import { carriesImage, droppedImage, type DroppedImage } from './image-drag';
 import { SetupActivityPanel } from './SetupActivityPanel';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -41,6 +42,7 @@ import {
   ArrowUp,
   ArrowUpRight,
   Boxes,
+  Brush,
   Compass,
   CircleHelp,
   Dices,
@@ -724,6 +726,7 @@ export default function App() {
   );
   const stageRef = useRef<HTMLDivElement>(null);
   const [sweepView, setSweepView] = useState<GenerationDraft['sweep']>();
+  const [liveOpen, setLiveOpen] = useState(false);
   // Outline the next image's shape on the stage while a size is hovered, and briefly after it changes.
   const [hoveredSize, setHoveredSize] = useState<{ width: number; height: number }>();
   const [sizeFlash, setSizeFlash] = useState(false);
@@ -1083,6 +1086,8 @@ export default function App() {
       'Queued.',
     );
   };
+  // Live paint brings its own source image, so image-input and Enhance problems don't block it.
+  const liveBlocked = draft.enhance || draft.upscale || draft.imageInput ? undefined : cannotGenerate;
   const queueSweep = (drafts: GenerationDraft[]) => {
     if (!drafts.length) return;
     void run(
@@ -1889,6 +1894,16 @@ export default function App() {
                         </button>
                       )}
                       <button
+                        type="button"
+                        className="soft-button live-open"
+                        disabled={Boolean(liveBlocked)}
+                        title={liveBlocked || 'Sketch and watch the engine redraw it as you paint'}
+                        onClick={() => void flushDraft().then(() => setLiveOpen(true))}
+                      >
+                        <Brush size={16} />
+                        Live
+                      </button>
+                      <button
                         className="primary generate"
                         type="submit"
                         title="Ctrl + Enter"
@@ -2361,6 +2376,17 @@ export default function App() {
           onClose={() => {
             setCompareRecord(undefined);
             setCompareAgainst(undefined);
+          }}
+        />
+      )}
+      {liveOpen && (
+        <LivePaint
+          snapshot={snapshot}
+          draft={draft}
+          startImage={selected}
+          onClose={message => {
+            setLiveOpen(false);
+            if (message) setNotice({ text: message });
           }}
         />
       )}

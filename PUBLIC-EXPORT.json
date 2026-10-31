@@ -278,8 +278,8 @@
     },
     {
       "path": "src/main/source-images.ts",
-      "bytes": 31257,
-      "sha256": "07fd93aca0aece4074c676abfef1d14bb9263cbc2500b858c00a9b7b03c490bc"
+      "bytes": 33140,
+      "sha256": "d3acff2a2206971650481297c7b9017c82984cd1929c9150e22bd7e121c3df5d"
     },
     {
       "path": "src/main/storage-catalog.ts",
@@ -363,8 +363,8 @@
     },
     {
       "path": "src/preload/preload.ts",
-      "bytes": 9445,
-      "sha256": "1eed97ff83bb5269ee4e1009dbbe9fc13551f92b058f53c6fe23a6cd9b8c0b94"
+      "bytes": 9575,
+      "sha256": "fb475637aa8b4d3f32b0fa4b150823a0ccddf0e09d8545184eba6f1bbc05d087"
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
@@ -373,8 +373,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 127753,
-      "sha256": "b5ac4e1c33659df58e90748eff98921f9a5dd8997a6ddc60ec2cd420fcc0e487"
+      "bytes": 128831,
+      "sha256": "e81c972b2bb995019b8765af8e4aa480d81e1e91db28fd281d29bc8bd9b92e54"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 70253,
-      "sha256": "38655a742fd303ee7f42e014b41f26a943a57c853640a159771cfd5effa82b6f"
+      "bytes": 72876,
+      "sha256": "d5911b61ad5b12bd2b9a99bbb3259c7a8f89977e930d326268f76c01b80a00bc"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -933,8 +933,8 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 21033,
-      "sha256": "b8aa5eb4d47e45d977810ac2577668f7199b31a895f0f3d94748b832989d35f5"
+      "bytes": 21154,
+      "sha256": "66e93acba06b1933006d88cf3e24ba68e1f5656fef0527be390fb715970e0eb7"
     },
     {
       "path": "src/shared/validation.ts",
@@ -1034,12 +1034,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "31d8d231edc84cc86f82a6afda9cce8538a91486cdcd704d10b23c79526b6d3b"
+      "sha256": "9ae6f2234ce447f4a92b593f7c5a7ce17ba51832b55ab98506ec3650e513f09e"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "cb6d1ccf3f98defc84d371d61e906cf543df42b9f73d3815e2b6f661a8654d0d"
+      "sha256": "926e31e4168f7e8ad436da1e526f1ca694267eebfd5a3bdfa4b665acb3132915"
     },
     {
       "path": "tsconfig.json",
@@ -1788,8 +1788,8 @@
     },
     {
       "path": "src/main/ipc/assistant-sources.ts",
-      "bytes": 3019,
-      "sha256": "0b6623ade69a18e87e5242f471b6c34acb71d68957dd42c270c34fd0c288037a"
+      "bytes": 3264,
+      "sha256": "1e062d9bee33924cc78a681a8102c8071f42b791866b15309f69ba5f2df1b3b2"
     },
     {
       "path": "src/main/ipc/gate.ts",
@@ -1922,6 +1922,11 @@
       "sha256": "2b4ac33cfde7d96aec7a056fb8126204cd07c7e72acfcb16884cf2430ae674fb"
     },
     {
+      "path": "tests/live-paint.test.ts",
+      "bytes": 4056,
+      "sha256": "3b61232dbc977a080f07dc845d3c1717d41fcf42297eecd6915f6c1c0a0630a2"
+    },
+    {
       "path": "tests/missing-parts.test.ts",
       "bytes": 1952,
       "sha256": "9fc1eec0975f70b944bd8ccd3ddd11674c1d1043600c57d72a25eb217138cee1"
@@ -1960,6 +1965,11 @@
       "path": "src/renderer/lineage.ts",
       "bytes": 1964,
       "sha256": "520735847c5367b6294808464242561719d7e26681d09ba9cd87e85a42a1e516"
+    },
+    {
+      "path": "src/renderer/LivePaint.tsx",
+      "bytes": 15754,
+      "sha256": "6b4fcf18fb2e38612cee024ea3b20e6abd0bfeb2ffc1ccdb7806efc04cc2615f"
     },
     {
       "path": "src/renderer/MissingParts.tsx",

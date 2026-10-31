@@ -465,6 +465,8 @@ export interface LatentAPI {
   importSourceImage(): Promise<SourceImageAsset | null>;
   useOutputAsSource(id: string): Promise<SourceImageAsset>;
   importDroppedImage(bytes: Uint8Array, name: string): Promise<SourceImageAsset>;
+  importLiveSketch(bytes: Uint8Array): Promise<SourceImageAsset>;
+  discardLiveSketches(ids: string[]): Promise<number>;
   saveSourceMask(sourceId: string, pngBytes: Uint8Array, options?: SourceMaskSaveOptions): Promise<SourceMaskAsset>;
   setupAssistant(repair?: boolean): Promise<void>;
   startAssistant(): Promise<void>;

@@ -370,6 +370,8 @@ export const decodeSourceImage: SourceImageDecoder = async bytes => {
 export class SourceImageService {
   private readonly directory: string;
   private writes: Promise<unknown> = Promise.resolve();
+  /** Sketches sent by Live paint during this run; only these can be discarded again. */
+  private readonly liveSketches = new Set<string>();
   constructor(
     private readonly paths: AppPaths,
     private readonly store: StudioStore,
@@ -454,6 +456,46 @@ export class SourceImageService {
               .slice(0, 200)
           : '';
       return this.importOriginal(Buffer.from(bytes), safeName || 'Dropped image');
+    });
+  }
+
+  /** A Live paint sketch. Kept like any source until Live paint discards the ones nobody kept. */
+  async importLiveSketch(bytes: Uint8Array): Promise<SourceImageAsset> {
+    const source = await this.importBytes(bytes, 'Live paint');
+    this.liveSketches.add(source.id);
+    return source;
+  }
+
+  /** Removes Live paint sketches from this run that have no masks. Other sources are never touched. */
+  discardLiveSketches(ids: string[]): Promise<number> {
+    return this.exclusive(async () => {
+      if (!Array.isArray(ids)) throw new Error('Invalid sketch list.');
+      const inventory = this.list();
+      const removable = new Set(
+        ids.filter(
+          id =>
+            typeof id === 'string' &&
+            SOURCE_ID.test(id) &&
+            this.liveSketches.has(id) &&
+            !inventory.masks.some(mask => mask.sourceId === id),
+        ),
+      );
+      if (!removable.size) return 0;
+      const next = { ...inventory, sources: inventory.sources.filter(source => !removable.has(source.id)) };
+      this.store.setState(INDEX_KEY, inventorySchema.parse(next));
+      await this.assertManagedDirectory(false);
+      for (const id of removable) {
+        this.liveSketches.delete(id);
+        const folder = path.join(this.directory, id);
+        if (!inside(this.directory, folder)) continue;
+        // Only the files a source can hold, never a recursive delete.
+        for (const name of ['original.png', 'original.jpg', 'original.webp', 'image.png'])
+          await fs.unlink(path.join(folder, name)).catch(error => {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+          });
+        await fs.rmdir(folder).catch(() => {});
+      }
+      return removable.size;
     });
   }
 
