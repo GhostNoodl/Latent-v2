@@ -332,6 +332,7 @@ export interface AppSnapshot {
   setupActivity?: import('./setup-activity').SetupActivity[];
   appUpdates?: AppUpdateStatus;
   telegram?: import('./telegram-types').TelegramStatus;
+  phone?: import('./phone-types').PhoneStatus;
   dismissedActivity?: { queue: string[]; notifications: string[] };
   notifications?: Array<{
     id: string;
@@ -456,6 +457,9 @@ export interface LatentAPI {
   setCivitaiKey(value: string | null): Promise<void>;
   saveTelegramSettings(settings: Partial<import('./telegram-types').TelegramSettings>): Promise<void>;
   setTelegramToken(value: string | null): Promise<void>;
+  savePhoneSettings(settings: Partial<import('./phone-types').PhoneSettings>): Promise<void>;
+  newPhoneCode(): Promise<void>;
+  forgetPhones(): Promise<void>;
   openCivitaiModel(modelId: number, versionId?: number): Promise<void>;
   setupSegmentation(repair?: boolean): Promise<void>;
   startSegmentation(): Promise<void>;

@@ -113,8 +113,8 @@
     },
     {
       "path": "src/main/main.ts",
-      "bytes": 55844,
-      "sha256": "efa63b066bc28ba83a934156f4d6e94300400dd19caf6fb23df0adeec4f26a2c"
+      "bytes": 56876,
+      "sha256": "7a2de3641b9fc9c0d7c245de03445a6a9946bcf9d69294d536f411dbe68a06eb"
     },
     {
       "path": "src/main/managed-backend.ts",
@@ -363,8 +363,8 @@
     },
     {
       "path": "src/preload/preload.ts",
-      "bytes": 9575,
-      "sha256": "fb475637aa8b4d3f32b0fa4b150823a0ccddf0e09d8545184eba6f1bbc05d087"
+      "bytes": 9739,
+      "sha256": "b661cf106679ffd7f1a2c9ac60c2efb5ec8e9e38daa7a6da17970c0f04d20e10"
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 72876,
-      "sha256": "d5911b61ad5b12bd2b9a99bbb3259c7a8f89977e930d326268f76c01b80a00bc"
+      "bytes": 73725,
+      "sha256": "599c1ef1997f98044117e1f593e9c38a792730b7bbbc8f2c5b0d692b2ab54230"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -603,8 +603,8 @@
     },
     {
       "path": "src/renderer/Settings.tsx",
-      "bytes": 26035,
-      "sha256": "3b8138b3aaf73368390badd61cab4074ec99bff02bebc88e2a2ef9846dc984b7"
+      "bytes": 26210,
+      "sha256": "3227a883a4efc09dc0810091b0ae710d9c9ef6f03584000fbaaf94744c5d330a"
     },
     {
       "path": "src/renderer/SharedBackendActivity.tsx",
@@ -933,8 +933,8 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 21154,
-      "sha256": "66e93acba06b1933006d88cf3e24ba68e1f5656fef0527be390fb715970e0eb7"
+      "bytes": 21361,
+      "sha256": "dc2c82607d295620be96151cd9769ada015e99b069b0a28d42e80cf7d2247a0e"
     },
     {
       "path": "src/shared/validation.ts",
@@ -1034,12 +1034,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "9ae6f2234ce447f4a92b593f7c5a7ce17ba51832b55ab98506ec3650e513f09e"
+      "sha256": "30ef22132e1051937e57d807262bf027a9ab005e6d518beef8119e99d95104b6"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "926e31e4168f7e8ad436da1e526f1ca694267eebfd5a3bdfa4b665acb3132915"
+      "sha256": "4861a4ad3fc62876906ebdb3f434414b3aae6fb348469d7af50009d5caa04295"
     },
     {
       "path": "tsconfig.json",
@@ -1777,6 +1777,16 @@
       "sha256": "779d5e833f33147aad9d7a81256503fe288ce87277c09c174ecc7af5559b8e37"
     },
     {
+      "path": "src/main/phone-page.ts",
+      "bytes": 10620,
+      "sha256": "c9ffdb03d880bdc3251c42b0aaf67deb9dec3441f088b793f6e30047dfa04150"
+    },
+    {
+      "path": "src/main/phone-remote.ts",
+      "bytes": 14739,
+      "sha256": "287d08e097d2baf630426603cd7a939999c13833ec03a1dfe1cbf0c9943a6b9c"
+    },
+    {
       "path": "src/shared/graph-builder.ts",
       "bytes": 846,
       "sha256": "cbf9421615122a8484d81f4401e26cca8e549797738d07e91e548e97b91dac9b"
@@ -1932,6 +1942,11 @@
       "sha256": "9fc1eec0975f70b944bd8ccd3ddd11674c1d1043600c57d72a25eb217138cee1"
     },
     {
+      "path": "tests/phone-remote.test.ts",
+      "bytes": 5096,
+      "sha256": "edc0f6fb26d5658fd9bdc97a3de7212b981c95db176cfdb62295e17f049df902"
+    },
+    {
       "path": "tests/regional-paint.test.ts",
       "bytes": 2970,
       "sha256": "a6b68dd7b3d621675283d65e705a681552dc9043a3cae61d3c07a9909b0edbb0"
@@ -1977,6 +1992,11 @@
       "sha256": "270b406ee52a37ae5579439770e8b2ada3119ac3881666495b2b0c52b5ac5c92"
     },
     {
+      "path": "src/renderer/PhoneRemote.tsx",
+      "bytes": 3702,
+      "sha256": "9b2e415b3031cc696a34edec70594b4729863d2297c9459b75b30d7a6fbf484f"
+    },
+    {
       "path": "src/renderer/PromptPieces.tsx",
       "bytes": 5890,
       "sha256": "95fc85f2612a31e45cf9c87cbf1145b7bf08017f4fe87a1b985084775f49af1c"
@@ -2000,6 +2020,11 @@
       "path": "src/shared/create-mode.ts",
       "bytes": 848,
       "sha256": "5e44f07fc96d8acfb1589ac508cb8ade594a92b7e25560f9ede87d75553d1572"
+    },
+    {
+      "path": "src/shared/phone-types.ts",
+      "bytes": 1385,
+      "sha256": "07e0ceadae01a381723782a9cccf4f053a4254e03fb6573a945b2873ec363b7a"
     },
     {
       "path": "src/shared/regional-paint.ts",

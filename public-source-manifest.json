@@ -1436,6 +1436,14 @@
       "to": "src/main/comfy-history.ts"
     },
     {
+      "from": "src/main/phone-page.ts",
+      "to": "src/main/phone-page.ts"
+    },
+    {
+      "from": "src/main/phone-remote.ts",
+      "to": "src/main/phone-remote.ts"
+    },
+    {
       "from": "src/shared/graph-builder.ts",
       "to": "src/shared/graph-builder.ts"
     },
@@ -1560,6 +1568,10 @@
       "to": "tests/missing-parts.test.ts"
     },
     {
+      "from": "tests/phone-remote.test.ts",
+      "to": "tests/phone-remote.test.ts"
+    },
+    {
       "from": "tests/regional-paint.test.ts",
       "to": "tests/regional-paint.test.ts"
     },
@@ -1596,6 +1608,10 @@
       "to": "src/renderer/MissingParts.tsx"
     },
     {
+      "from": "src/renderer/PhoneRemote.tsx",
+      "to": "src/renderer/PhoneRemote.tsx"
+    },
+    {
       "from": "src/renderer/PromptPieces.tsx",
       "to": "src/renderer/PromptPieces.tsx"
     },
@@ -1614,6 +1630,10 @@
     {
       "from": "src/shared/create-mode.ts",
       "to": "src/shared/create-mode.ts"
+    },
+    {
+      "from": "src/shared/phone-types.ts",
+      "to": "src/shared/phone-types.ts"
     },
     {
       "from": "src/shared/regional-paint.ts",
