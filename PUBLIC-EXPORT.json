@@ -373,8 +373,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 127694,
-      "sha256": "c9233ad86baa65aff2cf34e631f14278cd81698af668c818d6c6f1a9fb627245"
+      "bytes": 127753,
+      "sha256": "b5ac4e1c33659df58e90748eff98921f9a5dd8997a6ddc60ec2cd420fcc0e487"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -588,13 +588,13 @@
     },
     {
       "path": "src/renderer/regional-prompts.css",
-      "bytes": 3721,
-      "sha256": "13e7af11f54423f4b3568efa09f22e1664a25cdad70bc03aeda967e49935bb1e"
+      "bytes": 4242,
+      "sha256": "aa624b9e1410348eb5ff4b2ef895f391211f2ae6ef048bd03bba51743485c288"
     },
     {
       "path": "src/renderer/RegionalPrompts.tsx",
-      "bytes": 25253,
-      "sha256": "b15dabe68e93a9511bb80c2f0611a7ea017dc8a2d7fa17f3663529068659157d"
+      "bytes": 32211,
+      "sha256": "cd12b8773c96ddbee317c9c5eb4153e40dc8fc9be47103717d184c6fca98f122"
     },
     {
       "path": "src/renderer/RuntimeUpdates.tsx",
@@ -883,13 +883,13 @@
     },
     {
       "path": "src/shared/regional-prompt-types.ts",
-      "bytes": 5881,
-      "sha256": "5acc45ecb3d79d57402ba24aed4762b9e6e95202c8b1383a87c885ea0484446c"
+      "bytes": 6324,
+      "sha256": "0b83ea27f5caa72ab75b4a80af3fa17c9d529eb27d6443a1db8757044b571ae3"
     },
     {
       "path": "src/shared/regional-prompt-workflow.ts",
-      "bytes": 10669,
-      "sha256": "903fe192027e1f7b0395b092488d98e2644f88c3560f2af855cf94c5d0b17c1e"
+      "bytes": 10960,
+      "sha256": "918be12da79e15aaa2adccf013048825038d792eca86b631cd4cafe376468500"
     },
     {
       "path": "src/shared/runtime-identity.ts",
@@ -1034,12 +1034,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "007603d787d5eb890e1dd9c0c8bb38771289b5234d7c38657ccc274bd6ea28f5"
+      "sha256": "31d8d231edc84cc86f82a6afda9cce8538a91486cdcd704d10b23c79526b6d3b"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "dfb31cc18168bf5ee771b327738dceb8810475d7a89662633839bf3c3aa7a102"
+      "sha256": "cb6d1ccf3f98defc84d371d61e906cf543df42b9f73d3815e2b6f661a8654d0d"
     },
     {
       "path": "tsconfig.json",
@@ -1927,6 +1927,11 @@
       "sha256": "9fc1eec0975f70b944bd8ccd3ddd11674c1d1043600c57d72a25eb217138cee1"
     },
     {
+      "path": "tests/regional-paint.test.ts",
+      "bytes": 2970,
+      "sha256": "a6b68dd7b3d621675283d65e705a681552dc9043a3cae61d3c07a9909b0edbb0"
+    },
+    {
       "path": "src/renderer/draft-field-label.ts",
       "bytes": 932,
       "sha256": "17904d4c7755db8056a21f615bb6f53fe9d7d2456f54a3f1aa5e740c884dfe86"
@@ -1985,6 +1990,11 @@
       "path": "src/shared/create-mode.ts",
       "bytes": 848,
       "sha256": "5e44f07fc96d8acfb1589ac508cb8ade594a92b7e25560f9ede87d75553d1572"
+    },
+    {
+      "path": "src/shared/regional-paint.ts",
+      "bytes": 5132,
+      "sha256": "a34ce2da5e4a9ee691c8d4275db78224b07fdb2b911385b0edaf16b4d9ffa55c"
     }
   ],
   "privateHistoryIncluded": false

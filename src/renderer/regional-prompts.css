@@ -194,3 +194,32 @@
     max-width: none;
   }
 }
+.regional-canvas.painting {
+  cursor: crosshair;
+}
+.regional-backdrop {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.regional-paint {
+  pointer-events: none;
+  filter: blur(8px);
+}
+.regional-shape.painted > rect:first-child {
+  fill-opacity: 0;
+  stroke-dasharray: 6 4;
+  cursor: pointer;
+}
+.regional-brush-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.regional-brush-size input {
+  width: 110px;
+}
+.regional-paint-note .text-button {
+  margin-left: 4px;
+}
