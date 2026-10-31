@@ -2706,3 +2706,220 @@ body:has(.studio) {
   color: var(--muted);
   font-size: 12px;
 }
+
+/* Library: made-from trail */
+.studio .library-trail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .library-trail ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.studio .library-trail li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.studio .library-trail small {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.studio .library-trail button {
+  width: 34px;
+  height: 34px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.studio .library-trail button[aria-current='true'] {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+.studio .library-trail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Library: filters and review */
+.studio .library-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.studio .library-filters select,
+.studio .library-filters button {
+  width: auto;
+  min-height: 30px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.studio .library-filters select {
+  max-width: 220px;
+}
+.studio .library-filters .active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.studio .library-filters .text-button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.studio .library-filters .library-review-button {
+  margin-left: auto;
+}
+.studio .review-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 10px;
+  padding: 14px 18px 16px;
+  background: color-mix(in srgb, var(--bg) 96%, black);
+  outline: none;
+}
+.studio .review-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 13px;
+}
+.studio .review-top .review-keys {
+  margin-left: auto;
+  font-size: 12px;
+}
+.studio .review-top kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font: inherit;
+  font-size: 11px;
+}
+.studio .review-counts {
+  display: inline-flex;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.studio .review-counts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.studio .review-counts .keep {
+  color: var(--ok);
+}
+.studio .review-counts .bin {
+  color: var(--danger);
+}
+.studio .review-stage {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+.studio .review-stage figure {
+  position: relative;
+  margin: 0;
+  height: 100%;
+  min-height: 0;
+}
+.studio .review-stage img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+  transition: opacity 0.15s;
+}
+.studio .review-stage.bin img {
+  opacity: 0.35;
+}
+.studio .review-badge {
+  position: absolute;
+  z-index: 1;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--panel);
+}
+.studio .review-badge.keep,
+.studio .review-badge.kept {
+  color: var(--ok);
+}
+.studio .review-badge.bin {
+  color: var(--danger);
+}
+.studio .review-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.studio .review-actions button {
+  min-width: 110px;
+  justify-content: center;
+}
+.studio .review-actions button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.studio .review-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.studio .review-strip button {
+  flex: none;
+  width: 54px;
+  height: 72px;
+  padding: 0;
+  min-height: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  opacity: 0.75;
+}
+.studio .review-strip button[aria-current='true'] {
+  border-color: var(--accent);
+  opacity: 1;
+}
+.studio .review-strip button.keep {
+  border-color: var(--ok);
+}
+.studio .review-strip button.bin {
+  opacity: 0.3;
+}
+.studio .review-strip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

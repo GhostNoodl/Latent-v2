@@ -3,6 +3,7 @@ import type { GenerationRecord } from '../shared/types';
 import { groupImageVersions } from '../shared/image-versions';
 import { ImagePreview } from './ImagePreview';
 import { shortDate } from './ui';
+import { lineage, madeFromThis } from './lineage';
 
 /** The side panel on Library: the picked image, its versions and the settings behind it. */
 export function LibraryDetail({
@@ -26,6 +27,8 @@ export function LibraryDetail({
     group.versions.some(item => item.id === record.id),
   )?.versions;
   const prompt = record.resolvedPrompt || record.draft.prompt;
+  const trail = lineage(record, records);
+  const children = madeFromThis(record, records);
   const rows: Array<[string, string]> = [
     ['Model', record.checkpoint?.name ?? (record.qwenEdit ? 'Qwen image edit' : 'Resize')],
     ...(record.loras.length
@@ -57,6 +60,42 @@ export function LibraryDetail({
               <img src={version.imageUrl} alt="" />
             </button>
           ))}
+        </div>
+      )}
+      {(trail.length > 1 || children.length > 0) && (
+        <div className="library-trail" role="group" aria-label="Made from">
+          <span>{trail.length > 1 ? 'Made from' : 'Made from this'}</span>
+          <ol>
+            {trail.map((step, index) => (
+              <li key={step.record.id}>
+                <button
+                  type="button"
+                  aria-current={step.record.id === record.id ? 'true' : undefined}
+                  title={step.record.resolvedPrompt || step.record.draft.prompt || step.record.filename}
+                  onClick={() => onSelect(step.record)}
+                >
+                  <img src={step.record.imageUrl} alt="" />
+                </button>
+                {index < trail.length - 1 && <small>{step.how} →</small>}
+              </li>
+            ))}
+            {children.length > 0 && (
+              <li className="library-trail-children">
+                <small>→</small>
+                {children.slice(0, 4).map(child => (
+                  <button
+                    type="button"
+                    key={child.id}
+                    title={child.resolvedPrompt || child.draft.prompt || child.filename}
+                    onClick={() => onSelect(child)}
+                  >
+                    <img src={child.imageUrl} alt="" />
+                  </button>
+                ))}
+                {children.length > 4 && <small>+{children.length - 4}</small>}
+              </li>
+            )}
+          </ol>
         </div>
       )}
       {prompt && <p className="library-prompt">{prompt}</p>}

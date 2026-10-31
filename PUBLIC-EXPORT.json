@@ -408,13 +408,13 @@
     },
     {
       "path": "src/renderer/compare-image.css",
-      "bytes": 4197,
-      "sha256": "b692056d088b85b8a640e906827f0d9ad0fcf6103d81aaba866df6bd26bcb6af"
+      "bytes": 4808,
+      "sha256": "9f3ed79defc7af4e79dc84e2c41f8cba710e78ec67d46bab142f7f67dccabbd8"
     },
     {
       "path": "src/renderer/CompareImage.tsx",
-      "bytes": 21073,
-      "sha256": "a96589b1c060a0c729c6baac8d58547da05ea76f2950230b6964018e8619e6e1"
+      "bytes": 22584,
+      "sha256": "29e75adbbdb60f3f41e90e1f93ff284d9b92bc6422607e1d87c6fb115953b7c0"
     },
     {
       "path": "src/renderer/ControlNetControls.tsx",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 64196,
-      "sha256": "702739bf1ee4e4dbb3edc048551f72881c618c3e58e3fa392c98a046bf99967d"
+      "bytes": 68417,
+      "sha256": "e77cd56b1aae7764c9a531cf894f9925e1bab87b6618fda9b095c9edb36f0ba3"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -468,8 +468,8 @@
     },
     {
       "path": "src/renderer/History.tsx",
-      "bytes": 33058,
-      "sha256": "948e1c11b055cb7c15d6fca288eebb178f2efeb7b7893e249796aa4466d4bb13"
+      "bytes": 38063,
+      "sha256": "3b2e16107c823a76aacfd546fe9e1f4839c0cac4d225c6291826dd3e310810b7"
     },
     {
       "path": "src/renderer/image-preview-recovery.ts",
@@ -493,8 +493,8 @@
     },
     {
       "path": "src/renderer/LibraryDetail.tsx",
-      "bytes": 3223,
-      "sha256": "6fc4748e8bd09b834af75438ec2249591219748c9f2ee22ea0ea590cdf971f7e"
+      "bytes": 4878,
+      "sha256": "a4ce7504a0dfc956fed4ec1015824f3a534bb6ac73d6de2fcefc38138ac96946"
     },
     {
       "path": "src/renderer/LocalModelMetadata.tsx",
@@ -1912,6 +1912,11 @@
       "sha256": "47e46ac4c1746247d431b30480ecb2d370ffe75077e97bfbcc87e96c9ead7c06"
     },
     {
+      "path": "tests/library-extras.test.ts",
+      "bytes": 3266,
+      "sha256": "2b4ac33cfde7d96aec7a056fb8126204cd07c7e72acfcb16884cf2430ae674fb"
+    },
+    {
       "path": "src/renderer/draft-field-label.ts",
       "bytes": 932,
       "sha256": "17904d4c7755db8056a21f615bb6f53fe9d7d2456f54a3f1aa5e740c884dfe86"
@@ -1927,9 +1932,24 @@
       "sha256": "592316c30358ab602ea8f1533c99eb0f170f23871a06931275255d0557b98e3b"
     },
     {
+      "path": "src/renderer/library-filters.ts",
+      "bytes": 1912,
+      "sha256": "5ce84e72c2605937924578f13f5f29538ceeeb5ed675bd73eb0431e5901ec454"
+    },
+    {
+      "path": "src/renderer/lineage.ts",
+      "bytes": 1964,
+      "sha256": "520735847c5367b6294808464242561719d7e26681d09ba9cd87e85a42a1e516"
+    },
+    {
       "path": "src/renderer/PromptPieces.tsx",
       "bytes": 5890,
       "sha256": "95fc85f2612a31e45cf9c87cbf1145b7bf08017f4fe87a1b985084775f49af1c"
+    },
+    {
+      "path": "src/renderer/ReviewMode.tsx",
+      "bytes": 6699,
+      "sha256": "8f01040a0e177adf0e7d706b229c19a8a40815c626bea4d91b93a60296d7fc8f"
     },
     {
       "path": "src/renderer/SavedPrompts.tsx",
