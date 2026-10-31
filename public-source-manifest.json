@@ -1540,8 +1540,32 @@
       "to": "tests/backend-log-pruning.test.ts"
     },
     {
+      "from": "tests/create-extras.test.ts",
+      "to": "tests/create-extras.test.ts"
+    },
+    {
       "from": "src/renderer/draft-field-label.ts",
       "to": "src/renderer/draft-field-label.ts"
+    },
+    {
+      "from": "src/renderer/generation-eta.ts",
+      "to": "src/renderer/generation-eta.ts"
+    },
+    {
+      "from": "src/renderer/GridSweep.tsx",
+      "to": "src/renderer/GridSweep.tsx"
+    },
+    {
+      "from": "src/renderer/PromptPieces.tsx",
+      "to": "src/renderer/PromptPieces.tsx"
+    },
+    {
+      "from": "src/renderer/SavedPrompts.tsx",
+      "to": "src/renderer/SavedPrompts.tsx"
+    },
+    {
+      "from": "src/renderer/SizePeek.tsx",
+      "to": "src/renderer/SizePeek.tsx"
     },
     {
       "from": "src/shared/create-mode.ts",

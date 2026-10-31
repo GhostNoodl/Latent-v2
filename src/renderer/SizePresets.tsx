@@ -9,12 +9,15 @@ export function SizePresets({
   width,
   height,
   onChoose,
+  onPreview,
   onSave,
 }: {
   sizes?: Size[];
   width: number;
   height: number;
   onChoose(size: Size): void;
+  /** Called with a size while it is hovered or focused, and undefined when it no longer is. */
+  onPreview?(size: Size | undefined): void;
   onSave(sizes: NonNullable<AppSettings['sizePresets']>): Promise<void>;
 }) {
   const [editing, setEditing] = useState<Size[]>(),
@@ -62,6 +65,10 @@ export function SizePresets({
             title={`${size.width} × ${size.height}`}
             aria-pressed={width === size.width && height === size.height}
             onClick={() => onChoose(size)}
+            onPointerEnter={() => onPreview?.(size)}
+            onPointerLeave={() => onPreview?.(undefined)}
+            onFocus={() => onPreview?.(size)}
+            onBlur={() => onPreview?.(undefined)}
           >
             <span
               className="shape"

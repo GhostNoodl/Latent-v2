@@ -57,6 +57,17 @@ export const draftSchema = z
       .string()
       .regex(/^[a-f0-9]{32}$/)
       .optional(),
+    sweep: z
+      .object({
+        id: z.string().regex(/^sw-[a-z0-9]{4,24}$/),
+        index: z.number().int().min(0).max(15),
+        columnLabel: z.string().max(80),
+        columns: z.array(z.string().max(40)).min(1).max(8),
+        rowLabel: z.string().max(80).optional(),
+        rows: z.array(z.string().max(40)).max(8),
+      })
+      .strict()
+      .optional(),
     controlNet: controlNetSettingsSchema.optional(),
     dynamicPrompts: dynamicPromptAuthoringSchema.optional(),
     upscale: z
@@ -210,6 +221,18 @@ export const settingsSchema = z
       .strict()
       .default({ group: true, showOriginal: false, showRefined: false, showFaceSteps: false }),
     createMode: z.enum(['simple', 'advanced']).default('simple'),
+    savedPrompts: z
+      .array(
+        z
+          .object({
+            id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+            text: z.string().trim().min(1).max(4000),
+          })
+          .strict(),
+      )
+      .max(100)
+      .optional(),
+    promptPieces: z.boolean().optional(),
   })
   .strict();
 /** Zod applies field defaults inside .partial(), which would silently reset settings the patch never named. */

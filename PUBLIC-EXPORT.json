@@ -373,8 +373,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 120735,
-      "sha256": "62529b45a95656bbcfd361561d34a6c736f8f94755a82bba8c65fef6e8a54bad"
+      "bytes": 125682,
+      "sha256": "3c3fdf5d02684536df7f42d7d065be987f5cf7d3ca202bd2847e307509e1d084"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 58703,
-      "sha256": "a04aab584c4c2e4c764f109d0b1ea96ed85ec7c4b66c67155a66135184a24ebf"
+      "bytes": 64196,
+      "sha256": "702739bf1ee4e4dbb3edc048551f72881c618c3e58e3fa392c98a046bf99967d"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -933,13 +933,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 20422,
-      "sha256": "eb34ce49053057eff1163afbaf1dcad515def6dd271c1a9f2c008b5855753191"
+      "bytes": 20860,
+      "sha256": "cc424de0f5b2913127f60a8255457e1214dffe08d865e9e0693d07ac9c89181d"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 10959,
-      "sha256": "0bea47b6861830f9c7a145328bc4763065f04aa63f54ad7cf23b9ea075ecdc0f"
+      "bytes": 11625,
+      "sha256": "ff50b2cfcede3ca85c6a2af798f8f543af659be83888c5af95e340f560d99424"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1034,12 +1034,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "b48c286245765d709883b89ab5e0b59dc48bb499b6ed700819e5838be6618ca6"
+      "sha256": "1004fc537e43ea03dd7e5fcdba9495147919e5d3b3a47f3565fe1b6650244801"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "e359037fbbd54c49b438d549a7a0ec5dcfb25f5cc984fa2be883b0752ba0dfde"
+      "sha256": "7083dce45e35b80c0341fbb5dd8205790827cd36529a213492af5c0f93358da1"
     },
     {
       "path": "tsconfig.json",
@@ -1343,8 +1343,8 @@
     },
     {
       "path": "src/renderer/SizePresets.tsx",
-      "bytes": 4975,
-      "sha256": "b6b243bf5abda7f12319909fae98abf276a74567aaac66b5146a3c756926b355"
+      "bytes": 5335,
+      "sha256": "f004981cd8d874d0ce99efe69bac63acb9c57bbb64414224866e04c532e23303"
     },
     {
       "path": "src/renderer/PreviewMenu.tsx",
@@ -1907,9 +1907,39 @@
       "sha256": "150709b638a93c7ba3cc9e65de7c1f803730f579624ad354ee0678eb851a1fa5"
     },
     {
+      "path": "tests/create-extras.test.ts",
+      "bytes": 4944,
+      "sha256": "47e46ac4c1746247d431b30480ecb2d370ffe75077e97bfbcc87e96c9ead7c06"
+    },
+    {
       "path": "src/renderer/draft-field-label.ts",
       "bytes": 932,
       "sha256": "17904d4c7755db8056a21f615bb6f53fe9d7d2456f54a3f1aa5e740c884dfe86"
+    },
+    {
+      "path": "src/renderer/generation-eta.ts",
+      "bytes": 4335,
+      "sha256": "4852421eb05291d9fb05b506a01668e78807761a6c65c15e1ff3b1336e8ecaf1"
+    },
+    {
+      "path": "src/renderer/GridSweep.tsx",
+      "bytes": 11319,
+      "sha256": "592316c30358ab602ea8f1533c99eb0f170f23871a06931275255d0557b98e3b"
+    },
+    {
+      "path": "src/renderer/PromptPieces.tsx",
+      "bytes": 5890,
+      "sha256": "95fc85f2612a31e45cf9c87cbf1145b7bf08017f4fe87a1b985084775f49af1c"
+    },
+    {
+      "path": "src/renderer/SavedPrompts.tsx",
+      "bytes": 4374,
+      "sha256": "d783867c2f25f0277bf8d4348da68f4629e8e80937e5d5d3dc9bd5bfcbda6be5"
+    },
+    {
+      "path": "src/renderer/SizePeek.tsx",
+      "bytes": 1803,
+      "sha256": "0462b2d1f031142d69a0b9aa62dea7b2c2940cb329df41757d225f62e59d30cd"
     },
     {
       "path": "src/shared/create-mode.ts",
