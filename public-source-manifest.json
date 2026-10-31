@@ -1556,6 +1556,10 @@
       "to": "tests/missing-parts.test.ts"
     },
     {
+      "from": "tests/regional-paint.test.ts",
+      "to": "tests/regional-paint.test.ts"
+    },
+    {
       "from": "src/renderer/draft-field-label.ts",
       "to": "src/renderer/draft-field-label.ts"
     },
@@ -1602,6 +1606,10 @@
     {
       "from": "src/shared/create-mode.ts",
       "to": "src/shared/create-mode.ts"
+    },
+    {
+      "from": "src/shared/regional-paint.ts",
+      "to": "src/shared/regional-paint.ts"
     }
   ]
 }

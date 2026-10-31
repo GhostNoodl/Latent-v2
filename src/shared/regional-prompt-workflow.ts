@@ -1,5 +1,6 @@
 import { samplingValidationGraph } from './workflow';
 import { nodeAllocator } from './graph-builder';
+import { decodePaint, rasterizePaint } from './regional-paint';
 import type { ComfyWorkflow, GenerationDraft } from './types';
 import { draftSchema } from './validation';
 import {
@@ -51,6 +52,14 @@ export function rasterizeRegionalMaskPixels(
   dimensions: RegionalCanvas,
 ): RegionalMaskGeometry & { pixels: Uint8Array } {
   const geometry = regionalMaskGeometry(region, dimensions);
+  if (region.paint) {
+    const featherPixels = Math.min(region.feather, 128);
+    return {
+      ...geometry,
+      featherPixels,
+      pixels: rasterizePaint(decodePaint(region.paint), dimensions, featherPixels),
+    };
+  }
   const { pixelBounds: box, featherPixels: feather } = geometry;
   const pixels = new Uint8Array(dimensions.width * dimensions.height);
   for (let y = 0; y < box.height; y++)

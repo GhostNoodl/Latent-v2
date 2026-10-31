@@ -1534,6 +1534,7 @@ export default function App() {
                           width={draft.width}
                           height={draft.height}
                           disabledReason={regionalDisabledReason}
+                          backdropUrl={selected?.imageUrl}
                           onChange={settings => changeDraft({ regionalPrompts: settings ? { settings } : undefined })}
                         />
                       )}

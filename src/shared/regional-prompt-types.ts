@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ComfyWorkflow } from './types';
+import { PAINT_PATTERN, PAINT_TEXT_LENGTH, decodePaint, paintBounds } from './regional-paint';
 
 export const REGIONAL_PROMPT_LIMITS = Object.freeze({
   maxRegions: 4,
@@ -28,9 +29,13 @@ export const regionalPromptRegionSchema = z
     negativePrompt: z.string().max(REGIONAL_PROMPT_LIMITS.maxPromptLength),
     strength: z.number().finite().min(0).max(2),
     feather: z.number().int().min(0).max(REGIONAL_PROMPT_LIMITS.maxFeather),
+    /** A painted area (see regional-paint.ts). The box above is then just its bounds. */
+    paint: z.string().length(PAINT_TEXT_LENGTH).regex(PAINT_PATTERN).optional(),
   })
   .strict()
   .superRefine((region, ctx) => {
+    if (region.paint !== undefined && !paintBounds(decodePaint(region.paint)))
+      ctx.addIssue({ code: 'custom', message: 'Paint some of the area, or remove the region.' });
     if (region.x + region.width > 1 + Number.EPSILON * 4 || region.y + region.height > 1 + Number.EPSILON * 4)
       ctx.addIssue({ code: 'custom', message: 'Every region must fit inside the canvas.' });
   });

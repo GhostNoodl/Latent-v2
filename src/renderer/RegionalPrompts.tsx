@@ -1,5 +1,25 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
-import { ArrowDown, ArrowUp, LayoutPanelLeft, Move, Pencil, Plus, Trash2, Undo2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Eraser,
+  LayoutPanelLeft,
+  Move,
+  Paintbrush,
+  Pencil,
+  Plus,
+  Trash2,
+  Undo2,
+} from 'lucide-react';
+import {
+  PAINT_GRID,
+  decodePaint,
+  emptyPaint,
+  encodePaint,
+  paintBounds,
+  paintStroke,
+  type PaintCells,
+} from '../shared/regional-paint';
 import {
   activeRegionalPromptRegions,
   createDefaultRegionalPromptSettings,
@@ -25,19 +45,54 @@ export interface RegionalPromptsProps {
   width: number;
   height: number;
   disabledReason?: string;
+  /** The image on screen, shown faintly under the canvas so areas can be painted over it. */
+  backdropUrl?: string;
   onChange(value: RegionalPromptSettings | undefined): void;
 }
 const COLORS = ['#ac94ec', '#64ceb4', '#e3ad70', '#df8fb3'];
+type Brush = 'paint' | 'erase';
 interface Gesture {
-  kind: 'draw' | 'move' | RegionCorner;
+  kind: 'draw' | 'move' | 'paint' | RegionCorner;
+  /** Paint strokes: the grid so far and the last point, so fast moves leave no gaps. */
+  cells?: PaintCells;
+  last?: RegionPoint;
   id: string;
   start: RegionPoint;
   original: RegionalPromptSettings;
   pointer: number;
 }
+/** A region with new paint; its box follows the painted area. */
+function withPaint(region: RegionalPromptRegion, cells: PaintCells): RegionalPromptRegion {
+  const bounds = paintBounds(cells);
+  return { ...region, ...bounds, paint: encodePaint(cells) };
+}
+const paintImages = new Map<string, string>();
+/** The painted cells as a tinted picture for the canvas. Cached; empty in test DOMs without canvas. */
+function paintImage(paint: string, color: string) {
+  const key = `${color}:${paint}`;
+  const cached = paintImages.get(key);
+  if (cached !== undefined) return cached;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = PAINT_GRID;
+  const context = canvas.getContext?.('2d');
+  let url = '';
+  if (context) {
+    const cells = decodePaint(paint);
+    const image = context.createImageData(PAINT_GRID, PAINT_GRID);
+    const [r, g, b] = [1, 3, 5].map(at => parseInt(color.slice(at, at + 2), 16));
+    for (let index = 0; index < cells.length; index++) if (cells[index]) image.data.set([r, g, b, 120], index * 4);
+    context.putImageData(image, 0, 0);
+    url = canvas.toDataURL();
+  }
+  if (paintImages.size > 64) paintImages.clear();
+  paintImages.set(key, url);
+  return url;
+}
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-export function RegionalPrompts({ value, width, height, disabledReason, onChange }: RegionalPromptsProps) {
+export function RegionalPrompts({ value, width, height, disabledReason, backdropUrl, onChange }: RegionalPromptsProps) {
+  const [brush, setBrush] = useState<Brush | null>(null);
+  const [brushSize, setBrushSize] = useState(0.04);
   const enabled = value?.enabled ?? false;
   const [open, setOpen] = useState(false);
   const [editor, setEditor] = useState<RegionalPromptSettings>(createDefaultRegionalPromptSettings);
@@ -184,6 +239,35 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
     if (kind === 'draw' && editorRef.current.regions.length >= REGIONAL_PROMPT_LIMITS.maxRegions) return;
     const original = structuredClone(editorRef.current);
     const origin = point(event);
+    if (kind === 'paint') {
+      // Paint onto the selected region; with none selected, painting starts a new one.
+      let region = original.regions.find(item => item.id === selectedId);
+      if (!region) {
+        if (brush === 'erase' || original.regions.length >= REGIONAL_PROMPT_LIMITS.maxRegions) return;
+        region = newRegion();
+      }
+      if (brush === 'erase' && !region.paint) return;
+      const cells = paintStroke(
+        // A box becomes a painted area: painting starts it fresh.
+        region.paint ? decodePaint(region.paint) : emptyPaint(),
+        origin,
+        origin,
+        brushSize,
+        { width, height },
+        brush === 'erase',
+      );
+      const painted = withPaint(region, cells);
+      gesture.current = { kind, id: region.id, start: origin, original, pointer: event.pointerId, cells, last: origin };
+      setSelectedId(region.id);
+      svg.current.setPointerCapture(event.pointerId);
+      replace({
+        ...original,
+        regions: original.regions.some(item => item.id === region.id)
+          ? original.regions.map(item => (item.id === region.id ? painted : item))
+          : [...original.regions, painted],
+      });
+      return;
+    }
     const region = kind === 'draw' ? newRegion() : original.regions.find(region => region.id === id)!;
     if (!region) return;
     gesture.current = { kind, id: region.id, start: origin, original, pointer: event.pointerId };
@@ -196,6 +280,16 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
     const action = gesture.current;
     if (!action || action.pointer !== event.pointerId) return;
     const target = point(event);
+    if (action.kind === 'paint') {
+      action.cells = paintStroke(action.cells!, action.last!, target, brushSize, { width, height }, brush === 'erase');
+      action.last = target;
+      const cells = action.cells;
+      replace({
+        ...editorRef.current,
+        regions: editorRef.current.regions.map(region => (region.id === action.id ? withPaint(region, cells) : region)),
+      });
+      return;
+    }
     const original = action.original.regions.find(region => region.id === action.id);
     const updated =
       action.kind === 'draw'
@@ -289,8 +383,8 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
             }}
           >
             <p className="muted small">
-              Draw up to four regions, or add one and enter its bounds. Move a region by dragging; resize with its
-              corner handles. The global positive and negative prompts remain separate.
+              Draw boxes or paint areas, up to four. Drag a box to move it and use its corners to resize. Paint adds to
+              the selected region, or starts a new one when none is selected.
             </p>
             <div className="regional-toolbar">
               <button
@@ -298,11 +392,55 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
                 className={drawing ? 'active' : ''}
                 aria-pressed={drawing}
                 disabled={editor.regions.length >= 4}
-                onClick={() => setDrawing(!drawing)}
+                onClick={() => {
+                  setDrawing(!drawing);
+                  setBrush(null);
+                }}
               >
                 <Pencil size={14} />
                 {drawing ? 'Draw on canvas…' : 'Draw region'}
               </button>
+              <button
+                type="button"
+                className={brush === 'paint' ? 'active' : ''}
+                aria-pressed={brush === 'paint'}
+                disabled={!selected && editor.regions.length >= 4}
+                title="Paint an area. Paints the selected region, or starts a new one."
+                onClick={() => {
+                  setBrush(brush === 'paint' ? null : 'paint');
+                  setDrawing(false);
+                }}
+              >
+                <Paintbrush size={14} />
+                Paint
+              </button>
+              <button
+                type="button"
+                className={brush === 'erase' ? 'active' : ''}
+                aria-pressed={brush === 'erase'}
+                disabled={!selected?.paint}
+                onClick={() => {
+                  setBrush(brush === 'erase' ? null : 'erase');
+                  setDrawing(false);
+                }}
+              >
+                <Eraser size={14} />
+                Erase
+              </button>
+              {brush && (
+                <label className="regional-brush-size">
+                  Brush
+                  <input
+                    type="range"
+                    min={0.01}
+                    max={0.15}
+                    step={0.005}
+                    value={brushSize}
+                    aria-label="Brush size"
+                    onChange={event => setBrushSize(Number(event.target.value))}
+                  />
+                </label>
+              )}
               <button type="button" disabled={editor.regions.length >= 4} onClick={add}>
                 <Plus size={14} />
                 Add centered region
@@ -319,12 +457,13 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
               <div className="regional-canvas-column">
                 <svg
                   ref={svg}
-                  className={`regional-canvas ${drawing ? 'drawing' : ''}`}
+                  className={`regional-canvas ${drawing ? 'drawing' : ''} ${brush ? 'painting' : ''}`}
                   viewBox={`0 0 ${width} ${height}`}
                   style={{ aspectRatio: `${width} / ${height}` }}
                   aria-label="Regional prompt canvas"
                   onPointerDown={event => {
-                    if (drawing) start(event, 'draw');
+                    if (brush) start(event, 'paint');
+                    else if (drawing) start(event, 'draw');
                   }}
                   onPointerMove={move}
                   onPointerUp={event => finish(event)}
@@ -341,6 +480,15 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
                       />
                     </pattern>
                   </defs>
+                  {backdropUrl && (
+                    <image
+                      href={backdropUrl}
+                      width={width}
+                      height={height}
+                      preserveAspectRatio="xMidYMid slice"
+                      className="regional-backdrop"
+                    />
+                  )}
                   <rect width={width} height={height} className="regional-grid" fill="url(#regional-grid)" />
                   {editor.regions.map((region, index) => {
                     const selected = region.id === selectedId;
@@ -351,10 +499,11 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
                     const box = geometry.pixelBounds;
                     const feather = geometry.featherPixels;
                     const handle = Math.max(width, height) / 65;
+                    const painted = region.paint ? paintImage(region.paint, COLORS[index]) : undefined;
                     return (
                       <g
                         key={region.id}
-                        className={`regional-shape ${selected ? 'selected' : ''}`}
+                        className={`regional-shape ${selected ? 'selected' : ''} ${region.paint ? 'painted' : ''}`}
                         style={{ '--region-color': COLORS[index] } as CSSProperties}
                       >
                         <rect
@@ -366,7 +515,9 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
                           role="button"
                           aria-label={`${region.name || 'Untitled region'}, ${Math.round(region.x * 100)} percent from left, ${Math.round(region.y * 100)} percent from top. Arrow keys move; bounds fields resize.`}
                           onPointerDown={event => {
-                            if (drawing) start(event, 'draw');
+                            if (brush) start(event, 'paint');
+                            else if (drawing) start(event, 'draw');
+                            else if (region.paint) setSelectedId(region.id);
                             else start(event, 'move', region.id);
                           }}
                           onFocus={() => setSelectedId(region.id)}
@@ -380,7 +531,7 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
                                 ArrowDown: { x: 0, y: step },
                               } as Record<string, RegionPoint>
                             )[event.key];
-                            if (delta) {
+                            if (delta && !region.paint) {
                               event.preventDefault();
                               patch(region.id, current => moveRegionalRegion(current, delta));
                             }
@@ -390,7 +541,16 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
                             }
                           }}
                         />
-                        {feather > 0 && (
+                        {painted && (
+                          <image
+                            href={painted}
+                            width={width}
+                            height={height}
+                            preserveAspectRatio="none"
+                            className="regional-paint"
+                          />
+                        )}
+                        {feather > 0 && !region.paint && (
                           <rect
                             className="regional-feather"
                             x={box.x + feather}
@@ -403,6 +563,7 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
                           {index + 1}. {region.name || 'Untitled'}
                         </text>
                         {selected &&
+                          !region.paint &&
                           (['nw', 'ne', 'sw', 'se'] as const).map(corner => (
                             <rect
                               key={corner}
@@ -508,7 +669,11 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
                       </Field>
                       <Field
                         label="Feather · canvas pixels"
-                        hint={`Effective: ${selectedGeometry!.featherPixels}px; clamped to half the shorter side.`}
+                        hint={
+                          selected.paint
+                            ? 'Softens the painted edge.'
+                            : `Effective: ${selectedGeometry!.featherPixels}px; clamped to half the shorter side.`
+                        }
                       >
                         <input
                           type="number"
@@ -524,27 +689,40 @@ export function RegionalPrompts({ value, width, height, disabledReason, onChange
                         />
                       </Field>
                     </div>
-                    <div className="regional-bounds">
-                      {(['x', 'y', 'width', 'height'] as const).map(key => (
-                        <Field
-                          key={key}
-                          label={`${{ x: 'Left', y: 'Top', width: 'Width', height: 'Height' }[key]} · %`}
+                    {selected.paint ? (
+                      <p className="muted small regional-paint-note">
+                        Painted area. Use Paint and Erase to change it.{' '}
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() => patch(selected.id, ({ paint: _paint, ...box }) => box)}
                         >
-                          <input
-                            type="number"
-                            min={key === 'x' || key === 'y' ? 0 : 1}
-                            max={100}
-                            step={0.1}
-                            value={Math.round(selected[key] * 100000) / 1000}
-                            onChange={event =>
-                              patch(selected.id, current =>
-                                setRegionalBound(current, key, Number(event.target.value) / 100),
-                              )
-                            }
-                          />
-                        </Field>
-                      ))}
-                    </div>
+                          Make it a box
+                        </button>
+                      </p>
+                    ) : (
+                      <div className="regional-bounds">
+                        {(['x', 'y', 'width', 'height'] as const).map(key => (
+                          <Field
+                            key={key}
+                            label={`${{ x: 'Left', y: 'Top', width: 'Width', height: 'Height' }[key]} · %`}
+                          >
+                            <input
+                              type="number"
+                              min={key === 'x' || key === 'y' ? 0 : 1}
+                              max={100}
+                              step={0.1}
+                              value={Math.round(selected[key] * 100000) / 1000}
+                              onChange={event =>
+                                patch(selected.id, current =>
+                                  setRegionalBound(current, key, Number(event.target.value) / 100),
+                                )
+                              }
+                            />
+                          </Field>
+                        ))}
+                      </div>
+                    )}
                     <p className="muted small">
                       Pixel bounds: {selectedGeometry!.pixelBounds.x}, {selectedGeometry!.pixelBounds.y} ·{' '}
                       {selectedGeometry!.pixelBounds.width} × {selectedGeometry!.pixelBounds.height}. Edges round
