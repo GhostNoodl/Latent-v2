@@ -2,8 +2,8 @@ import { civitaiWorkflowIssue as sharedWorkflowIssue } from '../shared/civitai-d
 import { availableModelFilename } from '../shared/model-names';
 import { z } from 'zod';
 import type { AppPaths, CivitaiProvenance, ModelAsset } from '../shared/types';
-import type { CivitaiModel, CivitaiSearchRequest, CivitaiVersion } from '../shared/civitai-types';
-import { CivitaiClient } from './civitai';
+import type { CivitaiHashMatch, CivitaiModel, CivitaiSearchRequest, CivitaiVersion } from '../shared/civitai-types';
+import { CivitaiClient, CivitaiError } from './civitai';
 import type { ModelService } from './models';
 import type { StudioStore } from './store';
 import { resolveCivitaiTransfer } from './civitai-transfer';
@@ -209,6 +209,39 @@ export class CivitaiCatalog {
         ),
       signal,
     );
+  }
+  /** Finds the Civitai file with this exact checksum, so a missing model can be fetched again. */
+  async findByHash(input: unknown): Promise<CivitaiHashMatch | null> {
+    const hash = z
+      .string()
+      .regex(/^[a-f0-9]{64}$/i)
+      .parse(input)
+      .toLowerCase();
+    return this.operation(async (client, signal) => {
+      let match;
+      try {
+        match = await client.versionByHash(hash, signal);
+      } catch (error) {
+        if (error instanceof CivitaiError && error.code === 'not-found') return null;
+        throw error;
+      }
+      if (match.stale) throw new Error('Reconnect to Civitai to look this model up.');
+      const response = await client.detail(match.data.modelId, signal);
+      if (response.stale) throw new Error('Reconnect to Civitai to look this model up.');
+      const model = response.data,
+        version = model.versions.find(item => item.id === match.data.id);
+      const file = version?.files.find(item => item.sha256?.toLowerCase() === hash);
+      if (!version || !file) return null;
+      return {
+        modelId: model.id,
+        versionId: version.id,
+        fileId: file.id,
+        name: model.name,
+        versionName: version.name,
+        kind: model.kind,
+        bytes: file.sizeKB ? Math.round(file.sizeKB * 1024) : undefined,
+      };
+    });
   }
   async download(input: { modelId: number; versionId: number; fileId: number }): Promise<ModelAsset> {
     const selected = selectionSchema.parse(input);

@@ -4,6 +4,16 @@ export interface CivitaiDownloadRequest {
   versionId: number;
   fileId: number;
 }
+/** A Civitai file whose checksum matches a model this studio is missing. */
+export interface CivitaiHashMatch {
+  modelId: number;
+  versionId: number;
+  fileId: number;
+  name: string;
+  versionName: string;
+  kind: CivitaiModel['kind'];
+  bytes?: number;
+}
 export interface CivitaiSettings {
   hasApiKey: boolean;
 }

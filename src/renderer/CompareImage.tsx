@@ -21,6 +21,13 @@ export interface CompareImageProps {
 type Size = { width: number; height: number };
 type LoadedImage = Size & { url: string };
 type ImageSide = 'before' | 'after';
+type CompareMode = 'slider' | 'side' | 'fade' | 'difference';
+const MODES: Array<[CompareMode, string]> = [
+  ['slider', 'Slider'],
+  ['side', 'Side by side'],
+  ['fade', 'Fade'],
+  ['difference', 'Difference'],
+];
 type Point = { x: number; y: number };
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const validSize = ({ width, height }: Size) =>
@@ -64,7 +71,8 @@ export function CompareImage({ before, after, alignment, sourceFittingSize, onCl
   const [pan, setPan] = useState<Point>({ x: 0, y: 0 });
   const [divider, setDivider] = useState(50);
   const [panning, setPanning] = useState(false);
-  const [showRaw, setShowRaw] = useState(false);
+  const [mode, setMode] = useState<CompareMode>('slider');
+  const [fade, setFade] = useState(50);
   const helpId = useId();
   const dividerId = useId();
   const source = beforeLoaded?.url === before.url ? beforeLoaded : validSize(before) ? before : { width: 1, height: 1 };
@@ -82,7 +90,7 @@ export function CompareImage({ before, after, alignment, sourceFittingSize, onCl
   const crop = comparisonCrop(source, result, alignment, invalidFittingSize ? result : sourceFittingSize);
   const cannotAlign =
     dimensionMismatch || sameCanvasMismatch || invalidFittingSize || crop.width <= 0 || crop.height <= 0;
-  const raw = showRaw || alignment === 'raw' || cannotAlign;
+  const raw = mode === 'side' || alignment === 'raw' || cannotAlign;
   const world = raw
     ? { width: source.width + result.width + 32, height: Math.max(source.height, result.height) }
     : result;
@@ -156,7 +164,8 @@ export function CompareImage({ before, after, alignment, sourceFittingSize, onCl
     setZoom('fit');
     setPan({ x: 0, y: 0 });
     setDivider(50);
-    setShowRaw(false);
+    setMode('slider');
+    setFade(50);
     stopDragging();
     restoreRetryFocus.current = false;
     const old = previousUrls.current;
@@ -375,16 +384,35 @@ export function CompareImage({ before, after, alignment, sourceFittingSize, onCl
             </button>
           </div>
           {alignment !== 'raw' && !cannotAlign && (
-            <button
-              type="button"
-              aria-pressed={showRaw}
-              onClick={() => {
-                setShowRaw(value => !value);
-                fitImages();
-              }}
-            >
-              {showRaw ? 'Aligned divider' : 'Raw side by side'}
-            </button>
+            <div className="compare-modes" role="group" aria-label="How to compare">
+              {MODES.map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={mode === value}
+                  onClick={() => {
+                    setMode(value);
+                    if ((value === 'side') !== (mode === 'side')) fitImages();
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          {mode === 'fade' && !raw && (
+            <label className="compare-fade">
+              Before
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={fade}
+                aria-label="Fade between before and after"
+                onChange={event => setFade(Number(event.target.value))}
+              />
+              After
+            </label>
           )}
         </div>
         <div
@@ -416,7 +444,14 @@ export function CompareImage({ before, after, alignment, sourceFittingSize, onCl
               onLoad={event => loaded(event.currentTarget, 'after')}
               onError={event => failed(event.currentTarget, 'after')}
             />
-            <div className="compare-source" style={{ clipPath: raw ? undefined : `inset(0 ${100 - divider}% 0 0)` }}>
+            <div
+              className="compare-source"
+              style={{
+                clipPath: raw || mode !== 'slider' ? undefined : `inset(0 ${100 - divider}% 0 0)`,
+                opacity: !raw && mode === 'fade' ? 1 - fade / 100 : undefined,
+                mixBlendMode: !raw && mode === 'difference' ? 'difference' : undefined,
+              }}
+            >
               <img
                 key={`${before.url}:${loadAttempt}`}
                 ref={beforeRef}
@@ -429,11 +464,18 @@ export function CompareImage({ before, after, alignment, sourceFittingSize, onCl
               />
             </div>
           </div>
-          <div className="compare-corner-labels" aria-hidden="true">
-            <span>Before</span>
-            <span>After</span>
-          </div>
-          {!raw && (
+          {(raw || mode === 'slider') && (
+            <div className="compare-corner-labels" aria-hidden="true">
+              <span>Before</span>
+              <span>After</span>
+            </div>
+          )}
+          {!raw && mode === 'difference' && (
+            <p className="compare-mode-note" aria-hidden="true">
+              Dark means the same. Bright shows what changed.
+            </p>
+          )}
+          {!raw && mode === 'slider' && (
             <div
               className={`compare-divider${guideOutside ? ' is-outside' : ''}`}
               style={{

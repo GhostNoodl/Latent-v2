@@ -1544,6 +1544,14 @@
       "to": "tests/create-extras.test.ts"
     },
     {
+      "from": "tests/library-extras.test.ts",
+      "to": "tests/library-extras.test.ts"
+    },
+    {
+      "from": "tests/missing-parts.test.ts",
+      "to": "tests/missing-parts.test.ts"
+    },
+    {
       "from": "src/renderer/draft-field-label.ts",
       "to": "src/renderer/draft-field-label.ts"
     },
@@ -1556,8 +1564,24 @@
       "to": "src/renderer/GridSweep.tsx"
     },
     {
+      "from": "src/renderer/library-filters.ts",
+      "to": "src/renderer/library-filters.ts"
+    },
+    {
+      "from": "src/renderer/lineage.ts",
+      "to": "src/renderer/lineage.ts"
+    },
+    {
+      "from": "src/renderer/MissingParts.tsx",
+      "to": "src/renderer/MissingParts.tsx"
+    },
+    {
       "from": "src/renderer/PromptPieces.tsx",
       "to": "src/renderer/PromptPieces.tsx"
+    },
+    {
+      "from": "src/renderer/ReviewMode.tsx",
+      "to": "src/renderer/ReviewMode.tsx"
     },
     {
       "from": "src/renderer/SavedPrompts.tsx",

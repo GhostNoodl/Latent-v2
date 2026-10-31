@@ -219,3 +219,38 @@
     width: 44px;
   }
 }
+.compare-world {
+  isolation: isolate;
+}
+.compare-modes {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.compare-toolbar .compare-modes button {
+  border: 0;
+}
+.compare-fade {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.compare-fade input {
+  width: 160px;
+}
+.compare-mode-note {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  margin: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
+}

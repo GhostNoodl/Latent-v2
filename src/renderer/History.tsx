@@ -16,8 +16,12 @@ import {
   RotateCcw,
   Search,
   Shuffle,
+  Star,
   Trash2,
+  X,
 } from 'lucide-react';
+import { ReviewMode } from './ReviewMode';
+import { KEEPERS, libraryFacets, matchesFilters, type LibraryFilters } from './library-filters';
 import type { GenerationRecord } from '../shared/types';
 import type { CollectionActions, CollectionSnapshot } from '../shared/collections-types';
 import { ConfirmDialog, Modal, Notice, shortDate, type RunAction } from './ui';
@@ -124,11 +128,21 @@ export function History({
     ),
   );
   const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState<LibraryFilters>({});
+  const [reviewing, setReviewing] = useState(false);
+  const keepers = collections?.collections.find(
+    item => item.kind === 'image' && item.name.toLowerCase() === KEEPERS.toLowerCase(),
+  );
+  const keptIds = useMemo(() => new Set(keepers?.memberIds ?? []), [keepers]);
+  const facets = useMemo(() => (library ? libraryFacets(records) : undefined), [library, records]);
+  const filtering = Boolean(filters.model || filters.lora || filters.kept);
   const [collectionId, setCollectionId] = useState<string>();
   const [collectionRecord, setCollectionRecord] = useState<GenerationRecord>();
   const [menu, setMenu] = useState<{ record: GenerationRecord; x: number; y: number }>();
   const [details, setDetails] = useState<GenerationRecord>();
   const [trashing, setTrashing] = useState<GenerationRecord[]>();
+  /** How many pictures Review binned; their hidden versions ride along in `trashing`. */
+  const [binnedCount, setBinnedCount] = useState<number>();
   const menuRef = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const pageSize = library ? 24 : 4;
@@ -146,7 +160,11 @@ export function History({
     record =>
       (!members || members.has(record.id)) &&
       (!grouping || grouping.has(record.id)) &&
-      (!query || (grouping ? (groupOf.get(record.id)?.versions ?? [record]) : [record]).some(matches)),
+      (!query || (grouping ? (groupOf.get(record.id)?.versions ?? [record]) : [record]).some(matches)) &&
+      (!filtering ||
+        (grouping ? (groupOf.get(record.id)?.versions ?? [record]) : [record]).some(item =>
+          matchesFilters(item, filters, keptIds),
+        )),
   );
   const shownSelection = grouping ? selectedTileId : selectedId;
   const lastSelection = useRef(shownSelection);
@@ -294,6 +312,108 @@ export function History({
             }}
           />
         </label>
+      )}
+      {library && facets && (
+        <div className="library-filters" role="group" aria-label="Filter images">
+          <select
+            aria-label="Filter by model"
+            className={filters.model ? 'active' : ''}
+            value={filters.model ?? ''}
+            onChange={event => {
+              setFilters(value => ({ ...value, model: event.target.value || undefined }));
+              setPage(0);
+            }}
+          >
+            <option value="">Any model</option>
+            {facets.models.map(item => (
+              <option key={item.key} value={item.key}>
+                {item.label} ({item.count})
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filter by LoRA"
+            className={filters.lora ? 'active' : ''}
+            value={filters.lora ?? ''}
+            onChange={event => {
+              setFilters(value => ({ ...value, lora: event.target.value || undefined }));
+              setPage(0);
+            }}
+          >
+            <option value="">Any LoRA</option>
+            <option value="none">No LoRA</option>
+            {facets.loras.map(item => (
+              <option key={item.key} value={item.key}>
+                {item.label} ({item.count})
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className={filters.kept ? 'active' : ''}
+            aria-pressed={Boolean(filters.kept)}
+            onClick={() => {
+              setFilters(value => ({ ...value, kept: !value.kept || undefined }));
+              setPage(0);
+            }}
+          >
+            <Star size={13} /> Keepers{keptIds.size ? ` ${keptIds.size}` : ''}
+          </button>
+          {filtering && (
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => {
+                setFilters({});
+                setPage(0);
+              }}
+            >
+              <X size={13} /> Clear
+            </button>
+          )}
+          <button
+            type="button"
+            className="library-review-button"
+            disabled={!filtered.length}
+            title="Go through these images with the keyboard: + keeps, Delete bins"
+            onClick={() => setReviewing(true)}
+          >
+            Review {filtered.length}
+          </button>
+        </div>
+      )}
+      {reviewing && (
+        <ReviewMode
+          records={filtered}
+          startId={shownSelection}
+          keptIds={keptIds}
+          onClose={() => setReviewing(false)}
+          onDone={({ keep, bin }) => {
+            setReviewing(false);
+            if (keep.length && collectionActions && onCollectionChange)
+              void run('keep-images', async () => {
+                let id = keepers?.id;
+                if (!id) {
+                  const created = await collectionActions.create('image', KEEPERS);
+                  id = created.collections.find(
+                    item => item.kind === 'image' && item.name.toLowerCase() === KEEPERS.toLowerCase(),
+                  )?.id;
+                  onCollectionChange(created);
+                }
+                if (!id) throw new Error('Could not make the Keepers collection.');
+                onCollectionChange(
+                  await collectionActions.addMembers(
+                    id,
+                    keep.map(record => record.id),
+                  ),
+                );
+              });
+            if (bin.length) {
+              setBinnedCount(bin.length);
+              setTrashing(bin.flatMap(tileRecords));
+            }
+          }}
+        />
       )}
       {visible.length ? (
         <div className="history-grid">
@@ -568,19 +688,30 @@ export function History({
       )}
       {trashing && (
         <ConfirmDialog
-          title={trashing.length > 1 ? `Delete ${trashing.length} images?` : 'Delete this image?'}
+          title={
+            binnedCount
+              ? `Bin ${binnedCount} image${binnedCount === 1 ? '' : 's'}?`
+              : trashing.length > 1
+                ? `Delete ${trashing.length} images?`
+                : 'Delete this image?'
+          }
           confirmLabel="Move to Recycle Bin"
-          onClose={() => setTrashing(undefined)}
+          onClose={() => {
+            setTrashing(undefined);
+            setBinnedCount(undefined);
+          }}
           onConfirm={() =>
             void run('trash-outputs', () => window.latent.trashOutputs(trashing.map(record => record.id)))
           }
         >
           <p>
-            {trashing.length > 1
-              ? `This removes the image and its ${trashing.length - 1} other version${trashing.length > 2 ? 's' : ''} (${[
-                  ...new Set(trashing.slice(1).map(record => imageVersionLabel(record).toLowerCase())),
-                ].join(', ')}) from your library.`
-              : 'This removes the image from your library.'}{' '}
+            {binnedCount
+              ? `These move to the Recycle Bin${trashing.length > binnedCount ? ', along with their other versions' : ''}.`
+              : trashing.length > 1
+                ? `This removes the image and its ${trashing.length - 1} other version${trashing.length > 2 ? 's' : ''} (${[
+                    ...new Set(trashing.slice(1).map(record => imageVersionLabel(record).toLowerCase())),
+                  ].join(', ')}) from your library.`
+                : 'This removes the image from your library.'}{' '}
             Changed your mind later? Restore it from the Recycle Bin and it comes right back.
           </p>
         </ConfirmDialog>
