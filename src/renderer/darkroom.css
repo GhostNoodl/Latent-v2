@@ -3182,3 +3182,130 @@ body:has(.studio) {
 .studio .phone-port .field {
   max-width: 220px;
 }
+
+/* Pause to tweak */
+.studio .workspace .gen-extras {
+  display: flex;
+  gap: 6px;
+}
+.studio .workspace .gen-extras > * {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+}
+.studio .pause-pop {
+  position: relative;
+}
+.studio .pause-pop > summary svg {
+  flex: none;
+}
+.studio .pause-pop > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.studio .pause-pop > summary::-webkit-details-marker {
+  display: none;
+}
+.studio .pause-pop[open] > summary {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.studio .pause-setup {
+  position: absolute;
+  z-index: 40;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+}
+.studio .pause-setup p {
+  margin: 0;
+}
+.studio .pause-step {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.studio .pause-step b {
+  font-variant-numeric: tabular-nums;
+}
+.studio .pause-setup .primary {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.studio .workspace .paused-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 12px;
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: var(--panel);
+  flex-shrink: 0;
+}
+.studio .workspace .paused-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.studio .workspace .paused-head svg {
+  color: var(--accent);
+}
+.studio .workspace .paused-head .muted {
+  font-size: 12px;
+}
+.studio .workspace .paused-fields {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 64px;
+  gap: 8px;
+  min-width: 0;
+}
+.studio .workspace .paused-fields textarea {
+  min-height: 0;
+  resize: none;
+  font-size: 13px;
+}
+.studio .workspace .paused-cfg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.studio .workspace .paused-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.studio .workspace .paused-actions button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}

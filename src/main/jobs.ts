@@ -20,6 +20,7 @@ import type {
   VideoJob,
 } from '../shared/types';
 import { buildWorkflow, resolvePrompt, validateAssets, WORKFLOW_VERSION } from '../shared/workflow';
+import { augmentSplitWorkflow, splitBlockedReason, SPLIT_WORKFLOW_VERSION } from '../shared/split-sampling';
 import { bindModelPaths, canonicalModelPaths } from '../shared/workflow-model-paths';
 import { draftSchema } from '../shared/validation';
 import { containedPath, inside } from './paths';
@@ -498,6 +499,7 @@ export class JobService {
       );
     if (draft.variationOfRecordId && !this.store.record(draft.variationOfRecordId))
       throw new Error('The original image for this variation is no longer in the studio history.');
+    if (draft.split && splitBlockedReason(draft)) throw new Error(splitBlockedReason(draft));
     if (draft.upscale && draft.hiresFix)
       throw new Error('Choose either standalone resize/enhancement or hires fix for this job.');
     if (draft.upscale && (draft.imageInput?.mode !== 'img2img' || draft.batchSize !== 1))
@@ -548,6 +550,18 @@ export class JobService {
       const resolvedDraft = { ...draft, prompt: prepared.prompt, negativePrompt: prepared.negativePrompt };
       context.resolvedPrompt = resolvePrompt(resolvedDraft, this.models.assets);
       context.workflow = buildWorkflow(resolvedDraft, this.models.assets, actualSeed, id);
+      if (draft.split) {
+        const before = draft.split.before;
+        context.workflow = augmentSplitWorkflow(
+          context.workflow,
+          resolvedDraft,
+          before && {
+            positive: resolvePrompt({ ...resolvedDraft, prompt: before.prompt }, this.models.assets),
+            negative: before.negativePrompt,
+          },
+        );
+        context.workflowVersion = SPLIT_WORKFLOW_VERSION;
+      }
       if (draft.faceDetailer) {
         if (!this.faceDetailerService) throw new Error('The reviewed face refinement service is unavailable.');
         const authoring = draft.faceDetailer;

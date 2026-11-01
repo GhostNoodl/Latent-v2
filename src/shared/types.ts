@@ -130,6 +130,15 @@ export interface GenerationDraft {
     rowLabel?: string;
     rows: string[];
   };
+  /**
+   * Pause and tweak. `stop` saves a look at the image partway through; `before` finishes it,
+   * replaying the first part with the prompt it was paused with.
+   */
+  split?: {
+    atStep: number;
+    stop?: true;
+    before?: { prompt: string; negativePrompt: string; cfg: number };
+  };
   controlNet?: ControlNetSettings;
   dynamicPrompts?: DynamicPromptAuthoring;
   hiresFix?: HiresFixSettings;
