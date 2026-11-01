@@ -68,6 +68,22 @@ export const draftSchema = z
       })
       .strict()
       .optional(),
+    split: z
+      .object({
+        atStep: z.number().int().min(1).max(99),
+        stop: z.literal(true).optional(),
+        before: z
+          .object({
+            prompt: z.string().max(16000),
+            negativePrompt: z.string().max(16000),
+            cfg: z.number().min(0).max(30),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict()
+      .refine(value => !(value.stop && value.before), 'A paused image cannot also be a finished one.')
+      .optional(),
     controlNet: controlNetSettingsSchema.optional(),
     dynamicPrompts: dynamicPromptAuthoringSchema.optional(),
     upscale: z

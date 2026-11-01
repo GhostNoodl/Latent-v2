@@ -1,4 +1,6 @@
 import { LivePaint } from './LivePaint';
+import { PausedCard, PauseSetup } from './PauseTweak';
+import { finishDraft, splitBlockedReason } from '../shared/split-sampling';
 import { carriesImage, droppedImage, type DroppedImage } from './image-drag';
 import { SetupActivityPanel } from './SetupActivityPanel';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -144,6 +146,8 @@ function copyDraft(draft: GenerationDraft): GenerationDraft {
     autoFaceParentRecordId: draft.autoFaceParentRecordId,
     // A grid cell's marker belongs to that one run; reusing its settings starts a normal image.
     sweep: undefined,
+    // Pause markers belong to that run too.
+    split: undefined,
     enhance: draft.enhance ? structuredClone(draft.enhance) : undefined,
     promptTriggerSpans: draft.promptTriggerSpans ? structuredClone(draft.promptTriggerSpans) : undefined,
     faceDetailer: draft.faceDetailer ? structuredClone(draft.faceDetailer) : undefined,
@@ -1100,6 +1104,35 @@ export default function App() {
       `${drafts.length} images queued.`,
     );
   };
+  const queuePaused = (paused: GenerationDraft) => {
+    const requestedPreview = previewSelectionRevision.current;
+    void run(
+      'generate',
+      async () => {
+        await flushDraft();
+        await window.latent.queueGeneration(paused);
+        if (previewSelectionRevision.current === requestedPreview) {
+          setViewLivePreview(true);
+          setZoom(0);
+        }
+      },
+      'Queued. It will stop partway for you.',
+    );
+  };
+  const finishPaused = (record: GenerationRecord, tweaks: { prompt: string; negativePrompt: string; cfg: number }) =>
+    void run(
+      'paused',
+      async () => {
+        await window.latent.queueGeneration(finishDraft(record.draft, record.actualSeed, tweaks));
+        // The finished image replaces the rough one; the Recycle Bin still has it.
+        await window.latent.trashOutputs([record.id]);
+        setViewLivePreview(true);
+        setZoom(0);
+      },
+      'Finishing.',
+    );
+  const dropPaused = (record: GenerationRecord) =>
+    void run('paused', () => window.latent.trashOutputs([record.id]), 'Dropped.');
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (
       event.nativeEvent.isComposing ||
@@ -1893,16 +1926,23 @@ export default function App() {
                           Exit Enhance
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className="soft-button live-open"
-                        disabled={Boolean(liveBlocked)}
-                        title={liveBlocked || 'Sketch and watch the engine redraw it as you paint'}
-                        onClick={() => void flushDraft().then(() => setLiveOpen(true))}
-                      >
-                        <Brush size={16} />
-                        Live
-                      </button>
+                      <div className="gen-extras">
+                        <button
+                          type="button"
+                          className="soft-button live-open"
+                          disabled={Boolean(liveBlocked)}
+                          title={liveBlocked || 'Sketch and watch the engine redraw it as you paint'}
+                          onClick={() => void flushDraft().then(() => setLiveOpen(true))}
+                        >
+                          <Brush size={16} />
+                          Live
+                        </button>
+                        <PauseSetup
+                          draft={draft}
+                          disabledReason={cannotGenerate || splitBlockedReason(draft)}
+                          onQueue={queuePaused}
+                        />
+                      </div>
                       <button
                         className="primary generate"
                         type="submit"
@@ -2041,7 +2081,16 @@ export default function App() {
                       </div>
                     )}
                   </CanvasViewport>
-                  {selected && !livePreview && (
+                  {selected && !livePreview && selected.draft.split?.stop && (
+                    <PausedCard
+                      key={selected.id}
+                      record={selected}
+                      busy={Boolean(busy.paused)}
+                      onFinish={tweaks => finishPaused(selected, tweaks)}
+                      onDrop={() => dropPaused(selected)}
+                    />
+                  )}
+                  {selected && !livePreview && !selected.draft.split?.stop && (
                     <div className="stage-actions">
                       <div className="enhance-action">
                         <select

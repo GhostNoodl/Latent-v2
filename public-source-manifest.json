@@ -1576,6 +1576,10 @@
       "to": "tests/regional-paint.test.ts"
     },
     {
+      "from": "tests/split-sampling.test.ts",
+      "to": "tests/split-sampling.test.ts"
+    },
+    {
       "from": "src/renderer/draft-field-label.ts",
       "to": "src/renderer/draft-field-label.ts"
     },
@@ -1608,6 +1612,10 @@
       "to": "src/renderer/MissingParts.tsx"
     },
     {
+      "from": "src/renderer/PauseTweak.tsx",
+      "to": "src/renderer/PauseTweak.tsx"
+    },
+    {
       "from": "src/renderer/PhoneRemote.tsx",
       "to": "src/renderer/PhoneRemote.tsx"
     },
@@ -1638,6 +1646,10 @@
     {
       "from": "src/shared/regional-paint.ts",
       "to": "src/shared/regional-paint.ts"
+    },
+    {
+      "from": "src/shared/split-sampling.ts",
+      "to": "src/shared/split-sampling.ts"
     }
   ]
 }

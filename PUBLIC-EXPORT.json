@@ -108,8 +108,8 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 113530,
-      "sha256": "ed1d6d9aa4a937185d8f2d3a6a5fb84f643e1fec2aaf523ffeb8975ad436221a"
+      "bytes": 114162,
+      "sha256": "ce4bde47aef18d7cd1e37163b430a1ad99c451c1fb31f0d5d99776ec3149c81c"
     },
     {
       "path": "src/main/main.ts",
@@ -373,8 +373,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 128831,
-      "sha256": "e81c972b2bb995019b8765af8e4aa480d81e1e91db28fd281d29bc8bd9b92e54"
+      "bytes": 130899,
+      "sha256": "096c2dfc20da56e79a46725e002e8c62e3c47f1f3f7911bae3c3027b134d2a36"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 73725,
-      "sha256": "599c1ef1997f98044117e1f593e9c38a792730b7bbbc8f2c5b0d692b2ab54230"
+      "bytes": 76255,
+      "sha256": "23749c06e816280e7245066b483703696df47a97f65ef835cfbc45cd38c947e4"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -933,13 +933,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 21361,
-      "sha256": "dc2c82607d295620be96151cd9769ada015e99b069b0a28d42e80cf7d2247a0e"
+      "bytes": 21657,
+      "sha256": "cfeb309528b40daaeab6fa7e64405861c2e8bf6698d098d44c0126a79185cd11"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 11625,
-      "sha256": "ff50b2cfcede3ca85c6a2af798f8f543af659be83888c5af95e340f560d99424"
+      "bytes": 12124,
+      "sha256": "a93c500e39521db33e08b415581f947a45102668c85427843049efa8747ad3ea"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1952,6 +1952,11 @@
       "sha256": "a6b68dd7b3d621675283d65e705a681552dc9043a3cae61d3c07a9909b0edbb0"
     },
     {
+      "path": "tests/split-sampling.test.ts",
+      "bytes": 4114,
+      "sha256": "bb7bbf5ce50db9901d0fa7d7314e70f46aeb28bf5aff7990b73ba49606a9343b"
+    },
+    {
       "path": "src/renderer/draft-field-label.ts",
       "bytes": 932,
       "sha256": "17904d4c7755db8056a21f615bb6f53fe9d7d2456f54a3f1aa5e740c884dfe86"
@@ -1992,6 +1997,11 @@
       "sha256": "270b406ee52a37ae5579439770e8b2ada3119ac3881666495b2b0c52b5ac5c92"
     },
     {
+      "path": "src/renderer/PauseTweak.tsx",
+      "bytes": 4127,
+      "sha256": "827a293bf907b14cefa4be3eb325649b12ab1339876ff4a0708837e16bd832d4"
+    },
+    {
       "path": "src/renderer/PhoneRemote.tsx",
       "bytes": 3702,
       "sha256": "9b2e415b3031cc696a34edec70594b4729863d2297c9459b75b30d7a6fbf484f"
@@ -2030,6 +2040,11 @@
       "path": "src/shared/regional-paint.ts",
       "bytes": 5132,
       "sha256": "a34ce2da5e4a9ee691c8d4275db78224b07fdb2b911385b0edaf16b4d9ffa55c"
+    },
+    {
+      "path": "src/shared/split-sampling.ts",
+      "bytes": 5186,
+      "sha256": "19245ee8ecfbcc36899178e9cf22ea8cab2630b205c46fcb96d4074cfa3f6f4f"
     }
   ],
   "privateHistoryIncluded": false
