@@ -4,15 +4,22 @@ import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { privateShellPath } from '../shell-path';
 import { videoDraftSchema } from '../../shared/video-plan';
+import { EMPTY_SHOT_BOARD, shotBoardSchema } from '../../shared/shot-board';
 import { videoFileResponse } from '../video-media';
 import { videoPlaybackFixtureRecord, VIDEO_PLAYBACK_FIXTURE_ID } from '../video-playback-fixture';
 import type { HandlerContext, StudioMethods } from '../main';
 
+const SHOT_BOARD_KEY = 'video.shotBoard.v1';
 /** Video studio: conversations, planning, history and assets. */
 export function videoHandlers(ctx: HandlerContext) {
   return {
     getVideoConversation: async () => ctx.videoConversations.get(),
     saveVideoConversation: async value => ctx.videoConversations.save(value),
+    getShotBoard: async () => {
+      const saved = shotBoardSchema.safeParse(ctx.store.getState<unknown>(SHOT_BOARD_KEY, EMPTY_SHOT_BOARD));
+      return saved.success ? saved.data : EMPTY_SHOT_BOARD;
+    },
+    saveShotBoard: async value => ctx.store.setState(SHOT_BOARD_KEY, shotBoardSchema.parse(value)),
     planVideoDraft: async input => {
       const value = videoDraftSchema.parse(input);
       return ctx.videoDrafts.plan(

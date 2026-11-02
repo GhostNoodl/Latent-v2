@@ -396,6 +396,8 @@ export interface LatentAPI {
   cancelModelTransfer(id: string): Promise<void>;
   getVideoConversation(): Promise<VideoConversation | null>;
   saveVideoConversation(value: VideoConversation): Promise<void>;
+  getShotBoard(): Promise<import('./shot-board').ShotBoard>;
+  saveShotBoard(value: import('./shot-board').ShotBoard): Promise<void>;
   planVideoDraft(draft: VideoDraft): Promise<VideoPlan>;
   getVideoPlaybackFixture(): Promise<VideoHistoryRecord>;
   getVideoHistory(): Promise<{ records: VideoHistoryRecord[]; warnings: string[] }>;

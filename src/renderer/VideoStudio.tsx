@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Undo2 } from 'lucide-react';
+import { Clapperboard, Undo2 } from 'lucide-react';
 import type { AppSnapshot, GenerationRecord } from '../shared/types';
 import type { VideoDraft, VideoHistoryRecord, VideoPlan } from '../shared/video-types';
 import { DEFAULT_VIDEO_DRAFT } from '../shared/video-plan';
@@ -13,6 +13,7 @@ import { videoHistoryRevision } from './queue-view';
 import { Busy, Notice, Modal, type RunAction } from './ui';
 import './video-studio.css';
 import { PromptAssistant } from './PromptAssistant';
+import { ShotBoard } from './ShotBoard';
 import { DEFAULT_DRAFT } from '../shared/defaults';
 
 function newSession(initial: VideoDraft = DEFAULT_VIDEO_DRAFT): VideoEditorSession {
@@ -34,6 +35,7 @@ export interface VideoStudioProps {
 /** Remains mounted after first opening so navigation cannot discard a pending close flush. */
 export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStudioProps) {
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [shotBoardOpen, setShotBoardOpen] = useState(false);
   const makeSession = () =>
     newSession(
       snapshot.video.assets?.fusedPresent
@@ -330,6 +332,15 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
         if (pendingQueue.current === request) pendingQueue.current = undefined;
       }
     });
+  /** One take for the shot board: the current settings with the shot's prompt. */
+  const makeTake = async (prompt: string) => {
+    if (!snapshot.video.canGenerate) throw new Error('Video generation is not ready yet.');
+    const session = current.current?.sessions.find(item => item.id === current.current?.activeSessionId);
+    if (!session) throw new Error('Choose a video draft before making a take.');
+    if (closing.current || closeRequested.current) throw new Error('The studio is closing.');
+    const job = await window.latent.queueVideo({ ...structuredClone(session.draft), prompt });
+    return job.id;
+  };
   return (
     <div className="video-studio video-create-layout">
       {error && <Notice error>{error}</Notice>}
@@ -360,6 +371,10 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
               }
               sidebarExtras={
                 <>
+                  <button type="button" onClick={() => setShotBoardOpen(true)}>
+                    <Clapperboard size={14} />
+                    Shot board
+                  </button>
                   {selectedRecord && (
                     <button
                       type="button"
@@ -525,6 +540,23 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
             setPrevious({ id: active.id, draft: structuredClone(active.draft) });
             updateSession({ draft: { ...active.draft, prompt: suggestion.proposedDraft.prompt } });
           }}
+        />
+      )}
+      {visible && shotBoardOpen && (
+        <ShotBoard
+          records={history}
+          jobs={snapshot.jobs}
+          selectedRecordId={active?.selectedRecordId ?? history[0]?.id}
+          defaultPrompt={active?.draft.prompt ?? ''}
+          takeBlocked={
+            !snapshot.video.canGenerate
+              ? snapshot.video.message || 'Video generation is not ready yet.'
+              : !active
+                ? 'Choose a video draft first.'
+                : undefined
+          }
+          onMakeTake={makeTake}
+          onClose={() => setShotBoardOpen(false)}
         />
       )}
       {visible && fixture && (

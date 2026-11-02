@@ -2,6 +2,7 @@
 const STORAGE_SAFE_WRITES = new Set([
   'saveDraft',
   'saveVideoConversation',
+  'saveShotBoard',
   'saveQwenConversation',
   'saveAssistantConversation',
   'savePreviewSelection',
