@@ -363,8 +363,8 @@
     },
     {
       "path": "src/preload/preload.ts",
-      "bytes": 9739,
-      "sha256": "b661cf106679ffd7f1a2c9ac60c2efb5ec8e9e38daa7a6da17970c0f04d20e10"
+      "bytes": 9843,
+      "sha256": "21655861508ae97c720526b06e06992b612bbcc0a1cf538abe8eec3fe5f9a3a4"
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
@@ -673,8 +673,8 @@
     },
     {
       "path": "src/renderer/video-studio.css",
-      "bytes": 2365,
-      "sha256": "76f425d98d8d704262c018aa95f94f1933c9ec01287be79ce829dadba91e4920"
+      "bytes": 5548,
+      "sha256": "bb8a3cfaf6dc6d31de3dc3b31887bfcacafb91e5f2d885cc7c0811ee873e35ca"
     },
     {
       "path": "src/renderer/VideoAssetSetup.tsx",
@@ -693,8 +693,8 @@
     },
     {
       "path": "src/renderer/VideoStudio.tsx",
-      "bytes": 22560,
-      "sha256": "2ba656b16859cfac1da31cf6c056761d204e0044ea760496649125756af07e1e"
+      "bytes": 24081,
+      "sha256": "c39b6919c9041ce796dae73410616d0ff75864c4a004a207fafc9c26ea38ca66"
     },
     {
       "path": "src/shared/action-error.ts",
@@ -933,8 +933,8 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 21657,
-      "sha256": "cfeb309528b40daaeab6fa7e64405861c2e8bf6698d098d44c0126a79185cd11"
+      "bytes": 21791,
+      "sha256": "415aaf88e4a314b5252fa2fb2fd7258252d3bacb479b6f48d22f3ccad302fed1"
     },
     {
       "path": "src/shared/validation.ts",
@@ -1034,12 +1034,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "30ef22132e1051937e57d807262bf027a9ab005e6d518beef8119e99d95104b6"
+      "sha256": "5e2119c7575950be538aeb0826957590f27392a13621f6e9193de170abad65b6"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "4861a4ad3fc62876906ebdb3f434414b3aae6fb348469d7af50009d5caa04295"
+      "sha256": "28afdc3d2acbafdadf679b3663f9fd0010c81cadfffb0b9cae034620b29e1ea1"
     },
     {
       "path": "tsconfig.json",
@@ -1803,8 +1803,8 @@
     },
     {
       "path": "src/main/ipc/gate.ts",
-      "bytes": 1154,
-      "sha256": "a9f95c4f9fb3835cf695579a10f8d52095e8dbe993d2c359290e264f1cae95d9"
+      "bytes": 1173,
+      "sha256": "6dec88996eb40e21700709a2e18c1207119f32a9fddbcff8f230d861ba6dc071"
     },
     {
       "path": "src/main/ipc/library.ts",
@@ -1828,8 +1828,8 @@
     },
     {
       "path": "src/main/ipc/video.ts",
-      "bytes": 2338,
-      "sha256": "1d8241820cba4e6a17ee16274c978d1274c741f027fa50602a4938840cd7a04b"
+      "bytes": 2769,
+      "sha256": "23c2e496389f75ea991b6beb894a39eb4016fdf6d6982b5ae14aca86955dc6ce"
     },
     {
       "path": "tests/ipc-gate.test.ts",
@@ -1952,6 +1952,11 @@
       "sha256": "a6b68dd7b3d621675283d65e705a681552dc9043a3cae61d3c07a9909b0edbb0"
     },
     {
+      "path": "tests/shot-board.test.ts",
+      "bytes": 2757,
+      "sha256": "d7524733a70f5d6a0482e0f584cfa089aada4f10bcfddf18c8cb2535021ccc8c"
+    },
+    {
       "path": "tests/split-sampling.test.ts",
       "bytes": 4114,
       "sha256": "bb7bbf5ce50db9901d0fa7d7314e70f46aeb28bf5aff7990b73ba49606a9343b"
@@ -2022,6 +2027,11 @@
       "sha256": "d783867c2f25f0277bf8d4348da68f4629e8e80937e5d5d3dc9bd5bfcbda6be5"
     },
     {
+      "path": "src/renderer/ShotBoard.tsx",
+      "bytes": 13290,
+      "sha256": "aa2f5f447e5d89c5b35c8b29800ecad59163fbb2b3d357ddbab157915c27565a"
+    },
+    {
       "path": "src/renderer/SizePeek.tsx",
       "bytes": 1803,
       "sha256": "0462b2d1f031142d69a0b9aa62dea7b2c2940cb329df41757d225f62e59d30cd"
@@ -2040,6 +2050,11 @@
       "path": "src/shared/regional-paint.ts",
       "bytes": 5132,
       "sha256": "a34ce2da5e4a9ee691c8d4275db78224b07fdb2b911385b0edaf16b4d9ffa55c"
+    },
+    {
+      "path": "src/shared/shot-board.ts",
+      "bytes": 3519,
+      "sha256": "05dd9a8d2a2f3f5f749ee3b2ff0ee4bd17386d8876f44239f0a6e651df85e195"
     },
     {
       "path": "src/shared/split-sampling.ts",

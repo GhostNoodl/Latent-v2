@@ -1576,6 +1576,10 @@
       "to": "tests/regional-paint.test.ts"
     },
     {
+      "from": "tests/shot-board.test.ts",
+      "to": "tests/shot-board.test.ts"
+    },
+    {
       "from": "tests/split-sampling.test.ts",
       "to": "tests/split-sampling.test.ts"
     },
@@ -1632,6 +1636,10 @@
       "to": "src/renderer/SavedPrompts.tsx"
     },
     {
+      "from": "src/renderer/ShotBoard.tsx",
+      "to": "src/renderer/ShotBoard.tsx"
+    },
+    {
       "from": "src/renderer/SizePeek.tsx",
       "to": "src/renderer/SizePeek.tsx"
     },
@@ -1646,6 +1654,10 @@
     {
       "from": "src/shared/regional-paint.ts",
       "to": "src/shared/regional-paint.ts"
+    },
+    {
+      "from": "src/shared/shot-board.ts",
+      "to": "src/shared/shot-board.ts"
     },
     {
       "from": "src/shared/split-sampling.ts",

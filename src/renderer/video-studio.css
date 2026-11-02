@@ -118,3 +118,189 @@
     margin-bottom: 7px;
   }
 }
+
+/* Shot board */
+.modal:has(.shot-board) {
+  width: min(1180px, 96vw);
+}
+.shot-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 1fr);
+  gap: 20px;
+  min-height: 0;
+}
+.shot-player {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.shot-screen {
+  aspect-ratio: 16 / 9;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #000;
+  color: var(--muted);
+  overflow: hidden;
+}
+.shot-screen video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.shot-caption {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.shot-player-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.shot-player-actions .primary,
+.shot-add,
+.shot-take-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.shot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(68vh, 640px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.shot-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--inset);
+}
+.shot-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.shot-head input {
+  flex: 1;
+  min-width: 0;
+}
+.shot-number {
+  width: 22px;
+  text-align: center;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.shot-row textarea {
+  resize: none;
+  font-size: 13px;
+  min-height: 0;
+}
+.shot-takes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.shot-take {
+  position: relative;
+  width: 84px;
+  height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+.shot-take.keeper {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.shot-take.showing {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+.shot-take.waiting {
+  display: grid;
+  place-items: center;
+  background: var(--panel);
+  font-size: 12px;
+  color: var(--muted);
+}
+.shot-take-view {
+  all: unset;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.shot-take-view video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.shot-take-view small {
+  position: absolute;
+  left: 4px;
+  bottom: 2px;
+  font-size: 11px;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+.shot-take-star,
+.shot-take-remove {
+  position: absolute;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+}
+.shot-take-star {
+  right: 2px;
+}
+.shot-take.keeper .shot-take-star {
+  color: var(--accent);
+}
+.shot-take-remove {
+  left: 2px;
+  opacity: 0;
+}
+.shot-take:hover .shot-take-remove,
+.shot-take.waiting .shot-take-remove,
+.shot-take-remove:focus-visible {
+  opacity: 1;
+}
+.shot-take-add {
+  height: 48px;
+  padding: 0 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+}
+.shot-add {
+  align-self: flex-start;
+}
+.shot-list > p {
+  margin: 0;
+}
+@media (max-width: 900px) {
+  .shot-board {
+    grid-template-columns: 1fr;
+  }
+}
