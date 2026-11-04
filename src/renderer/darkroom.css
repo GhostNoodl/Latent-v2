@@ -3396,3 +3396,126 @@ body:has(.studio) {
   border-right-color: transparent;
   border-left-color: var(--accent);
 }
+/* The old #negative-area margin pushed the Negative box below the Prompt box. */
+.studio .workspace .prompt-workspace > #negative-area {
+  margin-top: 0;
+}
+
+/* Chip labels shorten with an ellipsis instead of being cut off mid-word. */
+.studio .dock-chip > * {
+  flex-shrink: 0;
+}
+.studio .dock-chip > .dock-chip-label {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.studio .dock-chip .lora-stack {
+  display: inline-flex;
+}
+.studio .dock-chip .lora-stack:empty {
+  display: none;
+}
+.studio .dock-chip .lora-stack .model-artwork {
+  border: 2px solid var(--inset);
+  box-sizing: content-box;
+}
+.studio .dock-chip .lora-stack .model-artwork + .model-artwork {
+  margin-left: -9px;
+}
+
+/* LoRA list: one row per LoRA with its weight; click a name for CLIP weight and trigger words. */
+.studio .lora-popover {
+  width: min(420px, calc(100% - 32px));
+  gap: 6px;
+}
+.studio .lora-popover .lora-list-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 4px 4px;
+  font-size: 13px;
+}
+.studio .lora-popover .lora-list-heading span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio .lora-popover .lora-row-group {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--inset);
+}
+.studio .lora-popover .lora-row-group:has([data-open]) {
+  border-color: var(--accent);
+}
+.studio .lora-popover .lora-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px 30px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 4px;
+}
+.studio .lora-popover .lora-row-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+}
+.studio .lora-popover .lora-row-name .model-artwork {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.studio .lora-popover .lora-row-name > span:not(.model-artwork) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio .lora-popover .lora-row-name > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.studio .lora-popover .lora-row-name[aria-expanded='true'] > svg {
+  transform: rotate(180deg);
+}
+.studio .lora-popover .lora-row-weight {
+  height: 30px;
+  min-height: 30px;
+  padding: 0 6px;
+  font-size: 13px;
+  text-align: right;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.studio .lora-popover .lora-row .icon-button {
+  width: 30px;
+  min-height: 30px;
+  height: 30px;
+  padding: 0;
+  justify-content: center;
+}
+.studio .lora-popover .lora-row-group > .lora-card {
+  padding: 4px 10px 10px;
+  display: grid;
+  gap: 8px;
+}
+.studio .lora-popover .lora-add {
+  justify-self: start;
+  margin-top: 2px;
+}
+.studio :is(.dock-chip, .lora-popover) .model-artwork.placeholder svg {
+  width: 14px;
+  height: 14px;
+}
