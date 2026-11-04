@@ -113,3 +113,32 @@ it('offers built-in wildcards immediately and customizes/removes their chips', a
     vi.unstubAllGlobals();
   }
 });
+it('pins an upward list to the prompt so it stays put when results narrow', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  const rect = vi
+    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+    .mockReturnValue({ top: 700, bottom: 760, left: 20, right: 520, width: 500, height: 60 } as DOMRect);
+  vi.stubGlobal('innerHeight', 800);
+  try {
+    await act(async () => root.render(<TagPrompt aria-label="Prompt" value="blue" onChange={() => {}} />));
+    const textarea = host.querySelector('textarea')!;
+    await act(async () => {
+      textarea.setSelectionRange(4, 4);
+      textarea.focus();
+    });
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 150));
+    });
+    const list = document.querySelector<HTMLElement>('.tag-suggestions')!;
+    expect(list.style.bottom).toBe('104px');
+    expect(list.style.top).toBe('');
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    rect.mockRestore();
+    vi.unstubAllGlobals();
+  }
+});

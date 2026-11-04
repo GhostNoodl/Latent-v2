@@ -1151,6 +1151,7 @@ export default function App() {
       className="studio"
       data-theme={snapshot.settings.theme}
       data-accent={snapshot.settings.accent}
+      data-tune-side={snapshot.settings.tuneSide ?? 'right'}
       onKeyDown={onKeyDown}
     >
       <SetupActivityPanel compact items={snapshot.setupActivity} />
@@ -1324,24 +1325,6 @@ export default function App() {
                         receive(await window.latent.updateSettings({ sizePresets }));
                       }}
                     />
-                    <div id="negative-area" hidden={false}>
-                      <Field label="Negative prompt">
-                        <TagPrompt
-                          wildcards={snapshot.wildcards.entries}
-                          wildcardSelections={draft.dynamicPrompts?.selections}
-                          onWildcardSelections={selections =>
-                            changeDraft({ dynamicPrompts: { enabled: true, selections } })
-                          }
-                          aria-label="Negative prompt"
-                          sourcePicker={false}
-                          rows={3}
-                          maxLength={16000}
-                          value={draft.negativePrompt}
-                          onChange={negativePrompt => changeDraft({ negativePrompt })}
-                          placeholder="Unwanted details or styles"
-                        />
-                      </Field>
-                    </div>
                     {draft.enhance && (
                       <Notice>
                         Enhancing a saved image. The original will be preserved.
@@ -1771,11 +1754,21 @@ export default function App() {
                             <GripVertical size={13} />
                             Pieces
                           </button>
-                          <button type="button" className="text-button" onClick={() => setAssistantOpen(true)}>
+                          <button
+                            type="button"
+                            className="text-button"
+                            title="Help me write"
+                            onClick={() => setAssistantOpen(true)}
+                          >
                             <Sparkles size={13} />
                             Help me write
                           </button>
-                          <button type="button" className="text-button" onClick={() => changeDraft({ prompt: '' })}>
+                          <button
+                            type="button"
+                            className="text-button"
+                            aria-label="Clear prompt"
+                            onClick={() => changeDraft({ prompt: '' })}
+                          >
                             Clear
                           </button>
                         </div>
@@ -1797,6 +1790,34 @@ export default function App() {
                             placeholder="A quiet greenhouse at dusk, fireflies between the flowers, delicate anime illustration…"
                           />
                         )}
+                      </section>
+                      <section id="negative-area" className="negative-prompt">
+                        <div className="label-row">
+                          <label htmlFor="negative-prompt">Negative</label>
+                          <button
+                            type="button"
+                            className="text-button"
+                            aria-label="Clear negative prompt"
+                            onClick={() => changeDraft({ negativePrompt: '' })}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                        <TagPrompt
+                          wildcards={snapshot.wildcards.entries}
+                          wildcardSelections={draft.dynamicPrompts?.selections}
+                          onWildcardSelections={selections =>
+                            changeDraft({ dynamicPrompts: { enabled: true, selections } })
+                          }
+                          id="negative-prompt"
+                          aria-label="Negative prompt"
+                          sourcePicker={false}
+                          rows={2}
+                          maxLength={16000}
+                          value={draft.negativePrompt}
+                          onChange={negativePrompt => changeDraft({ negativePrompt })}
+                          placeholder="Things to keep out of the image"
+                        />
                       </section>
                     </div>
                     {(familyMismatch || missing.length > 0 || changedAssets.length > 0) && (

@@ -40,6 +40,7 @@ export function useTuneFlyouts() {
       flyout.style.setProperty('--flyout-top', `${Math.round(row.top)}px`);
       flyout.style.setProperty('--flyout-bottom', `${Math.round(window.innerHeight - row.bottom)}px`);
       flyout.style.setProperty('--flyout-left', `${Math.round(row.left)}px`);
+      flyout.style.setProperty('--flyout-right', `${Math.round(row.right)}px`);
     };
     const toggle = (event: Event) => {
       const opened = event.target;

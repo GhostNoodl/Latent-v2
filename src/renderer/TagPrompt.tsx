@@ -85,7 +85,14 @@ export function TagPrompt({
   const [results, setResults] = useState<TagSuggestion[]>([]);
   const [active, setActive] = useState(0);
   const [error, setError] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 300, height: 290 });
+  // Opening upward pins the list's bottom edge to the prompt, so it stays put as results narrow.
+  const [position, setPosition] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+    height: number;
+  }>({ top: 0, left: 0, width: 300, height: 290 });
   const catalog = wildcards ? wildcardCatalog(wildcards) : {};
   const [editing, setEditing] = useState<string>();
   const [choiceQuery, setChoiceQuery] = useState('');
@@ -172,7 +179,8 @@ export function TagPrompt({
       const above = below < 180 && rect.top > below;
       const height = Math.min(290, Math.max(90, above ? rect.top - 12 : below));
       setPosition({
-        top: above ? rect.top - height - 4 : rect.bottom + 4,
+        top: above ? undefined : rect.bottom + 4,
+        bottom: above ? window.innerHeight - rect.top + 4 : undefined,
         left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
         width,
         height,
@@ -363,7 +371,13 @@ export function TagPrompt({
         createPortal(
           <div
             className="tag-suggestions"
-            style={{ top: position.top, left: position.left, width: position.width, maxHeight: position.height }}
+            style={{
+              top: position.top,
+              bottom: position.bottom,
+              left: position.left,
+              width: position.width,
+              maxHeight: position.height,
+            }}
           >
             <div className="tag-suggestions-hint">↑↓ choose · Tab / Enter insert · Esc close</div>
             <ul id={id} role="listbox" aria-label="Tag suggestions" style={{ maxHeight: position.height - 30 }}>
