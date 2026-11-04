@@ -409,6 +409,18 @@ export function StudioSettings({
           </select>
         </div>
         <div className="setting-line">
+          <label htmlFor="tune-side">Tune panel</label>
+          <select
+            id="tune-side"
+            value={settings.tuneSide ?? 'right'}
+            disabled={settingsBusy}
+            onChange={event => update({ tuneSide: event.target.value as 'left' | 'right' })}
+          >
+            <option value="right">On the right</option>
+            <option value="left">On the left</option>
+          </select>
+        </div>
+        <div className="setting-line">
           <span>Accent color</span>
           <div className="accent-picker">
             {(['iris', 'sea-glass', 'rose', 'sky', 'amber', 'peach', 'mint', 'lilac'] as const).map(accent => (

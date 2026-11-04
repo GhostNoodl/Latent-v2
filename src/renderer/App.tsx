@@ -1053,71 +1053,55 @@ export default function App() {
     const current = copyDraft(draftRef.current),
       requestedCloseEpoch = closeEpoch.current,
       requestedPreview = previewSelectionRevision.current;
-    void runUserWrite(
-      'enhance-image',
-      async () => {
-        const source = await window.latent.useOutputAsSource(record.id);
-        if (closing.current || closeRequested.current || requestedCloseEpoch !== closeEpoch.current)
-          throw new Error('Enhancement was not submitted because the studio is closing.');
-        const requested = prepareOneClickEnhancement(record, source, current, enhanceScale);
-        await window.latent.queueGeneration(requested);
-        if (previewSelectionRevision.current === requestedPreview) {
-          setViewLivePreview(true);
-          setZoom(0);
-        }
-      },
-      'Image refinement queued. Your original is kept.',
-    );
+    void runUserWrite('enhance-image', async () => {
+      const source = await window.latent.useOutputAsSource(record.id);
+      if (closing.current || closeRequested.current || requestedCloseEpoch !== closeEpoch.current)
+        throw new Error('Enhancement was not submitted because the studio is closing.');
+      const requested = prepareOneClickEnhancement(record, source, current, enhanceScale);
+      await window.latent.queueGeneration(requested);
+      if (previewSelectionRevision.current === requestedPreview) {
+        setViewLivePreview(true);
+        setZoom(0);
+      }
+    });
   };
   const generate = () => {
     const requestedDraft = copyDraft(draftRef.current);
     const requestedPreview = previewSelectionRevision.current;
     const requestedCloseEpoch = closeEpoch.current;
-    void run(
-      'generate',
-      async () => {
-        await flushDraft();
-        if (closing.current || closeRequested.current || requestedCloseEpoch !== closeEpoch.current)
-          throw new Error('Generation was not submitted because the studio is closing. Your draft is saved.');
-        const accepted = window.latent.queueGeneration(requestedDraft);
-        pendingGeneration.current = accepted;
-        await accepted;
-        if (previewSelectionRevision.current === requestedPreview) {
-          setViewLivePreview(true);
-          setZoom(0);
-        }
-      },
-      'Queued.',
-    );
+    void run('generate', async () => {
+      await flushDraft();
+      if (closing.current || closeRequested.current || requestedCloseEpoch !== closeEpoch.current)
+        throw new Error('Generation was not submitted because the studio is closing. Your draft is saved.');
+      const accepted = window.latent.queueGeneration(requestedDraft);
+      pendingGeneration.current = accepted;
+      await accepted;
+      if (previewSelectionRevision.current === requestedPreview) {
+        setViewLivePreview(true);
+        setZoom(0);
+      }
+    });
   };
   // Live paint brings its own source image, so image-input and Enhance problems don't block it.
   const liveBlocked = draft.enhance || draft.upscale || draft.imageInput ? undefined : cannotGenerate;
   const queueSweep = (drafts: GenerationDraft[]) => {
     if (!drafts.length) return;
-    void run(
-      'generate',
-      async () => {
-        await flushDraft();
-        for (const cell of drafts) await window.latent.queueGeneration(cell);
-        setSweepView(drafts[0].sweep);
-      },
-      `${drafts.length} images queued.`,
-    );
+    void run('generate', async () => {
+      await flushDraft();
+      for (const cell of drafts) await window.latent.queueGeneration(cell);
+      setSweepView(drafts[0].sweep);
+    });
   };
   const queuePaused = (paused: GenerationDraft) => {
     const requestedPreview = previewSelectionRevision.current;
-    void run(
-      'generate',
-      async () => {
-        await flushDraft();
-        await window.latent.queueGeneration(paused);
-        if (previewSelectionRevision.current === requestedPreview) {
-          setViewLivePreview(true);
-          setZoom(0);
-        }
-      },
-      'Queued. It will stop partway for you.',
-    );
+    void run('generate', async () => {
+      await flushDraft();
+      await window.latent.queueGeneration(paused);
+      if (previewSelectionRevision.current === requestedPreview) {
+        setViewLivePreview(true);
+        setZoom(0);
+      }
+    });
   };
   const finishPaused = (record: GenerationRecord, tweaks: { prompt: string; negativePrompt: string; cfg: number }) =>
     void run(
@@ -1151,6 +1135,7 @@ export default function App() {
       className="studio"
       data-theme={snapshot.settings.theme}
       data-accent={snapshot.settings.accent}
+      data-tune-side={snapshot.settings.tuneSide ?? 'right'}
       onKeyDown={onKeyDown}
     >
       <SetupActivityPanel compact items={snapshot.setupActivity} />
@@ -1324,24 +1309,6 @@ export default function App() {
                         receive(await window.latent.updateSettings({ sizePresets }));
                       }}
                     />
-                    <div id="negative-area" hidden={false}>
-                      <Field label="Negative prompt">
-                        <TagPrompt
-                          wildcards={snapshot.wildcards.entries}
-                          wildcardSelections={draft.dynamicPrompts?.selections}
-                          onWildcardSelections={selections =>
-                            changeDraft({ dynamicPrompts: { enabled: true, selections } })
-                          }
-                          aria-label="Negative prompt"
-                          sourcePicker={false}
-                          rows={3}
-                          maxLength={16000}
-                          value={draft.negativePrompt}
-                          onChange={negativePrompt => changeDraft({ negativePrompt })}
-                          placeholder="Unwanted details or styles"
-                        />
-                      </Field>
-                    </div>
                     {draft.enhance && (
                       <Notice>
                         Enhancing a saved image. The original will be preserved.
@@ -1771,11 +1738,21 @@ export default function App() {
                             <GripVertical size={13} />
                             Pieces
                           </button>
-                          <button type="button" className="text-button" onClick={() => setAssistantOpen(true)}>
+                          <button
+                            type="button"
+                            className="text-button"
+                            title="Help me write"
+                            onClick={() => setAssistantOpen(true)}
+                          >
                             <Sparkles size={13} />
                             Help me write
                           </button>
-                          <button type="button" className="text-button" onClick={() => changeDraft({ prompt: '' })}>
+                          <button
+                            type="button"
+                            className="text-button"
+                            aria-label="Clear prompt"
+                            onClick={() => changeDraft({ prompt: '' })}
+                          >
                             Clear
                           </button>
                         </div>
@@ -1797,6 +1774,34 @@ export default function App() {
                             placeholder="A quiet greenhouse at dusk, fireflies between the flowers, delicate anime illustration…"
                           />
                         )}
+                      </section>
+                      <section id="negative-area" className="negative-prompt">
+                        <div className="label-row">
+                          <label htmlFor="negative-prompt">Negative</label>
+                          <button
+                            type="button"
+                            className="text-button"
+                            aria-label="Clear negative prompt"
+                            onClick={() => changeDraft({ negativePrompt: '' })}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                        <TagPrompt
+                          wildcards={snapshot.wildcards.entries}
+                          wildcardSelections={draft.dynamicPrompts?.selections}
+                          onWildcardSelections={selections =>
+                            changeDraft({ dynamicPrompts: { enabled: true, selections } })
+                          }
+                          id="negative-prompt"
+                          aria-label="Negative prompt"
+                          sourcePicker={false}
+                          rows={2}
+                          maxLength={16000}
+                          value={draft.negativePrompt}
+                          onChange={negativePrompt => changeDraft({ negativePrompt })}
+                          placeholder="Things to keep out of the image"
+                        />
                       </section>
                     </div>
                     {(familyMismatch || missing.length > 0 || changedAssets.length > 0) && (

@@ -44,17 +44,13 @@ export function NotificationCenter({
     ...(snapshot.notifications ?? [])
       .filter(item => snapshot.settings[item.preference])
       .map(item => ({ key: `notice:${item.id}`, title: item.title, detail: item.body, at: item.at, job: false })),
+    // Finished images live in the gallery; only failed jobs belong here.
     ...snapshot.jobs
-      .filter(job =>
-        job.status === 'completed'
-          ? snapshot.settings.notifyGeneration
-          : job.status === 'failed' && snapshot.settings.notifyError,
-      )
+      .filter(job => job.status === 'failed' && snapshot.settings.notifyError)
       .map(job => ({
         key: `job:${queueClearKey(job)}`,
-        title:
-          job.status === 'failed' ? 'Generation needs attention' : job.kind === 'video' ? 'Video ready' : 'Image ready',
-        detail: job.error || 'Saved to your history.',
+        title: job.kind === 'video' ? 'Video needs attention' : 'Generation needs attention',
+        detail: job.error || 'Something went wrong.',
         at: job.updatedAt,
         job: true,
       })),

@@ -3309,3 +3309,90 @@ body:has(.studio) {
   justify-content: center;
   gap: 6px;
 }
+
+/* Prompt and negative prompt side by side in the dock. Each box lights up when typing in it. */
+.studio .workspace .prompt-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  align-items: stretch;
+  gap: 10px;
+  overflow: visible;
+  max-height: none;
+}
+.studio .workspace .prompt-workspace > section {
+  min-width: 0;
+  padding: 6px 10px 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--inset);
+  transition: border-color 0.15s ease;
+}
+.studio .workspace .prompt-workspace > section > .label-row {
+  min-height: 26px;
+}
+.studio .workspace .prompt-workspace > section:focus-within {
+  border-color: var(--accent);
+}
+.studio .workspace .prompt-workspace :is(#prompt, #negative-prompt):focus-visible,
+.studio .workspace .prompt-workspace .tag-prompt textarea:focus-visible {
+  outline: none;
+}
+.studio .workspace .prompt-workspace .tag-prompt textarea {
+  max-height: 20vh;
+  overflow-y: auto;
+}
+.studio .workspace .prompt-workspace .label-row {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.studio .workspace .prompt-workspace .label-row > * {
+  flex-shrink: 0;
+}
+.studio .workspace .prompt-workspace .negative-prompt .label-row label {
+  margin-right: auto;
+}
+.studio .workspace .prompt-workspace .negative-prompt .tag-prompt textarea {
+  font-size: 14px;
+  color: var(--muted);
+}
+.studio .workspace .prompt-workspace .negative-prompt .tag-prompt textarea:focus {
+  color: var(--text);
+}
+@media (max-width: 1500px) {
+  /* Narrow windows: the prompt toolbar keeps icons only, names stay on hover. */
+  .studio .workspace .prompt-workspace > section:first-child .label-row .text-button {
+    font-size: 0;
+    gap: 0;
+    padding: 0 6px;
+  }
+  .studio .workspace .prompt-workspace > section:first-child .label-row .text-button:last-child {
+    font-size: 12px;
+  }
+}
+
+/* Tune panel on the left (Settings > Appearance). */
+.studio[data-tune-side='left'] .main-create .workspace,
+.studio[data-tune-side='left'] .workspace {
+  grid-template-columns: var(--tune-width) minmax(0, 1fr) 76px;
+}
+.studio[data-tune-side='left'] .workspace .composer-fields {
+  grid-column: 1;
+  border-left: 0;
+  border-right: 1px solid var(--border);
+}
+.studio[data-tune-side='left'] .workspace :is(.stage, .prompt-dock) {
+  grid-column: 2;
+}
+.studio[data-tune-side='left'] .create-history {
+  grid-column: 3;
+}
+.studio[data-tune-side='left'] .workspace .composer-fields details.tune-flyout[open]::details-content {
+  right: auto;
+  left: calc(var(--flyout-right, var(--tune-width)) + 14px);
+}
+.studio[data-tune-side='left'] .workspace .composer-fields details.tune-flyout[open] > summary::before {
+  left: auto;
+  right: -15px;
+  border-right-color: transparent;
+  border-left-color: var(--accent);
+}

@@ -71,6 +71,15 @@ it('escapes trigger syntax in variations without adding a second hidden prefix',
   expect(prepared.prompt).toBe('__literal__, {red|blue}, a garden');
   expect(resolvePrompt({ ...d, prompt: prepared.prompt }, [])).toBe(prepared.prompt);
 });
+it('keeps single underscores in trigger words as typed when variations are on', async () => {
+  const d = change(
+    { ...initial(), dynamicPrompts: { enabled: true } },
+    { triggerWords: { a: ['muses_in_dark', 'a___b'] } },
+  );
+  expect(d.prompt.startsWith('muses_in_dark, ')).toBe(true);
+  const prepared = await prepareDynamicPromptDraft(d, '1', await createWildcardSnapshot({}));
+  expect(prepared.prompt).toBe('muses_in_dark, a___b, a garden');
+});
 it('preserves old recipes and resolver semantics across unrelated edits', () => {
   const old = restoreTriggerResolution({
     ...initial(),

@@ -38,14 +38,6 @@
   box-shadow: 0 8px 24px #0007;
   overflow: hidden;
 }
-.studio .workspace .prompt-workspace > section:first-child > .tag-prompt {
-  grid-column: 1;
-  grid-row: 2;
-}
-.studio .workspace .prompt-workspace #negative-area .tag-prompt {
-  grid-column: 2;
-  grid-row: 2;
-}
 .tag-suggestions-hint {
   padding: 6px 10px;
   font-size: 11px;
@@ -96,4 +88,13 @@
   font-size: 11px;
   padding: 4px 7px;
   min-height: 28px;
+}
+
+.tag-suggestions li[data-picked] strong {
+  color: var(--accent);
+}
+.tag-suggestions li > span > svg {
+  color: var(--accent);
+  margin-right: 6px;
+  vertical-align: -2px;
 }

@@ -373,8 +373,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 130899,
-      "sha256": "096c2dfc20da56e79a46725e002e8c62e3c47f1f3f7911bae3c3027b134d2a36"
+      "bytes": 131504,
+      "sha256": "67a19a021aef4b643014723cd60f76f7fe8904ad6365a93a3c52539ce13524d0"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 76255,
-      "sha256": "23749c06e816280e7245066b483703696df47a97f65ef835cfbc45cd38c947e4"
+      "bytes": 78994,
+      "sha256": "9c06fba8bb704622ce6d4a7de93e1f10d620a11c693befb079d13f54740b2837"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -548,8 +548,8 @@
     },
     {
       "path": "src/renderer/NotificationCenter.tsx",
-      "bytes": 6133,
-      "sha256": "5dce26d1a5e309c8a3bb2f9fde8177e09a48806cae189a3d4c62ca2edb59a8c6"
+      "bytes": 6062,
+      "sha256": "7a2b01c40f43d9c20bc5642f72647b42bd37e89866513dbe307c4c388ec1ae1b"
     },
     {
       "path": "src/renderer/PackageSetupStorage.tsx",
@@ -603,8 +603,8 @@
     },
     {
       "path": "src/renderer/Settings.tsx",
-      "bytes": 26210,
-      "sha256": "3227a883a4efc09dc0810091b0ae710d9c9ef6f03584000fbaaf94744c5d330a"
+      "bytes": 26685,
+      "sha256": "a6f4aaed60395d43adcda5c2d13e7070cc79b740f39fdeaed37b88389bf5e23b"
     },
     {
       "path": "src/renderer/SharedBackendActivity.tsx",
@@ -658,8 +658,8 @@
     },
     {
       "path": "src/renderer/usability.css",
-      "bytes": 30090,
-      "sha256": "b60d4e147a84a3c4788bab960c517b7695b44eade273ee7b1a5d5855b4dc5bbe"
+      "bytes": 29527,
+      "sha256": "589a89c473b0edd71552570a591ec941e113c35cee7c79e8820c95ec1541b0dd"
     },
     {
       "path": "src/renderer/variation-description.ts",
@@ -923,8 +923,8 @@
     },
     {
       "path": "src/shared/trigger-editing.ts",
-      "bytes": 3229,
-      "sha256": "eeedc7f49b9e0df8328b21f3f40252518f3c0d8742ce986ee2fa809cb25b704b"
+      "bytes": 3328,
+      "sha256": "6515a7c04843e81ff0267f9a82b7829aab03d6bd2afff8e2ed1c840f3a709759"
     },
     {
       "path": "src/shared/trigger-resolution.ts",
@@ -933,13 +933,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 21791,
-      "sha256": "415aaf88e4a314b5252fa2fb2fd7258252d3bacb479b6f48d22f3ccad302fed1"
+      "bytes": 21876,
+      "sha256": "5b977b4413419e676e580794e3229ac19d61ffd97d158bdf83dd4e5a11dcca88"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 12124,
-      "sha256": "a93c500e39521db33e08b415581f947a45102668c85427843049efa8747ad3ea"
+      "bytes": 12176,
+      "sha256": "1f75fc24e91d1ad43fd0eb0455da754da472e7875434a2e7d99d3818a8e57a2f"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1034,12 +1034,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "5e2119c7575950be538aeb0826957590f27392a13621f6e9193de170abad65b6"
+      "sha256": "ffe6048e69ccc6b13599ac49e499d6c5a6fbea71213c299b4be47da0e624a548"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "28afdc3d2acbafdadf679b3663f9fd0010c81cadfffb0b9cae034620b29e1ea1"
+      "sha256": "66b67567f96a54b40bc522cedfa8ea9c2be05f5f6802a2fa2af4bffa54da2782"
     },
     {
       "path": "tsconfig.json",
@@ -1353,8 +1353,8 @@
     },
     {
       "path": "src/renderer/useDismissiblePanel.ts",
-      "bytes": 3544,
-      "sha256": "3dfd8ee568c5d44a0a40f635a8a7b9c72fa45ac683b07c9cc0a2ce3009eefacc"
+      "bytes": 3624,
+      "sha256": "d5f4a92aede1c19655efa6a2583df5bfeb46961afde550be99f5593b81b3d288"
     },
     {
       "path": "tests/create-update.test.tsx",
@@ -1423,8 +1423,8 @@
     },
     {
       "path": "src/shared/visible-triggers.ts",
-      "bytes": 4405,
-      "sha256": "6b88e7741d0857674fbb59a39b90c7a571d694cb246f02b0ed9f948209496164"
+      "bytes": 4520,
+      "sha256": "810f0f915af9ab504c7189f745de9256c82d2435e17d3ec9a67a046bc61d2ff1"
     },
     {
       "path": "src/renderer/LoraTriggerChoices.tsx",
@@ -1433,8 +1433,8 @@
     },
     {
       "path": "tests/visible-triggers.test.ts",
-      "bytes": 5635,
-      "sha256": "9a3f958c3d79bccb9b960020df24ba47bfe8f9354feac18aff6669a6cf861b3c"
+      "bytes": 6093,
+      "sha256": "df107b5a3e12e625b30a4b6fc47cc1837a7f9dd3e04856cfefbc0c1f23c12bb6"
     },
     {
       "path": "tests/lora-trigger-choices.test.tsx",
@@ -1563,13 +1563,13 @@
     },
     {
       "path": "src/shared/tag-autocomplete.ts",
-      "bytes": 5664,
-      "sha256": "cc7e1b83eee3a74de860792be1b16f5b8d24d45f3ea3f29432e3723921435ab5"
+      "bytes": 5896,
+      "sha256": "be895b28a5659300d11298ec1b7b13c51d88cb7a8eefdeb65b26dccdf6268cf3"
     },
     {
       "path": "src/renderer/TagPrompt.tsx",
-      "bytes": 14309,
-      "sha256": "3afd818788433c2a842a8c500e42fd12eb275a8e0a9946a6894ba74cfb21b174"
+      "bytes": 15961,
+      "sha256": "a39af32ca63efbebca6a25238d1525df2fce67a2ff497a074723fe7b581ee5fe"
     },
     {
       "path": "src/renderer/tag-search.ts",
@@ -1583,8 +1583,8 @@
     },
     {
       "path": "src/renderer/tag-prompt.css",
-      "bytes": 1976,
-      "sha256": "71b58929d68853b42cb818605d912e848454b15611b31a4ba9321a293e064253"
+      "bytes": 1940,
+      "sha256": "40fc8985528ac86b5bfb02d2f4d8bc299c1d2c3971e2fe1375d0213c4f3f124b"
     },
     {
       "path": "src/renderer/tag-data/e621.csv",
@@ -1603,8 +1603,8 @@
     },
     {
       "path": "tests/tag-prompt-dom.test.tsx",
-      "bytes": 4473,
-      "sha256": "6bc4b0794ba5b4c92ff0d969e066468c008a33121122b6e35cd1b9d8b97d8b49"
+      "bytes": 7341,
+      "sha256": "b9c94040feafca9cb7688a2b0447d44a3613f39d92373f11f4543d03ae07e1e9"
     },
     {
       "path": "licenses/TAG-AUTOCOMPLETE-MIT.txt",

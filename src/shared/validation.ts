@@ -249,6 +249,7 @@ export const settingsSchema = z
       .max(100)
       .optional(),
     promptPieces: z.boolean().optional(),
+    tuneSide: z.enum(['left', 'right']).optional(),
   })
   .strict();
 /** Zod applies field defaults inside .partial(), which would silently reset settings the patch never named. */

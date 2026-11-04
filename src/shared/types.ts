@@ -206,6 +206,8 @@ export interface AppSettings {
   savedPrompts?: { id: string; text: string }[];
   /** Show the Create prompt as draggable pieces instead of plain text. */
   promptPieces?: boolean;
+  /** Which side of Create the Tune panel sits on. */
+  tuneSide?: 'left' | 'right';
 }
 export interface AppPaths {
   root: string;

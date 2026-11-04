@@ -5,7 +5,9 @@ export interface PromptTriggerSpan {
   word: string;
 }
 const key = (word: string) => word.trim().toLowerCase();
-const literal = (word: string, dynamic: boolean) => (dynamic ? word.replace(/[\\{}|_]/g, '\\$&') : word);
+// Only a double underscore starts a wildcard, so single ones (muses_in_dark) stay as typed.
+const literal = (word: string, dynamic: boolean) =>
+  dynamic ? word.replace(/[\\{}|]/g, '\\$&').replace(/__/g, '_\\_') : word;
 const valid = (prompt: string, span: PromptTriggerSpan) =>
   prompt.slice(span.start, span.start + span.text.length) === span.text;
 /** One contiguous edit: affected spans become user-owned; unchanged spans shift. */
