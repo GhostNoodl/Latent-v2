@@ -148,6 +148,8 @@ it('pins an upward list to the prompt so it stays put when results narrow', asyn
 
 it('picks several tags with Shift and inserts them together', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  // jsdom has no layout, so arrow keys can't scroll the list.
+  Element.prototype.scrollIntoView ??= () => {};
   vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) => {
     fn(0);
     return 0;
