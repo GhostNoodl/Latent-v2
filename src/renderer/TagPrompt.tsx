@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import { Modal } from './ui';
 import { wildcardCatalog } from '../shared/dynamic-prompt-recipe';
 import { activeWildcardNames, mixWildcardPrompt } from '../shared/wildcard-mixer';
@@ -11,7 +12,7 @@ import {
   type TextareaHTMLAttributes,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { insertTag, tagToken, type TagSource, type TagSuggestion } from '../shared/tag-autocomplete';
+import { insertTags, tagToken, type TagSource, type TagSuggestion } from '../shared/tag-autocomplete';
 import { findTags } from './tag-search';
 import './tag-prompt.css';
 
@@ -84,6 +85,8 @@ export function TagPrompt({
   const [composing, setComposing] = useState(false);
   const [results, setResults] = useState<TagSuggestion[]>([]);
   const [active, setActive] = useState(0);
+  /** Tags marked with Shift, inserted together on the next Enter, Tab or click. */
+  const [picked, setPicked] = useState<string[]>([]);
   const [error, setError] = useState(false);
   // Opening upward pins the list's bottom edge to the prompt, so it stays put as results narrow.
   const [position, setPosition] = useState<{
@@ -169,6 +172,11 @@ export function TagPrompt({
     setActive(0);
   }, [wildcardQuery]);
   const chosenIndex = Math.min(active, Math.max(0, suggestions.length - 1));
+  useEffect(() => {
+    if (!open) setPicked([]);
+  }, [open]);
+  const togglePick = (name: string) =>
+    setPicked(previous => (previous.includes(name) ? previous.filter(item => item !== name) : [...previous, name]));
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -207,11 +215,13 @@ export function TagPrompt({
     if (!element) return;
     const current = tagToken(value, element.selectionStart, element.selectionEnd);
     if (!current) return;
-    const next = insertTag(value, current, item.name);
+    const names = picked.length ? (picked.includes(item.name) ? picked : [...picked, item.name]) : [item.name];
+    const next = insertTags(value, current, names);
     if (props.maxLength && next.value.length > props.maxLength) return;
     onChange(next.value);
     setDismissed(true);
     setResults([]);
+    setPicked([]);
     requestAnimationFrame(() => {
       element.focus();
       element.setSelectionRange(next.caret, next.caret);
@@ -258,6 +268,12 @@ export function TagPrompt({
             event.preventDefault();
             event.stopPropagation();
             setDismissed(true);
+            return;
+          }
+          if (open && event.shiftKey && (event.key === 'Enter' || event.key === 'Tab') && wildcardQuery === undefined) {
+            event.preventDefault();
+            event.stopPropagation();
+            togglePick(suggestions[chosenIndex].name);
             return;
           }
           if (open && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
@@ -379,7 +395,11 @@ export function TagPrompt({
               maxHeight: position.height,
             }}
           >
-            <div className="tag-suggestions-hint">↑↓ choose · Tab / Enter insert · Esc close</div>
+            <div className="tag-suggestions-hint">
+              {picked.length
+                ? `${picked.length} picked · Enter adds them all · Esc close`
+                : '↑↓ choose · Tab / Enter insert · Shift to pick several · Esc close'}
+            </div>
             <ul id={id} role="listbox" aria-label="Tag suggestions" style={{ maxHeight: position.height - 30 }}>
               {suggestions.map((item, index) => (
                 <li
@@ -387,10 +407,15 @@ export function TagPrompt({
                   key={item.name}
                   role="option"
                   aria-selected={index === active}
+                  data-picked={picked.includes(item.name) || undefined}
                   onMouseDown={event => event.preventDefault()}
-                  onClick={() => accept(item)}
+                  onClick={event => {
+                    if (event.shiftKey && wildcardQuery === undefined) togglePick(item.name);
+                    else accept(item);
+                  }}
                 >
                   <span>
+                    {picked.includes(item.name) && <Check size={13} aria-label="Picked" />}
                     <strong>
                       {wildcardQuery !== undefined ? '__' + item.name + '__' : item.name.replaceAll('_', ' ')}
                     </strong>

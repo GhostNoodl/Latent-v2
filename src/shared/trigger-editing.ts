@@ -4,7 +4,8 @@ import { usesDynamicPrompts, prepareDynamicPromptDraft, type WildcardSnapshot } 
 import { draftSchema } from './validation';
 
 // Trigger metadata is literal text even when the authored prompt uses variations.
-const escapeVariationLiteral = (text: string) => text.replace(/[\\{}|_]/g, '\\$&');
+// Only a double underscore starts a wildcard, so single ones stay as typed.
+const escapeVariationLiteral = (text: string) => text.replace(/[\\{}|]/g, '\\$&').replace(/__/g, '_\\_');
 
 /** Transfer current automatic additions to authored ownership. Expressions stay
  * authored expressions; a seeded/frozen variation supplies matching context only.

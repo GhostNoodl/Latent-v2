@@ -89,3 +89,12 @@
   padding: 4px 7px;
   min-height: 28px;
 }
+
+.tag-suggestions li[data-picked] strong {
+  color: var(--accent);
+}
+.tag-suggestions li > span > svg {
+  color: var(--accent);
+  margin-right: 6px;
+  vertical-align: -2px;
+}

@@ -46,8 +46,13 @@ export function tagToken(value: string, caret: number, selectionEnd = caret): Ta
 }
 
 export function insertTag(value: string, token: TagToken, name: string) {
+  return insertTags(value, token, [name]);
+}
+
+/** Puts one or more picked tags where the typed tag was, comma separated. */
+export function insertTags(value: string, token: TagToken, names: string[]) {
   // Literal tag parentheses must not become Comfy prompt emphasis syntax.
-  const text = name.replaceAll('_', ' ').replace(/[()]/g, '\\$&');
+  const text = names.map(name => name.replaceAll('_', ' ').replace(/[()]/g, '\\$&')).join(', ');
   let tail = value.slice(token.end);
   let caret = token.start + text.length;
   if (!tail.trim()) {

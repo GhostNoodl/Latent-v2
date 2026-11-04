@@ -4,7 +4,10 @@ import { createRoot } from 'react-dom/client';
 import { expect, it, vi } from 'vitest';
 import { TagPrompt } from '../src/renderer/TagPrompt';
 vi.mock('../src/renderer/tag-search', () => ({
-  findTags: vi.fn(async () => [{ name: 'blue_eyes', sources: ['e621'], count: 100 }]),
+  findTags: vi.fn(async () => [
+    { name: 'blue_eyes', sources: ['e621'], count: 100 },
+    { name: 'blue_hair', sources: ['e621'], count: 90 },
+  ]),
 }));
 it('inserts with Tab, dismisses with Escape and preserves Ctrl+Enter', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -139,6 +142,47 @@ it('pins an upward list to the prompt so it stays put when results narrow', asyn
     await act(async () => root.unmount());
     host.remove();
     rect.mockRestore();
+    vi.unstubAllGlobals();
+  }
+});
+
+it('picks several tags with Shift and inserts them together', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) => {
+    fn(0);
+    return 0;
+  });
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  function Fixture() {
+    const [value, change] = useState('blue');
+    return <TagPrompt aria-label="Prompt" value={value} onChange={change} />;
+  }
+  const key = (textarea: HTMLTextAreaElement, init: KeyboardEventInit) =>
+    act(async () => {
+      textarea.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }));
+    });
+  try {
+    await act(async () => root.render(<Fixture />));
+    const textarea = host.querySelector('textarea')!;
+    await act(async () => {
+      textarea.setSelectionRange(4, 4);
+      textarea.focus();
+    });
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 150));
+    });
+    await key(textarea, { key: 'Enter', shiftKey: true });
+    expect(document.querySelector('[data-picked]')?.textContent).toContain('blue eyes');
+    expect(document.querySelector('.tag-suggestions-hint')?.textContent).toContain('1 picked');
+    await key(textarea, { key: 'ArrowDown' });
+    await key(textarea, { key: 'Enter' });
+    expect(textarea.value).toBe('blue eyes, blue hair, ');
+    expect(document.querySelector('[role=listbox]')).toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
     vi.unstubAllGlobals();
   }
 });

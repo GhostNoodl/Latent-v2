@@ -1053,71 +1053,55 @@ export default function App() {
     const current = copyDraft(draftRef.current),
       requestedCloseEpoch = closeEpoch.current,
       requestedPreview = previewSelectionRevision.current;
-    void runUserWrite(
-      'enhance-image',
-      async () => {
-        const source = await window.latent.useOutputAsSource(record.id);
-        if (closing.current || closeRequested.current || requestedCloseEpoch !== closeEpoch.current)
-          throw new Error('Enhancement was not submitted because the studio is closing.');
-        const requested = prepareOneClickEnhancement(record, source, current, enhanceScale);
-        await window.latent.queueGeneration(requested);
-        if (previewSelectionRevision.current === requestedPreview) {
-          setViewLivePreview(true);
-          setZoom(0);
-        }
-      },
-      'Image refinement queued. Your original is kept.',
-    );
+    void runUserWrite('enhance-image', async () => {
+      const source = await window.latent.useOutputAsSource(record.id);
+      if (closing.current || closeRequested.current || requestedCloseEpoch !== closeEpoch.current)
+        throw new Error('Enhancement was not submitted because the studio is closing.');
+      const requested = prepareOneClickEnhancement(record, source, current, enhanceScale);
+      await window.latent.queueGeneration(requested);
+      if (previewSelectionRevision.current === requestedPreview) {
+        setViewLivePreview(true);
+        setZoom(0);
+      }
+    });
   };
   const generate = () => {
     const requestedDraft = copyDraft(draftRef.current);
     const requestedPreview = previewSelectionRevision.current;
     const requestedCloseEpoch = closeEpoch.current;
-    void run(
-      'generate',
-      async () => {
-        await flushDraft();
-        if (closing.current || closeRequested.current || requestedCloseEpoch !== closeEpoch.current)
-          throw new Error('Generation was not submitted because the studio is closing. Your draft is saved.');
-        const accepted = window.latent.queueGeneration(requestedDraft);
-        pendingGeneration.current = accepted;
-        await accepted;
-        if (previewSelectionRevision.current === requestedPreview) {
-          setViewLivePreview(true);
-          setZoom(0);
-        }
-      },
-      'Queued.',
-    );
+    void run('generate', async () => {
+      await flushDraft();
+      if (closing.current || closeRequested.current || requestedCloseEpoch !== closeEpoch.current)
+        throw new Error('Generation was not submitted because the studio is closing. Your draft is saved.');
+      const accepted = window.latent.queueGeneration(requestedDraft);
+      pendingGeneration.current = accepted;
+      await accepted;
+      if (previewSelectionRevision.current === requestedPreview) {
+        setViewLivePreview(true);
+        setZoom(0);
+      }
+    });
   };
   // Live paint brings its own source image, so image-input and Enhance problems don't block it.
   const liveBlocked = draft.enhance || draft.upscale || draft.imageInput ? undefined : cannotGenerate;
   const queueSweep = (drafts: GenerationDraft[]) => {
     if (!drafts.length) return;
-    void run(
-      'generate',
-      async () => {
-        await flushDraft();
-        for (const cell of drafts) await window.latent.queueGeneration(cell);
-        setSweepView(drafts[0].sweep);
-      },
-      `${drafts.length} images queued.`,
-    );
+    void run('generate', async () => {
+      await flushDraft();
+      for (const cell of drafts) await window.latent.queueGeneration(cell);
+      setSweepView(drafts[0].sweep);
+    });
   };
   const queuePaused = (paused: GenerationDraft) => {
     const requestedPreview = previewSelectionRevision.current;
-    void run(
-      'generate',
-      async () => {
-        await flushDraft();
-        await window.latent.queueGeneration(paused);
-        if (previewSelectionRevision.current === requestedPreview) {
-          setViewLivePreview(true);
-          setZoom(0);
-        }
-      },
-      'Queued. It will stop partway for you.',
-    );
+    void run('generate', async () => {
+      await flushDraft();
+      await window.latent.queueGeneration(paused);
+      if (previewSelectionRevision.current === requestedPreview) {
+        setViewLivePreview(true);
+        setZoom(0);
+      }
+    });
   };
   const finishPaused = (record: GenerationRecord, tweaks: { prompt: string; negativePrompt: string; cfg: number }) =>
     void run(
