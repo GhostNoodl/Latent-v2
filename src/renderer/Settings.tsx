@@ -3,7 +3,7 @@ import { SetupActivityPanel } from './SetupActivityPanel';
 import { AppUpdates } from './AppUpdates';
 import { TelegramRemote } from './TelegramRemote';
 import { PackageSetupStorage } from './PackageSetupStorage';
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { ArrowUpRight, Check, Copy, Download, Play, RotateCcw, Square, Terminal } from 'lucide-react';
 import type { AppSettings, AppSnapshot } from '../shared/types';
 import { DEFAULT_SETTINGS } from '../shared/defaults';
@@ -53,6 +53,13 @@ const SECTION_NAMES: Record<string, string> = {
 };
 
 const tabKey = 'latent.settings-tab';
+/** Shows the chosen section; sections without a name (no heading) always show. */
+function showSection(root: HTMLElement, shown: string | undefined) {
+  if (!shown) return;
+  root.dataset.tabs = '';
+  for (const section of root.querySelectorAll<HTMLElement>(':scope > section'))
+    section.toggleAttribute('data-current', section.id === shown || !section.dataset.tabName);
+}
 /** The tabs on the left of Settings. Reads the sections from the page, so new ones show up on their own,
  * and shows one section at a time. */
 function SettingsSections({ content }: { content: RefObject<HTMLDivElement | null> }) {
@@ -65,14 +72,6 @@ function SettingsSections({ content }: { content: RefObject<HTMLDivElement | nul
     }
   });
   const shownRef = useRef<string | undefined>(undefined);
-  /** Shows the chosen section; sections without a name (no heading) always show. */
-  const apply = useCallback(() => {
-    const root = content.current;
-    if (!root || !shownRef.current) return;
-    root.dataset.tabs = '';
-    for (const section of root.querySelectorAll<HTMLElement>(':scope > section'))
-      section.toggleAttribute('data-current', section.id === shownRef.current || !section.dataset.tabName);
-  }, [content]);
   useEffect(() => {
     const root = content.current;
     if (!root) return;
@@ -96,21 +95,21 @@ function SettingsSections({ content }: { content: RefObject<HTMLDivElement | nul
       );
     };
     read();
-    apply();
+    showSection(root, shownRef.current);
     const changes = new MutationObserver(() => {
       read();
-      apply();
+      showSection(root, shownRef.current);
     });
     changes.observe(root, { childList: true });
     return () => changes.disconnect();
-  }, [content, apply]);
+  }, [content]);
   const named = sections.filter(section => section.name);
   const shown = named.some(section => section.id === current) ? current : named[0]?.id;
   useEffect(() => {
     shownRef.current = shown;
-    apply();
+    if (content.current) showSection(content.current, shown);
     content.current?.scrollTo?.({ top: 0 });
-  }, [content, shown, apply]);
+  }, [content, shown]);
   return (
     <nav className="settings-sections" aria-label="Settings sections">
       {named.map(section => (
