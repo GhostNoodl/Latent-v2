@@ -112,3 +112,11 @@ it('treats an adjective typed onto an inserted trigger as a manual edit', () => 
   d = change(d, { prompt: 'bold watercolor, a garden' });
   expect(change(d, { loras: [] }).prompt).toBe('bold watercolor, a garden');
 });
+it('takes a switched-off LoRA trigger out of the prompt and puts it back when switched on', () => {
+  let d = change(initial(), { triggerWords: { a: ['watercolor'] } });
+  d = change(d, { loras: [{ ...selected('a'), off: true }, selected('b')] });
+  expect(d.prompt).toBe('a garden');
+  expect(draftSchema.parse(d).loras[0].off).toBe(true);
+  d = change(d, { loras: [selected('a'), selected('b')] });
+  expect(d.prompt).toBe('watercolor, a garden');
+});

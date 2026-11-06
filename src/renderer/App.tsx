@@ -219,6 +219,7 @@ export default function App() {
   /** The LoRA list beside the dock; loraPopover is the row whose details are open. */
   const [lorasOpen, setLorasOpen] = useState(false);
   const [loraPopover, setLoraPopover] = useState<number>();
+  const [loraDrag, setLoraDrag] = useState<number>();
   useTuneFlyouts();
   useDismissiblePanel(
     lorasOpen,
@@ -1052,6 +1053,14 @@ export default function App() {
         ' Generate when ready, or Undo to return to your draft.',
     });
   };
+  function moveLora(from: number, to: number) {
+    if (from === to) return;
+    const loras = [...draft.loras];
+    const [moved] = loras.splice(from, 1);
+    loras.splice(to, 0, moved);
+    changeDraft({ loras });
+    setLoraPopover(undefined);
+  }
   function updateLora(index: number, values: Partial<LoraSelection>) {
     changeDraft({ loras: draft.loras.map((lora, i) => (i === index ? { ...lora, ...values } : lora)) });
   }
@@ -1589,8 +1598,46 @@ export default function App() {
                             ? modelDisplayName(rowAsset, snapshot.settings.civitaiDisplayMetadata !== false)
                             : 'Missing LoRA';
                           return (
-                            <div className="lora-row-group" key={`${lora.modelId}-${rowIndex}`}>
+                            <div
+                              className="lora-row-group"
+                              key={`${lora.modelId}-${rowIndex}`}
+                              data-off={lora.off || undefined}
+                              data-drop={(loraDrag !== undefined && loraDrag !== rowIndex) || undefined}
+                              onDragOver={event => {
+                                if (loraDrag !== undefined) event.preventDefault();
+                              }}
+                              onDrop={event => {
+                                event.preventDefault();
+                                if (loraDrag !== undefined) moveLora(loraDrag, rowIndex);
+                                setLoraDrag(undefined);
+                              }}
+                            >
                               <div className="lora-row" data-open={loraPopover === rowIndex || undefined}>
+                                <button
+                                  type="button"
+                                  className="lora-grip"
+                                  draggable
+                                  aria-label={`Move ${name}`}
+                                  title="Drag to reorder, or use the arrow keys"
+                                  onDragStart={event => {
+                                    event.dataTransfer.effectAllowed = 'move';
+                                    event.dataTransfer.setData('text/plain', String(rowIndex));
+                                    setLoraDrag(rowIndex);
+                                  }}
+                                  onDragEnd={() => setLoraDrag(undefined)}
+                                  onKeyDown={event => {
+                                    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+                                    event.preventDefault();
+                                    const target = rowIndex + (event.key === 'ArrowUp' ? -1 : 1);
+                                    if (target < 0 || target >= draft.loras.length) return;
+                                    moveLora(rowIndex, target);
+                                    requestAnimationFrame(() =>
+                                      document.querySelectorAll<HTMLButtonElement>('.lora-grip')[target]?.focus(),
+                                    );
+                                  }}
+                                >
+                                  <GripVertical size={14} />
+                                </button>
                                 <button
                                   type="button"
                                   className="lora-row-name"
@@ -1608,15 +1655,16 @@ export default function App() {
                                   <span>{name}</span>
                                   <ChevronDown size={14} />
                                 </button>
-                                <input
-                                  type="number"
-                                  className="lora-row-weight"
-                                  aria-label={`Weight for ${name}`}
-                                  title="Weight"
-                                  step={0.05}
-                                  value={lora.weight}
-                                  onChange={event => updateLora(rowIndex, { weight: Number(event.target.value) })}
-                                />
+                                <label className="toggle lora-switch" title={lora.off ? 'Off' : 'On'}>
+                                  <input
+                                    type="checkbox"
+                                    aria-label={`Use ${name}`}
+                                    checked={!lora.off}
+                                    onChange={event =>
+                                      updateLora(rowIndex, { off: event.target.checked ? undefined : true })
+                                    }
+                                  />
+                                </label>
                                 <button
                                   type="button"
                                   className="icon-button"
@@ -1629,6 +1677,28 @@ export default function App() {
                                 >
                                   <X size={14} />
                                 </button>
+                              </div>
+                              <div className="lora-weight-line">
+                                <input
+                                  type="range"
+                                  min={0}
+                                  max={2}
+                                  step={0.05}
+                                  aria-label={`Weight slider for ${name}`}
+                                  disabled={lora.off}
+                                  value={Math.min(2, Math.max(0, lora.weight))}
+                                  onChange={event => updateLora(rowIndex, { weight: Number(event.target.value) })}
+                                />
+                                <input
+                                  type="number"
+                                  className="lora-row-weight"
+                                  aria-label={`Weight for ${name}`}
+                                  title="Weight (type any value)"
+                                  step={0.05}
+                                  disabled={lora.off}
+                                  value={lora.weight}
+                                  onChange={event => updateLora(rowIndex, { weight: Number(event.target.value) })}
+                                />
                               </div>
                               {openLora?.index === rowIndex &&
                                 (() => {
@@ -1948,7 +2018,12 @@ export default function App() {
                                 : `${draft.loras.length} LoRAs`}
                             </span>
                             {draft.loras.length === 1 && (
-                              <span className="dock-chip-value">{draft.loras[0].weight}</span>
+                              <span className="dock-chip-value">
+                                {draft.loras[0].off ? 'off' : draft.loras[0].weight}
+                              </span>
+                            )}
+                            {draft.loras.length > 1 && draft.loras.some(lora => lora.off) && (
+                              <span className="dock-chip-value">{draft.loras.filter(lora => lora.off).length} off</span>
                             )}
                           </>
                         )}

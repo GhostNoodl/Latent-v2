@@ -3,7 +3,7 @@ import { SetupActivityPanel } from './SetupActivityPanel';
 import { AppUpdates } from './AppUpdates';
 import { TelegramRemote } from './TelegramRemote';
 import { PackageSetupStorage } from './PackageSetupStorage';
-import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { ArrowUpRight, Check, Copy, Download, Play, RotateCcw, Square, Terminal } from 'lucide-react';
 import type { AppSettings, AppSnapshot } from '../shared/types';
 import { DEFAULT_SETTINGS } from '../shared/defaults';
@@ -52,68 +52,85 @@ const SECTION_NAMES: Record<string, string> = {
   'Reset settings': 'Reset',
 };
 
-/** The list on the left of Settings. Reads the sections from the page, so new ones show up on their own. */
+const tabKey = 'latent.settings-tab';
+/** The tabs on the left of Settings. Reads the sections from the page, so new ones show up on their own,
+ * and shows one section at a time. */
 function SettingsSections({ content }: { content: RefObject<HTMLDivElement | null> }) {
   const [sections, setSections] = useState<{ id: string; name: string }[]>([]);
-  const [current, setCurrent] = useState('');
+  const [current, setCurrent] = useState(() => {
+    try {
+      return localStorage.getItem(tabKey) ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const shownRef = useRef<string | undefined>(undefined);
+  /** Shows the chosen section; sections without a name (no heading) always show. */
+  const apply = useCallback(() => {
+    const root = content.current;
+    if (!root || !shownRef.current) return;
+    root.dataset.tabs = '';
+    for (const section of root.querySelectorAll<HTMLElement>(':scope > section'))
+      section.toggleAttribute('data-current', section.id === shownRef.current || !section.dataset.tabName);
+  }, [content]);
   useEffect(() => {
     const root = content.current;
     if (!root) return;
-    let seen: HTMLElement[] = [];
-    const visible = new Map<string, boolean>();
-    const watcher = new IntersectionObserver(
-      entries => {
-        for (const entry of entries) visible.set(entry.target.id, entry.isIntersecting);
-        const first = seen.find(section => visible.get(section.id));
-        if (first) setCurrent(first.id);
-      },
-      { rootMargin: '-64px 0px -55% 0px' },
-    );
     const read = () => {
-      seen = [...root.querySelectorAll<HTMLElement>(':scope > section')];
-      watcher.disconnect();
-      const next = seen.map((section, index) => {
+      const next = [...root.querySelectorAll<HTMLElement>(':scope > section')].map((section, index) => {
         const heading =
           section.querySelector('h2')?.textContent?.trim() ||
           section.getAttribute('aria-label') ||
           section.querySelector('h3')?.textContent?.trim() ||
           '';
         section.id ||= `settings-section-${index}`;
-        watcher.observe(section);
-        return { id: section.id, name: SECTION_NAMES[heading] ?? heading };
+        const name = SECTION_NAMES[heading] ?? heading;
+        if (name) section.dataset.tabName = name;
+        return { id: section.id, name };
       });
       setSections(previous =>
-        previous.length === next.length && previous.every((item, index) => item.name === next[index].name)
+        previous.length === next.length &&
+        previous.every((item, index) => item.name === next[index].name && item.id === next[index].id)
           ? previous
           : next,
       );
     };
     read();
-    const changes = new MutationObserver(read);
+    apply();
+    const changes = new MutationObserver(() => {
+      read();
+      apply();
+    });
     changes.observe(root, { childList: true });
-    return () => {
-      changes.disconnect();
-      watcher.disconnect();
-    };
-  }, [content]);
+    return () => changes.disconnect();
+  }, [content, apply]);
+  const named = sections.filter(section => section.name);
+  const shown = named.some(section => section.id === current) ? current : named[0]?.id;
+  useEffect(() => {
+    shownRef.current = shown;
+    apply();
+    content.current?.scrollTo?.({ top: 0 });
+  }, [content, shown, apply]);
   return (
     <nav className="settings-sections" aria-label="Settings sections">
-      {sections
-        .filter(section => section.name)
-        .map(section => (
-          <a
-            key={section.id}
-            href={`#${section.id}`}
-            aria-current={current === section.id ? 'true' : undefined}
-            onClick={event => {
-              event.preventDefault();
-              document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              setCurrent(section.id);
-            }}
-          >
-            {section.name}
-          </a>
-        ))}
+      {named.map(section => (
+        <a
+          key={section.id}
+          href={`#${section.id}`}
+          aria-current={shown === section.id ? 'page' : undefined}
+          onClick={event => {
+            event.preventDefault();
+            setCurrent(section.id);
+            try {
+              localStorage.setItem(tabKey, section.id);
+            } catch {
+              /* Private browser storage can be unavailable. */
+            }
+          }}
+        >
+          {section.name}
+        </a>
+      ))}
     </nav>
   );
 }

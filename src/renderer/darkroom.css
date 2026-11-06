@@ -3451,10 +3451,10 @@ body:has(.studio) {
 }
 .studio .lora-popover .lora-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 72px 30px;
+  grid-template-columns: 22px minmax(0, 1fr) auto 30px;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px 4px 4px;
+  gap: 4px;
+  padding: 4px 6px 0 2px;
 }
 .studio .lora-popover .lora-row-name {
   display: flex;
@@ -3518,4 +3518,45 @@ body:has(.studio) {
 .studio :is(.dock-chip, .lora-popover) .model-artwork.placeholder svg {
   width: 14px;
   height: 14px;
+}
+
+.studio .lora-popover .lora-grip {
+  width: 22px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: grab;
+  justify-content: center;
+}
+.studio .lora-popover .lora-grip:active {
+  cursor: grabbing;
+}
+.studio .lora-popover .lora-switch {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+.studio .lora-popover .lora-weight-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 8px 32px;
+}
+.studio .lora-popover .lora-row-group[data-off] :is(.lora-row-name, .lora-weight-line) {
+  opacity: 0.45;
+}
+.studio .lora-popover .lora-row-group[data-drop] {
+  border-style: dashed;
+}
+
+/* Settings tabs: one section at a time. */
+.studio .settings-content[data-tabs] > section:not([data-current]) {
+  display: none;
+}
+.studio .settings-sections a[aria-current='page'] {
+  color: var(--text);
+  background: var(--raised);
 }
