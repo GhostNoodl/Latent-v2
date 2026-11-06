@@ -4,11 +4,14 @@ import type { AppSnapshot, GenerationDraft } from '../shared/types';
 import type { HiresFixSettings } from '../shared/advanced-image-types';
 import {
   editHiresSettings,
+  followHiresScale,
   suggestedHiresDimensions,
   suggestedUpscaleDimensions,
 } from '../shared/advanced-image-workflow';
 import { SAMPLERS, SCHEDULERS } from '../shared/defaults';
 import { Field, Notice, Toggle, type RunAction } from './ui';
+import { recallExtra, rememberExtra } from './remembered-extras';
+import { useEffect } from 'react';
 
 export function AdvancedImageControls({
   draft,
@@ -26,10 +29,13 @@ export function AdvancedImageControls({
   const updateHires = (change: Partial<HiresFixSettings>) => {
     if (hires) onChange({ hiresFix: editHiresSettings(hires, { ...change, classic: true }) });
   };
-  const enableHires = () =>
-    onChange({
-      upscale: undefined,
-      hiresFix: {
+  useEffect(() => rememberExtra('hires', hires), [hires]);
+  const enableHires = () => {
+    const suggested = suggestedHiresDimensions(draft.width, draft.height);
+    // Your last values come back; the size follows your last scale, or the suggestion.
+    const recalled = recallExtra<HiresFixSettings>(
+      'hires',
+      {
         classic: true,
         method: 'image',
         scaleFactor:
@@ -44,7 +50,13 @@ export function AdvancedImageControls({
         denoise: 0.3,
         seed: 'random',
       },
-    });
+      ['scaleFactor', 'interpolation'],
+    );
+    const scaled = recalled.scaleFactor
+      ? followHiresScale({ ...recalled, workflowVersion: undefined }, draft.width, draft.height)
+      : { ...recalled, workflowVersion: undefined, ...suggested };
+    onChange({ upscale: undefined, hiresFix: { ...scaled, classic: true } });
+  };
   const source = snapshot.sourceImages.sources.find(source => source.id === draft.imageInput?.sourceId);
   return (
     <section className="advanced-image-controls">

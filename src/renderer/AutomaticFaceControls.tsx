@@ -1,7 +1,8 @@
 import type { GenerationDraft } from '../shared/types';
 import type { FaceDetailerStatus } from '../shared/face-detailer-types';
 import { SAMPLERS, SCHEDULERS } from '../shared/defaults';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { recallExtra, rememberExtra } from './remembered-extras';
 import { Field, type RunAction } from './ui';
 export function AutomaticFaceControls({
   draft,
@@ -15,6 +16,7 @@ export function AutomaticFaceControls({
   onChange(change: Partial<GenerationDraft>): void;
 }) {
   const pending = useRef(false);
+  useEffect(() => rememberExtra('face', draft.autoFace), [draft.autoFace]);
   const [starting, setStarting] = useState(false);
   async function setup() {
     if (pending.current) return;
@@ -42,14 +44,17 @@ export function AutomaticFaceControls({
             onChange({
               autoFace: e.target.checked
                 ? {
-                    profile: 'illustrated',
-                    strength: 0.45,
+                    ...recallExtra<NonNullable<GenerationDraft['autoFace']>>('face', {
+                      profile: 'illustrated',
+                      strength: 0.45,
+                      classic: true,
+                      applyLoras: false,
+                      steps: 20,
+                      cfg: 7,
+                      sampler: 'euler',
+                      scheduler: 'normal',
+                    }),
                     classic: true,
-                    applyLoras: false,
-                    steps: 20,
-                    cfg: 7,
-                    sampler: 'euler',
-                    scheduler: 'normal',
                   }
                 : undefined,
             })
