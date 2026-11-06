@@ -286,10 +286,11 @@ it('offers face setup directly in Create and follows progress, cancellation, ret
     await render('ready');
     expect(host.querySelector('button')).toBeNull();
     await act(async () => host.querySelector('input')!.click());
+    // Switching back on brings back the last values (strength 0.3 from the earlier render).
     expect(change).toHaveBeenLastCalledWith({
       autoFace: {
         profile: 'illustrated',
-        strength: 0.45,
+        strength: 0.3,
         classic: true,
         applyLoras: false,
         steps: 20,

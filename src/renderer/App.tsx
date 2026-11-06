@@ -54,6 +54,7 @@ import {
   Maximize,
   Play,
   Plus,
+  ChevronDown,
   RefreshCw,
   RotateCcw,
   Save,
@@ -215,12 +216,18 @@ export default function App() {
   const [activityPanel, setActivityPanel] = useState<'queue' | 'notifications'>();
   const [previewMenu, setPreviewMenu] = useState<{ record: GenerationRecord; x: number; y: number }>();
   const closePreviewMenu = useCallback(() => setPreviewMenu(undefined), []);
+  /** The LoRA list beside the dock; loraPopover is the row whose details are open. */
+  const [lorasOpen, setLorasOpen] = useState(false);
   const [loraPopover, setLoraPopover] = useState<number>();
+  const [loraDrag, setLoraDrag] = useState<number>();
   useTuneFlyouts();
   useDismissiblePanel(
-    loraPopover !== undefined,
-    useCallback(() => setLoraPopover(undefined), []),
-    '.lora-popover, .dock-chip-lora',
+    lorasOpen,
+    useCallback(() => {
+      setLorasOpen(false);
+      setLoraPopover(undefined);
+    }, []),
+    '.lora-popover, .dock-chip-lora, [role="dialog"]',
   );
   useDismissiblePanel(
     Boolean(activityPanel),
@@ -1046,6 +1053,14 @@ export default function App() {
         ' Generate when ready, or Undo to return to your draft.',
     });
   };
+  function moveLora(from: number, to: number) {
+    if (from === to) return;
+    const loras = [...draft.loras];
+    const [moved] = loras.splice(from, 1);
+    loras.splice(to, 0, moved);
+    changeDraft({ loras });
+    setLoraPopover(undefined);
+  }
   function updateLora(index: number, values: Partial<LoraSelection>) {
     changeDraft({ loras: draft.loras.map((lora, i) => (i === index ? { ...lora, ...values } : lora)) });
   }
@@ -1571,99 +1586,194 @@ export default function App() {
                     </button>
                   </div>
                   <div className="prompt-dock">
-                    {openLora && (
-                      <div className="lora-popover" role="group" aria-label="LoRA settings">
-                        {(() => {
-                          const index = openLora.index;
-                          const lora = openLora.lora;
-                          const asset = findAsset(lora.modelId);
+                    {lorasOpen && draft.loras.length > 0 && (
+                      <div className="lora-popover" role="group" aria-label="LoRAs">
+                        <div className="lora-list-heading">
+                          <strong>LoRAs</strong>
+                          <span>{draft.loras.length} of 8</span>
+                        </div>
+                        {draft.loras.map((lora, rowIndex) => {
+                          const rowAsset = findAsset(lora.modelId);
+                          const name = rowAsset
+                            ? modelDisplayName(rowAsset, snapshot.settings.civitaiDisplayMetadata !== false)
+                            : 'Missing LoRA';
                           return (
-                            <div className="lora-card">
-                              <div className="label-row">
-                                <div className="selected-lora-heading">
-                                  {asset && (
+                            <div
+                              className="lora-row-group"
+                              key={`${lora.modelId}-${rowIndex}`}
+                              data-off={lora.off || undefined}
+                              data-drop={(loraDrag !== undefined && loraDrag !== rowIndex) || undefined}
+                              onDragOver={event => {
+                                if (loraDrag !== undefined) event.preventDefault();
+                              }}
+                              onDrop={event => {
+                                event.preventDefault();
+                                if (loraDrag !== undefined) moveLora(loraDrag, rowIndex);
+                                setLoraDrag(undefined);
+                              }}
+                            >
+                              <div className="lora-row" data-open={loraPopover === rowIndex || undefined}>
+                                <button
+                                  type="button"
+                                  className="lora-grip"
+                                  draggable
+                                  aria-label={`Move ${name}`}
+                                  title="Drag to reorder, or use the arrow keys"
+                                  onDragStart={event => {
+                                    event.dataTransfer.effectAllowed = 'move';
+                                    event.dataTransfer.setData('text/plain', String(rowIndex));
+                                    setLoraDrag(rowIndex);
+                                  }}
+                                  onDragEnd={() => setLoraDrag(undefined)}
+                                  onKeyDown={event => {
+                                    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+                                    event.preventDefault();
+                                    const target = rowIndex + (event.key === 'ArrowUp' ? -1 : 1);
+                                    if (target < 0 || target >= draft.loras.length) return;
+                                    moveLora(rowIndex, target);
+                                    requestAnimationFrame(() =>
+                                      document.querySelectorAll<HTMLButtonElement>('.lora-grip')[target]?.focus(),
+                                    );
+                                  }}
+                                >
+                                  <GripVertical size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="lora-row-name"
+                                  aria-expanded={loraPopover === rowIndex}
+                                  title={rowAsset?.filename ?? lora.modelId}
+                                  onClick={() => setLoraPopover(loraPopover === rowIndex ? undefined : rowIndex)}
+                                >
+                                  {rowAsset && (
                                     <ModelArtwork
-                                      model={asset}
+                                      model={rowAsset}
                                       history={snapshot.history}
                                       showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
                                     />
                                   )}
-                                  <strong title={asset?.filename ?? lora.modelId}>
-                                    {asset
-                                      ? modelDisplayName(asset, snapshot.settings.civitaiDisplayMetadata !== false)
-                                      : `Missing: ${lora.modelId}`}
-                                  </strong>
-                                </div>
+                                  <span>{name}</span>
+                                  <ChevronDown size={14} />
+                                </button>
+                                <label className="toggle lora-switch" title={lora.off ? 'Off' : 'On'}>
+                                  <input
+                                    type="checkbox"
+                                    aria-label={`Use ${name}`}
+                                    checked={!lora.off}
+                                    onChange={event =>
+                                      updateLora(rowIndex, { off: event.target.checked ? undefined : true })
+                                    }
+                                  />
+                                </label>
                                 <button
                                   type="button"
                                   className="icon-button"
-                                  aria-label={`Remove ${asset?.name ?? 'LoRA'}`}
+                                  aria-label={`Remove ${name}`}
                                   onClick={() => {
-                                    changeDraft({ loras: draft.loras.filter((_, i) => i !== index) });
+                                    changeDraft({ loras: draft.loras.filter((_, i) => i !== rowIndex) });
                                     setLoraPopover(undefined);
+                                    if (draft.loras.length === 1) setLorasOpen(false);
                                   }}
                                 >
                                   <X size={14} />
                                 </button>
                               </div>
-                              <div className="two-columns">
-                                <Field label="Model weight">
-                                  <input
-                                    type="number"
-                                    step={0.05}
-                                    value={lora.weight}
-                                    onChange={event => updateLora(index, { weight: Number(event.target.value) })}
-                                  />
-                                </Field>
-                                <Field label="CLIP weight">
-                                  <input
-                                    type="number"
-                                    step={0.05}
-                                    value={lora.clipWeight}
-                                    onChange={event => updateLora(index, { clipWeight: Number(event.target.value) })}
-                                  />
-                                </Field>
-                              </div>
-                              {asset?.family !== draft.family && (
-                                <p className="muted small">
-                                  Tagged {asset?.family}; check compatibility with your checkpoint.
-                                </p>
-                              )}
-                              {draft.triggerResolutionVersion === 'visible@3' && (
-                                <LoraTriggerChoices
-                                  words={asset?.triggers ?? []}
-                                  selected={draft.triggerWords?.[lora.modelId] ?? []}
-                                  onChange={words =>
-                                    changeDraft({
-                                      autoTriggers: true,
-                                      triggerWords: { ...draft.triggerWords, [lora.modelId]: words },
-                                    })
-                                  }
+                              <div className="lora-weight-line">
+                                <input
+                                  type="range"
+                                  min={0}
+                                  max={2}
+                                  step={0.05}
+                                  aria-label={`Weight slider for ${name}`}
+                                  disabled={lora.off}
+                                  value={Math.min(2, Math.max(0, lora.weight))}
+                                  onChange={event => updateLora(rowIndex, { weight: Number(event.target.value) })}
                                 />
-                              )}{' '}
-                              {draft.triggerResolutionVersion !== 'visible@3' &&
-                                Object.hasOwn(draft.triggerWords ?? {}, lora.modelId) && (
-                                  <div>
-                                    <p className="muted small">
-                                      {draft.triggerWords![lora.modelId].length
-                                        ? 'Using trigger words saved with this draft.'
-                                        : 'No automatic additions for this LoRA in this draft.'}
-                                    </p>
-                                    <button
-                                      type="button"
-                                      className="text-button"
-                                      disabled={
-                                        !models.some(model => model.id === lora.modelId && model.status === 'ready')
-                                      }
-                                      onClick={() => resetLoraTriggers(lora.modelId)}
-                                    >
-                                      Use current model triggers
-                                    </button>
-                                  </div>
-                                )}
+                                <input
+                                  type="number"
+                                  className="lora-row-weight"
+                                  aria-label={`Weight for ${name}`}
+                                  title="Weight (type any value)"
+                                  step={0.05}
+                                  disabled={lora.off}
+                                  value={lora.weight}
+                                  onChange={event => updateLora(rowIndex, { weight: Number(event.target.value) })}
+                                />
+                              </div>
+                              {openLora?.index === rowIndex &&
+                                (() => {
+                                  const index = openLora.index;
+                                  const lora = openLora.lora;
+                                  const asset = findAsset(lora.modelId);
+                                  return (
+                                    <div className="lora-card">
+                                      <div className="two-columns">
+                                        <Field label="CLIP weight">
+                                          <input
+                                            type="number"
+                                            step={0.05}
+                                            value={lora.clipWeight}
+                                            onChange={event =>
+                                              updateLora(index, { clipWeight: Number(event.target.value) })
+                                            }
+                                          />
+                                        </Field>
+                                      </div>
+                                      {asset?.family !== draft.family && (
+                                        <p className="muted small">
+                                          Tagged {asset?.family}; check compatibility with your checkpoint.
+                                        </p>
+                                      )}
+                                      {draft.triggerResolutionVersion === 'visible@3' && (
+                                        <LoraTriggerChoices
+                                          words={asset?.triggers ?? []}
+                                          selected={draft.triggerWords?.[lora.modelId] ?? []}
+                                          onChange={words =>
+                                            changeDraft({
+                                              autoTriggers: true,
+                                              triggerWords: { ...draft.triggerWords, [lora.modelId]: words },
+                                            })
+                                          }
+                                        />
+                                      )}{' '}
+                                      {draft.triggerResolutionVersion !== 'visible@3' &&
+                                        Object.hasOwn(draft.triggerWords ?? {}, lora.modelId) && (
+                                          <div>
+                                            <p className="muted small">
+                                              {draft.triggerWords![lora.modelId].length
+                                                ? 'Using trigger words saved with this draft.'
+                                                : 'No automatic additions for this LoRA in this draft.'}
+                                            </p>
+                                            <button
+                                              type="button"
+                                              className="text-button"
+                                              disabled={
+                                                !models.some(
+                                                  model => model.id === lora.modelId && model.status === 'ready',
+                                                )
+                                              }
+                                              onClick={() => resetLoraTriggers(lora.modelId)}
+                                            >
+                                              Use current model triggers
+                                            </button>
+                                          </div>
+                                        )}
+                                    </div>
+                                  );
+                                })()}
                             </div>
                           );
-                        })()}
+                        })}
+                        <button
+                          type="button"
+                          className="text-button lora-add"
+                          aria-haspopup="dialog"
+                          disabled={draft.loras.length >= 8}
+                          onClick={() => setLoraOpen(true)}
+                        >
+                          <Plus size={13} />
+                          Add LoRA
+                        </button>
                         {draft.loras.length > 0 && draft.triggerResolutionVersion !== 'visible@3' && (
                           <>
                             <Toggle
@@ -1855,39 +1965,68 @@ export default function App() {
                               showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
                               history={snapshot.history}
                             />
-                            {modelDisplayName(checkpoint, snapshot.settings.civitaiDisplayMetadata !== false)}
+                            <span className="dock-chip-label">
+                              {modelDisplayName(checkpoint, snapshot.settings.civitaiDisplayMetadata !== false)}
+                            </span>
                           </>
                         ) : (
                           'Choose a checkpoint'
                         )}
                       </button>
-                      {draft.loras.map((lora, index) => {
-                        const asset = findAsset(lora.modelId);
-                        return (
-                          <button
-                            type="button"
-                            key={`${lora.modelId}-${index}`}
-                            className="dock-chip dock-chip-lora"
-                            aria-expanded={loraPopover === index}
-                            title="LoRA settings"
-                            onClick={() => setLoraPopover(loraPopover === index ? undefined : index)}
-                          >
-                            {asset
-                              ? modelDisplayName(asset, snapshot.settings.civitaiDisplayMetadata !== false)
-                              : 'Missing LoRA'}
-                            <span className="dock-chip-value">{lora.weight}</span>
-                          </button>
-                        );
-                      })}
                       <button
                         type="button"
-                        className="dock-chip"
-                        aria-haspopup="dialog"
-                        disabled={draft.loras.length >= 8}
-                        onClick={() => setLoraOpen(true)}
+                        className="dock-chip dock-chip-lora"
+                        aria-haspopup={draft.loras.length ? undefined : 'dialog'}
+                        aria-expanded={draft.loras.length ? lorasOpen : undefined}
+                        title={draft.loras.length ? 'Your LoRAs' : 'Add a LoRA'}
+                        onClick={() => {
+                          if (!draft.loras.length) setLoraOpen(true);
+                          else {
+                            setLorasOpen(!lorasOpen);
+                            setLoraPopover(undefined);
+                          }
+                        }}
                       >
-                        <Plus size={13} />
-                        LoRA
+                        {draft.loras.length === 0 ? (
+                          <>
+                            <Plus size={13} />
+                            LoRA
+                          </>
+                        ) : (
+                          <>
+                            <span className="lora-stack">
+                              {draft.loras.slice(0, 3).map((lora, index) => {
+                                const asset = findAsset(lora.modelId);
+                                return asset ? (
+                                  <ModelArtwork
+                                    key={`${lora.modelId}-${index}`}
+                                    model={asset}
+                                    history={snapshot.history}
+                                    showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
+                                  />
+                                ) : null;
+                              })}
+                            </span>
+                            <span className="dock-chip-label">
+                              {draft.loras.length === 1
+                                ? findAsset(draft.loras[0].modelId)
+                                  ? modelDisplayName(
+                                      findAsset(draft.loras[0].modelId)!,
+                                      snapshot.settings.civitaiDisplayMetadata !== false,
+                                    )
+                                  : 'Missing LoRA'
+                                : `${draft.loras.length} LoRAs`}
+                            </span>
+                            {draft.loras.length === 1 && (
+                              <span className="dock-chip-value">
+                                {draft.loras[0].off ? 'off' : draft.loras[0].weight}
+                              </span>
+                            )}
+                            {draft.loras.length > 1 && draft.loras.some(lora => lora.off) && (
+                              <span className="dock-chip-value">{draft.loras.filter(lora => lora.off).length} off</span>
+                            )}
+                          </>
+                        )}
                       </button>
                       <button
                         type="button"
@@ -2778,6 +2917,7 @@ export default function App() {
           onChoose={model => {
             changeDraft({ loras: [...draft.loras, { modelId: model.id, weight: 1, clipWeight: 1 }] });
             setLoraOpen(false);
+            setLorasOpen(true);
           }}
         />
       )}

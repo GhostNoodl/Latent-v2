@@ -412,7 +412,11 @@ export class JobService {
   }
   private async prepareEnqueue(input: GenerationDraft): Promise<GenerationJob> {
     if (this.disposed) throw new Error('The generation queue is stopped.');
-    const draft = draftSchema.parse(input);
+    const parsed = draftSchema.parse(input);
+    // LoRAs switched off in the list stay in the draft but never reach the image.
+    const draft = parsed.loras.some(lora => lora.off)
+      ? { ...parsed, loras: parsed.loras.filter(lora => !lora.off) }
+      : parsed;
     if (this.ipAdapterService?.status().state === 'activating')
       throw new Error('Wait for reference-tool activation to finish before queueing generation.');
     if (draft.autoFace && (draft.faceDetailer || draft.autoFaceParentRecordId || draft.qwenEdit || draft.upscale))

@@ -5,10 +5,12 @@ export const WORKFLOW_VERSION = 'sdxl-txt2img@1';
 export function automaticTriggerWords(draft: GenerationDraft, models: ModelAsset[]): string[] {
   if (!draft.autoTriggers || draft.triggerResolutionVersion === 'visible@3') return [];
   const manual = draft.prompt.toLocaleLowerCase();
-  const triggers = draft.loras.flatMap(
-    selected =>
-      draft.triggerWords?.[selected.modelId] ?? models.find(model => model.id === selected.modelId)?.triggers ?? [],
-  );
+  const triggers = draft.loras
+    .filter(selected => !selected.off)
+    .flatMap(
+      selected =>
+        draft.triggerWords?.[selected.modelId] ?? models.find(model => model.id === selected.modelId)?.triggers ?? [],
+    );
   const seen = new Set<string>();
   const automatic = triggers
     .map(t => t.trim())

@@ -41,7 +41,7 @@ export function reconcileVisibleTriggers(previous: GenerationDraft, next: Genera
   // Explicit recipe replacements retain their supplied ownership, not the old composer's.
   const spans = rebase(previous.prompt, next.prompt, previous.promptTriggerSpans ?? []);
   const chosen = (d: GenerationDraft) =>
-    d.autoTriggers ? d.loras.flatMap(l => d.triggerWords?.[l.modelId] ?? []) : [];
+    d.autoTriggers ? d.loras.filter(l => !l.off).flatMap(l => d.triggerWords?.[l.modelId] ?? []) : [];
   const words = [...new Map(chosen(next).map(w => [key(w), w.trim()])).values()].filter(Boolean);
   const changed =
     JSON.stringify(chosen(previous)) !== JSON.stringify(chosen(next)) ||

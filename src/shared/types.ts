@@ -102,6 +102,8 @@ export interface LoraSelection {
   modelId: string;
   weight: number;
   clipWeight: number;
+  /** Switched off in the LoRA list: kept in the draft but left out of the image. */
+  off?: boolean;
 }
 export interface GenerationDraft {
   autoFace?: {
