@@ -1700,6 +1700,19 @@ export default function App() {
                                   onChange={event => updateLora(rowIndex, { weight: Number(event.target.value) })}
                                 />
                               </div>
+                              {/* Trigger words stay in view; the arrow only opens CLIP weight and notes. */}
+                              {draft.triggerResolutionVersion === 'visible@3' && (
+                                <LoraTriggerChoices
+                                  words={rowAsset?.triggers ?? []}
+                                  selected={draft.triggerWords?.[lora.modelId] ?? []}
+                                  onChange={words =>
+                                    changeDraft({
+                                      autoTriggers: true,
+                                      triggerWords: { ...draft.triggerWords, [lora.modelId]: words },
+                                    })
+                                  }
+                                />
+                              )}
                               {openLora?.index === rowIndex &&
                                 (() => {
                                   const index = openLora.index;
@@ -1724,18 +1737,6 @@ export default function App() {
                                           Tagged {asset?.family}; check compatibility with your checkpoint.
                                         </p>
                                       )}
-                                      {draft.triggerResolutionVersion === 'visible@3' && (
-                                        <LoraTriggerChoices
-                                          words={asset?.triggers ?? []}
-                                          selected={draft.triggerWords?.[lora.modelId] ?? []}
-                                          onChange={words =>
-                                            changeDraft({
-                                              autoTriggers: true,
-                                              triggerWords: { ...draft.triggerWords, [lora.modelId]: words },
-                                            })
-                                          }
-                                        />
-                                      )}{' '}
                                       {draft.triggerResolutionVersion !== 'visible@3' &&
                                         Object.hasOwn(draft.triggerWords ?? {}, lora.modelId) && (
                                           <div>
