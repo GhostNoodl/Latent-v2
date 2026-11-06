@@ -373,8 +373,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 139586,
-      "sha256": "189a362df3e8f6bec29b15074a707d45b3d4db3eb2215051d49f97570dac6e78"
+      "bytes": 139598,
+      "sha256": "2147093015b5062353d844a6fab8c60cff1d43a540462204988f4d7144c64e4a"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/renderer/darkroom.css",
-      "bytes": 82863,
-      "sha256": "72030a3ae0a2ac1a40d433734f59790c36f0b940a66d08b9af2fca8f605abd86"
+      "bytes": 83182,
+      "sha256": "a48e0ff4885368f7c37a32a1eb62ea03613841255d4e86a2c195b795c38ad2bc"
     },
     {
       "path": "src/renderer/dynamic-prompts.css",
@@ -1034,12 +1034,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "ec0bb0eeabf25b0f8bcbc412a7906d8e48c99a6d683ec1786ace6c321b8c7cc2"
+      "sha256": "dc9af5873c88be88e72a2d509b49d24f6a7465c57976890128656a47facf7d26"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "bbac200ce58a93306dffa4bc5d09e6e2b052c1b7aec3b2302a66989a67f6efdb"
+      "sha256": "7aaada62125ee60f42853f6e57ace264b15c9c65188c97c6679c71f748b3eb38"
     },
     {
       "path": "tsconfig.json",

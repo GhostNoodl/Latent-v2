@@ -3560,3 +3560,14 @@ body:has(.studio) {
   color: var(--text);
   background: var(--raised);
 }
+.studio .lora-popover .lora-row-group > .lora-trigger-choices {
+  margin: 0;
+  padding: 0 10px 10px 32px;
+  font-size: 12px;
+}
+.studio .lora-popover .lora-row-group > .lora-trigger-choices > summary {
+  color: var(--muted);
+}
+.studio .lora-popover .lora-row-group[data-off] > .lora-trigger-choices {
+  opacity: 0.45;
+}
