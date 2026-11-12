@@ -91,6 +91,7 @@ import { draftSchema, parseSettingsPatch } from '../shared/validation';
 import { TelegramBotService } from './telegram-bot';
 import { PhoneRemoteService } from './phone-remote';
 import { SIZE_PRESETS } from '../shared/defaults';
+import { usesExtraVram } from '../shared/vram';
 import type { AppSnapshot, GenerationDraft, HardwareInfo, LatentAPI } from '../shared/types';
 import { SnapshotSender, type LightSnapshot } from './snapshot-sender';
 
@@ -758,6 +759,7 @@ async function initialize() {
     faceDetailer,
     backendActivity,
     videoQueue,
+    () => usesExtraVram(store.settings(), hardware),
   );
   telegram = new TelegramBotService({
     store,

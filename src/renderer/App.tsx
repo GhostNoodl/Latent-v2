@@ -4,6 +4,7 @@ import { finishDraft, splitBlockedReason } from '../shared/split-sampling';
 import { carriesImage, droppedImage, type DroppedImage } from './image-drag';
 import { SetupActivityPanel } from './SetupActivityPanel';
 import { ErrorBoundary } from './ErrorBoundary';
+import { enhanceMaxSide, usesExtraVram } from '../shared/vram';
 import { isLoraFamilyCompatible } from '../shared/types';
 import { TagPrompt, TagSourcePicker } from './TagPrompt';
 import brandIcon from '../../resources/latent-icon.svg';
@@ -802,6 +803,7 @@ export default function App() {
     ? groupImageVersions(snapshot.history).find(group => group.versions.includes(selected))
     : undefined;
   const imageVersions = snapshot.settings.imageVersions ?? DEFAULT_IMAGE_VERSIONS;
+  const enhanceMax = enhanceMaxSide(usesExtraVram(snapshot.settings, snapshot.hardware));
   const comparisonBefore = compareAgainst
     ? {
         url: compareAgainst.imageUrl,
@@ -1072,7 +1074,7 @@ export default function App() {
       const source = await window.latent.useOutputAsSource(record.id);
       if (closing.current || closeRequested.current || requestedCloseEpoch !== closeEpoch.current)
         throw new Error('Enhancement was not submitted because the studio is closing.');
-      const requested = prepareOneClickEnhancement(record, source, current, enhanceScale);
+      const requested = prepareOneClickEnhancement(record, source, current, enhanceScale, enhanceMax);
       await window.latent.queueGeneration(requested);
       if (previewSelectionRevision.current === requestedPreview) {
         setViewLivePreview(true);
@@ -2241,8 +2243,8 @@ export default function App() {
                         <select
                           aria-label="Enhancement scale"
                           value={enhanceScale}
-                          disabled={busy['enhance-image'] || Math.max(selected.width, selected.height) >= 2048}
-                          title="Enlargement is limited to 2048 pixels per side."
+                          disabled={busy['enhance-image'] || Math.max(selected.width, selected.height) >= enhanceMax}
+                          title={`Enlargement is limited to ${enhanceMax} pixels per side.`}
                           onChange={event => setEnhanceScale(event.target.value === '1.5' ? 1.5 : 2)}
                         >
                           <option value="1.5">1.5×</option>
@@ -2251,10 +2253,10 @@ export default function App() {
                         <button
                           type="button"
                           disabled={busy['enhance-image']}
-                          title={`Enlarge up to ${enhanceScale}× and refine immediately (maximum 2048 pixels per side). Keeps the original image.`}
+                          title={`Enlarge up to ${enhanceScale}× and refine immediately (maximum ${enhanceMax} pixels per side). Keeps the original image.`}
                           onClick={() => enhanceImage(selected)}
                         >
-                          {busy['enhance-image'] ? 'Queueing...' : enhancementActionLabel(selected)}
+                          {busy['enhance-image'] ? 'Queueing...' : enhancementActionLabel(selected, enhanceMax)}
                         </button>
                       </div>
                       <button
@@ -2603,6 +2605,7 @@ export default function App() {
           onClose={closePreviewMenu}
           onReuse={() => restore(previewMenu.record)}
           onEnhance={() => enhanceImage(previewMenu.record)}
+          enhanceMax={enhanceMax}
           onTrash={() => setConfirmDelete({ kind: 'image', record: previewMenu.record })}
           run={run}
         />

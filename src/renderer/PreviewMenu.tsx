@@ -9,6 +9,7 @@ export function PreviewMenu({
   onClose,
   onReuse,
   onEnhance,
+  enhanceMax,
   onTrash,
   run,
 }: {
@@ -18,6 +19,7 @@ export function PreviewMenu({
   onClose(): void;
   onReuse(): void;
   onEnhance?(): void;
+  enhanceMax?: number;
   onTrash(): void;
   run: RunAction;
 }) {
@@ -80,7 +82,7 @@ export function PreviewMenu({
             onEnhance();
           }}
         >
-          {enhancementActionLabel(record)}
+          {enhancementActionLabel(record, enhanceMax)}
         </button>
       )}
       <button

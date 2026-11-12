@@ -200,6 +200,8 @@ export interface AppSettings {
   fastMath?: boolean;
   /** Global SageAttention (`--use-sage-attention`) when the reviewed optional packages are installed. */
   sageAttention?: boolean;
+  /** Bigger limits and GPU text encoding on 20 GB+ cards. Unset means on when the card is big enough. */
+  extraVram?: boolean;
   /** Show an image's original, hires fix and face fix as one gallery card; the flags keep stages as their own tiles too. */
   imageVersions?: { group: boolean; showOriginal: boolean; showRefined: boolean; showFaceSteps: boolean };
   /** Simple shows the everyday Create controls; Advanced shows every tool. */

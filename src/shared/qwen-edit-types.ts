@@ -227,6 +227,8 @@ export interface QwenEditWorkflowInput {
   jobId: string;
   settings: QwenEditSettings;
   workflowVersion?: QwenEditWorkflowVersion;
+  /** 'default' runs the text encoder on the graphics card (extra graphics memory); older recipes use 'cpu'. */
+  textEncoderDevice?: 'cpu' | 'default';
 }
 export interface QwenEditWorkflowPlan {
   workflow: ComfyWorkflow;
@@ -246,7 +248,7 @@ export interface QwenEditWorkflowPlan {
     denoise: 1;
     modelShift: 3.1 | null;
     cfgNorm: 1 | null;
-    textEncoderDevice: 'cpu';
+    textEncoderDevice: 'cpu' | 'default';
   };
   output: { nodeId: '7'; filenamePrefix: string; width: number; height: number; batchSize: 1 };
   expectedOutputCount: 1;
