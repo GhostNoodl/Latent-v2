@@ -1156,6 +1156,10 @@
       "to": "src/shared/visible-triggers.ts"
     },
     {
+      "from": "src/shared/vram.ts",
+      "to": "src/shared/vram.ts"
+    },
+    {
       "from": "src/renderer/LoraTriggerChoices.tsx",
       "to": "src/renderer/LoraTriggerChoices.tsx"
     },

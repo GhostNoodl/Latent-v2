@@ -145,8 +145,9 @@ export const draftSchema = z
     checkpointId: z.string().max(500),
     prompt: z.string().max(16000),
     negativePrompt: z.string().max(16000),
-    width: z.number().int().min(256).max(2048).multipleOf(64),
-    height: z.number().int().min(256).max(2048).multipleOf(64),
+    // Above 2048 is only allowed for Enhance with extra graphics memory; jobs check that.
+    width: z.number().int().min(256).max(3072).multipleOf(64),
+    height: z.number().int().min(256).max(3072).multipleOf(64),
     steps: z.number().int().min(1).max(100),
     cfg: z.number().min(0).max(30),
     sampler: z.enum(SAMPLERS as [string, ...string[]]),
@@ -228,6 +229,7 @@ export const settingsSchema = z
     deviceMode: z.enum(['auto', 'lowvram', 'cpu']),
     fastMath: z.boolean().default(false),
     sageAttention: z.boolean().default(false),
+    extraVram: z.boolean().optional(),
     imageVersions: z
       .object({
         group: z.boolean(),

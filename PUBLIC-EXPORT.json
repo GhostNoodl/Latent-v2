@@ -108,13 +108,13 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 114385,
-      "sha256": "f83a3bf48acd158937f0440c9c4477a1ee5ae750002a70f09ab0d54610bd31b7"
+      "bytes": 115110,
+      "sha256": "b775de391cc976c227fde95daeef64c0c8fe95f45d3e8f9dfb8b320e0bd7d21f"
     },
     {
       "path": "src/main/main.ts",
-      "bytes": 56876,
-      "sha256": "7a2de3641b9fc9c0d7c245de03445a6a9946bcf9d69294d536f411dbe68a06eb"
+      "bytes": 56977,
+      "sha256": "3f2af1ea5dac1328394b691454f1678ddd2208e367936fe6dd367850f6b85c3c"
     },
     {
       "path": "src/main/managed-backend.ts",
@@ -373,8 +373,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 139598,
-      "sha256": "2147093015b5062353d844a6fab8c60cff1d43a540462204988f4d7144c64e4a"
+      "bytes": 139836,
+      "sha256": "84ae81cdfcbf11d84c956b5266f450a7a46055608ecc065873eef17d7b7e2933"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -603,8 +603,8 @@
     },
     {
       "path": "src/renderer/Settings.tsx",
-      "bytes": 27300,
-      "sha256": "6282443e7a56159472a2ea53e9958d8a3f44deb90b4a3fb6d9b9de15f790ac64"
+      "bytes": 28547,
+      "sha256": "976fb93cd41e10e67b20474ca6c554aba16ed1359c3e940022c02040e3887a89"
     },
     {
       "path": "src/renderer/SharedBackendActivity.tsx",
@@ -868,13 +868,13 @@
     },
     {
       "path": "src/shared/qwen-edit-types.ts",
-      "bytes": 9050,
-      "sha256": "421cfdd3a327c71b24d05f712f64394c9f7134247864c7af33ca43463e1b86de"
+      "bytes": 9215,
+      "sha256": "feed22bee3086d54883307c4388b1888c43892cc8efd20f4f3830232c9f31bf2"
     },
     {
       "path": "src/shared/qwen-edit-workflow.ts",
-      "bytes": 15292,
-      "sha256": "341579010c1dafe5d990f5e2fcc4e01d7275a7778d2847b392f1ac99d078d81f"
+      "bytes": 15377,
+      "sha256": "456ffbe8d70a86ab40a6feb2042a565cdca3298f197c5b366cb222587dcee714"
     },
     {
       "path": "src/shared/regional-prompt-editor.ts",
@@ -933,13 +933,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 21978,
-      "sha256": "0a2991a58d0481af925ddf81a7b0a023b50bad14219a3273b2fc562d23ed1633"
+      "bytes": 22107,
+      "sha256": "994e20687d6dcbee71685ba95bb8e0769fa185fb520de820a9c59ba9eb75f629"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 12217,
-      "sha256": "7dacfb942eb8e6b3511cdbe0923b061ecc2609fa9e58d3a5d90250b37c817b4a"
+      "bytes": 12347,
+      "sha256": "91d80683e5f2ba603118738671d06b0668f25c76fa5b90d0217dbed6d731c344"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1034,12 +1034,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "dc9af5873c88be88e72a2d509b49d24f6a7465c57976890128656a47facf7d26"
+      "sha256": "9d282122fb022ae5334a5966e839d5c99112d805302a6a46a48d98384ccfb370"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "7aaada62125ee60f42853f6e57ace264b15c9c65188c97c6679c71f748b3eb38"
+      "sha256": "eed655f8e8f003f2d9b2d1501e04e239f9f62cf64003b49ca68fc73d006ad50d"
     },
     {
       "path": "tsconfig.json",
@@ -1348,8 +1348,8 @@
     },
     {
       "path": "src/renderer/PreviewMenu.tsx",
-      "bytes": 3691,
-      "sha256": "0c312ce9f940148728f74f7cf313da3038a7a8471fe1cf94f0680171af8aee2c"
+      "bytes": 3740,
+      "sha256": "8f0985bce0f5c53df33a272421dced4f7f023ca7e4646a578ec2aa31cba70605"
     },
     {
       "path": "src/renderer/useDismissiblePanel.ts",
@@ -1427,6 +1427,11 @@
       "sha256": "11c1d8ae436563577f9f146bb8c910817304322e21dc3f1fcd0fd6ac5a0f856e"
     },
     {
+      "path": "src/shared/vram.ts",
+      "bytes": 1096,
+      "sha256": "f5114665ef14995e3ad0be5cad487a67595102cf1641ab50d254b73f5397ee12"
+    },
+    {
       "path": "src/renderer/LoraTriggerChoices.tsx",
       "bytes": 1723,
       "sha256": "ab21c015aa25f25379f77dd4e9a3b8e8def2b5f615c54abe154c830f84d1ba92"
@@ -1443,8 +1448,8 @@
     },
     {
       "path": "src/shared/enhancement.ts",
-      "bytes": 7744,
-      "sha256": "9eacdd7ecb267ca0bbeff84b53bca003352bd0d1a5e8a7aed0852818ca296fce"
+      "bytes": 8117,
+      "sha256": "b0d33f4e1107c6282037d07d7061c71c4be24bb847a01c5c2506e312898f302f"
     },
     {
       "path": "src/renderer/EnhanceDialog.tsx",
@@ -1453,8 +1458,8 @@
     },
     {
       "path": "tests/enhancement.test.ts",
-      "bytes": 8441,
-      "sha256": "fdfebe5cedfbda61fecc482ad9d6c4e96da6a1bd37e40633a53ddccd4335a67c"
+      "bytes": 9817,
+      "sha256": "c4441ec12792a208481c6bb6590bf13f8df37d9182a3ad0bb6c6ad7b0da94331"
     },
     {
       "path": "tests/enhance-dialog.test.tsx",
@@ -1548,8 +1553,8 @@
     },
     {
       "path": "tests/qwen-compact.test.ts",
-      "bytes": 8948,
-      "sha256": "843c413c5b877b47b0b1deb22c8faa3f1c079228e19b26f99301204906c68e67"
+      "bytes": 9441,
+      "sha256": "9b13177056cad82df022761e25290cb65cbb6f57a7641a54662bf9428117c52a"
     },
     {
       "path": "docs/QWEN-COMPACT.md",
@@ -1643,8 +1648,8 @@
     },
     {
       "path": "src/shared/qwen21-workflow.ts",
-      "bytes": 8601,
-      "sha256": "ff260b0b5a640d490362e7753087e230710d2350c18f3d7a333517879bb413bc"
+      "bytes": 8686,
+      "sha256": "1ce128d0afc5b5f3e1739db3aa0f6fab87110b961e5f2d35da226cb622c41bc2"
     },
     {
       "path": "tests/qwen-station-dom.test.tsx",

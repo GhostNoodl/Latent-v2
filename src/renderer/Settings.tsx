@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 
 import { ArrowUpRight, Check, Copy, Download, Play, RotateCcw, Square, Terminal } from 'lucide-react';
 import type { AppSettings, AppSnapshot } from '../shared/types';
 import { DEFAULT_SETTINGS } from '../shared/defaults';
+import { ENHANCE_MAX_SIDE_LARGE, hasLargeVram, usesExtraVram } from '../shared/vram';
 import { DEFAULT_IMAGE_VERSIONS } from '../shared/image-versions';
 import { Busy, ConfirmDialog, Notice, Toggle, type RunAction } from './ui';
 import { RuntimeUpdates } from './RuntimeUpdates';
@@ -151,6 +152,8 @@ export function StudioSettings({
 }) {
   const { settings, backend, paths } = snapshot;
   const sage = snapshot.sageAttention ?? { state: 'checking', message: 'Checking…' };
+  const bigCard = hasLargeVram(snapshot.hardware);
+  const vramGb = snapshot.hardware.vramMiB ? Math.round(snapshot.hardware.vramMiB / 1024) : undefined;
   useEffect(() => {
     void window.latent.checkSageAttention().catch(() => undefined);
   }, [backend.state]);
@@ -340,6 +343,29 @@ export function StudioSettings({
               label="SageAttention"
               checked={settings.sageAttention ?? false}
               onChange={sageAttention => update({ sageAttention })}
+            />
+          </fieldset>
+        </div>
+        <div className="setting-line">
+          <div>
+            <h3>Use extra graphics memory</h3>
+            <p>
+              For cards with 20 GB or more. Enhance can go up to {ENHANCE_MAX_SIDE_LARGE} pixels, and Qwen reads your
+              prompt on the graphics card, which is faster.
+            </p>
+            {!bigCard ? (
+              <p className="muted">
+                {vramGb ? `This card has ${vramGb} GB, so this stays off.` : 'Needs a card with 20 GB or more.'}
+              </p>
+            ) : (
+              settings.deviceMode !== 'auto' && <p className="muted">Works with Automatic memory mode only.</p>
+            )}
+          </div>
+          <fieldset disabled={settingsBusy || !bigCard || settings.deviceMode !== 'auto'}>
+            <Toggle
+              label="Use extra graphics memory"
+              checked={usesExtraVram(settings, snapshot.hardware)}
+              onChange={extraVram => update({ extraVram })}
             />
           </fieldset>
         </div>

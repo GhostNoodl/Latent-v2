@@ -199,3 +199,31 @@ it('keeps model sampling overrides when enhancing a saved image', () => {
       .modelSampling,
   ).toEqual(modelSampling);
 });
+
+it('Enhance goes past 2048 only with extra graphics memory', async () => {
+  const { usesExtraVram, enhanceMaxSide } = await import('../src/shared/vram');
+  expect(enhancementSize(2048, 2048, 1.5, 3072)).toEqual({ width: 3072, height: 3072 });
+  expect(enhancementSize(1024, 1792, 2, 3072)).toEqual({ width: 1792, height: 3072 });
+  expect(enhancementSize(1024, 1792, 2)).toEqual({ width: 1216, height: 2048 });
+  const auto = { deviceMode: 'auto' as const };
+  expect(usesExtraVram(auto, { vramMiB: 24576 })).toBe(true);
+  expect(usesExtraVram({ ...auto, extraVram: false }, { vramMiB: 24576 })).toBe(false);
+  expect(usesExtraVram({ ...auto, extraVram: true }, { vramMiB: 16380 })).toBe(false);
+  expect(usesExtraVram({ deviceMode: 'lowvram', extraVram: true }, { vramMiB: 24576 })).toBe(false);
+  expect(usesExtraVram(auto, {})).toBe(false);
+  expect(enhanceMaxSide(false)).toBe(2048);
+  const big = prepareEnhancement(
+    { ...parent, width: 2048, height: 2048 },
+    { ...source, normalized: { ...source.normalized, width: 2048, height: 2048 } },
+    DEFAULT_DRAFT,
+    1.5,
+    0.3,
+    3072,
+  );
+  expect([big.width, big.height]).toEqual([3072, 3072]);
+  expect(() =>
+    validateEnhancementSource(big, { ...source, normalized: { ...source.normalized, width: 2048, height: 2048 } }, [
+      { ...parent, width: 2048, height: 2048 },
+    ]),
+  ).toThrow('2048');
+});

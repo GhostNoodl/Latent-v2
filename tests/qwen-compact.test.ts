@@ -183,3 +183,11 @@ it('uses eight-step Lightning by default for new edits and keeps older profiles 
   expect(buildQwenEditWorkflow(input('fast'), qwenBundle('fast')).settings.steps).toBe(4);
   expect(buildQwenEditWorkflow(input('base'), qwenBundle('base')).settings.steps).toBe(40);
 });
+it('reads the prompt on the graphics card only when asked, and records it', () => {
+  const gpu = buildQwenEditWorkflow({ ...input('fast'), textEncoderDevice: 'default' }, qwenBundle('fast'));
+  expect(gpu.workflow['2'].inputs.device).toBe('default');
+  expect(gpu.sampler.textEncoderDevice).toBe('default');
+  const cpu = buildQwenEditWorkflow(input('fast'), qwenBundle('fast'));
+  expect(cpu.workflow['2'].inputs.device).toBe('cpu');
+  expect(cpu.sampler.textEncoderDevice).toBe('cpu');
+});

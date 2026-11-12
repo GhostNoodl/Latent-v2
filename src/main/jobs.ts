@@ -1,6 +1,7 @@
 import { resolveClassicHires } from '../shared/advanced-image-workflow';
 import { processAutomaticFace } from './automatic-faces';
 import { enhancementIssue, validateEnhancementSource, buildEnhancementWorkflow } from '../shared/enhancement';
+import { ENHANCE_MAX_SIDE, enhanceMaxSide } from '../shared/vram';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
@@ -169,6 +170,8 @@ export class JobService {
     >,
     private activity?: Pick<BackendActivityService, 'refresh' | 'status'>,
     private videoQueue?: VideoQueueService,
+    /** True when "Use extra graphics memory" is on for a big enough card. */
+    private extraVram?: () => boolean,
   ) {
     this.items = store.jobs();
     this.sources = new SourceImageService(paths, store);
@@ -427,6 +430,9 @@ export class JobService {
       throw new Error('In Create, use Set up / update face detector below Automatically refine faces, then try again.');
     if (draft.autoFaceParentRecordId && !draft.faceDetailer)
       throw new Error('Automatic face lineage requires a face refinement recipe.');
+    const maxSide = draft.enhance ? enhanceMaxSide(Boolean(this.extraVram?.())) : ENHANCE_MAX_SIDE;
+    if (Math.max(draft.width, draft.height) > maxSide)
+      throw new Error(`Images can be up to ${maxSide} pixels per side${draft.enhance ? ' on this setup' : ''}.`);
     const enhanceError = enhancementIssue(draft);
     if (enhanceError) throw new Error(enhanceError);
     if (
@@ -671,7 +677,12 @@ export class JobService {
         context.workflow = context.advancedImage.workflow;
         context.workflowVersion = context.advancedImage.workflowVersion;
       } else if (draft.enhance) {
-        validateEnhancementSource(draft, source.source, this.store.records());
+        validateEnhancementSource(
+          draft,
+          source.source,
+          this.store.records(),
+          enhanceMaxSide(Boolean(this.extraVram?.())),
+        );
         context.workflow = buildEnhancementWorkflow(context.workflow, draft, sourceFilename);
         context.workflowVersion = 'sdxl-saved-latent-enhance@1';
       } else if (input.mode === 'inpaint' && input.crop) {
@@ -831,6 +842,7 @@ export class JobService {
         jobId: id,
         settings: { ...request.settings, seed: actualSeed },
         workflowVersion: request.workflowVersion,
+        textEncoderDevice: Boolean(this.extraVram?.()) ? 'default' : 'cpu',
       },
       bundle,
     );
@@ -1887,6 +1899,7 @@ export class JobService {
         settings: { ...request.settings, seed: request.settings.seed },
         jobId: job.id,
         workflowVersion: request.workflowVersion,
+        textEncoderDevice: saved.plan.sampler?.textEncoderDevice === 'default' ? 'default' : 'cpu',
       },
       saved.plan.bundle,
     );

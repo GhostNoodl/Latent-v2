@@ -94,7 +94,11 @@ export function buildQwen21Workflow(input: QwenEditWorkflowInput, bundle: QwenEd
     '1': { class_type: 'UNETLoader', inputs: { unet_name: bundle.assets.diffusion.filename, weight_dtype: 'default' } },
     '2': {
       class_type: 'CLIPLoader',
-      inputs: { clip_name: bundle.assets.encoder.filename, type: 'qwen_image', device: 'cpu' },
+      inputs: {
+        clip_name: bundle.assets.encoder.filename,
+        type: 'qwen_image',
+        device: input.textEncoderDevice ?? 'cpu',
+      },
     },
     '3': { class_type: 'VAELoader', inputs: { vae_name: bundle.assets.vae.filename } },
     '8': {
@@ -195,7 +199,7 @@ export function buildQwen21Workflow(input: QwenEditWorkflowInput, bundle: QwenEd
       denoise: 1,
       modelShift: null,
       cfgNorm: null,
-      textEncoderDevice: 'cpu',
+      textEncoderDevice: input.textEncoderDevice ?? 'cpu',
     },
     output: { nodeId: '7', filenamePrefix, width: settings.width, height: settings.height, batchSize: 1 },
     expectedOutputCount: 1,

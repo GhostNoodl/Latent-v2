@@ -3,7 +3,8 @@ import type { SourceImageAsset } from './source-types';
 import { DEFAULT_DRAFT } from './defaults';
 import { draftSchema } from './validation';
 import { augmentImageWorkflow } from './image-workflow';
-export function enhancementSize(width: number, height: number, scale: number) {
+import { ENHANCE_MAX_SIDE } from './vram';
+export function enhancementSize(width: number, height: number, scale: number, maxSide = ENHANCE_MAX_SIDE) {
   if (
     !Number.isFinite(scale) ||
     scale < 1 ||
@@ -11,13 +12,13 @@ export function enhancementSize(width: number, height: number, scale: number) {
     !Number.isInteger(width) ||
     !Number.isInteger(height) ||
     Math.min(width, height) < 256 ||
-    Math.max(width, height) > 2048
+    Math.max(width, height) > maxSide
   )
-    throw Error('Enhance currently supports source images between 256 and 2048 pixels on each side.');
-  const factor = Math.min(scale, 2048 / width, 2048 / height);
+    throw Error(`Enhance works on images between 256 and ${maxSide} pixels on each side.`);
+  const factor = Math.min(scale, maxSide / width, maxSide / height);
   return {
-    width: Math.min(2048, Math.ceil((width * factor) / 64) * 64),
-    height: Math.min(2048, Math.ceil((height * factor) / 64) * 64),
+    width: Math.min(maxSide, Math.ceil((width * factor) / 64) * 64),
+    height: Math.min(maxSide, Math.ceil((height * factor) / 64) * 64),
   };
 }
 export function enhancementIssue(draft: GenerationDraft): string | undefined {
@@ -44,6 +45,7 @@ export function validateEnhancementSource(
   draft: GenerationDraft,
   source: SourceImageAsset,
   records: readonly GenerationRecord[],
+  maxSide = ENHANCE_MAX_SIDE,
 ) {
   const issue = enhancementIssue(draft);
   if (issue) throw Error(issue);
@@ -57,7 +59,9 @@ export function validateEnhancementSource(
     throw Error('The enhancement source does not match its saved parent image. Start Enhance from that image again.');
   if (source.normalized.width !== parent.width || source.normalized.height !== parent.height)
     throw Error('The enhancement source dimensions changed. Import the original again.');
-  enhancementSize(parent.width, parent.height, 1);
+  enhancementSize(parent.width, parent.height, 1, maxSide);
+  if (Math.max(draft.width, draft.height) > maxSide)
+    throw Error(`Enhance goes up to ${maxSide} pixels per side on this setup.`);
   if (draft.width < parent.width || draft.height < parent.height)
     throw Error('Enhance cannot shrink the original. Choose its size or a larger size.');
 }
@@ -67,8 +71,9 @@ export function prepareEnhancement(
   current: GenerationDraft,
   scale: number,
   denoise: number,
+  maxSide = ENHANCE_MAX_SIDE,
 ): GenerationDraft {
-  const size = enhancementSize(record.width, record.height, scale);
+  const size = enhancementSize(record.width, record.height, scale, maxSide);
   const original = record.checkpoint ? record.draft : current;
   const selected = record.checkpoint
     ? record.loras.map(l => ({ modelId: l.id, weight: l.weight, clipWeight: l.clipWeight }))
@@ -104,7 +109,7 @@ export function prepareEnhancement(
       resize: 'stretch',
     },
   });
-  validateEnhancementSource(result, source, [record]);
+  validateEnhancementSource(result, source, [record], maxSide);
   return result;
 }
 /** New recipes resize pixels before encoding; preserve latent scaling for historic recipes. */
@@ -168,8 +173,9 @@ export function prepareOneClickEnhancement(
   source: SourceImageAsset,
   current: GenerationDraft,
   scale: 1.5 | 2 = 2,
+  maxSide = ENHANCE_MAX_SIDE,
 ): GenerationDraft {
-  const next = prepareEnhancement(record, source, current, scale, 0.3);
+  const next = prepareEnhancement(record, source, current, scale, 0.3, maxSide);
   return draftSchema.parse({
     ...next,
     steps: oneClickEnhancementSteps(next.width, next.height),
@@ -191,6 +197,9 @@ export function prepareOneClickEnhancement(
       : undefined,
   });
 }
-export function enhancementActionLabel(record: Pick<GenerationRecord, 'width' | 'height'>): string {
-  return Math.max(record.width, record.height) >= 2048 ? 'Refine image' : 'Upscale & refine';
+export function enhancementActionLabel(
+  record: Pick<GenerationRecord, 'width' | 'height'>,
+  maxSide = ENHANCE_MAX_SIDE,
+): string {
+  return Math.max(record.width, record.height) >= maxSide ? 'Refine image' : 'Upscale & refine';
 }
