@@ -842,7 +842,7 @@ export class JobService {
         jobId: id,
         settings: { ...request.settings, seed: actualSeed },
         workflowVersion: request.workflowVersion,
-        textEncoderDevice: Boolean(this.extraVram?.()) ? 'default' : 'cpu',
+        textEncoderDevice: this.extraVram?.() ? 'default' : 'cpu',
       },
       bundle,
     );
