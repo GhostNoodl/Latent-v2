@@ -118,6 +118,8 @@ describe('managed runtime isolation', () => {
     expect(args[args.indexOf('--database-url') + 1]).toContain('comfyui.db');
     expect(backendArguments(paths, 19023, { deviceMode: 'cpu' })).toContain('--cpu');
     expect(backendArguments(paths, 19023, { deviceMode: 'lowvram' })).toContain('--disable-dynamic-vram');
+    expect(args).toContain('--disable-pinned-memory');
+    expect(backendArguments(paths, 19023, { deviceMode: 'cpu' })).not.toContain('--disable-pinned-memory');
     expect(() => backendArguments(paths, 0)).toThrow();
   });
 

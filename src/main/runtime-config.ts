@@ -181,6 +181,9 @@ export function backendArguments(
   if (settings?.fastMath && settings.deviceMode !== 'cpu') args.push('--fast', 'fp16_accumulation', 'fp8_matrix_mult');
   // Callers pass the recorded launch identity, which enables this only when the reviewed packages are installed.
   if (settings?.sageAttention && settings.deviceMode !== 'cpu') args.push('--use-sage-attention');
+  // Pinned copies of big models (video, Qwen) took ~25 GB of extra RAM on a 64 GB PC for no measurable speed gain.
+  // The launcher drops this switch on engines too old to know it.
+  if (settings?.deviceMode !== 'cpu') args.push('--disable-pinned-memory');
   return args;
 }
 
@@ -262,6 +265,13 @@ def watch_owner():
             if os.getppid() != parent_pid: os._exit(0)
             time.sleep(2)
 threading.Thread(target=watch_owner, daemon=True).start()
+# Newer engine switches are left out on engines that don't know them yet.
+try:
+    with open(os.path.join(os.path.dirname(backend_main), 'comfy', 'cli_args.py'), encoding='utf-8') as cli_args:
+        known_args = cli_args.read()
+except OSError:
+    known_args = ''
+sys.argv = [a for a in sys.argv if a != '--disable-pinned-memory' or a in known_args]
 sys.path.insert(0, os.path.dirname(backend_main))
 sys.argv[0] = backend_main
 runpy.run_path(backend_main, run_name='__main__')
