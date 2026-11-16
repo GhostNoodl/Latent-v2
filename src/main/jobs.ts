@@ -21,6 +21,15 @@ import type {
   VideoJob,
 } from '../shared/types';
 import { buildWorkflow, resolvePrompt, validateAssets, WORKFLOW_VERSION } from '../shared/workflow';
+import {
+  IMAGE_MODELS,
+  buildImageModelWorkflow,
+  compareEngineVersions,
+  imageModelNodes,
+  validateImageModelBundle,
+  type ImageModelBundle,
+} from '../shared/image-models';
+import type { ImageModelAssetsService } from './image-model-assets';
 import { augmentSplitWorkflow, splitBlockedReason, SPLIT_WORKFLOW_VERSION } from '../shared/split-sampling';
 import { bindModelPaths, canonicalModelPaths } from '../shared/workflow-model-paths';
 import { draftSchema } from '../shared/validation';
@@ -91,6 +100,7 @@ interface ExecutionContext {
   ipAdapterSource?: GenerationRecord['ipAdapterSource'];
   regionalPrompts?: RegionalPromptPlan;
   qwenEdit?: QwenEditRecord;
+  imageModel?: ImageModelBundle;
   cropInpaint?: CropInpaintPlan;
   runtimeIdentity?: RuntimeIdentitySnapshot;
   controlNet?: GenerationRecord['controlNet'];
@@ -192,6 +202,11 @@ export class JobService {
     this.sources = new SourceImageService(paths, store);
     this.regionalMasks = new RegionalMaskService(paths);
     this.order = store.getState<string[]>('queue-order', []);
+  }
+  private imageModelAssets?: Pick<ImageModelAssetsService, 'verify'>;
+  /** Newer image models (Anima, Z-Image…) are verified by their own download service. */
+  setImageModelAssets(service: Pick<ImageModelAssetsService, 'verify'>) {
+    this.imageModelAssets = service;
   }
   start() {
     if (!this.timer) this.timer = setInterval(() => void this.tick(), 1000);
@@ -498,6 +513,7 @@ export class JobService {
         );
       return this.enqueueQwenEdit(draft.qwenEdit);
     }
+    if (draft.imageModel) return this.enqueueImageModel(draft);
     if (draft.regionalPrompts?.frozen && !draft.regionalPrompts.settings.enabled)
       throw new Error('Turn off regional prompting with a new layout, or restore the frozen regional recipe.');
     if (
@@ -783,6 +799,74 @@ export class JobService {
       status: 'queued',
       progress: 0,
       progressMax: draft.upscale ? 1 : draft.steps,
+      outputIds: [],
+    };
+    this.accept(job, context);
+    void this.tick();
+    return structuredClone(job);
+  }
+  /** Text-to-image with a newer model that loads its own diffusion model, text encoder and VAE. */
+  private async enqueueImageModel(draft: GenerationDraft): Promise<GenerationJob> {
+    const definition = IMAGE_MODELS[draft.imageModel!];
+    if (
+      draft.imageInput ||
+      draft.controlNet ||
+      draft.hiresFix ||
+      draft.upscale ||
+      draft.enhance ||
+      draft.ipAdapter ||
+      draft.faceDetailer ||
+      draft.autoFace ||
+      draft.autoFaceParentRecordId ||
+      draft.regionalPrompts?.settings.enabled ||
+      draft.split ||
+      draft.modelSampling ||
+      draft.qwenEdit
+    )
+      throw new Error(`${definition.name} makes images from text only for now. Turn off the extra image tools.`);
+    if (draft.loras.length)
+      throw new Error(`${definition.name} can't use SDXL LoRAs. Remove them from the LoRA list first.`);
+    if (Math.max(draft.width, draft.height) > 2048) throw new Error('Images can be up to 2048 pixels per side.');
+    if (!this.imageModelAssets) throw new Error('Image model downloads are unavailable.');
+    if (draft.variationOfRecordId && !this.store.record(draft.variationOfRecordId))
+      throw new Error('The original image for this variation is no longer in the studio history.');
+    const engine = this.backend.status().version;
+    if (engine && compareEngineVersions(engine, definition.minEngine) < 0)
+      throw new Error(
+        `${definition.name} needs engine ${definition.minEngine} or newer (you have ${engine}). Update the engine in Settings first.`,
+      );
+    const id = randomUUID();
+    const actualSeed =
+      draft.seed === 'random' ? String(randomBytes(6).readUIntBE(0, 6)) : BigInt(draft.seed).toString();
+    const prepared = await prepareDynamicPromptDraft(
+      draft,
+      actualSeed,
+      usesDynamicPrompts(draft) ? new WildcardStore(this.store, () => {}).snapshot() : undefined,
+    );
+    const stored: GenerationDraft = { ...draft, checkpointId: '', triggerWords: undefined, assetHashes: undefined };
+    if (prepared.recipe) stored.dynamicPrompts = { ...draft.dynamicPrompts, enabled: true, frozen: prepared.recipe };
+    const bundle = await this.imageModelAssets.verify(definition.id);
+    const resolvedDraft = { ...stored, prompt: prepared.prompt, negativePrompt: prepared.negativePrompt };
+    const context: ExecutionContext = {
+      workflow: buildImageModelWorkflow(resolvedDraft, bundle, actualSeed, id),
+      workflowVersion: definition.workflowVersion,
+      imageModel: bundle,
+      loras: [],
+      resolvedPrompt: prepared.prompt,
+      dynamicPromptRecipe: prepared.recipe,
+      backendVersion: engine ?? 'unknown',
+      appVersion: this.appVersion,
+    };
+    const now = new Date().toISOString();
+    const job: GenerationJob = {
+      id,
+      createdAt: now,
+      updatedAt: now,
+      draft: structuredClone(stored),
+      actualSeed,
+      status: 'queued',
+      progress: 0,
+      progressMax: stored.steps,
       outputIds: [],
     };
     this.accept(job, context);
@@ -1309,6 +1393,22 @@ export class JobService {
       const bound = bindQwenEditWorkflow(expected, objects);
       context.qwenEdit.plan = bound;
       context.workflow = bound.workflow;
+    }
+    if (context.imageModel) {
+      if (!this.imageModelAssets) throw new Error('Image model downloads are unavailable.');
+      validateImageModelBundle(context.imageModel);
+      const current = await this.imageModelAssets.verify(context.imageModel.id);
+      if (
+        (['diffusion', 'encoder', 'vae'] as const).some(
+          role => current.files[role].sha256 !== context.imageModel!.files[role].sha256,
+        )
+      )
+        throw new Error('The image model files changed after this job was queued.');
+      const missing = imageModelNodes(context.imageModel.id).find(name => !objects[name]);
+      if (missing)
+        throw new Error(
+          `This engine can't run ${IMAGE_MODELS[context.imageModel.id].name} yet (no ${missing}). Update the engine in Settings.`,
+        );
     }
     if (context.advancedImage?.hires) validateHiresCapabilities(objects, context.advancedImage);
     if (context.controlNet) validateControlNetCapabilities(objects, context.controlNet.plan.asset);
@@ -2476,6 +2576,7 @@ export class JobService {
       width: decoded.width,
       height: decoded.height,
       checkpoint: context.checkpoint,
+      imageModel: context.imageModel,
       loras: context.loras,
       workflow: context.workflow,
       workflowVersion: context.workflowVersion ?? WORKFLOW_VERSION,

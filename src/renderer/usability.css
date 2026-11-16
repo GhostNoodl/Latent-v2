@@ -1480,3 +1480,22 @@
   color: var(--accent);
   font-weight: 500;
 }
+.studio .dock-chip .model-artwork.placeholder svg {
+  width: 13px;
+  height: 13px;
+}
+.image-model-card .model-artwork {
+  height: 96px;
+}
+.image-model-card .image-model-license {
+  color: var(--muted);
+}
+.image-model-download {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.image-model-download progress {
+  flex: 1;
+}

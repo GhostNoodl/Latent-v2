@@ -1,4 +1,5 @@
 import { Clapperboard, Maximize2, WandSparkles } from 'lucide-react';
+import { recordImageModelName } from '../shared/image-models';
 import type { GenerationRecord } from '../shared/types';
 import { groupImageVersions } from '../shared/image-versions';
 import { ImagePreview } from './ImagePreview';
@@ -30,7 +31,10 @@ export function LibraryDetail({
   const trail = lineage(record, records);
   const children = madeFromThis(record, records);
   const rows: Array<[string, string]> = [
-    ['Model', record.checkpoint?.name ?? (record.qwenEdit ? 'Qwen image edit' : 'Resize')],
+    [
+      'Model',
+      recordImageModelName(record) ?? record.checkpoint?.name ?? (record.qwenEdit ? 'Qwen image edit' : 'Resize'),
+    ],
     ...(record.loras.length
       ? [['LoRA', record.loras.map(lora => `${lora.name} · ${lora.weight}`).join(', ')] as [string, string]]
       : []),

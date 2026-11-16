@@ -138,6 +138,7 @@ export function imageSetupReason(s: AppSnapshot): string {
   if (s.backend.state !== 'ready') return 'Open Setup to start the generation engine.';
   if (
     !s.draft.upscale &&
+    !s.draft.imageModel &&
     !s.models.some(m => m.id === s.draft.checkpointId && m.kind === 'checkpoint' && m.status === 'ready')
   )
     return 'Choose an installed checkpoint in Models, or open Setup.';

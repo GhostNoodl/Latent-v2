@@ -1,4 +1,5 @@
 import type { GenerationRecord } from '../shared/types';
+import { recordImageModelName } from '../shared/image-models';
 
 /** The image collection that Review's Keep adds to. */
 export const KEEPERS = 'Keepers';
@@ -17,7 +18,8 @@ export interface Facet {
   count: number;
 }
 
-const modelKey = (record: GenerationRecord) => record.checkpoint?.filename ?? 'none';
+const modelKey = (record: GenerationRecord) =>
+  record.imageModel ? `image-model:${record.imageModel.id}` : (record.checkpoint?.filename ?? 'none');
 
 /** Every model and LoRA used in the library, most used first. */
 export function libraryFacets(records: GenerationRecord[]) {
@@ -29,7 +31,13 @@ export function libraryFacets(records: GenerationRecord[]) {
     map.set(key, item);
   };
   for (const record of records) {
-    bump(models, modelKey(record), record.checkpoint?.name ?? (record.qwenEdit ? 'Image edits' : 'No model (resize)'));
+    bump(
+      models,
+      modelKey(record),
+      recordImageModelName(record) ??
+        record.checkpoint?.name ??
+        (record.qwenEdit ? 'Image edits' : 'No model (resize)'),
+    );
     for (const lora of new Map((record.loras ?? []).map(item => [item.filename, item])).values())
       bump(loras, lora.filename, lora.name);
   }

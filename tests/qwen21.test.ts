@@ -102,7 +102,7 @@ it('replays creation and references without turning them into Lightning edits', 
   }
 });
 it('keeps the engine update opt-in while retaining the old channel and Lightning recipes', () => {
-  expect(latestReviewedRuntimeSet().backend.version).toBe('0.34.0');
+  expect(latestReviewedRuntimeSet().backend.version).toBe('0.45.2');
   const set = reviewedRuntimeSet('comfy-0-37-0-qwen21-1');
   expect(set.optional).toBe(true);
   expect(set.workflowVersions).toContain('qwen-image-edit-2511-int8@2');

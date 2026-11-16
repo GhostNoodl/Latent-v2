@@ -118,6 +118,8 @@ import type { CollectionActions, CollectionSnapshot } from '../shared/collection
 import { invalidateDynamicPromptFreeze, restoreDynamicPromptRecipe } from '../shared/dynamic-prompt-recipe';
 import { acceptHardwareProfileApplication } from '../shared/hardware-profile-application';
 import { SharedBackendActivity } from './SharedBackendActivity';
+import { IMAGE_MODELS, type ImageModelId } from '../shared/image-models';
+import { imageModelProblem } from './ImageModelCards';
 import { queueJobActive, queueJobPresentation, queueView, runningImageJob } from './queue-view';
 import type { HardwareOomAdvice } from '../shared/hardware-profile-types';
 import { Busy, ConfirmDialog, Field, Modal, Notice, Toggle, shortDate, type RunAction } from './ui';
@@ -177,6 +179,8 @@ export default function App() {
   const closeRequested = useRef(false);
   const closeEpoch = useRef(0);
   const pendingGeneration = useRef<Promise<unknown>>(Promise.resolve());
+  /** The SDXL setup put aside while a newer image model is in use, restored when switching back. */
+  const sdxlStash = useRef<Partial<GenerationDraft> | undefined>(undefined);
   const pendingUserWrites = useRef(new Set<Promise<unknown>>());
   const revision = useRef(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -359,6 +363,9 @@ export default function App() {
         !Object.hasOwn(change, 'modelSampling')
       )
         change = { ...change, modelSampling: undefined };
+      // Picking any checkpoint (presets, reuse settings…) leaves the newer image model behind.
+      if (change.checkpointId && draftRef.current.imageModel && !Object.hasOwn(change, 'imageModel'))
+        change = { ...change, imageModel: undefined };
       change = reconcileEnhancementChange(draftRef.current, change);
       const applied = applyTriggerResolutionChange(draftRef.current, change);
       let merged: GenerationDraft;
@@ -436,6 +443,37 @@ export default function App() {
     },
     [persist],
   );
+  /** Switches Create to a newer image model, putting the SDXL setup aside so switching back restores it. */
+  const chooseImageModel = (id: ImageModelId) => {
+    const current = draftRef.current;
+    if (!current.imageModel)
+      sdxlStash.current = {
+        family: current.family,
+        loras: current.loras,
+        steps: current.steps,
+        cfg: current.cfg,
+        sampler: current.sampler,
+        scheduler: current.scheduler,
+        hiresFix: current.hiresFix,
+        autoFace: current.autoFace,
+        modelSampling: current.modelSampling,
+        split: current.split,
+      };
+    const { steps, cfg, sampler, scheduler } = IMAGE_MODELS[id].defaults;
+    changeDraft({
+      imageModel: id,
+      checkpointId: '',
+      loras: [],
+      steps,
+      cfg,
+      sampler,
+      scheduler,
+      hiresFix: undefined,
+      autoFace: undefined,
+      modelSampling: undefined,
+      split: undefined,
+    });
+  };
   const flushDraft = useCallback(async () => {
     if (!initialized.current) return;
     let savingRevision: number;
@@ -915,23 +953,25 @@ export default function App() {
         mask.sourceId === input.sourceId &&
         mask.sourceSha256 === input.sourceSha256,
     );
-  const diffusionError = draft.upscale
-    ? ''
-    : !draft.checkpointId
-      ? 'Choose a checkpoint in Models to begin.'
-      : missing.length
-        ? 'Restore the missing model files before generating.'
-        : changedAssets.length
-          ? 'A model file changed since this image was made. See the note above.'
-          : familyMismatch
-            ? checkpoint?.family === 'unknown'
-              ? 'Tag your checkpoint with its matching family in Models.'
-              : 'Select the family matching your checkpoint, or choose a matching checkpoint.'
-            : loraMismatch
-              ? 'Check the family tags of your selected LoRAs.'
-              : unavailableSampling
-                ? 'Choose a supported sampler and scheduler.'
-                : '';
+  const diffusionError = draft.imageModel
+    ? imageModelProblem({ ...snapshot, draft }, draft.imageModel)
+    : draft.upscale
+      ? ''
+      : !draft.checkpointId
+        ? 'Choose a checkpoint in Models to begin.'
+        : missing.length
+          ? 'Restore the missing model files before generating.'
+          : changedAssets.length
+            ? 'A model file changed since this image was made. See the note above.'
+            : familyMismatch
+              ? checkpoint?.family === 'unknown'
+                ? 'Tag your checkpoint with its matching family in Models.'
+                : 'Select the family matching your checkpoint, or choose a matching checkpoint.'
+              : loraMismatch
+                ? 'Check the family tags of your selected LoRAs.'
+                : unavailableSampling
+                  ? 'Choose a supported sampler and scheduler.'
+                  : '';
   const hires = draft.hiresFix;
   const advancedError =
     enhancementIssue(draft) ||
@@ -1958,10 +1998,17 @@ export default function App() {
                         id="checkpoint"
                         className="dock-chip"
                         aria-haspopup="dialog"
-                        title="Change checkpoint"
+                        title="Change model"
                         onClick={() => setCheckpointOpen(true)}
                       >
-                        {checkpoint ? (
+                        {draft.imageModel ? (
+                          <>
+                            <span className="model-artwork placeholder" aria-hidden="true">
+                              <Sparkles />
+                            </span>
+                            <span className="dock-chip-label">{IMAGE_MODELS[draft.imageModel].name}</span>
+                          </>
+                        ) : checkpoint ? (
                           <>
                             <ModelArtwork
                               model={checkpoint}
@@ -2903,10 +2950,33 @@ export default function App() {
           snapshot={snapshot}
           kind="checkpoint"
           selectedIds={[draft.checkpointId]}
+          imageModel={draft.imageModel}
           onClose={() => setCheckpointOpen(false)}
           onChoose={model => {
-            changeDraft({ checkpointId: model.id, ...(model.family !== 'unknown' ? { family: model.family } : {}) });
+            const restore = draft.imageModel ? (sdxlStash.current ?? {}) : {};
+            sdxlStash.current = undefined;
+            changeDraft({
+              ...restore,
+              imageModel: undefined,
+              checkpointId: model.id,
+              ...(model.family !== 'unknown' ? { family: model.family } : {}),
+            });
             setCheckpointOpen(false);
+          }}
+          onChooseImageModel={id => {
+            chooseImageModel(id);
+            setCheckpointOpen(false);
+          }}
+          onDownloadImageModel={id => {
+            const model = IMAGE_MODELS[id];
+            void run(
+              `image-model-${id}`,
+              async () => {
+                await window.latent.setupImageModel(id);
+                receive(await window.latent.getSnapshot());
+              },
+              `${model.name} is ready. Pick it to use it.`,
+            );
           }}
         />
       )}

@@ -1,10 +1,14 @@
 import { isLoraFamilyCompatible } from '../shared/types';
 import { cleanModelStem } from '../shared/model-names';
 import { useEffect, useState } from 'react';
-import { Boxes, Image, Layers, Folder } from 'lucide-react';
+import { Boxes, Image, Layers, Folder, Sparkles } from 'lucide-react';
+import { IMAGE_MODEL_IDS, type ImageModelId } from '../shared/image-models';
+import { ImageModelCards } from './ImageModelCards';
 import type { AppSnapshot, ModelAsset } from '../shared/types';
 import { LocalModelMetadata } from './LocalModelMetadata';
 import { Modal } from './ui';
+
+const NEWER = '__newer-image-models';
 
 export const modelDisplayName = (model: ModelAsset, showCivitai = true) =>
   (showCivitai ? model.civitai?.modelName?.trim() : '') || cleanModelStem(model.name);
@@ -65,9 +69,16 @@ export function ModelPicker({
   onChoose,
   onClose,
   onUpdated,
+  imageModel,
+  onChooseImageModel,
+  onDownloadImageModel,
 }: {
   snapshot: AppSnapshot;
   onUpdated?(snapshot: AppSnapshot): void;
+  /** Newer image model in use (checkpoint picker only). */
+  imageModel?: ImageModelId;
+  onChooseImageModel?(id: ImageModelId): void;
+  onDownloadImageModel?(id: ImageModelId): void;
   kind: 'checkpoint' | 'lora';
   selectedIds: string[];
   family?: string;
@@ -76,12 +87,17 @@ export function ModelPicker({
 }) {
   const [contextModel, setContextModel] = useState<ModelAsset>();
   const [query, setQuery] = useState('');
-  const [collection, setCollection] = useState('');
+  const newer = kind === 'checkpoint' && Boolean(onChooseImageModel);
+  const [collection, setCollection] = useState(newer && imageModel ? NEWER : '');
   const collections = snapshot.collections.collections
     .filter(item => item.kind === 'model')
     .sort((a, b) => a.name.localeCompare(b.name));
   useEffect(() => {
-    if (collection && !snapshot.collections.collections.some(item => item.kind === 'model' && item.id === collection))
+    if (
+      collection &&
+      collection !== NEWER &&
+      !snapshot.collections.collections.some(item => item.kind === 'model' && item.id === collection)
+    )
       setCollection('');
   }, [collection, snapshot.collections]);
   const inventory = snapshot.models.filter(model => model.kind === kind);
@@ -96,7 +112,10 @@ export function ModelPicker({
         .includes(query.toLowerCase()),
   );
   return (
-    <Modal title={kind === 'checkpoint' ? 'Choose a checkpoint' : 'Add a LoRA'} onClose={onClose}>
+    <Modal
+      title={kind === 'checkpoint' ? (newer ? 'Choose a model' : 'Choose a checkpoint') : 'Add a LoRA'}
+      onClose={onClose}
+    >
       <div className="model-picker-layout">
         <nav className="picker-folders" aria-label="Model folders">
           <h4>Folders</h4>
@@ -104,6 +123,18 @@ export function ModelPicker({
             <span>All {kind === 'lora' ? 'LoRAs' : 'checkpoints'}</span>
             <span>{count()}</span>
           </button>
+          {newer && (
+            <button
+              type="button"
+              className="folder-target"
+              aria-pressed={collection === NEWER}
+              onClick={() => setCollection(NEWER)}
+            >
+              <Sparkles size={15} />
+              <span className="folder-name">Newer models</span>
+              <span>{IMAGE_MODEL_IDS.length}</span>
+            </button>
+          )}
           {collections.map(item => (
             <button
               key={item.id}
@@ -130,49 +161,63 @@ export function ModelPicker({
               onChange={event => setQuery(event.target.value)}
             />
           </div>
-          <div className="visual-model-grid">
-            {models.map(model => (
-              <button
-                type="button"
-                className="visual-model-card"
-                key={model.id}
-                onContextMenu={event => {
-                  event.preventDefault();
-                  setContextModel(model);
-                }}
-                onKeyDown={event => {
-                  if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
-                    event.preventDefault();
-                    setContextModel(model);
-                  }
-                }}
-                aria-pressed={selectedIds.includes(model.id)}
-                disabled={
-                  model.status !== 'ready' ||
-                  (kind === 'lora' && (!isLoraFamilyCompatible(model.family, family) || selectedIds.includes(model.id)))
-                }
-                onClick={() => onChoose(model)}
-              >
-                <ModelArtwork
-                  model={model}
-                  showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
-                  history={snapshot.history}
-                />
-                <strong>{modelDisplayName(model, snapshot.settings.civitaiDisplayMetadata !== false)}</strong>
-                <small>
-                  <Boxes size={12} /> {model.family} · {(model.bytes / 1e9).toFixed(1)} GB
-                </small>
-                <small>
-                  {model.status !== 'ready'
-                    ? 'Missing file'
-                    : kind === 'lora' && !isLoraFamilyCompatible(model.family, family)
-                      ? 'Different checkpoint family'
-                      : model.triggers.slice(0, 3).join(', ') || (model.kind === 'lora' ? 'LoRA' : 'Checkpoint')}
-                </small>
-              </button>
-            ))}
-          </div>
-          {!models.length && <p>No matches in this folder. Try another folder or clear your search.</p>}
+          {collection === NEWER && onChooseImageModel ? (
+            <ImageModelCards
+              snapshot={snapshot}
+              selected={imageModel}
+              query={query}
+              onChoose={onChooseImageModel}
+              onDownload={id => onDownloadImageModel?.(id)}
+              onCancel={() => void window.latent.cancelImageModelSetup()}
+            />
+          ) : (
+            <>
+              <div className="visual-model-grid">
+                {models.map(model => (
+                  <button
+                    type="button"
+                    className="visual-model-card"
+                    key={model.id}
+                    onContextMenu={event => {
+                      event.preventDefault();
+                      setContextModel(model);
+                    }}
+                    onKeyDown={event => {
+                      if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+                        event.preventDefault();
+                        setContextModel(model);
+                      }
+                    }}
+                    aria-pressed={!imageModel && selectedIds.includes(model.id)}
+                    disabled={
+                      model.status !== 'ready' ||
+                      (kind === 'lora' &&
+                        (!isLoraFamilyCompatible(model.family, family) || selectedIds.includes(model.id)))
+                    }
+                    onClick={() => onChoose(model)}
+                  >
+                    <ModelArtwork
+                      model={model}
+                      showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
+                      history={snapshot.history}
+                    />
+                    <strong>{modelDisplayName(model, snapshot.settings.civitaiDisplayMetadata !== false)}</strong>
+                    <small>
+                      <Boxes size={12} /> {model.family} · {(model.bytes / 1e9).toFixed(1)} GB
+                    </small>
+                    <small>
+                      {model.status !== 'ready'
+                        ? 'Missing file'
+                        : kind === 'lora' && !isLoraFamilyCompatible(model.family, family)
+                          ? 'Different checkpoint family'
+                          : model.triggers.slice(0, 3).join(', ') || (model.kind === 'lora' ? 'LoRA' : 'Checkpoint')}
+                    </small>
+                  </button>
+                ))}
+              </div>
+              {!models.length && <p>No matches in this folder. Try another folder or clear your search.</p>}
+            </>
+          )}
         </div>
       </div>
       {contextModel && (

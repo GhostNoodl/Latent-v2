@@ -158,6 +158,8 @@ export interface GenerationDraft {
   };
   family: ModelFamily;
   checkpointId: string;
+  /** A newer image model (Anima, Z-Image…) loaded from its own files instead of the checkpoint. */
+  imageModel?: import('./image-models').ImageModelId;
   prompt: string;
   negativePrompt: string;
   width: number;
@@ -292,6 +294,7 @@ export interface GenerationRecord {
   ipAdapterSource?: SourceImageAsset;
   regionalPrompts?: RegionalPromptPlan;
   qwenEdit?: QwenEditRecord;
+  imageModel?: import('./image-models').ImageModelBundle;
   cropInpaint?: CropInpaintPlan;
   runtimeIdentity?: RuntimeIdentitySnapshot;
   controlNet?: { plan: ControlNetPlan; map?: RetainedControlMap };
@@ -363,6 +366,7 @@ export interface AppSnapshot {
   runtimeUpdates: RuntimeUpdateStatus;
   ipAdapter: IPAdapterStatus;
   qwenEdit: QwenEditAssetsStatus;
+  imageModels: import('./image-models').ImageModelsStatus;
   modelLocations: ModelLocationsSnapshot;
   collections: CollectionSnapshot;
   controlNet: ControlNetStatus;
@@ -447,6 +451,8 @@ export interface LatentAPI {
   saveQwenConversation(value: QwenConversationStore): Promise<void>;
   setupQwenEdit(profile: QwenEditProfile, repair?: boolean): Promise<void>;
   cancelQwenEditSetup(): Promise<void>;
+  setupImageModel(id: import('./image-models').ImageModelId): Promise<void>;
+  cancelImageModelSetup(): Promise<void>;
   enqueueQwenEdit(request: QwenEditJobRequest): Promise<GenerationJob>;
   chooseExternalModelRoot(kind: ModelKind): Promise<ModelLocationsSnapshot | null>;
   unregisterExternalModelRoot(rootId: string): Promise<ModelLocationsSnapshot>;

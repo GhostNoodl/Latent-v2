@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { imageModelIdSchema } from './image-models';
 import type { AppSettings } from './types';
 import { SAMPLERS, SCHEDULERS } from './defaults';
 import { dynamicPromptAuthoringSchema } from './dynamic-prompt-recipe';
@@ -143,6 +144,7 @@ export const draftSchema = z
       .optional(),
     family: z.enum(['sdxl', 'illustrious']),
     checkpointId: z.string().max(500),
+    imageModel: imageModelIdSchema.optional(),
     prompt: z.string().max(16000),
     negativePrompt: z.string().max(16000),
     // Above 2048 is only allowed for Enhance with extra graphics memory; jobs check that.

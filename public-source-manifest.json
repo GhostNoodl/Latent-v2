@@ -1678,6 +1678,34 @@
     {
       "from": "tests/remembered-extras.test.ts",
       "to": "tests/remembered-extras.test.ts"
+    },
+    {
+      "from": "src/main/image-model-assets.ts",
+      "to": "src/main/image-model-assets.ts"
+    },
+    {
+      "from": "src/main/runtime-045-packages.ts",
+      "to": "src/main/runtime-045-packages.ts"
+    },
+    {
+      "from": "src/shared/image-models.ts",
+      "to": "src/shared/image-models.ts"
+    },
+    {
+      "from": "src/renderer/ImageModelCards.tsx",
+      "to": "src/renderer/ImageModelCards.tsx"
+    },
+    {
+      "from": "tests/image-models.test.ts",
+      "to": "tests/image-models.test.ts"
+    },
+    {
+      "from": ".github/workflows/comfyui-release-watch.yml",
+      "to": ".github/workflows/comfyui-release-watch.yml"
+    },
+    {
+      "from": "tests/image-model-picker.test.tsx",
+      "to": "tests/image-model-picker.test.tsx"
     }
   ]
 }
