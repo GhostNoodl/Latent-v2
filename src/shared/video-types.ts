@@ -1,5 +1,6 @@
 import type { ComfyWorkflow } from './types';
 import type { VideoAssetsStatus } from './video-assets';
+import type { VideoExtrasStatus, VideoFinishing } from './video-extras';
 
 export interface VideoSourceReference {
   sourceId: string;
@@ -26,6 +27,8 @@ export interface VideoDraft {
   profile: 'base' | 'turbo8' | 'fused4';
   audio: 'none' | 'stereo-candidate';
   speed: VideoSpeed;
+  /** Smoother and upscaler that run after the clip is made. */
+  finishing: VideoFinishing;
   firstFrame?: VideoSourceReference;
   lastFrame?: VideoSourceReference;
   resize: 'stretch' | 'center-crop';
@@ -43,6 +46,8 @@ export interface VideoAvailability {
   bigCard?: boolean;
   /** The Sol add-on is installed in the engine. */
   solInstalled?: boolean;
+  /** Smoother and upscaler files. */
+  extras?: VideoExtrasStatus;
 }
 export interface VideoSourceTransform extends VideoSourceReference {
   role: 'first' | 'last';
@@ -82,6 +87,15 @@ export interface VideoPlan {
   };
   decode: { tiled: true; tileSize: 512; overlap: 64; temporalSize: 64; temporalOverlap: 8 } | { tiled: false };
   encoding: { container: 'mp4'; codec: 'h264'; audio: VideoDraft['audio'] };
+  /** What the saved file ends up as after the finishing steps. */
+  finishing: {
+    smooth: VideoFinishing['smooth'];
+    upscale: { width: number; height: number } | null;
+    width: number;
+    height: number;
+    fps: 24 | 48;
+    frames: number;
+  };
   assets: VideoAssetIdentity[];
 }
 export interface VideoWorkflowContract {

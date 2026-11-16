@@ -15,6 +15,8 @@ import {
 } from '../shared/video-workflow';
 import type { RuntimeIdentitySnapshot } from '../shared/runtime-identity';
 import type { VideoAssetsService } from './video-assets';
+import type { VideoExtrasService } from './video-extras';
+import { videoExtrasFor } from '../shared/video-extras';
 import type { SourceImageService } from './source-images';
 import type { VideoHistoryService } from './video-history';
 import { VIDEO_MEDIA_LIMITS } from './video-media';
@@ -51,6 +53,8 @@ export interface VideoQueueOptions {
   bigCard(): boolean;
   blockedReason?(): string | undefined;
   objectInfo?(address: string, signal: AbortSignal): Promise<Record<string, unknown>>;
+  /** Smoother and upscaler files. */
+  extras?: Pick<VideoExtrasService, 'assertInstalled'>;
 }
 const id = z
   .string()
@@ -127,6 +131,7 @@ export class VideoQueueService {
     if (this.engine.status().state !== 'ready') throw new Error('Start the engine first.');
     const address = engineAddress(this.engine.getUrl());
     const bindings = this.assets.bindings(parsed.profile);
+    this.options.extras?.assertInstalled(videoExtrasFor(parsed.finishing));
     const ids = [
       ...new Set([parsed.firstFrame?.sourceId, parsed.lastFrame?.sourceId].filter((value): value is string => !!value)),
     ];

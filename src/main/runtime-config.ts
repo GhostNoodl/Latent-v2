@@ -204,7 +204,7 @@ export function modelPathsYaml(paths: AppPaths, externalRoots: readonly BackendM
       return `latentv2_external_${root.id}:\n  is_default: false\n  ${root.kind === 'checkpoint' ? 'checkpoints' : 'loras'}: ${scalar(root.path)}\n`;
     })
     .join('');
-  return `latentv2:\n  base_path: ${scalar(paths.models)}\n  is_default: true\n  checkpoints: checkpoints\n  loras: loras\n  vae: vae\n  embeddings: embeddings\n  controlnet: controlnet\n  upscale_models: upscale_models\n  diffusion_models: diffusion_models\n  text_encoders: text_encoders\n  clip_vision: clip_vision\nlatentv2_qwen_loras:\n  base_path: ${scalar(paths.models)}\n  is_default: false\n  loras: qwen-edit-loras\nlatentv2_video_loras:\n  base_path: ${scalar(paths.models)}\n  is_default: false\n  loras: video-loras\n${mappings}`;
+  return `latentv2:\n  base_path: ${scalar(paths.models)}\n  is_default: true\n  checkpoints: checkpoints\n  loras: loras\n  vae: vae\n  embeddings: embeddings\n  controlnet: controlnet\n  upscale_models: upscale_models\n  diffusion_models: diffusion_models\n  text_encoders: text_encoders\n  clip_vision: clip_vision\n  frame_interpolation: frame_interpolation\nlatentv2_qwen_loras:\n  base_path: ${scalar(paths.models)}\n  is_default: false\n  loras: qwen-edit-loras\nlatentv2_video_loras:\n  base_path: ${scalar(paths.models)}\n  is_default: false\n  loras: video-loras\n${mappings}`;
 }
 
 /** A dead Electron owner cannot leave an untracked GPU server behind after a crash. */

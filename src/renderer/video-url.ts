@@ -34,7 +34,12 @@ export function estimateVideoMs(draft: VideoDraft, records: readonly VideoHistor
     return undefined;
   }
   const timed = records.filter(
-    record => record.elapsedMs && record.plan && record.plan.draft.speed?.attention === draft.speed.attention,
+    record =>
+      record.elapsedMs &&
+      record.plan &&
+      record.plan.draft.speed?.attention === draft.speed.attention &&
+      // The upscaler takes minutes, so only compare with clips that made the same choice.
+      (record.plan.draft.finishing?.upscale ?? 'off') === draft.finishing.upscale,
   );
   const sameProfile = timed.filter(record => record.plan!.draft.profile === draft.profile);
   const pool = (sameProfile.length ? sameProfile : timed).slice(0, 5);
