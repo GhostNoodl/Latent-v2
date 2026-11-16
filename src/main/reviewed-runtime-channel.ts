@@ -21,7 +21,10 @@ export const IMAGE_MODELS_SET_ID = 'comfy-0-45-2-image-models-1';
  * Digest of GitHub's codeload archive for the 0.45.2 commit. Measured by the
  * ComfyUI release watch workflow (codeload is not reachable from every build machine).
  */
-const COMFY_0452_ARCHIVE = { sha256: 'PENDING', bytes: 0 };
+const COMFY_0452_ARCHIVE = {
+  sha256: '9c75b7bb09d79a30eff87bbc10b849281cdceb12f0d80a0695e9fcefc4724167',
+  bytes: 13719452,
+};
 /** Closed channel: new entries are reviewed application source changes, never remote executable manifests. */
 const CURRENT_RUNTIME_SET: ReviewedRuntimeSet = {
   id: 'comfy-0-34-0-cu130-workflows-1',
