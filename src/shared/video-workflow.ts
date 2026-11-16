@@ -68,6 +68,7 @@ export function buildVideoWorkflow(
     names.set(asset.role, safeVideoRelativeFilename(binding.filename, '.safetensors'));
   }
   const filenamePrefix = `Latent_${input.jobId}_video`;
+  const split = plan.finishing.upscale !== null;
   let model: [string, number] = ['1', 0];
   const workflow: ComfyWorkflow = {
     '1': { class_type: 'UNETLoader', inputs: { unet_name: names.get('diffusion')!, weight_dtype: 'default' } },
@@ -133,7 +134,10 @@ export function buildVideoWorkflow(
             temporal_overlap: plan.decode.temporalOverlap,
           },
         },
-    '14': { class_type: 'CreateVideo', inputs: { images: finish(workflow, plan, ['11', 0]), fps: plan.finishing.fps } },
+    // With the upscaler, this run saves the plain clip and the finish graph does the rest.
+    '14': split
+      ? { class_type: 'CreateVideo', inputs: { images: ['11', 0], fps: 24 } }
+      : { class_type: 'CreateVideo', inputs: { images: finish(workflow, plan, ['11', 0]), fps: plan.finishing.fps } },
     // V3 dynamic inputs are flattened on the API wire; the engine rebuilds the nested choices.
     '15': {
       class_type: 'SaveVideo',
@@ -177,7 +181,36 @@ export function buildVideoWorkflow(
     workflow,
     output: { nodeId: '15', filenamePrefix, extension: '.mp4' },
     sourceFilenames: [...new Set(sourceFilenames)],
+    ...(split ? { finish: finishGraph(plan, input.jobId, filenamePrefix) } : {}),
   };
+}
+/** Second run: load the plain clip, upscale, smooth, and save under the same name pattern. */
+function finishGraph(plan: VideoPlan, jobId: string, filenamePrefix: string) {
+  const inputFilename = `Latent_${jobId}_raw.mp4`;
+  const workflow: ComfyWorkflow = {
+    '50': { class_type: 'LoadVideo', inputs: { file: inputFilename } },
+    '51': { class_type: 'GetVideoComponents', inputs: { video: ['50', 0] } },
+  };
+  workflow['14'] = {
+    class_type: 'CreateVideo',
+    inputs: {
+      images: finish(workflow, plan, ['51', 0]),
+      fps: plan.finishing.fps,
+      ...(plan.draft.audio === 'stereo-candidate' ? { audio: ['51', 1] } : {}),
+    },
+  };
+  workflow['15'] = {
+    class_type: 'SaveVideo',
+    inputs: {
+      video: ['14', 0],
+      filename_prefix: filenamePrefix,
+      format: 'mp4',
+      'format.codec': 'h264',
+      'format.codec.encoding': 're-encode',
+      'format.codec.encoding.crf': 18,
+    },
+  };
+  return { workflow, inputFilename };
 }
 
 const [SEEDVR2_MODEL, SEEDVR2_VAE] = VIDEO_EXTRAS.seedvr2.files;
@@ -250,6 +283,7 @@ const MISSING_NODE_HELP: Record<string, string> = {
   FrameInterpolate: ENGINE_UPDATE,
   FrameInterpolationModelLoader: ENGINE_UPDATE,
   SeedVR2Preprocess: ENGINE_UPDATE,
+  LoadVideo: ENGINE_UPDATE,
 };
 
 /** Light check that the engine has every node and model file this graph needs. Returns the graph with
@@ -259,7 +293,7 @@ export function bindVideoWorkflow(
   objects: Record<string, any>,
 ): VideoWorkflowContract {
   const result = structuredClone(contract);
-  for (const node of Object.values(result.workflow)) {
+  for (const node of [...Object.values(result.workflow), ...Object.values(result.finish?.workflow ?? {})]) {
     const definition = objects[node.class_type];
     if (!definition)
       throw new Error(MISSING_NODE_HELP[node.class_type] ?? `The engine is missing the ${node.class_type} node.`);

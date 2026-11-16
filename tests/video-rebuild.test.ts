@@ -145,11 +145,19 @@ describe('finishing', () => {
     expect(contract.plan.finishing).toMatchObject({ width: 832, height: 480, fps: 48, frames: 247 });
     expect(contract.workflow['30']).toBeUndefined();
   });
-  it('upscales before smoothing, keeping the shape', () => {
+  it('upscales in a second run, before smoothing, keeping the shape', () => {
     const contract = build(draft({ width: 1344, height: 768, finishing: { smooth: 'rife', upscale: '1080p' } }));
-    expect(contract.workflow['30'].inputs).toMatchObject({ width: 1890, height: 1080 });
-    expect(contract.workflow['42'].inputs.images).toEqual(['40', 0]);
-    expect(contract.plan.finishing).toMatchObject({ width: 1890, height: 1080 });
+    // First run: just the plain clip at 24 fps.
+    expect(contract.workflow['30']).toBeUndefined();
+    expect(contract.workflow['14'].inputs).toMatchObject({ images: ['11', 0], fps: 24 });
+    const finish = contract.finish!;
+    expect(finish.inputFilename).toBe(`Latent_${jobId}_raw.mp4`);
+    expect(finish.workflow['50'].inputs.file).toBe(finish.inputFilename);
+    expect(finish.workflow['30'].inputs).toMatchObject({ image: ['51', 0], width: 1890, height: 1080 });
+    expect(finish.workflow['42'].inputs.images).toEqual(['40', 0]);
+    expect(finish.workflow['15'].inputs.filename_prefix).toBe(contract.output.filenamePrefix);
+    expect(contract.plan.finishing).toMatchObject({ width: 1890, height: 1080, fps: 48 });
+    expect(parseVideoContract(JSON.parse(JSON.stringify(contract)), jobId).finish).toEqual(finish);
   });
   it('skips smoothing when off and gives old drafts the default', () => {
     const contract = build(draft({ finishing: { smooth: 'off', upscale: 'off' } }));

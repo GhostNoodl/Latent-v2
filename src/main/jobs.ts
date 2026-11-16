@@ -1569,7 +1569,10 @@ export class JobService {
     try {
       const context = this.videoContext(job);
       if (!context.finalization) throw new Error('The finished video is missing its saving receipt.');
-      const record = await this.videoQueue!.finalize(job, context, this.shutdown.signal);
+      const record = await this.videoQueue!.finalize(job, context, this.shutdown.signal, phase => {
+        job.phase = phase;
+        this.save(job);
+      });
       if (this.disposed) return;
       // Cancellation may have been saved while the CPU decoder was working.
       const latest = this.videoContext(job);

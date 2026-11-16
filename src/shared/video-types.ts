@@ -108,6 +108,11 @@ export interface VideoWorkflowContract {
     extension: '.mp4';
   };
   sourceFilenames: string[];
+  /**
+   * Upscaling runs as a second engine run after the models are freed, so both fit in memory.
+   * The first run saves the plain clip; this graph loads a copy of it from the inputs folder.
+   */
+  finish?: { workflow: ComfyWorkflow; inputFilename: string };
 }
 export interface VideoMediaInfo {
   schema: 1;
