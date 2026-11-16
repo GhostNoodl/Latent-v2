@@ -7,7 +7,12 @@ import type { VideoDraft, VideoHistoryRecord, VideoWorkflowContract } from '../s
 import { planVideo, videoDraftSchema } from '../shared/video-plan';
 import { parseVideoContract } from '../shared/video-history';
 import { videoOutputCandidates } from '../shared/video-output';
-import { bindVideoWorkflow, buildVideoWorkflow, safeVideoRelativeFilename } from '../shared/video-workflow';
+import {
+  bindVideoWorkflow,
+  buildVideoWorkflow,
+  safeVideoRelativeFilename,
+  SOL_ATTENTION_NODE,
+} from '../shared/video-workflow';
 import type { RuntimeIdentitySnapshot } from '../shared/runtime-identity';
 import type { VideoAssetsService } from './video-assets';
 import type { SourceImageService } from './source-images';
@@ -136,6 +141,10 @@ export class VideoQueueService {
         '.png',
       );
     }
+    const objects = await (this.options.objectInfo ?? readObjectInfo)(address, signal ?? new AbortController().signal);
+    // Sol is an add-on. Without it (or without triton) the engine has no Sol node, so fall back to plain Sage.
+    if (parsed.speed.attention === 'sage-sol' && !objects[SOL_ATTENTION_NODE])
+      parsed.speed = { ...parsed.speed, attention: 'sage' };
     const plan = planVideo(parsed, { actualSeed, sources, bigCard: this.options.bigCard() });
     const built = buildVideoWorkflow(
       {
@@ -146,7 +155,6 @@ export class VideoQueueService {
       },
       bindings,
     );
-    const objects = await (this.options.objectInfo ?? readObjectInfo)(address, signal ?? new AbortController().signal);
     const contract = bindVideoWorkflow(built, objects);
     return {
       kind: 'video',

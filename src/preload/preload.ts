@@ -133,6 +133,7 @@ const api: LatentAPI = {
   stopBackend: () => invoke('stopBackend'),
   checkSageAttention: () => invoke('checkSageAttention'),
   installSageAttention: () => invoke('installSageAttention'),
+  installSolAttention: () => invoke('installSolAttention'),
   openComfyUI: () => invoke('openComfyUI'),
   refreshModels: () => invoke('refreshModels'),
   importModels: kind => invoke('importModels', kind),

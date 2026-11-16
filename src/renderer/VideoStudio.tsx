@@ -46,7 +46,6 @@ export function VideoStudio({ snapshot, selectedRecord: selectedImage, visible, 
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [pendingAction, setPendingAction] = useState('');
-  const [saveState, setSaveState] = useState<'new' | 'saved' | 'editing' | 'saving' | 'error'>('new');
   const revision = useRef(0);
   const savedRevision = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -101,7 +100,6 @@ export function VideoStudio({ snapshot, selectedRecord: selectedImage, visible, 
             sessions: value.sessions.length ? value.sessions : [session],
           };
         }
-        setSaveState('saved');
       }
       current.current = value;
       setConversation(value);
@@ -117,17 +115,14 @@ export function VideoStudio({ snapshot, selectedRecord: selectedImage, visible, 
     if (!current.current || (!force && revision.current === savedRevision.current)) return pendingSave.current;
     const value = videoConversationSchema.parse(structuredClone(current.current));
     const captured = revision.current;
-    setSaveState('saving');
     const request = pendingSave.current
       .catch(() => undefined)
       .then(() => window.latent.saveVideoConversation(value))
       .then(() => {
         savedRevision.current = captured;
-        if (revision.current === captured) setSaveState('saved');
       })
       .catch(cause => {
         if (revision.current === captured) {
-          setSaveState('error');
           setError(`Couldn’t save the video settings: ${actionErrorMessage(cause)}`);
         }
         throw cause;
@@ -191,7 +186,6 @@ export function VideoStudio({ snapshot, selectedRecord: selectedImage, visible, 
     current.current = value;
     setConversation(value);
     revision.current++;
-    setSaveState('editing');
     if (!selectionOnly) {
       setError('');
       setMessage('');
@@ -331,6 +325,8 @@ export function VideoStudio({ snapshot, selectedRecord: selectedImage, visible, 
       async () => {
         try {
           await window.latent.installSolAttention();
+          const now = current.current?.sessions.find(item => item.id === current.current?.activeSessionId)?.draft;
+          if (now) updateSession({ draft: { ...now, speed: { ...now.speed, attention: 'sage-sol' } } });
         } catch (cause) {
           setError(actionErrorMessage(cause));
           throw cause;
@@ -507,6 +503,7 @@ export function VideoStudio({ snapshot, selectedRecord: selectedImage, visible, 
         records={history}
         selectedId={selectedId}
         warnings={historyWarnings}
+        loading={historyLoading}
         onSelect={selectSavedVideo}
         onSelectJob={selectSavedVideo}
         onCancel={id => action('cancel', () => window.latent.cancelJob(id))}

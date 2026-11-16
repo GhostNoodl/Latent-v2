@@ -143,7 +143,7 @@ export function VideoDock(props: VideoDockProps) {
           : !status.canGenerate
             ? status.message
             : undefined;
-  const gpuText = textOnGpu(draft.speed, status.bigCard === true);
+  const gpuText = textOnGpu(draft.speed, status.bigCard === true, draft.profile);
   const chip = (panel: Panel, label: string, value: ReactNode, extra = '') => (
     <button
       type="button"

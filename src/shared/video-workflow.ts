@@ -27,15 +27,22 @@ export function safeVideoRelativeFilename(value: string, extension: '.png' | '.s
 
 /** Node names for the optional speed add-ons. */
 export const VIDEO_ATTENTION_NODE = 'LatentVideoAttention';
-export const SOL_ATTENTION_NODE = 'LatentSolAttention';
+export const SOL_ATTENTION_NODE = 'SolAttnPatch';
 
 /** Settings the Sol add-on was tested with on a 3090. */
 export const SOL_SETTINGS = Object.freeze({
   tau: 1.3,
-  dense_blocks: '0-2',
+  start_percent: 0.2,
+  end_percent: 0.9,
+  min_tokens: 4096,
   int8_qk: true,
-  int8_pv: true,
   sink_conditioning: 'exact_kv_and_rows',
+  morton: false,
+  morton_curve: '2d_frame',
+  int8_pv: true,
+  verbose: false,
+  use_tma: false,
+  dense_blocks: '0-2',
 });
 
 /**

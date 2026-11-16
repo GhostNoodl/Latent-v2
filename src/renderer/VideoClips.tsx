@@ -27,6 +27,7 @@ export function VideoClips({
   records,
   selectedId,
   warnings,
+  loading,
   onSelect,
   onSelectJob,
   onCancel,
@@ -36,6 +37,7 @@ export function VideoClips({
   records: readonly VideoHistoryRecord[];
   selectedId?: string;
   warnings: readonly string[];
+  loading?: boolean;
   onSelect(id: string): void;
   onSelectJob(id: string): void;
   onCancel(id: string): void;
@@ -127,7 +129,9 @@ export function VideoClips({
           );
         })}
       </ul>
-      {!active.length && !records.length && !failed.length && <p className="vp-empty">Your clips show up here.</p>}
+      {!active.length && !records.length && !failed.length && (
+        <p className="vp-empty">{loading ? 'Loading clips…' : 'Your clips show up here.'}</p>
+      )}
       {warnings.length > 0 && <p className="vp-empty">{warnings[0]}</p>}
     </aside>
   );

@@ -79,7 +79,7 @@ import { VIDEO_AVAILABILITY } from '../shared/video-plan';
 import { videoFileResponse, VideoMediaInspector, packagedVideoInspectorPath } from './video-media';
 import { VideoHistoryService } from './video-history';
 import { VideoAssetsService } from './video-assets';
-import { solAttentionInstalled } from './video-speed-nodes';
+import { installSolAttention, solAttentionInstalled } from './video-speed-nodes';
 import { localVideoAvailability } from './video-availability';
 import { VideoQueueService } from './video-queue';
 import { isVideoJob } from '../shared/types';
@@ -1036,6 +1036,31 @@ async function initialize() {
       } finally {
         broadcast();
         // Bring the engine back even when the install fails; it simply starts without the add-on.
+        if (restart) await startEngine();
+      }
+    },
+    installSolAttention: async () => {
+      let restart = false;
+      try {
+        await models.library.withShared('installing Sol', async () => {
+          assertModelLocationsReady();
+          if (['not-installed', 'installing'].includes(backend.status().state))
+            throw new Error('Set up the engine first.');
+          await jobs.withRuntimeMaintenance(
+            async () => {
+              await backendActivity.assertIdle('install Sol');
+              if (backend.status().state !== 'stopped') {
+                restart = true;
+                await backend.stop();
+                await backendActivity.refresh();
+              }
+              await installSolAttention(paths, AbortSignal.timeout(10 * 60_000));
+            },
+            { allowRetainedJobs: false },
+          );
+        });
+      } finally {
+        broadcast();
         if (restart) await startEngine();
       }
     },

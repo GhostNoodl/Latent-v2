@@ -60,11 +60,16 @@ describe('video drafts', () => {
 });
 
 describe('video plan', () => {
-  it('reads the prompt on the GPU only on big cards unless told otherwise', () => {
+  it('reads the prompt on the GPU on big cards or Fast unless told otherwise', () => {
     expect(planVideo(draft(), { actualSeed: '1', sources: [], bigCard: true }).sampling.textEncoderDevice).toBe(
       'default',
     );
-    expect(planVideo(draft(), { actualSeed: '1', sources: [], bigCard: false }).sampling.textEncoderDevice).toBe('cpu');
+    const turbo = draft({ profile: 'turbo8' });
+    expect(planVideo(turbo, { actualSeed: '1', sources: [], bigCard: false }).sampling.textEncoderDevice).toBe('cpu');
+    // Fast always reads on the GPU: its encoder fits and the CPU takes over a minute.
+    expect(planVideo(draft(), { actualSeed: '1', sources: [], bigCard: false }).sampling.textEncoderDevice).toBe(
+      'default',
+    );
     const forced = draft({ speed: { ...DEFAULT_VIDEO_DRAFT.speed, textOnGpu: 'on' } });
     expect(planVideo(forced, { actualSeed: '1', sources: [] }).sampling.textEncoderDevice).toBe('default');
   });
@@ -106,6 +111,10 @@ describe('video graph', () => {
     const contract = build(draft(), { bigCard: true });
     expect(parseVideoContract(JSON.parse(JSON.stringify(contract)), jobId).plan.actualSeed).toBe('777');
     expect(() => parseVideoContract(contract, 'b'.repeat(32))).toThrow();
+  });
+  it('sends the tested Sol settings', () => {
+    const graph = build(draft({ speed: { ...DEFAULT_VIDEO_DRAFT.speed, attention: 'sage-sol' } })).workflow;
+    expect(graph['18'].inputs).toMatchObject({ tau: 1.3, dense_blocks: '0-2', int8_qk: true, int8_pv: true });
   });
   it('names the missing node in plain words', () => {
     expect(() => bindVideoWorkflow(build(draft()), {})).toThrow(/engine/);

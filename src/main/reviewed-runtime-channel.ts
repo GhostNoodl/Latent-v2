@@ -1,4 +1,9 @@
-import { VIDEO_ATTENTION_DIRECTORY, VIDEO_ATTENTION_FILE } from './video-speed-nodes';
+import {
+  SOL_ATTENTION_DIRECTORY,
+  SOL_ATTENTION_RELEASE,
+  VIDEO_ATTENTION_DIRECTORY,
+  VIDEO_ATTENTION_FILE,
+} from './video-speed-nodes';
 import { QWEN21_RUNTIME_PACKAGES } from './qwen21-runtime-packages';
 import { QWEN21_SET_ID, QWEN21_RUNTIME } from '../shared/qwen21-release';
 import { QWEN_GGUF_RELEASE } from '../shared/qwen-gguf-release';
@@ -109,6 +114,13 @@ const CURRENT_RUNTIME_SET: ReviewedRuntimeSet = {
       revision: `sha256:${VIDEO_ATTENTION_FILE.sha256}`,
       license: 'Project source',
       files: [{ ...VIDEO_ATTENTION_FILE }],
+    },
+    {
+      directory: SOL_ATTENTION_DIRECTORY,
+      repository: SOL_ATTENTION_RELEASE.repository,
+      revision: SOL_ATTENTION_RELEASE.revision,
+      license: SOL_ATTENTION_RELEASE.license,
+      files: SOL_ATTENTION_RELEASE.files.map(({ filename, bytes, sha256 }) => ({ filename, bytes, sha256 })),
     },
     {
       directory: IPADAPTER_RELEASE.customNodeDirectory,

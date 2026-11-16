@@ -189,8 +189,9 @@ export function resolveVideoDuration(seconds: number) {
 }
 export const VIDEO_STEPS = { fused4: 4, turbo8: 8, base: 20 } as const;
 /** Whether the prompt reader runs on the graphics card for this draft. */
-export function textOnGpu(speed: VideoSpeed, bigCard: boolean): boolean {
-  return speed.textOnGpu === 'on' || (speed.textOnGpu === 'auto' && bigCard);
+/** Auto reads the prompt on the GPU on big cards, and always for Fast (its encoder fits and CPU takes over a minute). */
+export function textOnGpu(speed: VideoSpeed, bigCard: boolean, profile?: VideoDraft['profile']): boolean {
+  return speed.textOnGpu === 'on' || (speed.textOnGpu === 'auto' && (bigCard || profile === 'fused4'));
 }
 export function planVideo(
   input: VideoDraft,
@@ -238,7 +239,7 @@ export function planVideo(
       steps: VIDEO_STEPS[draft.profile],
       sampler: 'res_multistep',
       scheduler: 'simple',
-      textEncoderDevice: textOnGpu(draft.speed, options.bigCard === true) ? 'default' : 'cpu',
+      textEncoderDevice: textOnGpu(draft.speed, options.bigCard === true, draft.profile) ? 'default' : 'cpu',
       attention: draft.speed.attention,
     },
     decode:
