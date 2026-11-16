@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_VIDEO_FINISHING, videoUpscaleSize } from './video-extras';
 import type { SourceImageAsset } from './source-types';
 import type {
   VideoAssetIdentity,
@@ -27,6 +28,13 @@ export const videoSpeedSchema = z
     finish: z.enum(['quick', 'low-memory']).catch('quick'),
   })
   .strict();
+export const videoFinishingSchema = z
+  .object({
+    smooth: z.enum(['off', 'rife', 'film']).catch(DEFAULT_VIDEO_FINISHING.smooth),
+    upscale: z.enum(['off', '1080p', '1440p']).catch(DEFAULT_VIDEO_FINISHING.upscale),
+  })
+  .strict()
+  .catch({ ...DEFAULT_VIDEO_FINISHING });
 /** The largest picture area H3 is made for (768 × 1344 either way round). */
 export const VIDEO_MAX_AREA = 768 * 1344;
 const draftShape = {
@@ -51,6 +59,7 @@ const draftShape = {
   profile: z.enum(['base', 'turbo8', 'fused4']),
   audio: z.enum(['none', 'stereo-candidate']),
   speed: videoSpeedSchema,
+  finishing: videoFinishingSchema,
   firstFrame: sourceReferenceSchema.optional(),
   lastFrame: sourceReferenceSchema.optional(),
   resize: z.enum(['stretch', 'center-crop']),
@@ -101,6 +110,7 @@ export const DEFAULT_VIDEO_DRAFT: Readonly<VideoDraft> = Object.freeze({
   profile: 'fused4',
   audio: 'none',
   speed: { ...DEFAULT_VIDEO_SPEED },
+  finishing: { ...DEFAULT_VIDEO_FINISHING },
   resize: 'center-crop',
 });
 const repository = 'Comfy-Org/MiniMax-H3';
@@ -193,6 +203,20 @@ export const VIDEO_STEPS = { fused4: 4, turbo8: 8, base: 20 } as const;
 export function textOnGpu(speed: VideoSpeed, bigCard: boolean, profile?: VideoDraft['profile']): boolean {
   return speed.textOnGpu === 'on' || (speed.textOnGpu === 'auto' && (bigCard || profile === 'fused4'));
 }
+function planFinishing(draft: VideoDraft): VideoPlan['finishing'] {
+  const { frames } = resolveVideoDuration(draft.requestedDurationSeconds);
+  const upscale = videoUpscaleSize(draft.width, draft.height, draft.finishing.upscale);
+  const smooth = draft.finishing.smooth;
+  return {
+    smooth,
+    upscale,
+    width: upscale?.width ?? draft.width,
+    height: upscale?.height ?? draft.height,
+    fps: smooth === 'off' ? 24 : 48,
+    // The smoother puts one new frame between each pair.
+    frames: smooth === 'off' ? frames : (frames - 1) * 2 + 1,
+  };
+}
 export function planVideo(
   input: VideoDraft,
   options: { actualSeed: string; sources: readonly SourceImageAsset[]; bigCard?: boolean },
@@ -247,6 +271,7 @@ export function planVideo(
         ? { tiled: false }
         : { tiled: true, tileSize: 512, overlap: 64, temporalSize: 64, temporalOverlap: 8 },
     encoding: { container: 'mp4', codec: 'h264', audio: draft.audio },
+    finishing: planFinishing(draft),
     assets: structuredClone(videoProfileAssets(draft.profile)),
   };
 }

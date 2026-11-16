@@ -34,12 +34,21 @@ export const videoContractSchema = z
       })
       .strict(),
     sourceFilenames: z.array(z.string().max(512)).max(2),
+    finish: z
+      .object({
+        workflow: z.record(z.string(), node),
+        inputFilename: z.string().regex(/^Latent_[a-f0-9]{32}_raw\.mp4$/),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export function parseVideoContract(value: unknown, jobId: string): VideoWorkflowContract {
   id.parse(jobId);
   const contract = videoContractSchema.parse(value) as unknown as VideoWorkflowContract;
   if (contract.output.filenamePrefix !== `Latent_${jobId}_video`)
+    throw new Error('The saved clip belongs to a different job.');
+  if (contract.finish && contract.finish.inputFilename !== `Latent_${jobId}_raw.mp4`)
     throw new Error('The saved clip belongs to a different job.');
   return structuredClone(contract);
 }

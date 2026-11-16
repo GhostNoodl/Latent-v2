@@ -181,6 +181,9 @@ export function backendArguments(
   if (settings?.fastMath && settings.deviceMode !== 'cpu') args.push('--fast', 'fp16_accumulation', 'fp8_matrix_mult');
   // Callers pass the recorded launch identity, which enables this only when the reviewed packages are installed.
   if (settings?.sageAttention && settings.deviceMode !== 'cpu') args.push('--use-sage-attention');
+  // Pinned copies of big models (video, Qwen) took ~25 GB of extra RAM on a 64 GB PC for no measurable speed gain.
+  // The launcher drops this switch on engines too old to know it.
+  if (settings?.deviceMode !== 'cpu') args.push('--disable-pinned-memory');
   return args;
 }
 
@@ -204,7 +207,7 @@ export function modelPathsYaml(paths: AppPaths, externalRoots: readonly BackendM
       return `latentv2_external_${root.id}:\n  is_default: false\n  ${root.kind === 'checkpoint' ? 'checkpoints' : 'loras'}: ${scalar(root.path)}\n`;
     })
     .join('');
-  return `latentv2:\n  base_path: ${scalar(paths.models)}\n  is_default: true\n  checkpoints: checkpoints\n  loras: loras\n  vae: vae\n  embeddings: embeddings\n  controlnet: controlnet\n  upscale_models: upscale_models\n  diffusion_models: diffusion_models\n  text_encoders: text_encoders\n  clip_vision: clip_vision\nlatentv2_qwen_loras:\n  base_path: ${scalar(paths.models)}\n  is_default: false\n  loras: qwen-edit-loras\nlatentv2_video_loras:\n  base_path: ${scalar(paths.models)}\n  is_default: false\n  loras: video-loras\n${mappings}`;
+  return `latentv2:\n  base_path: ${scalar(paths.models)}\n  is_default: true\n  checkpoints: checkpoints\n  loras: loras\n  vae: vae\n  embeddings: embeddings\n  controlnet: controlnet\n  upscale_models: upscale_models\n  diffusion_models: diffusion_models\n  text_encoders: text_encoders\n  clip_vision: clip_vision\n  frame_interpolation: frame_interpolation\nlatentv2_qwen_loras:\n  base_path: ${scalar(paths.models)}\n  is_default: false\n  loras: qwen-edit-loras\nlatentv2_video_loras:\n  base_path: ${scalar(paths.models)}\n  is_default: false\n  loras: video-loras\n${mappings}`;
 }
 
 /** A dead Electron owner cannot leave an untracked GPU server behind after a crash. */
@@ -262,6 +265,13 @@ def watch_owner():
             if os.getppid() != parent_pid: os._exit(0)
             time.sleep(2)
 threading.Thread(target=watch_owner, daemon=True).start()
+# Newer engine switches are left out on engines that don't know them yet.
+try:
+    with open(os.path.join(os.path.dirname(backend_main), 'comfy', 'cli_args.py'), encoding='utf-8') as cli_args:
+        known_args = cli_args.read()
+except OSError:
+    known_args = ''
+sys.argv = [a for a in sys.argv if a != '--disable-pinned-memory' or a in known_args]
 sys.path.insert(0, os.path.dirname(backend_main))
 sys.argv[0] = backend_main
 runpy.run_path(backend_main, run_name='__main__')

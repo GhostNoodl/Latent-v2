@@ -1,4 +1,6 @@
 import fs from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod';
@@ -15,6 +17,8 @@ import {
 } from '../shared/video-workflow';
 import type { RuntimeIdentitySnapshot } from '../shared/runtime-identity';
 import type { VideoAssetsService } from './video-assets';
+import type { VideoExtrasService } from './video-extras';
+import { videoExtrasFor } from '../shared/video-extras';
 import type { SourceImageService } from './source-images';
 import type { VideoHistoryService } from './video-history';
 import { VIDEO_MEDIA_LIMITS } from './video-media';
@@ -51,6 +55,8 @@ export interface VideoQueueOptions {
   bigCard(): boolean;
   blockedReason?(): string | undefined;
   objectInfo?(address: string, signal: AbortSignal): Promise<Record<string, unknown>>;
+  /** Smoother and upscaler files. */
+  extras?: Pick<VideoExtrasService, 'assertInstalled'>;
 }
 const id = z
   .string()
@@ -127,6 +133,7 @@ export class VideoQueueService {
     if (this.engine.status().state !== 'ready') throw new Error('Start the engine first.');
     const address = engineAddress(this.engine.getUrl());
     const bindings = this.assets.bindings(parsed.profile);
+    this.options.extras?.assertInstalled(videoExtrasFor(parsed.finishing));
     const ids = [
       ...new Set([parsed.firstFrame?.sourceId, parsed.lastFrame?.sourceId].filter((value): value is string => !!value)),
     ];
@@ -241,24 +248,96 @@ export class VideoQueueService {
       ? { '15': { images: [{ filename: candidates[0], subfolder: '', type: 'output' }], animated: [true] } }
       : {};
   }
-  async finalize(job: VideoJob, input: VideoQueueContext, signal?: AbortSignal): Promise<VideoHistoryRecord> {
+  async finalize(
+    job: VideoJob,
+    input: VideoQueueContext,
+    signal?: AbortSignal,
+    onPhase?: (phase: string) => void,
+  ): Promise<VideoHistoryRecord> {
     const context = this.validate(job, input);
     signal?.throwIfAborted();
     if (!context.finalization) throw new Error('The clip hasn’t finished yet.');
-    if (this.outputs(context, context.finalization.outputs, context.finalization.terminalStatus).length !== 1)
-      throw new Error('There’s no finished clip to save.');
-    return this.history.finalize(
+    const raw = this.outputs(context, context.finalization.outputs, context.finalization.terminalStatus);
+    if (raw.length !== 1) throw new Error('There’s no finished clip to save.');
+    let outputs = context.finalization.outputs;
+    let elapsedMs = context.finalization.elapsedMs;
+    const finish = context.prepared.contract.finish;
+    if (finish && context.finalization.terminalStatus === 'completed') {
+      onPhase?.('Upscaling');
+      const started = Date.now();
+      outputs = await this.runFinish(finish, context, raw[0].filename, signal);
+      if (elapsedMs !== undefined) elapsedMs += Date.now() - started;
+    }
+    const record = await this.history.finalize(
       {
         jobId: job.id,
         createdAt: context.finalization.createdAt,
         title: context.prepared.contract.plan.draft.prompt.trim().slice(0, 160) || 'Untitled clip',
         contract: context.prepared.contract,
-        outputs: context.finalization.outputs,
+        outputs,
         evidenceKind: 'generated',
         ...(job.promptId ? { promptId: job.promptId } : {}),
-        ...(context.finalization.elapsedMs !== undefined ? { elapsedMs: context.finalization.elapsedMs } : {}),
+        ...(elapsedMs !== undefined ? { elapsedMs } : {}),
       },
       signal,
     );
+    // The plain clip was only a stepping stone once the finished one is saved.
+    if (outputs !== context.finalization.outputs)
+      await fs.rm(containedPath(this.paths.outputs, path.join(this.paths.outputs, raw[0].filename)), { force: true });
+    return record;
+  }
+  /** Frees the video models, then runs the upscale graph on a copy of the plain clip. Returns its outputs. */
+  private async runFinish(
+    finish: NonNullable<VideoWorkflowContract['finish']>,
+    context: VideoQueueContext,
+    rawFilename: string,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
+    validateRuntimePaths(this.paths);
+    if (this.engine.status().state !== 'ready') throw new Error('Start the engine to finish the upscale.');
+    const address = engineAddress(this.engine.getUrl());
+    const source = containedPath(this.paths.outputs, path.join(this.paths.outputs, rawFilename));
+    const copy = containedPath(this.paths.inputs, path.join(this.paths.inputs, finish.inputFilename));
+    await fs.copyFile(source, copy);
+    const post = async (route: string, body: unknown) => {
+      const response = await fetch(`${address}${route}`, {
+        method: 'POST',
+        signal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(30000)]),
+        redirect: 'error',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error(`The engine didn’t take the upscale (HTTP ${response.status}).`);
+    };
+    const promptId = randomUUID();
+    try {
+      // Drop the video model and prompt reader from memory so the upscaler has room.
+      await post('/free', { unload_models: true, free_memory: true });
+      await post('/prompt', { prompt_id: promptId, prompt: finish.workflow });
+      const deadline = Date.now() + 60 * 60_000;
+      for (;;) {
+        if (signal?.aborted) {
+          await post('/interrupt', { prompt_id: promptId }).catch(() => undefined);
+          signal.throwIfAborted();
+        }
+        if (Date.now() > deadline) throw new Error('The upscale took over an hour and was stopped.');
+        await delay(2000);
+        const response = await fetch(`${address}/history/${promptId}`, {
+          signal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(30000)]),
+          redirect: 'error',
+        }).catch(() => undefined);
+        if (!response?.ok) continue;
+        const entry = ((await response.json()) as Record<string, any>)[promptId];
+        if (!entry?.status?.completed && entry?.status?.status_str !== 'error') continue;
+        if (entry.status.status_str === 'error') throw new Error('The engine stopped while upscaling.');
+        const outputs = entry.outputs ?? {};
+        const candidates = videoOutputCandidates(outputs, context.prepared.contract);
+        if (candidates.length !== 1 || candidates[0].filename === rawFilename)
+          throw new Error('The upscale finished without writing the clip.');
+        return outputs;
+      }
+    } finally {
+      await fs.rm(copy, { force: true }).catch(() => undefined);
+    }
   }
 }

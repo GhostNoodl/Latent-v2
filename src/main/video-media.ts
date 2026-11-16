@@ -242,7 +242,9 @@ export function assertVideoMediaMatchesPlan(media: VideoMediaInfo, plan: VideoPl
   )
     throw new Error('The decoded video has no bounded file identity.');
   // The engine decides the exact frame count, so only the picture size has to match.
-  if (media.width !== plan.width || media.height !== plan.height)
+  const width = plan.finishing?.width ?? plan.width;
+  const height = plan.finishing?.height ?? plan.height;
+  if (media.width !== width || media.height !== height)
     throw new Error('The finished clip has a different size than requested.');
 }
 

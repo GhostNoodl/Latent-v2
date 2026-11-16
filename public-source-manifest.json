@@ -282,6 +282,10 @@
       "to": "src/main/video-speed-nodes.ts"
     },
     {
+      "from": "src/main/video-extras.ts",
+      "to": "src/main/video-extras.ts"
+    },
+    {
       "from": "src/main/wildcards.ts",
       "to": "src/main/wildcards.ts"
     },
@@ -764,6 +768,10 @@
     {
       "from": "src/shared/video-conversation.ts",
       "to": "src/shared/video-conversation.ts"
+    },
+    {
+      "from": "src/shared/video-extras.ts",
+      "to": "src/shared/video-extras.ts"
     },
     {
       "from": "src/shared/video-history.ts",
