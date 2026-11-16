@@ -58,21 +58,22 @@ export async function installVideoAttentionNode(paths: AppPaths): Promise<void> 
   await fs.promises.rename(temporary, filename);
 }
 
-/** Kijai's Sol-Attn (Apache-2.0), pinned and checked file by file. Needs only torch and triton. */
+/** Kijai's Sol-Attn (Apache-2.0), pinned and checked file by file. Needs only torch and triton.
+ * Sizes and hashes are of the files as GitHub serves them (LF line endings, not a Windows checkout). */
 const SOL_REPOSITORY = 'kijai/ComfyUI-SolAttn_triton';
 const SOL_REVISION = '26d816ebd4f1e43a2c6e4d4759be3137f10a7a73';
 const SOL_FILES: readonly [string, number, string][] = [
-  ['__init__.py', 32017, '2ba280f7e7b988f6b33558ddeafda2f3e4be8ddf99e4c814f3f2832fa7dfb6a6'],
-  ['_autotune_log.py', 3938, '665b045b0aa7410110591b75f06f7726e84547001bc553cd2428bdd0910e4c4f'],
-  ['_fused_prep.py', 4020, 'f484c118206a71a3066504c7b23bb0235d9d8e3630195ccd801bd6d4bf4e240e'],
-  ['_fused_quant.py', 4341, '1d80718d0e7cb6078eafc91cc415359631100eb3ffbcaf35d5cd7c3fcd696a81'],
-  ['_int8_fwd.py', 19215, 'bff511d577c8f51c999c5b1137af5be1a6f92ec68c9b1a4e9fcf6dacccc714b7'],
-  ['_morton_h3.py', 10309, '0f831e27ac01323213a5d91c1ee0929f94e372ea93b61208cf7576efb51b4e20'],
-  ['_morton.py', 6634, '25ea60d60d9dc2b77ecafc98496cb1171cda0dfa2a5c3041cedbdc177dfdb2fa'],
-  ['_preprocess.py', 8369, '4a972b573706a3603cfbbf73988d1b18ba4671f8d435dc18bd02f9036224b7a0'],
-  ['_tri_fwd.py', 16012, '09749207cad09091a7e3ab76a8c1a12121d4848f8cd4eb164639cc22684b892a'],
-  ['LICENSE', 11558, '1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6'],
-  ['readme.md', 2587, '4fa66078c041e070678b60e5f4623c3c76389ffa57a6bd127071d9523f46239a'],
+  ['__init__.py', 31333, '76dcbf6f5c58c1f655ee674aecddb165c6069408bc6058e3a5b2383d7198509f'],
+  ['_autotune_log.py', 3834, 'c9156e74f4cb8ed9e2be16c08885415c96daa093153fedcf0461e6868e9fa3bb'],
+  ['_fused_prep.py', 3919, '970d9756033b5c4a992b48bb656e5a365a21380b16d5af4ed7a51b71a4cbd9ca'],
+  ['_fused_quant.py', 4225, '24b36b7d8fe31bd3c7eb2259dc8eb7f63ceed2ee0aa340abc2bdedac78152502'],
+  ['_int8_fwd.py', 18754, '17b42a3481e65539493bf0abc0a29f081ca53c02d0f72d4ce32a2a637f378547'],
+  ['_morton_h3.py', 10069, '6c6468f3469bf3b66b68a2515632511ab56d0ebe31ce19d8603a6d3f0991a2e5'],
+  ['_morton.py', 6478, '513dbcd50c97f99d4163eb42ff1f02809d372d702feaa061367ae7c5199066c6'],
+  ['_preprocess.py', 8086, 'efe30d6aa72debd04c5f78860cdfb01e98cfa8503e4603d8392aca42af1dd8ee'],
+  ['_tri_fwd.py', 15575, '4d2a8a1ae1524e5a1e2d52a034bfdfd42ba6c1cf3e1f03d29b877f2f57974b24'],
+  ['LICENSE', 11357, 'c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4'],
+  ['readme.md', 2514, '5da2b8e587c305d4870a39fac0e97c8c1a020ca923459dd93b9d5dcd45ee961e'],
 ];
 export const SOL_ATTENTION_RELEASE = Object.freeze({
   repository: SOL_REPOSITORY,
