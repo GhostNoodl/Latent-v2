@@ -39,7 +39,7 @@ import type {
 import type { FaceRefinementPlan, FaceRefinementOutput } from './face-detailer-workflow';
 import type { DownloadStorageSnapshot, PackageStorageSnapshot, StorageOverviewSnapshot } from './storage-types';
 import type { BackendActivitySnapshot, SubmittedJobQueueState } from './backend-activity-types';
-import type { VideoAvailability, VideoDraft, VideoHistoryRecord, VideoPlan } from './video-types';
+import type { VideoAvailability, VideoDraft, VideoHistoryRecord } from './video-types';
 import type { VideoAssetBundle } from './video-assets';
 import type { VideoConversation } from './video-conversation';
 import type { ModelTransferRecovery, ModelTransferRetryRequest } from './model-transfer-types';
@@ -404,7 +404,6 @@ export interface LatentAPI {
   saveVideoConversation(value: VideoConversation): Promise<void>;
   getShotBoard(): Promise<import('./shot-board').ShotBoard>;
   saveShotBoard(value: import('./shot-board').ShotBoard): Promise<void>;
-  planVideoDraft(draft: VideoDraft): Promise<VideoPlan>;
   getVideoPlaybackFixture(): Promise<VideoHistoryRecord>;
   getVideoHistory(): Promise<{ records: VideoHistoryRecord[]; warnings: string[] }>;
   restoreVideoParameters(id: string): Promise<VideoDraft>;
@@ -508,6 +507,7 @@ export interface LatentAPI {
   stopBackend(): Promise<void>;
   checkSageAttention(): Promise<SageAttentionStatus>;
   installSageAttention(): Promise<void>;
+  installSolAttention(): Promise<void>;
   openComfyUI(): Promise<void>;
   refreshModels(): Promise<AppSnapshot>;
   importModels(kind: ModelKind): Promise<AppSnapshot>;

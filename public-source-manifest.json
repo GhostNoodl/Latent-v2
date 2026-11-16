@@ -262,10 +262,6 @@
       "to": "src/main/video-conversations.ts"
     },
     {
-      "from": "src/main/video-drafts.ts",
-      "to": "src/main/video-drafts.ts"
-    },
-    {
       "from": "src/main/video-history.ts",
       "to": "src/main/video-history.ts"
     },
@@ -278,12 +274,12 @@
       "to": "src/main/video-playback-fixture.ts"
     },
     {
-      "from": "src/main/video-preflight.ts",
-      "to": "src/main/video-preflight.ts"
-    },
-    {
       "from": "src/main/video-queue.ts",
       "to": "src/main/video-queue.ts"
+    },
+    {
+      "from": "src/main/video-speed-nodes.ts",
+      "to": "src/main/video-speed-nodes.ts"
     },
     {
       "from": "src/main/wildcards.ts",
@@ -546,16 +542,24 @@
       "to": "src/renderer/VideoAssetSetup.tsx"
     },
     {
-      "from": "src/renderer/VideoHistory.tsx",
-      "to": "src/renderer/VideoHistory.tsx"
-    },
-    {
-      "from": "src/renderer/VideoPlanner.tsx",
-      "to": "src/renderer/VideoPlanner.tsx"
-    },
-    {
       "from": "src/renderer/VideoStudio.tsx",
       "to": "src/renderer/VideoStudio.tsx"
+    },
+    {
+      "from": "src/renderer/VideoDock.tsx",
+      "to": "src/renderer/VideoDock.tsx"
+    },
+    {
+      "from": "src/renderer/VideoClips.tsx",
+      "to": "src/renderer/VideoClips.tsx"
+    },
+    {
+      "from": "src/renderer/video-url.ts",
+      "to": "src/renderer/video-url.ts"
+    },
+    {
+      "from": "src/renderer/video-page.css",
+      "to": "src/renderer/video-page.css"
     },
     {
       "from": "src/shared/action-error.ts",
@@ -810,10 +814,6 @@
       "to": "resources/latent-icon.svg"
     },
     {
-      "from": "resources/latent-video-attention.py",
-      "to": "resources/latent-video-attention.py"
-    },
-    {
       "from": "resources/segmentation-worker.py",
       "to": "resources/segmentation-worker.py"
     },
@@ -884,6 +884,10 @@
     {
       "from": "tests/sage-attention.test.ts",
       "to": "tests/sage-attention.test.ts"
+    },
+    {
+      "from": "tests/video-rebuild.test.ts",
+      "to": "tests/video-rebuild.test.ts"
     },
     {
       "from": "tests/runtime-isolation.test.ts",

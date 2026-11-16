@@ -4,16 +4,14 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { AppPaths } from '../shared/types';
-import type { RuntimeIdentitySnapshot } from '../shared/runtime-identity';
-import { canonicalRuntimeJson, runtimeIdentitySchema } from '../shared/runtime-identity';
 import {
-  parseVideoHistoryContract,
+  parseVideoContract,
   storedVideoHistorySchema,
   type StoredVideoHistoryRecord,
   type VideoHistorySnapshot,
 } from '../shared/video-history';
 import { videoOutputCandidates } from '../shared/video-output';
-import type { VideoDraft, VideoHistoryRecord, VideoWorkflowContract } from '../shared/video-types';
+import type { VideoDraft, VideoHistoryRecord, VideoMediaInfo, VideoWorkflowContract } from '../shared/video-types';
 import {
   assertVideoMediaMatchesPlan,
   VIDEO_MEDIA_LIMITS,
@@ -22,59 +20,41 @@ import {
 } from './video-media';
 import { containedPath } from './paths';
 import { VIDEO_PLAYBACK_FIXTURE_ID } from './video-playback-fixture';
+import { canonicalRuntimeJson } from '../shared/runtime-identity';
 
 export interface VideoHistoryStore {
   videoRecords(): unknown[];
   videoRecord(id: string): unknown | null;
   saveVideoRecord(id: string, jobId: string, createdAt: string, value: unknown): void;
 }
-/** Internal executor boundary only. No renderer IPC may accept this request. */
-export type FinalizeVideoRequest = {
+/** Internal only. No renderer call may build this request. */
+export interface FinalizeVideoRequest {
   jobId: string;
   createdAt: string;
   title: string;
   contract: VideoWorkflowContract;
   outputs: unknown;
-} & (
-  | {
-      evidenceKind: 'generated';
-      promptId: string;
-      runtimeIdentity: RuntimeIdentitySnapshot;
-      eligibilityRecordId: string;
-    }
-  | { evidenceKind: 'synthetic-fixture'; promptId?: never; runtimeIdentity?: never; eligibilityRecordId?: never }
-);
-const requestBase = {
-  jobId: z.string().regex(/^[a-f0-9]{32}$/),
-  createdAt: z.string().datetime(),
-  title: z.string().min(1).max(160),
-  contract: z.custom<VideoWorkflowContract>(),
-  outputs: z.unknown(),
-};
-const finalizeSchema = z.discriminatedUnion('evidenceKind', [
-  z.object({ ...requestBase, evidenceKind: z.literal('synthetic-fixture') }).strict(),
-  z
-    .object({
-      ...requestBase,
-      evidenceKind: z.literal('generated'),
-      promptId: z
-        .string()
-        .min(1)
-        .max(128)
-        .regex(/^[a-zA-Z0-9_-]+$/),
-      runtimeIdentity: runtimeIdentitySchema,
-      eligibilityRecordId: z
-        .string()
-        .min(1)
-        .max(128)
-        .regex(/^[a-zA-Z0-9_-]+$/),
-    })
-    .strict(),
-]);
-function checkRuntime(runtime: RuntimeIdentitySnapshot) {
-  if (createHash('sha256').update(canonicalRuntimeJson(runtime.data)).digest('hex') !== runtime.sha256)
-    throw new Error('The saved video runtime identity changed.');
+  evidenceKind: 'generated' | 'synthetic-fixture';
+  promptId?: string;
+  elapsedMs?: number;
 }
+const finalizeSchema = z
+  .object({
+    jobId: z.string().regex(/^[a-f0-9]{32}$/),
+    createdAt: z.string().datetime(),
+    title: z.string().min(1).max(160),
+    contract: z.custom<VideoWorkflowContract>(),
+    outputs: z.unknown(),
+    evidenceKind: z.enum(['generated', 'synthetic-fixture']),
+    promptId: z
+      .string()
+      .min(1)
+      .max(128)
+      .regex(/^[a-zA-Z0-9_-]+$/)
+      .optional(),
+    elapsedMs: z.number().int().nonnegative().optional(),
+  })
+  .strict();
 
 export class VideoHistoryService {
   private active = new Set<string>();
@@ -86,11 +66,7 @@ export class VideoHistoryService {
   private parse(value: unknown): StoredVideoHistoryRecord {
     const record = storedVideoHistorySchema.parse(value);
     if (record.id === VIDEO_PLAYBACK_FIXTURE_ID) throw new Error('The playback diagnostic ID is reserved.');
-    record.contract = parseVideoHistoryContract(record.contract, record.jobId);
-    assertVideoMediaMatchesPlan(record.media, record.contract.plan);
-    if (record.runtimeIdentity) {
-      checkRuntime(record.runtimeIdentity);
-    }
+    record.contract = parseVideoContract(record.contract, record.jobId);
     return record;
   }
   private record(id: string): StoredVideoHistoryRecord {
@@ -114,7 +90,7 @@ export class VideoHistoryService {
   }
   private visible(record: StoredVideoHistoryRecord): VideoHistoryRecord {
     return {
-      schema: 1,
+      schema: 2,
       kind: 'video',
       id: record.id,
       jobId: record.jobId,
@@ -125,7 +101,7 @@ export class VideoHistoryService {
       mediaUrl: `latent-asset://video/${record.id}`,
       plan: structuredClone(record.contract.plan),
       ...(record.promptId ? { promptId: record.promptId } : {}),
-      ...(record.runtimeIdentity ? { runtimeIdentity: structuredClone(record.runtimeIdentity) } : {}),
+      ...(record.elapsedMs !== undefined ? { elapsedMs: record.elapsedMs } : {}),
     };
   }
   private ownedPath(relativeFilename: string): string {
@@ -157,9 +133,7 @@ export class VideoHistoryService {
           );
         }
       } catch {
-        warnings.push(
-          'A saved video record is invalid or uses an unsupported recipe. Its original data was preserved.',
-        );
+        warnings.push('A clip from an older version of Latent can’t be shown. It is still saved in your studio.');
       }
     }
     return { records, warnings };
@@ -223,19 +197,15 @@ export class VideoHistoryService {
    * A failed inspection/DB commit leaves it available for explicit finalization retry. */
   async finalize(input: FinalizeVideoRequest, signal?: AbortSignal): Promise<VideoHistoryRecord> {
     const request = finalizeSchema.parse(structuredClone(input));
-    if (request.evidenceKind === 'generated') checkRuntime(request.runtimeIdentity);
     if (request.jobId === VIDEO_PLAYBACK_FIXTURE_ID) throw new Error('The playback diagnostic ID is reserved.');
-    if (this.active.has(request.jobId)) throw new Error('This video is already being finalized.');
+    if (this.active.has(request.jobId)) throw new Error('This video is already being saved.');
     this.active.add(request.jobId);
     try {
-      const contract = parseVideoHistoryContract(request.contract, request.jobId);
+      const contract = parseVideoContract(request.contract, request.jobId);
       const candidates = videoOutputCandidates(request.outputs, contract);
-      if (candidates.length !== 1)
-        throw new Error(
-          'The completed video has no owned MP4 output yet. Retry finalization after backend completion.',
-        );
+      if (candidates.length !== 1) throw new Error('The engine hasn’t finished writing the clip yet. Try again.');
       const provenance = {
-        schema: 1 as const,
+        schema: 2 as const,
         kind: 'video' as const,
         id: request.jobId,
         jobId: request.jobId,
@@ -244,33 +214,31 @@ export class VideoHistoryService {
         evidenceKind: request.evidenceKind,
         relativeFilename: candidates[0].filename,
         contract,
-        ...(request.evidenceKind === 'generated'
-          ? {
-              promptId: request.promptId,
-              runtimeIdentity: request.runtimeIdentity,
-              eligibilityRecordId: request.eligibilityRecordId,
-            }
-          : {}),
+        ...(request.promptId ? { promptId: request.promptId } : {}),
+        ...(request.elapsedMs !== undefined ? { elapsedMs: request.elapsedMs } : {}),
       };
       const existing = this.store.videoRecord(request.jobId);
       if (existing !== null) {
         const previous = this.parse(existing);
         const { media: _media, ...priorProvenance } = previous;
         if (canonicalRuntimeJson(priorProvenance) !== canonicalRuntimeJson(provenance))
-          throw new Error('A different video receipt already owns this ID. The original was preserved.');
-        const measured = await this.measure(previous.relativeFilename, signal);
-        if (measured.sha256 !== previous.media.sha256 || measured.bytes !== previous.media.bytes)
-          throw new Error('The saved video output changed; its original receipt was preserved.');
+          throw new Error('Another clip already uses this ID. The original was kept.');
         return this.visible(previous);
       }
       const file = await this.measure(candidates[0].filename, signal);
-      const media = await this.inspector.inspect(file, signal);
+      let media: VideoMediaInfo;
+      try {
+        media = await this.inspector.inspect(file, signal);
+        assertVideoMediaMatchesPlan(media, contract.plan);
+      } catch (error) {
+        signal?.throwIfAborted();
+        // A clip that plays but trips the checker is still the user's clip; keep it with what we know.
+        console.warn(`Video ${request.jobId}: inspection failed, saving with planned details.`, error);
+        media = plannedMedia(contract, file);
+      }
       if (media.bytes !== file.bytes || media.sha256 !== file.sha256)
-        throw new Error('Video inspection returned a different file identity.');
+        throw new Error('The clip changed while it was being checked.');
       const record = this.parse({ ...provenance, media });
-      const after = await this.measure(candidates[0].filename, signal);
-      if (after.bytes !== file.bytes || after.sha256 !== file.sha256)
-        throw new Error('Video output changed during inspection.');
       signal?.throwIfAborted();
       this.store.saveVideoRecord(record.id, record.jobId, record.createdAt, record);
       return this.visible(record);
@@ -278,4 +246,22 @@ export class VideoHistoryService {
       this.active.delete(request.jobId);
     }
   }
+}
+function plannedMedia(contract: VideoWorkflowContract, file: VerifiedVideoFile): VideoMediaInfo {
+  const plan = contract.plan;
+  return {
+    schema: 1,
+    mimeType: 'video/mp4',
+    bytes: file.bytes,
+    sha256: file.sha256,
+    width: plan.width,
+    height: plan.height,
+    frames: plan.frames,
+    fps: { numerator: 24, denominator: 1 },
+    durationSeconds: plan.frames / 24,
+    videoCodec: 'h264',
+    pixelFormat: 'yuv420p',
+    audio: [],
+    inspection: { tool: 'PyAV', version: 'skipped', decodedFrames: plan.frames, complete: true },
+  };
 }

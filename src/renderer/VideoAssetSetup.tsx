@@ -3,29 +3,20 @@ import type { VideoAssetsStatus } from '../shared/video-assets';
 import { VIDEO_ASSET_DIRECTORIES, videoProfileReady } from '../shared/video-assets';
 import { videoProfileAssets } from '../shared/video-plan';
 import type { VideoDraft } from '../shared/video-types';
-import { Notice } from './ui';
+import { bytes, Notice } from './ui';
 
-const stateLabels: Record<VideoAssetsStatus['state'], string> = {
-  'not-installed': 'Not installed',
-  partial: 'Partially present',
-  installed: 'Files installed',
-  installing: 'Installing files',
-  verifying: 'Verifying files',
-  cancelled: 'Setup cancelled',
-  error: 'Setup needs attention',
-};
 const roleLabels = {
   diffusion: 'Video model',
-  encoder: 'Text encoder',
-  videoVae: 'Video decoder',
-  audioVae: 'Audio decoder',
-  turbo: 'Turbo adapter',
+  encoder: 'Prompt reader',
+  videoVae: 'Picture decoder',
+  audioVae: 'Sound decoder',
+  turbo: 'Turbo add-on',
 };
 const profileLabel = (profile: VideoDraft['profile']) =>
-  profile === 'fused4' ? 'Fused turbo 4-step' : profile === 'turbo8' ? 'Turbo 8-step' : 'Base';
+  profile === 'fused4' ? 'Fast (4 steps)' : profile === 'turbo8' ? 'Better (8 steps)' : 'Best (20 steps)';
 export interface VideoAssetSetupProps {
   status?: VideoAssetsStatus;
-  profile?: VideoDraft['profile'];
+  profile: VideoDraft['profile'];
   busy?: boolean;
   cancelBusy?: boolean;
   onSetup(profile: VideoDraft['profile']): void;
@@ -33,10 +24,10 @@ export interface VideoAssetSetupProps {
   onCancel(): void;
 }
 
-/** Displays main's authority and observations. Rendering never acquires or verifies assets. */
+/** Get or check the files one quality needs. Showing this never downloads anything by itself. */
 export function VideoAssetSetup({
   status,
-  profile = 'base',
+  profile,
   busy = false,
   cancelBusy = false,
   onSetup,
@@ -44,101 +35,79 @@ export function VideoAssetSetup({
   onCancel,
 }: VideoAssetSetupProps) {
   const operating = status?.state === 'installing' || status?.state === 'verifying';
-  const enabled = status?.canAcquire === true && !busy && !cancelBusy && !operating;
-  const verifyEnabled = (status?.canVerify ?? status?.canAcquire) === true && !busy && !cancelBusy && !operating;
+  const ready = videoProfileReady(status, profile);
+  const assets = videoProfileAssets(profile);
+  const total = assets.reduce((sum, asset) => sum + asset.bytes, 0);
   const progress =
     status?.progress !== undefined && Number.isFinite(status.progress)
       ? Math.max(0, Math.min(100, status.progress))
       : undefined;
-  const ready = videoProfileReady(status, profile);
-  const setupLabel = ready
-    ? 'Check / restore selected files'
-    : status?.state === 'error'
-      ? 'Retry asset setup'
-      : status?.state === 'partial' || status?.state === 'cancelled'
-        ? 'Resume asset setup'
-        : 'Set up video assets';
   return (
-    <section className="settings-card" aria-label="Video asset setup">
-      <div className="section-heading">
-        <h2>Files for this profile</h2>
-        <span role="status">{status ? stateLabels[status.state] : 'Status unavailable'}</span>
-      </div>
-      <p>
-        Selected draft profile: <strong>{profileLabel(profile)}</strong>
-      </p>
-      {!status && <Notice>Can't check the video files right now. Restart Latent to try again.</Notice>}
-      {status?.message && <Notice error={status.state === 'error'}>{status.message}</Notice>}
-      {status && !status.canAcquire && (
-        <Notice>
-          {status.canVerify
-            ? 'Use files supplied separately. Verification checks their exact identity without downloading model weights.'
-            : 'Local file verification is unavailable for this configuration.'}
-        </Notice>
+    <section className="vp-setup" aria-label="Video files">
+      <h2>{ready ? `${profileLabel(profile)} is ready` : `Get the files for ${profileLabel(profile)}`}</h2>
+      {!ready && (
+        <p>
+          About {bytes(total)} to download once. Fast is the quickest way to start; Better and Best need their own
+          files.
+        </p>
       )}
-      {status?.canVerify && (
-        <details>
-          <summary>Required local files</summary>
-          <p>
-            Place these exact files under this studio’s models folder. Verification checks each file’s SHA-256; renamed
-            alternatives are not interchangeable.
-          </p>
-          <ul>
-            {videoProfileAssets(profile).map(asset => (
-              <li key={asset.role}>
-                <strong>{roleLabels[asset.role]}</strong>
-                <p className="inline-path">
-                  {VIDEO_ASSET_DIRECTORIES[asset.role]}/minimax-h3/{asset.filename.split('/').at(-1)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </details>
+      {!status && <Notice>Can’t check the video files right now. Restart Latent to try again.</Notice>}
+      {status?.message && !operating && ['error', 'partial', 'cancelled'].includes(status.state) && (
+        <Notice error={status.state === 'error'}>{status.message}</Notice>
       )}
-      <p className={videoProfileReady(status, profile) ? 'profile-ready' : 'profile-missing'}>
-        {videoProfileReady(status, profile)
-          ? `${profileLabel(profile)}: all required files are present.`
-          : `${profileLabel(profile)}: download or verify the required files below.`}
-      </p>
-      <p className="muted small">Other profiles use different model files. You only need the profile you choose.</p>
+      {status?.warnings.map((warning, index) => (
+        <Notice key={index}>{warning}</Notice>
+      ))}
       {operating && (
-        <div role="status">
+        <div role="status" className="vp-setup-progress">
           <p>
-            {status.state === 'installing' ? 'Installing' : 'Verifying'} {profileLabel(status.profile ?? profile)} files
-            {status.activeRole ? ` · ${roleLabels[status.activeRole]}` : ''}
-            {progress === undefined ? '' : ` · ${Math.round(progress)}%`}
+            {status.message}
+            {progress === undefined ? '' : ` ${Math.round(progress)}%`}
           </p>
-          <progress aria-label="Video asset operation progress" max={100} value={progress} />
+          <progress aria-label="Video file progress" max={100} value={progress} />
         </div>
       )}
-      {status && status.warnings.length > 0 && (
-        <Notice>
-          <ul>
-            {status.warnings.map((warning, index) => (
-              <li key={index}>{warning}</li>
-            ))}
-          </ul>
-        </Notice>
-      )}
-      <p>Checking only looks at the files. Speed depends on your settings and how much graphics memory you have.</p>
       <PackageSetupStorage packageId={`video-${profile}`} />
       <div className="button-row">
-        <button type="button" disabled={!enabled} onClick={() => onSetup(profile)}>
-          {setupLabel}
-        </button>
-        <button type="button" disabled={!verifyEnabled} onClick={() => onVerify(profile)}>
-          Verify saved video assets
-        </button>
-        {operating && (
+        {operating ? (
           <button type="button" disabled={cancelBusy} onClick={onCancel}>
-            {cancelBusy
-              ? 'Cancelling setup…'
-              : status?.state === 'verifying'
-                ? 'Cancel asset verification'
-                : 'Cancel asset setup'}
+            {cancelBusy ? 'Stopping…' : 'Stop'}
           </button>
+        ) : (
+          <>
+            {!ready && (
+              <button
+                type="button"
+                className="primary"
+                disabled={busy || status?.canAcquire !== true}
+                onClick={() => onSetup(profile)}
+              >
+                {status?.state === 'partial' || status?.state === 'cancelled' ? 'Finish download' : 'Download'}
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={busy || (status?.canVerify ?? status?.canAcquire) !== true}
+              onClick={() => onVerify(profile)}
+            >
+              {ready ? 'Check files again' : 'I already have them'}
+            </button>
+          </>
         )}
       </div>
+      <details>
+        <summary>Where the files go</summary>
+        <ul className="vp-setup-files">
+          {assets.map(asset => (
+            <li key={asset.role}>
+              <strong>{roleLabels[asset.role]}</strong> · {bytes(asset.bytes)}
+              <span className="inline-path">
+                models/{VIDEO_ASSET_DIRECTORIES[asset.role]}/minimax-h3/{asset.filename.split('/').at(-1)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </details>
     </section>
   );
 }

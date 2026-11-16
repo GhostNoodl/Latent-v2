@@ -2,26 +2,35 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod';
-import type { AppPaths, VideoJob } from '../shared/types';
-import type { VideoDraft, VideoHistoryRecord } from '../shared/video-types';
-import { videoDraftSchema } from '../shared/video-plan';
-import { parseVideoHistoryContract } from '../shared/video-history';
+import type { AppPaths, BackendStatus, VideoJob } from '../shared/types';
+import type { VideoDraft, VideoHistoryRecord, VideoWorkflowContract } from '../shared/video-types';
+import { planVideo, videoDraftSchema } from '../shared/video-plan';
+import { parseVideoContract } from '../shared/video-history';
 import { videoOutputCandidates } from '../shared/video-output';
-import { canonicalRuntimeJson, runtimeIdentitySchema } from '../shared/runtime-identity';
 import {
-  VIDEO_RUNTIME_CANDIDATE,
-  validateVideoRuntime,
-  type VideoPreparedExecution,
-  type VideoPreflightService,
-} from './video-preflight';
+  bindVideoWorkflow,
+  buildVideoWorkflow,
+  safeVideoRelativeFilename,
+  SOL_ATTENTION_NODE,
+} from '../shared/video-workflow';
+import type { RuntimeIdentitySnapshot } from '../shared/runtime-identity';
+import type { VideoAssetsService } from './video-assets';
+import type { SourceImageService } from './source-images';
 import type { VideoHistoryService } from './video-history';
 import { VIDEO_MEDIA_LIMITS } from './video-media';
 import { VIDEO_PLAYBACK_FIXTURE_ID } from './video-playback-fixture';
-import { validateRuntimePaths } from './runtime-config';
+import { containedPath, validateRuntimePaths } from './runtime-config';
 
+export interface VideoPrepared {
+  schema: 2;
+  kind: 'video';
+  jobId: string;
+  preparedAt: string;
+  contract: VideoWorkflowContract;
+}
 export interface VideoQueueContext {
   kind: 'video';
-  prepared: VideoPreparedExecution;
+  prepared: VideoPrepared;
   startedAt?: number;
   cancelRequested?: boolean;
   finalization?: {
@@ -29,49 +38,79 @@ export interface VideoQueueContext {
     outputs: unknown;
     terminalStatus: 'completed' | 'cancelled' | 'failed';
     error?: string;
+    elapsedMs?: number;
   };
+}
+interface Engine {
+  status(): BackendStatus;
+  getUrl(): string | null;
+  getRuntimeIdentity(): RuntimeIdentitySnapshot | undefined;
+}
+export interface VideoQueueOptions {
+  /** True on 24 GB class cards with "Use extra graphics memory" on. */
+  bigCard(): boolean;
+  blockedReason?(): string | undefined;
+  objectInfo?(address: string, signal: AbortSignal): Promise<Record<string, unknown>>;
 }
 const id = z
   .string()
   .regex(/^[a-f0-9]{32}$/)
   .refine(value => value !== VIDEO_PLAYBACK_FIXTURE_ID, 'The playback diagnostic ID is reserved.');
-const preparedSchema = z
-  .object({
-    schema: z.literal(1),
-    kind: z.literal('video'),
-    candidateId: z.literal(VIDEO_RUNTIME_CANDIDATE.id),
-    jobId: id,
-    preparedAt: z.string().datetime(),
-    contract: z.unknown(),
-    runtimeIdentity: runtimeIdentitySchema,
-    authorizationRecordId: z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/),
-    capabilitiesSha256: z.string().regex(/^[a-f0-9]{64}$/),
-  })
-  .strict();
 const finalizationSchema = z
   .object({
     createdAt: z.string().datetime(),
     outputs: z.unknown(),
     terminalStatus: z.enum(['completed', 'cancelled', 'failed']),
     error: z.string().max(16384).optional(),
+    elapsedMs: z.number().int().nonnegative().optional(),
   })
   .strict();
 const contextSchema = z
   .object({
     kind: z.literal('video'),
-    prepared: preparedSchema,
+    prepared: z
+      .object({
+        schema: z.literal(2),
+        kind: z.literal('video'),
+        jobId: id,
+        preparedAt: z.string().datetime(),
+        contract: z.unknown(),
+      })
+      .strict(),
     startedAt: z.number().finite().nonnegative().optional(),
     cancelRequested: z.boolean().optional(),
     finalization: finalizationSchema.optional(),
   })
   .strict();
 
-/** Video-only queue operations. JobService owns all scheduling, submission and durable transitions. */
+function engineAddress(address: string | null) {
+  if (!address) throw new Error('Start the engine first.');
+  const url = new URL(address);
+  if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port)
+    throw new Error('Video only runs on Latent’s own engine.');
+  return url.origin;
+}
+async function readObjectInfo(address: string, signal: AbortSignal): Promise<Record<string, unknown>> {
+  const response = await fetch(`${address}/object_info`, {
+    signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]),
+    redirect: 'error',
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error(`The engine didn’t answer (HTTP ${response.status}).`);
+  const value = await response.json();
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('The engine sent back nonsense.');
+  return value as Record<string, unknown>;
+}
+
+/** Turns a draft into a ready-to-send engine graph and saves finished clips. JobService owns the queue itself. */
 export class VideoQueueService {
   constructor(
     private paths: AppPaths,
-    private preflight: Pick<VideoPreflightService, 'prepare' | 'revalidate' | 'assertCurrent'>,
+    private assets: Pick<VideoAssetsService, 'bindings'>,
+    private sources: Pick<SourceImageService, 'resolve'>,
+    private engine: Engine,
     private history: Pick<VideoHistoryService, 'finalize'>,
+    private options: VideoQueueOptions,
   ) {}
   async prepare(
     draft: VideoDraft,
@@ -80,67 +119,84 @@ export class VideoQueueService {
     signal?: AbortSignal,
   ): Promise<VideoQueueContext> {
     signal?.throwIfAborted();
-    const prepared = await this.preflight.prepare({ draft: structuredClone(draft), jobId, actualSeed }, signal);
-    const plan = prepared.contract.plan;
-    return this.validate(
+    id.parse(jobId);
+    const parsed = videoDraftSchema.parse(structuredClone(draft)) as VideoDraft;
+    const blocked = this.options.blockedReason?.();
+    if (blocked) throw new Error(blocked);
+    validateRuntimePaths(this.paths);
+    if (this.engine.status().state !== 'ready') throw new Error('Start the engine first.');
+    const address = engineAddress(this.engine.getUrl());
+    const bindings = this.assets.bindings(parsed.profile);
+    const ids = [
+      ...new Set([parsed.firstFrame?.sourceId, parsed.lastFrame?.sourceId].filter((value): value is string => !!value)),
+    ];
+    const sources = [];
+    const sourceFilenames: Record<string, string> = {};
+    for (const sourceId of ids) {
+      const resolved = await this.sources.resolve(sourceId);
+      const filename = containedPath(this.paths.inputs, resolved.normalizedPath);
+      sources.push(resolved.source);
+      sourceFilenames[sourceId] = safeVideoRelativeFilename(
+        path.relative(this.paths.inputs, filename).replaceAll('\\', '/'),
+        '.png',
+      );
+    }
+    const objects = await (this.options.objectInfo ?? readObjectInfo)(address, signal ?? new AbortController().signal);
+    // Sol is an add-on. Without it (or without triton) the engine has no Sol node, so fall back to plain Sage.
+    if (parsed.speed.attention === 'sage-sol' && !objects[SOL_ATTENTION_NODE])
+      parsed.speed = { ...parsed.speed, attention: 'sage' };
+    const plan = planVideo(parsed, { actualSeed, sources, bigCard: this.options.bigCard() });
+    const built = buildVideoWorkflow(
       {
-        kind: 'video',
-        id: jobId,
-        video: draft,
-        actualSeed,
-        frames: plan.frames,
-        durationSeconds: plan.durationSeconds,
-      } as VideoJob,
-      { kind: 'video', prepared },
+        plan,
+        jobId,
+        sourceFilenames,
+        globalSage: this.engine.getRuntimeIdentity()?.data.launch.sageAttention === true,
+      },
+      bindings,
     );
+    const contract = bindVideoWorkflow(built, objects);
+    return {
+      kind: 'video',
+      prepared: { schema: 2, kind: 'video', jobId, preparedAt: new Date().toISOString(), contract },
+    };
   }
   private outputs(context: VideoQueueContext, outputs: unknown, terminalStatus: 'completed' | 'cancelled' | 'failed') {
-    if (
-      !outputs ||
-      typeof outputs !== 'object' ||
-      Array.isArray(outputs) ||
-      Object.keys(outputs).some(key => key !== '15')
-    )
-      throw new Error('The video returned unexpected output nodes. Its original outputs were preserved.');
     const candidates = videoOutputCandidates(outputs, context.prepared.contract);
     if (terminalStatus === 'completed' && candidates.length !== 1)
-      throw new Error('The completed video must have exactly one owned output.');
+      throw new Error('The engine finished without writing the clip.');
     return candidates;
   }
   validate(job: VideoJob, input: unknown): VideoQueueContext {
-    const context = contextSchema.parse(structuredClone(input)) as VideoQueueContext;
+    let context: VideoQueueContext;
+    try {
+      context = contextSchema.parse(structuredClone(input)) as VideoQueueContext;
+      context.prepared.contract = parseVideoContract(context.prepared.contract, job.id);
+    } catch {
+      throw new Error('This video was queued by an older version of Latent. Make it again from the Video page.');
+    }
     id.parse(job.id);
-    const draft = videoDraftSchema.parse(job.video);
-    if (job.kind !== 'video' || !draft.prompt.trim()) throw new Error('The queued video draft is invalid.');
-    const prepared = context.prepared;
-    prepared.contract = parseVideoHistoryContract(prepared.contract, job.id);
-    validateVideoRuntime(prepared.runtimeIdentity);
-    const plan = prepared.contract.plan;
     if (
-      prepared.jobId !== job.id ||
-      canonicalRuntimeJson(JSON.parse(JSON.stringify(plan.draft))) !==
-        canonicalRuntimeJson(JSON.parse(JSON.stringify(draft))) ||
-      plan.actualSeed !== job.actualSeed ||
-      plan.frames !== job.frames ||
-      plan.durationSeconds !== job.durationSeconds
+      job.kind !== 'video' ||
+      context.prepared.jobId !== job.id ||
+      context.prepared.contract.plan.actualSeed !== job.actualSeed
     )
-      throw new Error('The queued video differs from its frozen execution plan.');
+      throw new Error('The queued video doesn’t match its saved settings.');
     if (context.finalization) this.outputs(context, context.finalization.outputs, context.finalization.terminalStatus);
     return context;
   }
+  /** Right before sending, rebuild against the engine as it is now (it may have restarted). */
   async revalidate(job: VideoJob, input: VideoQueueContext, signal?: AbortSignal): Promise<VideoQueueContext> {
     const context = this.validate(job, input);
-    signal?.throwIfAborted();
-    if (context.finalization)
-      throw new Error('A video with frozen outputs can only retry finalization, not generation.');
-    context.prepared = await this.preflight.revalidate(context.prepared, signal);
-    return this.validate(job, context);
+    if (context.finalization) throw new Error('This clip already finished. Retry saving it instead.');
+    const fresh = await this.prepare(context.prepared.contract.plan.draft, job.id, job.actualSeed, signal);
+    return { ...context, prepared: fresh.prepared };
   }
   assertSubmission(job: VideoJob, input: VideoQueueContext, signal?: AbortSignal): void {
     const context = this.validate(job, input);
     signal?.throwIfAborted();
-    if (context.finalization) throw new Error('A video with frozen outputs cannot be submitted again.');
-    this.preflight.assertCurrent(context.prepared, signal);
+    if (context.finalization) throw new Error('This clip already finished. It can’t be sent again.');
+    if (this.engine.status().state !== 'ready') throw new Error('The engine stopped. Start it and retry.');
   }
   completedOutputs(
     job: VideoJob,
@@ -156,9 +212,14 @@ export class VideoQueueService {
       outputs: structuredClone(outputs),
       terminalStatus,
       ...(error === undefined ? {} : { error }),
+      ...(context.finalization?.elapsedMs !== undefined
+        ? { elapsedMs: context.finalization.elapsedMs }
+        : context.startedAt
+          ? { elapsedMs: Math.max(0, Math.round(Date.now() - context.startedAt)) }
+          : {}),
     });
     if (context.finalization && !isDeepStrictEqual(context.finalization, receipt))
-      throw new Error('The frozen video finalization receipt changed. Its original receipt must be retained.');
+      throw new Error('The finished clip’s details changed. The original was kept.');
     context.finalization = receipt;
     return context;
   }
@@ -171,18 +232,11 @@ export class VideoQueueService {
     for await (const entry of directory) {
       if (!pattern.test(entry.name)) continue;
       candidates.push(entry.name);
-      if (candidates.length > 1) throw new Error('Multiple owned video outputs need review. Every file was preserved.');
+      if (candidates.length > 1) throw new Error('Found more than one file for this clip. All were kept.');
       const stat = await fs.lstat(path.join(this.paths.outputs, entry.name));
-      if (
-        !stat.isFile() ||
-        stat.isSymbolicLink() ||
-        stat.nlink !== 1 ||
-        stat.size < 1 ||
-        stat.size > VIDEO_MEDIA_LIMITS.maxBytes
-      )
-        throw new Error('The recovered video is not an independent bounded file. Its original path was preserved.');
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size < 1 || stat.size > VIDEO_MEDIA_LIMITS.maxBytes)
+        throw new Error('The clip file looks wrong. It was kept as is.');
     }
-    validateRuntimePaths(this.paths);
     return candidates.length
       ? { '15': { images: [{ filename: candidates[0], subfolder: '', type: 'output' }], animated: [true] } }
       : {};
@@ -190,24 +244,19 @@ export class VideoQueueService {
   async finalize(job: VideoJob, input: VideoQueueContext, signal?: AbortSignal): Promise<VideoHistoryRecord> {
     const context = this.validate(job, input);
     signal?.throwIfAborted();
-    if (!context.finalization) throw new Error('Persist the video output receipt before finalization.');
+    if (!context.finalization) throw new Error('The clip hasn’t finished yet.');
     if (this.outputs(context, context.finalization.outputs, context.finalization.terminalStatus).length !== 1)
-      throw new Error('There is no owned video output to finalize.');
-    const promptId = z
-      .string()
-      .regex(/^[a-zA-Z0-9_-]{1,128}$/)
-      .parse(job.promptId);
+      throw new Error('There’s no finished clip to save.');
     return this.history.finalize(
       {
         jobId: job.id,
         createdAt: context.finalization.createdAt,
-        title: context.prepared.contract.plan.draft.prompt.trim().slice(0, 160),
+        title: context.prepared.contract.plan.draft.prompt.trim().slice(0, 160) || 'Untitled clip',
         contract: context.prepared.contract,
         outputs: context.finalization.outputs,
         evidenceKind: 'generated',
-        promptId,
-        runtimeIdentity: context.prepared.runtimeIdentity,
-        eligibilityRecordId: context.prepared.authorizationRecordId,
+        ...(job.promptId ? { promptId: job.promptId } : {}),
+        ...(context.finalization.elapsedMs !== undefined ? { elapsedMs: context.finalization.elapsedMs } : {}),
       },
       signal,
     );

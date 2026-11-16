@@ -99,18 +99,12 @@ export function builtInStorageCatalog(
     const message = [
       assets?.message ?? statuses.video?.message ?? VIDEO_AVAILABILITY.message,
       ...(assets?.warnings ?? []),
-      assets && !assets.canAcquire
-        ? assets.canVerify
-          ? 'Local model verification is available; automatic acquisition is disabled.'
-          : 'MiniMax H3 eligibility remains unresolved; setup and use are unavailable.'
-        : '',
-      'File presence is not runtime readiness. Runtime compatibility, hardware support and video generation remain unverified.',
     ]
       .filter(Boolean)
       .join(' ');
     return entry(
       `video-${profile}`,
-      `MiniMax H3 video · ${profile === 'fused4' ? 'fused turbo 4-step candidate' : profile === 'base' ? 'base' : 'turbo 8-step candidate'}`,
+      `Video (H3) · ${profile === 'fused4' ? 'Fast, 4 steps' : profile === 'base' ? 'Best, 20 steps' : 'Better, 8 steps'}`,
       {
         state,
         message,
@@ -123,11 +117,9 @@ export function builtInStorageCatalog(
       },
       [...new Set(pins.map(pin => path.dirname(videoAssetPath(paths, pin))))],
       [
-        'Private image engine with native H3 and video output nodes',
-        profile === 'fused4'
-          ? 'Fused INT8 diffusion, automatic text-encoder device, video VAE and audio VAE'
-          : 'INT8 diffusion, CPU text encoder, video VAE and audio VAE',
-        ...(profile === 'turbo8' ? ['Dedicated video turbo adapter; separate from ordinary image LoRAs'] : []),
+        'The engine (it has H3 built in)',
+        'Video model, prompt reader, picture decoder and sound decoder',
+        ...(profile === 'turbo8' ? ['Turbo add-on for 8-step clips'] : []),
       ],
       pins.map(pin =>
         artifact(

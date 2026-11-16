@@ -126,6 +126,21 @@ class EngineRequestError extends Error {
 }
 class JobPersistenceError extends Error {}
 
+const VIDEO_PHASES: Record<string, string> = {
+  UNETLoader: 'Loading the video model',
+  CLIPLoader: 'Loading the prompt reader',
+  VAELoader: 'Loading the decoder',
+  MiniMaxH3ImageToVideo: 'Reading the prompt',
+  SamplerCustomAdvanced: 'Making the clip',
+  VAEDecode: 'Finishing frames',
+  VAEDecodeTiled: 'Finishing frames',
+  VAEDecodeAudio: 'Finishing sound',
+  CreateVideo: 'Saving the clip',
+  SaveVideo: 'Saving the clip',
+};
+function videoPhase(kind: string | undefined) {
+  return (kind && VIDEO_PHASES[kind]) ?? 'Getting ready';
+}
 export class JobService {
   private items: StudioJob[];
   private order: string[];
@@ -1077,16 +1092,7 @@ export class JobService {
           if (isVideoJob(job)) {
             const graph = this.videoContext(job).prepared.contract.workflow;
             const kind = node ? graph[node]?.class_type : undefined;
-            job.phase =
-              kind === 'SaveVideo'
-                ? 'Writing video'
-                : kind === 'SamplerCustomAdvanced'
-                  ? 'Generating video'
-                  : kind === 'VAEDecodeTiled'
-                    ? 'Decoding video'
-                    : kind === 'VAEDecodeAudio'
-                      ? 'Decoding audio'
-                      : 'Preparing video';
+            job.phase = videoPhase(kind);
           } else {
             const context = this.recipeForPhase(job.id);
             job.phase = generationPhase(context.workflow, node, context.advancedImage, context.faceDetailer?.plan);
@@ -1469,8 +1475,6 @@ export class JobService {
           actualSeed: job.actualSeed,
           video: job.video,
           contract: video.prepared.contract,
-          runtimeIdentity: video.prepared.runtimeIdentity,
-          authorizationRecordId: video.prepared.authorizationRecordId,
         };
       } else {
         const image = context as ExecutionContext;

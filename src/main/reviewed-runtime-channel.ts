@@ -1,3 +1,9 @@
+import {
+  SOL_ATTENTION_DIRECTORY,
+  SOL_ATTENTION_RELEASE,
+  VIDEO_ATTENTION_DIRECTORY,
+  VIDEO_ATTENTION_FILE,
+} from './video-speed-nodes';
 import { QWEN21_RUNTIME_PACKAGES } from './qwen21-runtime-packages';
 import { QWEN21_SET_ID, QWEN21_RUNTIME } from '../shared/qwen21-release';
 import { QWEN_GGUF_RELEASE } from '../shared/qwen-gguf-release';
@@ -103,17 +109,18 @@ const CURRENT_RUNTIME_SET: ReviewedRuntimeSet = {
       files: QWEN_GGUF_RELEASE.files.map(({ filename, bytes, sha256 }) => ({ filename, bytes, sha256 })),
     },
     {
-      directory: 'latent_video_attention',
-      repository: 'Latentv2/resources/latent-video-attention.py',
-      revision: 'sha256:dee9d47101b2b4e42af636cda8ce2df2c091753ae82796c38fe336e7948241f8',
+      directory: VIDEO_ATTENTION_DIRECTORY,
+      repository: 'Latentv2/src/main/video-speed-nodes.ts',
+      revision: `sha256:${VIDEO_ATTENTION_FILE.sha256}`,
       license: 'Project source',
-      files: [
-        {
-          filename: '__init__.py',
-          bytes: 936,
-          sha256: 'dee9d47101b2b4e42af636cda8ce2df2c091753ae82796c38fe336e7948241f8',
-        },
-      ],
+      files: [{ ...VIDEO_ATTENTION_FILE }],
+    },
+    {
+      directory: SOL_ATTENTION_DIRECTORY,
+      repository: SOL_ATTENTION_RELEASE.repository,
+      revision: SOL_ATTENTION_RELEASE.revision,
+      license: SOL_ATTENTION_RELEASE.license,
+      files: SOL_ATTENTION_RELEASE.files.map(({ filename, bytes, sha256 }) => ({ filename, bytes, sha256 })),
     },
     {
       directory: IPADAPTER_RELEASE.customNodeDirectory,

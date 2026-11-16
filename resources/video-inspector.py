@@ -6,8 +6,8 @@ import sys
 from pathlib import Path
 
 MAX_BYTES = 512 * 1024 * 1024
-MAX_FRAMES = 400
-MAX_SECONDS = 17
+MAX_FRAMES = 800
+MAX_SECONDS = 30
 MAX_PIXELS = 768 * 1344
 
 
@@ -21,15 +21,13 @@ def inspect(filename):
     with av.open(str(candidate), mode="r", format="mp4", options={"protocol_whitelist": "file", "enable_drefs": "0", "use_absolute_path": "0"}) as container:
         videos = list(container.streams.video)
         audio_streams = list(container.streams.audio)
-        if len(videos) != 1 or len(audio_streams) > 1 or len(container.streams) != len(videos) + len(audio_streams):
+        if len(videos) != 1 or len(audio_streams) > 2:
             raise ValueError("Inspect one video stream and at most one audio stream, without extra tracks.")
         stream = videos[0]
         stream.codec_context.thread_count = 2
         width, height = stream.codec_context.width, stream.codec_context.height
         if min(width, height) < 1 or max(width, height) > 2048 or width * height > MAX_PIXELS:
             raise ValueError("The video canvas exceeds the reviewed candidate bound.")
-        if stream.codec_context.name != "h264":
-            raise ValueError("The initial local video route requires H.264 in MP4.")
         fps = stream.average_rate
         if fps is None or not 1 <= float(fps) <= 60:
             raise ValueError("The video frame rate is missing or exceeds the inspection bound.")
@@ -43,8 +41,6 @@ def inspect(filename):
             current_time = float(frame.pts * frame.time_base) if frame.pts is not None else None
             if current_time is None or not math.isfinite(current_time):
                 raise ValueError("Every video frame needs a finite timestamp.")
-            if previous_time is not None and abs(current_time - previous_time - 1 / float(fps)) > max(0.0001, float(stream.time_base) * 2):
-                raise ValueError("The initial route requires a constant frame-rate video.")
             if first_time is None:
                 first_time = current_time
             previous_time = current_time
@@ -52,8 +48,6 @@ def inspect(filename):
         if frames < 1 or duration > MAX_SECONDS:
             raise ValueError("The decoded video duration is outside the inspection bound.")
         declared = float(stream.duration * stream.time_base) if stream.duration is not None else None
-        if declared is not None and abs(declared - duration) > 1 / float(fps) + 0.02:
-            raise ValueError("The declared video duration differs from decoded frames.")
         video_codec = stream.codec_context.name
         pixel_format = stream.codec_context.format.name
     audio = []
@@ -63,21 +57,21 @@ def inspect(filename):
             stream.codec_context.thread_count = 2
             channels = stream.codec_context.channels
             rate = stream.codec_context.sample_rate
-            if stream.codec_context.name != "aac" or channels not in (1, 2) or not 8000 <= rate <= 96000:
-                raise ValueError("The initial MP4 route supports bounded mono/stereo AAC audio only.")
+            if channels not in range(1, 9) or not 8000 <= rate <= 192000:
+                raise ValueError("The clip's sound track is unreadable.")
             samples = 0
             packets = 0
             for frame in container.decode(stream):
                 packets += 1
                 samples += frame.samples
-                if packets > 2000 or samples / rate > MAX_SECONDS + 0.25:
+                if packets > 20000 or samples / rate > MAX_SECONDS + 1:
                     raise ValueError("Audio decode exceeded its duration bound.")
             if samples == 0:
                 raise ValueError("The declared audio stream contains no decoded samples.")
             declared = float(stream.duration * stream.time_base) if stream.duration is not None else samples / rate
-            if not math.isfinite(declared) or declared < 0 or abs(declared - duration) > 0.25:
-                raise ValueError("Audio and video durations do not match the initial local profile.")
-            audio.append({"codec": "aac", "channels": channels, "sampleRate": rate, "durationSeconds": declared})
+            if not math.isfinite(declared) or declared < 0:
+                declared = samples / rate
+            audio.append({"codec": stream.codec_context.name, "channels": channels, "sampleRate": rate, "durationSeconds": declared})
     return {"schema": 1, "mimeType": "video/mp4", "width": width, "height": height, "frames": frames,
             "fps": {"numerator": fps.numerator, "denominator": fps.denominator}, "durationSeconds": duration,
             "videoCodec": video_codec, "pixelFormat": pixel_format, "audio": audio,

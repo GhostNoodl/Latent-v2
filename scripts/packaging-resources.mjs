@@ -14,7 +14,6 @@ export const REQUIRED_RESOURCES = [
   'face-detailer-worker.py',
   'face-detailer-NOTICES.txt',
   'video-inspector.py',
-  'latent-video-attention.py',
   'video-playback-fixture.mp4',
   'latent-icon.svg',
   'latent-icon.ico',
