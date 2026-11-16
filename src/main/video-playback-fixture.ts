@@ -19,7 +19,7 @@ export async function videoPlaybackFixtureRecord(file: VerifiedVideoFile): Promi
     throw new Error('The bundled playback diagnostic is missing or changed.');
   await videoFileResponse(file, { method: 'HEAD', headers: new Headers(), signal: AbortSignal.timeout(5000) });
   return {
-    schema: 1,
+    schema: 2,
     kind: 'video',
     id: VIDEO_PLAYBACK_FIXTURE_ID,
     jobId: 'synthetic-codec-diagnostic',

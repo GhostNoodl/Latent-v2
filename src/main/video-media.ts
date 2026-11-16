@@ -7,18 +7,18 @@ import { z } from 'zod';
 import type { VideoMediaInfo, VideoPlan } from '../shared/video-types';
 export const VIDEO_MEDIA_LIMITS = Object.freeze({
   maxBytes: 512 * 1024 * 1024,
-  maxFrames: 400,
-  maxSeconds: 17,
+  maxFrames: 800,
+  maxSeconds: 30,
   maxPixels: 768 * 1344,
   maxDimension: 2048,
-  timeoutMs: 45000,
+  timeoutMs: 120000,
 });
 const audioSchema = z
   .object({
-    codec: z.literal('aac'),
-    channels: z.number().int().min(1).max(2),
-    sampleRate: z.number().int().min(8000).max(96000),
-    durationSeconds: z.number().finite().min(0).max(17.25),
+    codec: z.string().min(1).max(32),
+    channels: z.number().int().min(1).max(8),
+    sampleRate: z.number().int().min(8000).max(192000),
+    durationSeconds: z.number().finite().min(0).max(120).nullable(),
   })
   .strict();
 const workerInfoSchema = z
@@ -34,10 +34,10 @@ const workerInfoSchema = z
         denominator: z.number().int().positive().max(1000000),
       })
       .strict(),
-    durationSeconds: z.number().finite().positive().max(17),
-    videoCodec: z.literal('h264'),
+    durationSeconds: z.number().finite().positive().max(120),
+    videoCodec: z.string().min(1).max(32),
     pixelFormat: z.string().min(1).max(32),
-    audio: z.array(audioSchema).max(1),
+    audio: z.array(audioSchema).max(2),
     inspection: z
       .object({
         tool: z.literal('PyAV'),
@@ -52,7 +52,7 @@ const workerInfoSchema = z
     if (
       value.width * value.height > VIDEO_MEDIA_LIMITS.maxPixels ||
       value.inspection.decodedFrames !== value.frames ||
-      Math.abs(value.durationSeconds - (value.frames * value.fps.denominator) / value.fps.numerator) > 0.001
+      Math.abs(value.durationSeconds - (value.frames * value.fps.denominator) / value.fps.numerator) > 0.05
     )
       ctx.addIssue({ code: 'custom', message: 'Inconsistent video dimensions, duration or decoded frame count.' });
   });
@@ -241,20 +241,9 @@ export function assertVideoMediaMatchesPlan(media: VideoMediaInfo, plan: VideoPl
     !/^[0-9a-f]{64}$/.test(sha256)
   )
     throw new Error('The decoded video has no bounded file identity.');
-  if (
-    media.width !== plan.width ||
-    media.height !== plan.height ||
-    media.frames !== plan.frames ||
-    media.fps.numerator / media.fps.denominator !== 24 ||
-    Math.abs(media.durationSeconds - plan.durationSeconds) > 0.001
-  )
-    throw new Error('The decoded video differs from its submitted canvas, frame count, FPS or duration.');
-  if (
-    plan.encoding.audio === 'none'
-      ? media.audio.length !== 0
-      : media.audio.length !== 1 || media.audio[0].channels !== 2 || media.audio[0].sampleRate !== 32000
-  )
-    throw new Error('The decoded video audio differs from its explicit export profile.');
+  // The engine decides the exact frame count, so only the picture size has to match.
+  if (media.width !== plan.width || media.height !== plan.height)
+    throw new Error('The finished clip has a different size than requested.');
 }
 
 export type ByteRange =

@@ -75,12 +75,11 @@ import { ModelTransferActions } from './model-transfer-actions';
 import { modelTransferNeedsAttention } from './model-transfer-notifications';
 import { DesktopNotifications, type NotificationPreference } from './desktop-notifications';
 import { VideoConversationService } from './video-conversations';
-import { VideoDraftService } from './video-drafts';
 import { VIDEO_AVAILABILITY } from '../shared/video-plan';
 import { videoFileResponse, VideoMediaInspector, packagedVideoInspectorPath } from './video-media';
 import { VideoHistoryService } from './video-history';
 import { VideoAssetsService } from './video-assets';
-import { VideoPreflightService } from './video-preflight';
+import { solAttentionInstalled } from './video-speed-nodes';
 import { localVideoAvailability } from './video-availability';
 import { VideoQueueService } from './video-queue';
 import { isVideoJob } from '../shared/types';
@@ -143,7 +142,6 @@ let storageOverview: StorageOverviewService;
 let hardwareProfiles: HardwareProfilesService;
 let backendActivity: BackendActivityService;
 let videoConversations: VideoConversationService;
-let videoDrafts: VideoDraftService;
 let videoHistory: VideoHistoryService;
 let videoAssets: VideoAssetsService;
 let videoInspector: VideoMediaInspector;
@@ -209,12 +207,10 @@ function trusted(value: string) {
   return value.split('#')[0] === trustedUrl;
 }
 function videoStatus(): AppSnapshot['video'] {
-  return localVideoAvailability(
-    videoDrafts.status(),
-    videoAssets.status(),
-    backend.status().state,
-    backend.getRuntimeIdentity(),
-  );
+  return localVideoAvailability(VIDEO_AVAILABILITY, videoAssets.status(), backend.status().state, {
+    bigCard: usesExtraVram(store.settings(), hardware),
+    solInstalled: solAttentionInstalled(paths),
+  });
 }
 function snapshot(): AppSnapshot {
   return snapshots.snapshot();
@@ -621,9 +617,6 @@ function handlerContext() {
     get videoConversations() {
       return videoConversations;
     },
-    get videoDrafts() {
-      return videoDrafts;
-    },
     videoFixture,
     get videoHistory() {
       return videoHistory;
@@ -650,7 +643,6 @@ async function initialize() {
   assistant = new PromptAssistant(paths, store, broadcast);
   sources = new SourceImageService(paths, store);
   videoConversations = new VideoConversationService(store);
-  videoDrafts = new VideoDraftService(store);
   videoInspector = new VideoMediaInspector({
     get python() {
       return paths.python;
@@ -730,12 +722,12 @@ async function initialize() {
     },
     broadcast,
   );
-  const videoPreflight = new VideoPreflightService(paths, videoAssets, sources, backend, {
+  const videoQueue = new VideoQueueService(paths, videoAssets, sources, backend, videoHistory, {
+    bigCard: () => usesExtraVram(store.settings(), hardware),
     blockedReason: () =>
       runtimeCoordinator?.blockedReason() ??
       (!runtimeCoordinator ? 'Checking interrupted runtime maintenance.' : undefined),
   });
-  const videoQueue = new VideoQueueService(paths, videoPreflight, videoHistory);
   jobs = new JobService(
     paths,
     store,

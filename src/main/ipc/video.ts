@@ -1,9 +1,8 @@
 import { storageBoundary } from '../storage-locations';
 import { shell } from 'electron';
-import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { privateShellPath } from '../shell-path';
-import { videoDraftSchema } from '../../shared/video-plan';
+import { VIDEO_AVAILABILITY } from '../../shared/video-plan';
 import { EMPTY_SHOT_BOARD, shotBoardSchema } from '../../shared/shot-board';
 import { videoFileResponse } from '../video-media';
 import { videoPlaybackFixtureRecord, VIDEO_PLAYBACK_FIXTURE_ID } from '../video-playback-fixture';
@@ -20,14 +19,6 @@ export function videoHandlers(ctx: HandlerContext) {
       return saved.success ? saved.data : EMPTY_SHOT_BOARD;
     },
     saveShotBoard: async value => ctx.store.setState(SHOT_BOARD_KEY, shotBoardSchema.parse(value)),
-    planVideoDraft: async input => {
-      const value = videoDraftSchema.parse(input);
-      return ctx.videoDrafts.plan(
-        value,
-        value.seed === 'random' ? String(randomBytes(6).readUIntBE(0, 6)) : value.seed,
-        async sourceId => (await ctx.sources.resolve(sourceId)).source,
-      );
-    },
     getVideoPlaybackFixture: async () => videoPlaybackFixtureRecord(ctx.videoFixture),
     getVideoHistory: async () => ctx.videoHistory.snapshot(),
     setupVideoAssets: async profile => ctx.videoAssets.setup(z.enum(['base', 'turbo8', 'fused4']).parse(profile)),
@@ -47,7 +38,7 @@ export function videoHandlers(ctx: HandlerContext) {
       shell.showItemInFolder(await privateShellPath(storageBoundary(ctx.paths, file.filename), file.filename));
     },
     openVideoLicense: async () => {
-      await shell.openExternal(ctx.videoDrafts.status().licenseUrl);
+      await shell.openExternal(VIDEO_AVAILABILITY.licenseUrl);
     },
   } satisfies Partial<StudioMethods>;
 }

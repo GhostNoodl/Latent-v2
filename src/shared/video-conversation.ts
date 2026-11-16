@@ -1,16 +1,19 @@
 import { z } from 'zod';
-import { videoDraftSchema } from './video-plan';
+import { upgradeVideoDraft, videoDraftObjectSchema } from './video-plan';
 
-/** Editor persistence accepts unfinished fields; execution planning still uses videoDraftSchema. */
-export const videoEditorDraftSchema = z
-  .object({
-    ...videoDraftSchema.shape,
-    width: z.number().finite().min(-100000).max(100000),
-    height: z.number().finite().min(-100000).max(100000),
-    requestedDurationSeconds: z.number().finite().min(-100000).max(100000),
-    seed: z.string().max(32),
-  })
-  .strict();
+/** Saved setups keep half-typed values; the queue checks the real limits. */
+export const videoEditorDraftSchema = z.preprocess(
+  upgradeVideoDraft,
+  z
+    .object({
+      ...videoDraftObjectSchema.shape,
+      width: z.number().finite().min(-100000).max(100000),
+      height: z.number().finite().min(-100000).max(100000),
+      requestedDurationSeconds: z.number().finite().min(-100000).max(100000),
+      seed: z.string().max(32),
+    })
+    .strict(),
+);
 export const videoEditorSessionSchema = z
   .object({
     id: z.uuid(),
@@ -33,9 +36,9 @@ export const videoConversationSchema = z
   .strict()
   .superRefine((value, context) => {
     if (new Set(value.sessions.map(session => session.id)).size !== value.sessions.length)
-      context.addIssue({ code: 'custom', message: 'Video draft sessions must have unique identities.' });
+      context.addIssue({ code: 'custom', message: 'Video setups must have unique IDs.' });
     if (value.activeSessionId && !value.sessions.some(session => session.id === value.activeSessionId))
-      context.addIssue({ code: 'custom', message: 'The active video draft is unavailable.' });
+      context.addIssue({ code: 'custom', message: 'The open video setup is missing.' });
   });
 export type VideoConversation = z.infer<typeof videoConversationSchema>;
 export type VideoEditorSession = z.infer<typeof videoEditorSessionSchema>;

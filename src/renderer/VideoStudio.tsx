@@ -1,17 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Clapperboard, Undo2 } from 'lucide-react';
+import { Clapperboard, FolderOpen, RotateCcw, Sparkles, Undo2 } from 'lucide-react';
 import type { AppSnapshot, GenerationRecord } from '../shared/types';
-import type { VideoDraft, VideoHistoryRecord, VideoPlan } from '../shared/video-types';
+import { isVideoJob } from '../shared/types';
+import type { VideoDraft, VideoHistoryRecord } from '../shared/video-types';
 import { DEFAULT_VIDEO_DRAFT } from '../shared/video-plan';
+import { videoProfileReady } from '../shared/video-assets';
 import { videoConversationSchema, type VideoConversation, type VideoEditorSession } from '../shared/video-conversation';
 import { actionErrorMessage } from '../shared/action-error';
-import { VideoPlanner } from './VideoPlanner';
-import { VideoHistory } from './VideoHistory';
 import { VideoAssetSetup } from './VideoAssetSetup';
+import { VideoDock } from './VideoDock';
+import { VideoClips, activeVideoJobs, jobPercent } from './VideoClips';
 import { applyVideoHistoryRestore, selectVideoHistory } from './video-history-state';
 import { videoHistoryRevision } from './queue-view';
-import { Busy, Notice, Modal, type RunAction } from './ui';
+import { estimateVideoMs, formatDuration, safeVideoHistoryUrl } from './video-url';
+import { Busy, Notice, type RunAction } from './ui';
 import './video-studio.css';
+import './video-page.css';
 import { PromptAssistant } from './PromptAssistant';
 import { ShotBoard } from './ShotBoard';
 import { DEFAULT_DRAFT } from '../shared/defaults';
@@ -33,15 +37,10 @@ export interface VideoStudioProps {
   run: RunAction;
 }
 /** Remains mounted after first opening so navigation cannot discard a pending close flush. */
-export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStudioProps) {
+export function VideoStudio({ snapshot, selectedRecord: selectedImage, visible, run }: VideoStudioProps) {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [shotBoardOpen, setShotBoardOpen] = useState(false);
-  const makeSession = () =>
-    newSession(
-      snapshot.video.assets?.fusedPresent
-        ? { ...DEFAULT_VIDEO_DRAFT, profile: 'fused4', width: 832, height: 480, decodeMode: 'auto' }
-        : DEFAULT_VIDEO_DRAFT,
-    );
+  const makeSession = () => newSession(DEFAULT_VIDEO_DRAFT);
   const [conversation, setConversation] = useState<VideoConversation>();
   const current = useRef<VideoConversation | undefined>(undefined);
   const [error, setError] = useState('');
@@ -56,9 +55,7 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
   const closeEpoch = useRef(0);
   const closeRequested = useRef(false);
   const pendingQueue = useRef<Promise<unknown> | undefined>(undefined);
-  const [plan, setPlan] = useState<VideoPlan>();
   const [previous, setPrevious] = useState<{ id: string; draft: VideoDraft }>();
-  const [fixture, setFixture] = useState<VideoHistoryRecord>();
   const [history, setHistory] = useState<VideoHistoryRecord[]>([]);
   const [historyWarnings, setHistoryWarnings] = useState<string[]>([]);
   const [historyError, setHistoryError] = useState('');
@@ -81,8 +78,7 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
       setHistoryWarnings(result.warnings);
       setHistoryError('');
     } catch (cause) {
-      if (request === historyRequest.current)
-        setHistoryError(`Could not refresh saved videos: ${actionErrorMessage(cause)}`);
+      if (request === historyRequest.current) setHistoryError(`Couldn’t load your clips: ${actionErrorMessage(cause)}`);
     } finally {
       if (request === historyRequest.current) setHistoryLoading(false);
     }
@@ -112,7 +108,7 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
       setDraftLoadError('');
     } catch (cause) {
       if (request === draftRequest.current)
-        setDraftLoadError(`Could not open saved video drafts: ${actionErrorMessage(cause)}`);
+        setDraftLoadError(`Couldn’t open the video settings: ${actionErrorMessage(cause)}`);
     } finally {
       if (request === draftRequest.current) setDraftLoading(false);
     }
@@ -132,7 +128,7 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
       .catch(cause => {
         if (revision.current === captured) {
           setSaveState('error');
-          setError(`Could not save the video draft: ${actionErrorMessage(cause)}`);
+          setError(`Couldn’t save the video settings: ${actionErrorMessage(cause)}`);
         }
         throw cause;
       });
@@ -168,7 +164,7 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
         await pendingQueue.current;
         await flush();
         if (revision.current !== savedRevision.current)
-          throw new Error('The video draft changed while saving. Keep the studio open and try closing again.');
+          throw new Error('The video settings changed while saving. Try closing again.');
         if (requestedEpoch === closeEpoch.current) closing.current = true;
       } catch (cause) {
         if (requestedEpoch === closeEpoch.current) closeRequested.current = false;
@@ -197,7 +193,6 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
     revision.current++;
     setSaveState('editing');
     if (!selectionOnly) {
-      setPlan(undefined);
       setError('');
       setMessage('');
     }
@@ -254,7 +249,7 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
   };
   const selectSavedVideo = (id: string) => {
     if (!current.current) {
-      setError('Open your saved video settings before selecting a video.');
+      setError('The video settings are still opening.');
       return;
     }
     try {
@@ -265,23 +260,25 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
   };
   const reuseSavedVideo = (id: string) =>
     action('reuse', async () => {
-      if (!current.current) throw new Error('Open your saved video drafts before restoring a recipe.');
+      if (!current.current) throw new Error('The video settings are still opening.');
       const captured = revision.current;
       const proposal = await window.latent.restoreVideoParameters(id);
-      if (closing.current) throw new Error('The studio is closing. Reuse the saved video after opening it again.');
+      if (closing.current) throw new Error('Latent is closing.');
       const result = applyVideoHistoryRestore(current.current, proposal, id, captured, revision.current, makeSession);
       commit(result.conversation);
       setPrevious(result.previous);
-      setMessage('Video settings loaded, seed included.');
+      setMessage('Settings loaded, seed included.');
     });
-  const attachSource = (load: () => ReturnType<typeof window.latent.importSourceImage>) =>
+  const attachSource = (
+    role: 'firstFrame' | 'lastFrame',
+    load: () => ReturnType<typeof window.latent.importSourceImage>,
+  ) =>
     action('source', async () => {
       const captured = revision.current;
       const source = await load();
-      if (!source) return;
-      if (closing.current) return;
+      if (!source || closing.current) return;
       if (captured !== revision.current || !current.current?.activeSessionId) {
-        setMessage('Source imported. Choose it from the frame list when ready.');
+        setMessage('Image added. Pick it from the frame slot.');
         return;
       }
       const session = current.current.sessions.find(item => item.id === current.current!.activeSessionId)!;
@@ -289,244 +286,231 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
         draft: {
           ...session.draft,
           mode: 'img2vid',
-          firstFrame: { sourceId: source.id, sha256: source.normalized.sha256 },
+          [role]: { sourceId: source.id, sha256: source.normalized.sha256 },
         },
       });
     });
-  const reviewPlan = () =>
-    action('plan', async () => {
-      if (!active) return;
-      const captured = revision.current;
-      const result = await window.latent.planVideoDraft(structuredClone(active.draft));
-      if (captured !== revision.current) {
-        setMessage('The draft changed during review. Review the current draft again.');
-        return;
-      }
-      setPlan(result);
-      setMessage('Here is the plan. Nothing has been queued or downloaded yet.');
-    });
   const queueVideo = () =>
     action('queue', async () => {
-      if (!snapshot.video.canGenerate)
-        throw new Error('Video generation is not enabled for this studio configuration.');
+      if (!snapshot.video.canGenerate) throw new Error(snapshot.video.message);
       const session = current.current?.sessions.find(item => item.id === current.current?.activeSessionId);
-      if (!session) throw new Error('Choose a video draft before generating.');
+      if (!session) throw new Error('The video settings are still opening.');
       const captured = revision.current,
         preparationEpoch = closeEpoch.current;
       const frozen = structuredClone(session.draft);
       await flush();
       if (closeRequested.current || preparationEpoch !== closeEpoch.current)
-        throw new Error(
-          'Video generation was not submitted because the studio began closing. Generate again when ready.',
-        );
+        throw new Error('Latent is closing, so the clip wasn’t started.');
       if (captured !== revision.current || closing.current)
-        throw new Error('The video draft changed while saving. Review the current draft before generating.');
+        throw new Error('The settings changed while saving. Press Make clip again.');
       const request = window.latent.queueVideo(frozen);
       pendingQueue.current = request;
       try {
         const job = await request;
-        setMessage(
-          `Video added to the shared queue · seed ${job.actualSeed}. You can keep adjusting settings while it runs.`,
-        );
+        setMessage('');
+        commit(selectVideoHistory(current.current!, job.id, makeSession), true);
       } finally {
         if (pendingQueue.current === request) pendingQueue.current = undefined;
       }
     });
   /** One take for the shot board: the current settings with the shot's prompt. */
   const makeTake = async (prompt: string) => {
-    if (!snapshot.video.canGenerate) throw new Error('Video generation is not ready yet.');
+    if (!snapshot.video.canGenerate) throw new Error(snapshot.video.message);
     const session = current.current?.sessions.find(item => item.id === current.current?.activeSessionId);
-    if (!session) throw new Error('Choose a video draft before making a take.');
+    if (!session) throw new Error('The video settings are still opening.');
     if (closing.current || closeRequested.current) throw new Error('The studio is closing.');
     const job = await window.latent.queueVideo({ ...structuredClone(session.draft), prompt });
     return job.id;
   };
+  const [solBusy, setSolBusy] = useState(false);
+  const installSol = () => {
+    if (solBusy) return;
+    setSolBusy(true);
+    void run(
+      'video-sol',
+      async () => {
+        try {
+          await window.latent.installSolAttention();
+        } catch (cause) {
+          setError(actionErrorMessage(cause));
+          throw cause;
+        }
+      },
+      'Sol is installed. The engine restarted.',
+    ).finally(() => setSolBusy(false));
+  };
+  const draft = active?.draft;
+  const selectedId = active?.selectedRecordId ?? activeVideoJobs(snapshot.jobs)[0]?.id ?? history[0]?.id;
+  const selectedJob = snapshot.jobs.find(job => job.id === selectedId && isVideoJob(job));
+  const selectedRecord = history.find(record => record.id === selectedId);
+  const showJob = selectedJob && isVideoJob(selectedJob) && !selectedRecord ? selectedJob : undefined;
+  const filesReady = draft ? videoProfileReady(snapshot.video.assets, draft.profile) : false;
+  const assetsBusy = ['installing', 'verifying'].includes(snapshot.video.assets?.state ?? '');
+  const estimateMs = draft ? estimateVideoMs(draft, history) : undefined;
+  const url = selectedRecord && safeVideoHistoryUrl(selectedRecord);
+  const percent = showJob ? jobPercent(showJob) : 0;
   return (
-    <div className="video-studio video-create-layout">
-      {error && <Notice error>{error}</Notice>}
-      {draftLoadError && <Notice error>{draftLoadError}</Notice>}
-      {!conversation ? (
-        <section className="settings-card">
-          <Busy active={draftLoading} />
-          <p>{draftLoadError ? 'Saved settings remain untouched.' : 'Opening video settings…'}</p>
-          {draftLoadError && (
-            <button type="button" disabled={draftLoading} onClick={() => void loadDrafts()}>
-              Retry opening video settings
+    <div className="vp">
+      <div className="vp-main">
+        <div className="vp-toolbar">
+          {previous && previous.id === active?.id && (
+            <button
+              type="button"
+              className="vp-ghost"
+              onClick={() => {
+                updateSession({ draft: structuredClone(previous.draft) });
+                setPrevious(undefined);
+              }}
+            >
+              <Undo2 size={15} /> Undo
             </button>
           )}
-        </section>
-      ) : (
-        <>
-          {active && (
-            <VideoPlanner
-              onAssistant={() => setAssistantOpen(true)}
-              saveLabel={
-                saveState === 'saved'
-                  ? 'Settings saved'
-                  : saveState === 'saving'
-                    ? 'Saving…'
-                    : saveState === 'error'
-                      ? 'Save needs attention'
-                      : 'Settings save automatically'
-              }
-              sidebarExtras={
-                <>
-                  <button type="button" onClick={() => setShotBoardOpen(true)}>
-                    <Clapperboard size={14} />
-                    Shot board
-                  </button>
-                  {selectedRecord && (
-                    <button
-                      type="button"
-                      disabled={Boolean(pendingAction)}
-                      onClick={() => attachSource(() => window.latent.useOutputAsSource(selectedRecord.id))}
-                    >
-                      Use selected image as first frame
-                    </button>
-                  )}
-                  {previous && previous.id === active.id && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateSession({ draft: structuredClone(previous.draft) });
-                        setPrevious(undefined);
-                      }}
-                    >
-                      <Undo2 size={14} />
-                      Undo settings change
-                    </button>
-                  )}
-                  {conversation.sessions.length > 1 && (
-                    <details>
-                      <summary>Previous setups</summary>
-                      <label>
-                        Load previous setup
-                        <select
-                          value={conversation.activeSessionId ?? ''}
-                          disabled={Boolean(pendingAction)}
-                          onChange={event => {
-                            commit({ ...conversation, activeSessionId: event.target.value });
-                            setPrevious(undefined);
-                          }}
-                        >
-                          {conversation.sessions.map(session => (
-                            <option key={session.id} value={session.id}>
-                              {session.name.trim() || 'Untitled video'}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </details>
-                  )}
-                  <details>
-                    <summary>Playback diagnostic</summary>
-                    <p>Check local playback with a bundled two-second test clip.</p>
-                    <button
-                      type="button"
-                      disabled={Boolean(pendingAction)}
-                      onClick={() =>
-                        action('playback', async () => setFixture(await window.latent.getVideoPlaybackFixture()))
-                      }
-                    >
-                      Open playback diagnostic
-                    </button>
-                  </details>
-                </>
-              }
-              assetSetup={
-                <VideoAssetSetup
-                  status={snapshot.video.assets}
-                  profile={active?.draft.profile ?? 'base'}
-                  busy={Boolean(pendingAction)}
-                  cancelBusy={assetCancelPending}
-                  onSetup={profile =>
-                    action('assets-setup', async () => {
-                      await window.latent.setupVideoAssets(profile);
-                      setMessage('Video files are ready. Start the engine to generate; each job checks compatibility.');
-                    })
-                  }
-                  onVerify={profile =>
-                    action('assets-verify', async () => {
-                      await window.latent.verifyVideoAssets(profile);
-                      setMessage('Saved video files verified. Start the engine to generate.');
-                    })
-                  }
-                  onCancel={cancelAssetSetup}
-                />
-              }
-              draft={active.draft}
-              status={snapshot.video}
-              sources={snapshot.sourceImages.sources}
+          <span className="vp-spacer" />
+          <button type="button" className="vp-ghost" onClick={() => setShotBoardOpen(true)}>
+            <Clapperboard size={15} /> Shot board
+          </button>
+          <button type="button" className="vp-ghost" disabled={!active} onClick={() => setAssistantOpen(true)}>
+            <Sparkles size={15} /> Help me write
+          </button>
+        </div>
+        {(error || draftLoadError || historyError || message) && (
+          <div className="vp-notices">
+            {error && <Notice error>{error}</Notice>}
+            {draftLoadError && <Notice error>{draftLoadError}</Notice>}
+            {historyError && <Notice error>{historyError}</Notice>}
+            {message && <Notice>{message}</Notice>}
+          </div>
+        )}
+        <div className="vp-stage">
+          {!conversation ? (
+            <div className="vp-placeholder">
+              <Busy active={draftLoading} />
+              <p>{draftLoadError ? 'Your saved settings were left as they were.' : 'Opening video settings…'}</p>
+              {draftLoadError && (
+                <button type="button" disabled={draftLoading} onClick={() => void loadDrafts()}>
+                  Try again
+                </button>
+              )}
+            </div>
+          ) : draft && (!filesReady || assetsBusy) ? (
+            <VideoAssetSetup
+              status={snapshot.video.assets}
+              profile={draft.profile}
               busy={Boolean(pendingAction)}
-              message={message}
-              onChange={draft => updateSession({ draft })}
-              onSaveDraft={() =>
-                action('save', async () => {
-                  clearTimeout(timer.current);
-                  await persist(true);
+              cancelBusy={assetCancelPending}
+              onSetup={profile =>
+                action('assets-setup', async () => {
+                  await window.latent.setupVideoAssets(profile);
+                  setMessage('');
                 })
               }
-              onResetDraft={() => {
-                setPrevious({ id: active.id, draft: structuredClone(active.draft) });
-                updateSession({ draft: structuredClone(makeSession().draft) });
-              }}
-              onImportSource={() => attachSource(() => window.latent.importSourceImage())}
-              onOpenLicense={() => action('license', () => window.latent.openVideoLicense())}
-              onReviewPlan={reviewPlan}
-              onGenerate={queueVideo}
+              onVerify={profile =>
+                action('assets-verify', async () => {
+                  await window.latent.verifyVideoAssets(profile);
+                  setMessage('');
+                })
+              }
+              onCancel={cancelAssetSetup}
             />
+          ) : showJob ? (
+            <div
+              className="vp-screen vp-making"
+              style={{ aspectRatio: `${showJob.video.width} / ${showJob.video.height}` }}
+            >
+              <div className="vp-making-card" role="status">
+                <strong>
+                  {showJob.status === 'running'
+                    ? 'Making your clip'
+                    : showJob.status === 'queued'
+                      ? 'Waiting its turn'
+                      : 'This clip didn’t finish'}
+                </strong>
+                {showJob.status === 'running' && (
+                  <>
+                    <div className="vp-bar">
+                      <span style={{ width: `${percent}%` }} />
+                    </div>
+                    <span>
+                      {showJob.phase ?? 'Getting ready'}
+                      {showJob.progressMax
+                        ? ` · step ${Math.min(showJob.progress, showJob.progressMax)} of ${showJob.progressMax}`
+                        : ''}
+                    </span>
+                  </>
+                )}
+                {showJob.status === 'failed' && showJob.error && <span className="vp-error-text">{showJob.error}</span>}
+                <span className="vp-dim">{showJob.video.prompt}</span>
+              </div>
+            </div>
+          ) : selectedRecord && url ? (
+            <div
+              className="vp-screen"
+              style={{ aspectRatio: `${selectedRecord.media.width} / ${selectedRecord.media.height}` }}
+            >
+              {visible && <video key={selectedRecord.id} src={url} controls playsInline loop />}
+            </div>
+          ) : (
+            <div className="vp-placeholder">
+              <p>Your clip plays here.</p>
+              <p className="vp-dim">Describe what happens below, then press Make clip.</p>
+            </div>
           )}
-          {plan && (
-            <Modal title="Video plan" onClose={() => setPlan(undefined)}>
-              <dl className="metadata">
-                <dt>Output</dt>
-                <dd>
-                  {plan.width} × {plan.height} · {plan.frames} frames at 24 fps · {plan.durationSeconds.toFixed(4)} s
-                </dd>
-                <dt>Seed for this review</dt>
-                <dd>
-                  {plan.actualSeed}
-                  {plan.draft.seed === 'random' && ' · another review resolves a new seed'}
-                </dd>
-                <dt>Candidate sampling</dt>
-                <dd>
-                  {plan.sampling.steps} steps · {plan.sampling.sampler} / {plan.sampling.scheduler}
-                </dd>
-                <dt>Sources</dt>
-                <dd>
-                  {plan.sources.length
-                    ? plan.sources.map(source => (
-                        <p key={source.role}>
-                          {source.role === 'first' ? 'First' : 'Last'} frame: {source.originalWidth} ×{' '}
-                          {source.originalHeight} → {plan.width} × {plan.height},{' '}
-                          {source.resize === 'center-crop' ? 'center crop' : 'stretch'} with Lanczos. Source identity:{' '}
-                          {source.sha256}
-                        </p>
-                      ))
-                    : 'Text to video; no image references.'}
-                </dd>
-              </dl>
-              <Notice>
-                Reviewing a plan does not start generation. Current availability is shown above; each submitted job
-                verifies its model files, source images and engine compatibility.
-              </Notice>
-            </Modal>
+          {selectedRecord && filesReady && !assetsBusy && !showJob && (
+            <div className="vp-under">
+              <span className="vp-dim">
+                {selectedRecord.media.width}×{selectedRecord.media.height} ·{' '}
+                {selectedRecord.media.durationSeconds.toFixed(1)} s
+                {selectedRecord.plan ? ` · seed ${selectedRecord.plan.actualSeed}` : ''}
+                {selectedRecord.elapsedMs ? ` · made in ${formatDuration(selectedRecord.elapsedMs)}` : ''}
+              </span>
+              <span className="vp-spacer" />
+              <button
+                type="button"
+                className="vp-ghost"
+                disabled={Boolean(pendingAction)}
+                onClick={() => reuseSavedVideo(selectedRecord.id)}
+              >
+                <RotateCcw size={14} /> Reuse settings
+              </button>
+              <button
+                type="button"
+                className="vp-ghost"
+                onClick={() => action('reveal', () => window.latent.revealVideo(selectedRecord.id))}
+              >
+                <FolderOpen size={14} /> Show file
+              </button>
+            </div>
           )}
-        </>
-      )}
-      <VideoHistory
-        studio
-        playbackVisible={visible}
+        </div>
+        {draft && (
+          <VideoDock
+            draft={draft}
+            status={snapshot.video}
+            sources={snapshot.sourceImages.sources}
+            busy={Boolean(pendingAction) && pendingAction !== 'reveal'}
+            estimateMs={estimateMs}
+            selectedImageAvailable={Boolean(selectedImage)}
+            lastSeed={history[0]?.plan?.actualSeed}
+            onChange={next => updateSession({ draft: next })}
+            onImportSource={role => attachSource(role, () => window.latent.importSourceImage())}
+            onUseSelectedImage={role =>
+              selectedImage && attachSource(role, () => window.latent.useOutputAsSource(selectedImage.id))
+            }
+            onInstallSol={installSol}
+            solBusy={solBusy}
+            onGenerate={queueVideo}
+          />
+        )}
+      </div>
+      <VideoClips
+        jobs={snapshot.jobs}
         records={history}
-        selectedId={active?.selectedRecordId ?? history[0]?.id}
-        loading={historyLoading}
-        error={historyError}
+        selectedId={selectedId}
         warnings={historyWarnings}
-        onRefresh={() => void loadHistory()}
-        reuseDisabled={!conversation || Boolean(pendingAction)}
         onSelect={selectSavedVideo}
-        onReuse={reuseSavedVideo}
-        onReveal={id => action('reveal', () => window.latent.revealVideo(id))}
+        onSelectJob={selectSavedVideo}
+        onCancel={id => action('cancel', () => window.latent.cancelJob(id))}
+        onRetrySave={id => action('retry-save', () => window.latent.retryVideoSave(id))}
       />
       {visible && assistantOpen && active && (
         <PromptAssistant
@@ -546,30 +530,18 @@ export function VideoStudio({ snapshot, selectedRecord, visible, run }: VideoStu
         <ShotBoard
           records={history}
           jobs={snapshot.jobs}
-          selectedRecordId={active?.selectedRecordId ?? history[0]?.id}
+          selectedRecordId={selectedRecord?.id ?? history[0]?.id}
           defaultPrompt={active?.draft.prompt ?? ''}
           takeBlocked={
             !snapshot.video.canGenerate
-              ? snapshot.video.message || 'Video generation is not ready yet.'
+              ? snapshot.video.message
               : !active
-                ? 'Choose a video draft first.'
+                ? 'The video settings are still opening.'
                 : undefined
           }
           onMakeTake={makeTake}
           onClose={() => setShotBoardOpen(false)}
         />
-      )}
-      {visible && fixture && (
-        <Modal title="Playback diagnostic" onClose={() => setFixture(undefined)}>
-          <VideoHistory
-            title="Playback diagnostic · no AI model used"
-            records={[fixture]}
-            selectedId={fixture.id}
-            onSelect={() => undefined}
-            onReuse={() => undefined}
-            onReveal={id => action('reveal', () => window.latent.revealVideo(id))}
-          />
-        </Modal>
       )}
     </div>
   );

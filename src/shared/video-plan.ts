@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import type { SourceImageAsset } from './source-types';
-import type { VideoAssetIdentity, VideoAvailability, VideoDraft, VideoPlan, VideoSourceTransform } from './video-types';
+import type {
+  VideoAssetIdentity,
+  VideoAvailability,
+  VideoDraft,
+  VideoPlan,
+  VideoSourceTransform,
+  VideoSpeed,
+} from './video-types';
 
 const sourceReferenceSchema = z
   .object({
@@ -8,66 +15,92 @@ const sourceReferenceSchema = z
     sha256: z.string().regex(/^[0-9a-f]{64}$/),
   })
   .strict();
-export const videoDraftSchema = z
+export const DEFAULT_VIDEO_SPEED: Readonly<VideoSpeed> = Object.freeze({
+  textOnGpu: 'auto',
+  attention: 'sage',
+  finish: 'quick',
+});
+export const videoSpeedSchema = z
   .object({
-    schema: z.literal(1),
-    provider: z.literal('local-minimax-h3'),
-    mode: z.enum(['txt2vid', 'img2vid']),
-    prompt: z
-      .string()
-      .max(8000)
-      .refine(value => !value.includes('\0'), 'The prompt contains a null character.'),
-    width: z.number().int().min(32).max(2048).multipleOf(32),
-    height: z.number().int().min(32).max(2048).multipleOf(32),
-    requestedDurationSeconds: z.number().finite().min(5).max(15),
-    seed: z
-      .string()
-      .refine(
-        value =>
-          value === 'random' ||
-          (/^(0|[1-9][0-9]{0,15})$/.test(value) && BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER)),
-        'Use random or an integer seed up to 9007199254740991.',
-      ),
-    profile: z.enum(['base', 'turbo8', 'fused4']),
-    audio: z.enum(['none', 'stereo-candidate']),
-    attention: z.enum(['default', 'sage-auto']).optional(),
-    decodeMode: z.enum(['tiled', 'auto']).optional(),
-    firstFrame: sourceReferenceSchema.optional(),
-    lastFrame: sourceReferenceSchema.optional(),
-    resize: z.enum(['stretch', 'center-crop']),
+    textOnGpu: z.enum(['auto', 'on', 'off']).catch('auto'),
+    attention: z.enum(['normal', 'sage', 'sage-sol']).catch('sage'),
+    finish: z.enum(['quick', 'low-memory']).catch('quick'),
   })
-  .strict()
-  .superRefine((value, ctx) => {
-    if ((value.attention || value.decodeMode) && value.profile !== 'fused4')
-      ctx.addIssue({
-        code: 'custom',
-        path: ['attention'],
-        message: 'Attention and decoding selection are supported by the fused four-step profile.',
-      });
-    if (value.width * value.height > 768 * 1344)
+  .strict();
+/** The largest picture area H3 is made for (768 × 1344 either way round). */
+export const VIDEO_MAX_AREA = 768 * 1344;
+const draftShape = {
+  schema: z.literal(2),
+  provider: z.literal('local-minimax-h3'),
+  mode: z.enum(['txt2vid', 'img2vid']),
+  prompt: z
+    .string()
+    .max(8000)
+    .refine(value => !value.includes('\0'), 'The prompt contains a null character.'),
+  width: z.number().int().min(32).max(2048).multipleOf(32),
+  height: z.number().int().min(32).max(2048).multipleOf(32),
+  requestedDurationSeconds: z.number().finite().min(5).max(15),
+  seed: z
+    .string()
+    .refine(
+      value =>
+        value === 'random' ||
+        (/^(0|[1-9][0-9]{0,15})$/.test(value) && BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER)),
+      'Use random or a whole number seed.',
+    ),
+  profile: z.enum(['base', 'turbo8', 'fused4']),
+  audio: z.enum(['none', 'stereo-candidate']),
+  speed: videoSpeedSchema,
+  firstFrame: sourceReferenceSchema.optional(),
+  lastFrame: sourceReferenceSchema.optional(),
+  resize: z.enum(['stretch', 'center-crop']),
+};
+/** Drafts saved before the rebuild (schema 1) move over with the same choices. */
+export function upgradeVideoDraft(value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const draft = value as Record<string, unknown>;
+  if (draft.schema !== 1) return value;
+  const { attention, decodeMode, ...rest } = draft;
+  return {
+    ...rest,
+    schema: 2,
+    speed: {
+      ...DEFAULT_VIDEO_SPEED,
+      ...(attention === 'sage-auto' ? { attention: 'sage' } : attention === 'default' ? { attention: 'normal' } : {}),
+      ...(decodeMode === 'tiled' ? { finish: 'low-memory' } : {}),
+    },
+  };
+}
+export const videoDraftObjectSchema = z.object(draftShape).strict();
+export const videoDraftSchema = z.preprocess(
+  upgradeVideoDraft,
+  videoDraftObjectSchema.superRefine((value, ctx) => {
+    if (value.width * value.height > VIDEO_MAX_AREA)
       ctx.addIssue({
         code: 'custom',
         path: ['width'],
-        message: 'The native H3 candidate is limited to a 768 × 1344 pixel area.',
+        message: 'That size is too big for H3. Keep it within 768 × 1344.',
       });
     if (value.mode === 'txt2vid' && (value.firstFrame || value.lastFrame))
       ctx.addIssue({
         code: 'custom',
         path: ['mode'],
-        message: 'Text-to-video cannot retain hidden image references. Clear them or select Image to video.',
+        message: 'Text to video can’t use frames. Clear them or pick Image.',
       });
-  });
+  }),
+);
 export const DEFAULT_VIDEO_DRAFT: Readonly<VideoDraft> = Object.freeze({
-  schema: 1,
+  schema: 2,
   provider: 'local-minimax-h3',
   mode: 'txt2vid',
   prompt: '',
-  width: 512,
-  height: 288,
+  width: 832,
+  height: 480,
   requestedDurationSeconds: 5,
   seed: 'random',
-  profile: 'base',
+  profile: 'fused4',
   audio: 'none',
+  speed: { ...DEFAULT_VIDEO_SPEED },
   resize: 'center-crop',
 });
 const repository = 'Comfy-Org/MiniMax-H3';
@@ -133,12 +166,10 @@ export function videoProfileAssets(profile: VideoDraft['profile']): VideoAssetId
   );
 }
 export const VIDEO_AVAILABILITY: Readonly<VideoAvailability> = Object.freeze({
-  phase: 'eligibility-unresolved',
-  canAcquire: false,
+  phase: 'assets-missing',
+  canAcquire: true,
   canGenerate: false,
-  message:
-    'Video planning is available. MiniMax H3 setup and generation await the licensing eligibility decision, verified assets, and local hardware testing.',
-  hardwareEvidence: 'not-measured',
+  message: 'Get the video files to start making clips.',
   licenseUrl: 'https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/42ed227ee7df40d41602854ae760620d6eb651fe/LICENSE',
   baseBytes: H3_VIDEO_CANDIDATE_ASSETS.filter(item => item.role !== 'turbo').reduce((sum, item) => sum + item.bytes, 0),
   withTurboBytes: H3_VIDEO_CANDIDATE_ASSETS.reduce((sum, item) => sum + item.bytes, 0),
@@ -156,42 +187,33 @@ export function resolveVideoDuration(seconds: number) {
   const frames = 5 + Math.ceil((requestedFrames - 5) / 17) * 17;
   return { frames, fps: { numerator: 24 as const, denominator: 1 as const }, durationSeconds: frames / 24 };
 }
+export const VIDEO_STEPS = { fused4: 4, turbo8: 8, base: 20 } as const;
+/** Whether the prompt reader runs on the graphics card for this draft. */
+export function textOnGpu(speed: VideoSpeed, bigCard: boolean): boolean {
+  return speed.textOnGpu === 'on' || (speed.textOnGpu === 'auto' && bigCard);
+}
 export function planVideo(
   input: VideoDraft,
-  options: { actualSeed: string; sources: readonly SourceImageAsset[] },
+  options: { actualSeed: string; sources: readonly SourceImageAsset[]; bigCard?: boolean },
 ): VideoPlan {
-  const draft = videoDraftSchema.parse(input);
-  if (!draft.prompt.trim()) throw new Error('Describe the video before saving an execution plan.');
+  const draft = videoDraftSchema.parse(input) as VideoDraft;
+  if (!draft.prompt.trim()) throw new Error('Describe the video first.');
   if (
     !/^(0|[1-9][0-9]{0,15})$/.test(options.actualSeed) ||
     BigInt(options.actualSeed) > BigInt(Number.MAX_SAFE_INTEGER)
   )
-    throw new Error('A resolved integer seed is required for the frozen video plan.');
-  if (draft.seed !== 'random' && draft.seed !== options.actualSeed)
-    throw new Error('The resolved seed does not match the authored fixed seed.');
+    throw new Error('The clip needs a whole number seed.');
+  if (draft.seed !== 'random' && draft.seed !== options.actualSeed) throw new Error('The seed changed. Try again.');
   if (draft.mode === 'img2vid' && !draft.firstFrame && !draft.lastFrame)
-    throw new Error('Choose a first frame, a last frame, or both for Image to video.');
+    throw new Error('Pick a first frame, a last frame, or both.');
   const sources: VideoSourceTransform[] = [];
   for (const role of ['first', 'last'] as const) {
     const selected = role === 'first' ? draft.firstFrame : draft.lastFrame;
     if (!selected) continue;
-    const matches = options.sources.filter(source => source.id === selected.sourceId);
-    const source = matches[0];
-    if (
-      matches.length !== 1 ||
-      source.normalized.sha256 !== selected.sha256 ||
-      source.normalized.mimeType !== 'image/png'
-    )
-      throw new Error(`The ${role} frame is missing, ambiguous, or no longer matches its saved identity.`);
+    const source = options.sources.find(item => item.id === selected.sourceId);
+    if (!source || source.normalized.sha256 !== selected.sha256)
+      throw new Error(`The ${role} frame is missing or changed. Pick it again.`);
     const { width, height } = source.normalized;
-    if (
-      !Number.isInteger(width) ||
-      !Number.isInteger(height) ||
-      Math.min(width, height) < 1 ||
-      Math.max(width, height) > 8192 ||
-      width * height > 32 * 1024 * 1024
-    )
-      throw new Error(`The ${role} source dimensions exceed the import bounds.`);
     sources.push({
       ...selected,
       role,
@@ -205,9 +227,7 @@ export function planVideo(
     });
   }
   return {
-    schema: 1,
-    workflowVersion: draft.profile === 'fused4' ? 'minimax-h3-fused-int8@1' : 'minimax-h3-fl2va-int8@1',
-    executionStatus: 'planning-only',
+    schema: 2,
     draft: structuredClone(draft),
     actualSeed: options.actualSeed,
     ...resolveVideoDuration(draft.requestedDurationSeconds),
@@ -215,27 +235,17 @@ export function planVideo(
     height: draft.height,
     sources,
     sampling: {
-      steps: draft.profile === 'fused4' ? 4 : draft.profile === 'turbo8' ? 8 : 20,
+      steps: VIDEO_STEPS[draft.profile],
       sampler: 'res_multistep',
       scheduler: 'simple',
-      guidance: 'distilled-basic',
-      denoise: 1,
-      textEncoderDevice: draft.profile === 'fused4' ? 'default' : 'cpu',
-      ...(draft.profile === 'turbo8' ? { turboStrength: 1 as const } : {}),
+      textEncoderDevice: textOnGpu(draft.speed, options.bigCard === true) ? 'default' : 'cpu',
+      attention: draft.speed.attention,
     },
     decode:
-      draft.decodeMode === 'auto'
+      draft.speed.finish === 'quick'
         ? { tiled: false }
         : { tiled: true, tileSize: 512, overlap: 64, temporalSize: 64, temporalOverlap: 8 },
-    encoding: { container: 'mp4', codec: 'h264', bitDepth: 8, colorSpace: 'sRGB', audio: draft.audio },
+    encoding: { container: 'mp4', codec: 'h264', audio: draft.audio },
     assets: structuredClone(videoProfileAssets(draft.profile)),
-    baselineComfyCommit: '12d5279438bfefc058a269eae805ceab6047777f',
-    limitations: [
-      draft.profile === 'fused4'
-        ? 'Fused model includes fixed reference, turbo, and Mystic style weights; no separate turbo adapter is applied.'
-        : 'Planning contract only; licensing eligibility is unresolved and no H3 assets have been acquired.',
-      'Memory, generation time, source fidelity, motion, audio, and playback remain unverified on this GPU.',
-      'Silent export omits the audio track; the native joint AV model still computes audio latents.',
-    ],
   };
 }

@@ -33,7 +33,6 @@ const api: LatentAPI = {
   saveVideoConversation: value => invoke('saveVideoConversation', value),
   getShotBoard: () => invoke('getShotBoard'),
   saveShotBoard: value => invoke('saveShotBoard', value),
-  planVideoDraft: draft => invoke('planVideoDraft', draft),
   getVideoPlaybackFixture: () => invoke('getVideoPlaybackFixture'),
   getVideoHistory: () => invoke('getVideoHistory'),
   restoreVideoParameters: id => invoke('restoreVideoParameters', id),

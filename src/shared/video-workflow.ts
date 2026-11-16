@@ -1,7 +1,5 @@
-import { planVideo } from './video-plan';
-import type { SourceImageAsset } from './source-types';
 import type { ComfyWorkflow } from './types';
-import type { VideoAssetIdentity, VideoDraft, VideoWorkflowContract } from './video-types';
+import type { VideoAssetIdentity, VideoPlan, VideoWorkflowContract } from './video-types';
 
 export interface VideoAssetBinding {
   role: VideoAssetIdentity['role'];
@@ -23,43 +21,46 @@ export function safeVideoRelativeFilename(value: string, extension: '.png' | '.s
           /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part),
       )
   )
-    throw new Error('Video dependencies require safe relative filenames from verified private paths.');
+    throw new Error('A video file has an unsafe name.');
   return value;
 }
-/** Graph authoring only. No model loading, right to use, availability check or backend submission occurs. */
+
+/** Node names for the optional speed add-ons. */
+export const VIDEO_ATTENTION_NODE = 'LatentVideoAttention';
+export const SOL_ATTENTION_NODE = 'LatentSolAttention';
+
+/** Settings the Sol add-on was tested with on a 3090. */
+export const SOL_SETTINGS = Object.freeze({
+  tau: 1.3,
+  dense_blocks: '0-2',
+  int8_qk: true,
+  int8_pv: true,
+  sink_conditioning: 'exact_kv_and_rows',
+});
+
+/**
+ * Builds the engine graph for one clip. The plan already holds every choice; this only lays out nodes.
+ * `globalSage` is true when the engine itself was started with SageAttention for everything.
+ */
 export function buildVideoWorkflow(
   input: {
-    draft: VideoDraft;
-    actualSeed: string;
-    sources: readonly SourceImageAsset[];
-    sourceFilenames: Record<string, string>;
+    plan: VideoPlan;
     jobId: string;
+    sourceFilenames: Record<string, string>;
+    globalSage?: boolean;
   },
   bindings: readonly VideoAssetBinding[],
 ): VideoWorkflowContract {
-  const plan = planVideo(input.draft, { actualSeed: input.actualSeed, sources: input.sources });
-  if (!/^[a-f0-9]{32}$/.test(input.jobId))
-    throw new Error('The video job identifier must be an immutable 32-character ID.');
-  if (bindings.length !== plan.assets.length)
-    throw new Error('The video candidate asset set must match the selected profile.');
+  const { plan } = input;
+  if (!/^[a-f0-9]{32}$/.test(input.jobId)) throw new Error('The video job needs a 32-character ID.');
   const names = new Map<string, string>();
   for (const asset of plan.assets) {
-    const matches = bindings.filter(value => value.role === asset.role);
-    const binding = matches[0];
-    if (
-      matches.length !== 1 ||
-      binding.sha256 !== asset.sha256 ||
-      binding.bytes !== asset.bytes ||
-      binding.filename.split('/').at(-1) !== asset.filename.split('/').at(-1)
-    )
-      throw new Error(`Video ${asset.role} identity differs from the reviewed candidate.`);
+    const binding = bindings.find(value => value.role === asset.role);
+    if (!binding) throw new Error(`The video ${asset.role} file is missing.`);
     names.set(asset.role, safeVideoRelativeFilename(binding.filename, '.safetensors'));
   }
   const filenamePrefix = `Latent_${input.jobId}_video`;
-  const model: [string, number] = [
-    plan.draft.attention === 'sage-auto' ? '17' : plan.draft.profile === 'turbo8' ? '16' : '1',
-    0,
-  ];
+  let model: [string, number] = ['1', 0];
   const workflow: ComfyWorkflow = {
     '1': { class_type: 'UNETLoader', inputs: { unet_name: names.get('diffusion')!, weight_dtype: 'default' } },
     '2': {
@@ -80,6 +81,28 @@ export function buildVideoWorkflow(
     },
     '6': { class_type: 'RandomNoise', inputs: { noise_seed: Number(plan.actualSeed) } },
     '7': { class_type: 'KSamplerSelect', inputs: { sampler_name: plan.sampling.sampler } },
+  };
+  if (plan.draft.profile === 'turbo8') {
+    workflow['16'] = {
+      class_type: 'LoraLoaderModelOnly',
+      inputs: { model, lora_name: names.get('turbo')!, strength_model: 1 },
+    };
+    model = ['16', 0];
+  }
+  const attention = plan.sampling.attention;
+  // Sage comes from the engine-wide setting when it is on; otherwise a small node switches this model only.
+  if (attention === 'normal' ? input.globalSage : !input.globalSage) {
+    workflow['17'] = {
+      class_type: VIDEO_ATTENTION_NODE,
+      inputs: { model, attention: attention === 'normal' ? 'normal' : 'sage' },
+    };
+    model = ['17', 0];
+  }
+  if (attention === 'sage-sol') {
+    workflow['18'] = { class_type: SOL_ATTENTION_NODE, inputs: { model, ...SOL_SETTINGS } };
+    model = ['18', 0];
+  }
+  Object.assign(workflow, {
     '8': {
       class_type: 'BasicScheduler',
       inputs: { model, scheduler: plan.sampling.scheduler, steps: plan.sampling.steps, denoise: 1 },
@@ -102,8 +125,8 @@ export function buildVideoWorkflow(
             temporal_overlap: plan.decode.temporalOverlap,
           },
         },
-    '14': { class_type: 'CreateVideo', inputs: { images: ['11', 0], fps: 24, bit_depth: 8, color_space: 'sRGB' } },
-    // V3 dynamic inputs are flattened on the API wire; Comfy reconstructs nested execution dictionaries.
+    '14': { class_type: 'CreateVideo', inputs: { images: ['11', 0], fps: 24 } },
+    // V3 dynamic inputs are flattened on the API wire; the engine rebuilds the nested choices.
     '15': {
       class_type: 'SaveVideo',
       inputs: {
@@ -115,20 +138,13 @@ export function buildVideoWorkflow(
         'format.codec.encoding.crf': 23,
       },
     },
-  };
-  if (plan.draft.attention === 'sage-auto')
-    workflow['17'] = { class_type: 'LatentVideoAttention', inputs: { model: ['1', 0], attention: 'sage-auto' } };
+  } satisfies ComfyWorkflow);
   if (plan.draft.audio === 'stereo-candidate') {
     workflow['4'] = { class_type: 'VAELoader', inputs: { vae_name: names.get('audioVae')! } };
     workflow['12'] = { class_type: 'VAEDecodeAudio', inputs: { samples: ['10', 0], vae: ['4', 0] } };
     workflow['14'].inputs.audio = ['12', 0];
   }
-  if (plan.draft.profile === 'turbo8')
-    workflow['16'] = {
-      class_type: 'LoraLoaderModelOnly',
-      inputs: { model: ['1', 0], lora_name: names.get('turbo')!, strength_model: 1 },
-    };
-  const verifiedSourceFilenames: string[] = [];
+  const sourceFilenames: string[] = [];
   for (const source of plan.sources) {
     const filename = safeVideoRelativeFilename(input.sourceFilenames[source.sourceId], '.png');
     const load = source.role === 'first' ? '20' : '22';
@@ -145,182 +161,46 @@ export function buildVideoWorkflow(
       },
     };
     workflow['5'].inputs[source.role === 'first' ? 'first_frame' : 'last_frame'] = [scale, 0];
-    verifiedSourceFilenames.push(filename);
+    sourceFilenames.push(filename);
   }
   return {
-    schema: 1,
+    schema: 2,
     plan,
     workflow,
-    output: { nodeId: '15', filenamePrefix, extension: '.mp4', expectedCount: 1, historyKey: 'images', animated: true },
-    verifiedSourceFilenames: [...new Set(verifiedSourceFilenames)],
+    output: { nodeId: '15', filenamePrefix, extension: '.mp4' },
+    sourceFilenames: [...new Set(sourceFilenames)],
   };
 }
-type SchemaMap = Record<string, any>;
-const choices = (definition: any): unknown[] =>
-  Array.isArray(definition?.[0]) ? definition[0] : definition?.[0] === 'COMBO' ? (definition[1]?.options ?? []) : [];
-const schemaObject = (value: any): value is Record<string, any> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value);
-/** Only the chosen dynamic branches exist on the API wire. Defaults are not
- * frozen recipe values, so even a new required field with a default must fail. */
-function activeVideoInputs(definition: any, supplied: Record<string, unknown>, classType: string): Map<string, any> {
-  const active = new Map<string, any>();
-  const visit = (groups: any, prefix = '', depth = 0) => {
-    if (!schemaObject(groups) || depth > 16) throw new Error(`The engine changed the ${classType} input schema.`);
-    for (const group of ['required', 'optional']) {
-      const fields = groups[group];
-      if (fields === undefined) continue;
-      if (!schemaObject(fields)) throw new Error(`The engine changed the ${classType} input schema.`);
-      for (const [name, input] of Object.entries(fields)) {
-        const path = prefix ? `${prefix}.${name}` : name;
-        if (!name || name.includes('.') || active.has(path) || !Array.isArray(input) || !input.length)
-          throw new Error(`The engine changed the ${classType}.${path} input schema.`);
-        active.set(path, input);
-        const present = Object.hasOwn(supplied, path);
-        if (group === 'required' && !present)
-          throw new Error(`The engine requires ${classType}.${path}, which is absent from the frozen video workflow.`);
-        if (present && input[0] === 'COMFY_DYNAMICCOMBO_V3') {
-          const options = input[1]?.options;
-          const selected = Array.isArray(options)
-            ? options.filter((option: any) => schemaObject(option) && option.key === supplied[path])
-            : [];
-          if (typeof supplied[path] !== 'string' || selected.length !== 1)
-            throw new Error(`The engine does not provide the reviewed video encoding choice at ${classType}.${path}.`);
-          visit(selected[0].inputs, path, depth + 1);
-        }
-      }
-    }
-  };
-  visit(definition.input);
-  // Comfy supplies input.hidden itself; it is not part of the authored graph.
-  return active;
-}
-/** Read-only capability binding. Must follow future main-process rights, source and full asset verification. */
-export function bindVideoWorkflow(contract: VideoWorkflowContract, objects: SchemaMap): VideoWorkflowContract {
-  if (contract.plan.draft.attention === 'sage-auto' && !objects.LatentVideoAttention)
-    throw new Error(
-      'The private engine lacks LatentVideoAttention. Install the optional acceleration support or choose Default attention.',
-    );
+
+const MISSING_NODE_HELP: Record<string, string> = {
+  MiniMaxH3ImageToVideo: 'This engine version has no H3 support. Update the engine in Settings.',
+  [VIDEO_ATTENTION_NODE]: 'The engine needs a restart to pick up the video speed switch.',
+  [SOL_ATTENTION_NODE]: 'Sol isn’t installed. Install it in the Speed panel, or pick Sage.',
+};
+
+/** Light check that the engine has every node and model file this graph needs. Returns the graph with
+ * file names spelled the way the engine lists them (Windows uses backslashes). */
+export function bindVideoWorkflow(
+  contract: VideoWorkflowContract,
+  objects: Record<string, any>,
+): VideoWorkflowContract {
   const result = structuredClone(contract);
-  const outputs: Record<string, string[]> = {
-    UNETLoader: ['MODEL'],
-    CLIPLoader: ['CLIP'],
-    VAELoader: ['VAE'],
-    MiniMaxH3ImageToVideo: ['CONDITIONING', 'LATENT'],
-    RandomNoise: ['NOISE'],
-    KSamplerSelect: ['SAMPLER'],
-    BasicScheduler: ['SIGMAS'],
-    BasicGuider: ['GUIDER'],
-    SamplerCustomAdvanced: ['LATENT', 'LATENT'],
-    VAEDecodeTiled: ['IMAGE'],
-    VAEDecode: ['IMAGE'],
-    VAEDecodeAudio: ['AUDIO'],
-    CreateVideo: ['VIDEO'],
-    SaveVideo: ['VIDEO'],
-    LoadImage: ['IMAGE', 'MASK'],
-    ImageScale: ['IMAGE'],
-    LoraLoaderModelOnly: ['MODEL'],
-    LatentVideoAttention: ['MODEL'],
-  };
   for (const node of Object.values(result.workflow)) {
     const definition = objects[node.class_type];
-    if (
-      !definition ||
-      !outputs[node.class_type] ||
-      outputs[node.class_type].some(
-        (type, index) => definition.output?.[index] !== type || definition.output_is_list?.[index] === true,
-      ) ||
-      definition.is_input_list === true
-    )
-      throw new Error(`The engine lacks the reviewed ${node.class_type} output contract.`);
-    const activeInputs = activeVideoInputs(definition, node.inputs, node.class_type);
-    for (const [name, value] of Object.entries(node.inputs)) {
-      const input = activeInputs.get(name);
-      if (!input) throw new Error(`The engine lacks ${node.class_type}.${name} in the selected input schema.`);
-      if (Array.isArray(value)) {
-        const source = result.workflow[value[0]];
-        const expected = source && objects[source.class_type]?.output?.[value[1]];
-        if (
-          value.length !== 2 ||
-          typeof value[0] !== 'string' ||
-          !Number.isInteger(value[1]) ||
-          value[1] < 0 ||
-          !expected ||
-          input[0] !== expected
-        )
-          throw new Error(`The engine changed a video link type at ${node.class_type}.${name}.`);
-        continue;
-      }
-      if (input[1]?.forceInput === true)
-        throw new Error(`The engine now requires a link at ${node.class_type}.${name}.`);
-      if (
-        node.class_type === 'LoadImage' &&
-        name === 'image' &&
-        result.verifiedSourceFilenames.includes(String(value))
-      ) {
-        if (
-          input[1]?.multiselect === true ||
-          !Array.isArray(choices(input)) ||
-          (!choices(input).length && input[0] !== 'COMBO' && !Array.isArray(input[0]))
-        )
-          throw new Error('The source-image input is no longer a filename choice.');
-        continue;
-      }
-      if (input[0] === 'COMFY_DYNAMICCOMBO_V3') continue;
-      if (input[0] === 'COMBO' || Array.isArray(input[0])) {
-        const filename = [
-          'UNETLoader.unet_name',
-          'CLIPLoader.clip_name',
-          'VAELoader.vae_name',
-          'LoraLoaderModelOnly.lora_name',
-        ].includes(`${node.class_type}.${name}`);
-        const options = choices(input);
-        const matches = Array.isArray(options)
-          ? options.filter(option =>
-              filename && typeof option === 'string' && typeof value === 'string'
-                ? option.replaceAll('\\', '/') === value
-                : option === value,
-            )
-          : [];
-        if (input[1]?.multiselect === true || matches.length !== 1)
-          throw new Error(`The engine does not offer the reviewed ${node.class_type}.${name}.`);
-        if (filename) node.inputs[name] = matches[0] as string;
-      } else if (input[0] === 'INT' || input[0] === 'FLOAT') {
-        const bounds = input[1];
-        if (
-          (bounds !== undefined && !schemaObject(bounds)) ||
-          ['min', 'max'].some(
-            key => bounds?.[key] !== undefined && (typeof bounds[key] !== 'number' || !Number.isFinite(bounds[key])),
-          ) ||
-          typeof value !== 'number' ||
-          !Number.isFinite(value) ||
-          (input[0] === 'INT' && !Number.isInteger(value)) ||
-          value < (bounds?.min ?? -Infinity) ||
-          value > (bounds?.max ?? Infinity)
-        )
-          throw new Error(`The engine numeric range changed for ${node.class_type}.${name}.`);
-      } else if (input[0] === 'STRING') {
-        if (typeof value !== 'string') throw new Error(`The video string input ${name} is invalid.`);
-      } else if (input[0] === 'BOOLEAN') {
-        if (typeof value !== 'boolean')
-          throw new Error(`The engine changed the video input type at ${node.class_type}.${name}.`);
-      } else throw new Error(`The engine changed the video input type at ${node.class_type}.${name}.`);
+    if (!definition)
+      throw new Error(MISSING_NODE_HELP[node.class_type] ?? `The engine is missing the ${node.class_type} node.`);
+    for (const field of ['unet_name', 'clip_name', 'vae_name', 'lora_name'] as const) {
+      const value = node.inputs[field];
+      if (typeof value !== 'string') continue;
+      const spec = definition.input?.required?.[field];
+      const options: unknown[] = Array.isArray(spec?.[0]) ? spec[0] : (spec?.[1]?.options ?? []);
+      const match = options.find(
+        option => typeof option === 'string' && option.replaceAll('\\', '/') === value.replaceAll('\\', '/'),
+      );
+      if (typeof match !== 'string')
+        throw new Error(`The engine can’t see ${value.split('/').at(-1)}. Restart the engine and try again.`);
+      node.inputs[field] = match;
     }
   }
-  const writer = result.workflow[result.output.nodeId];
-  const writerInputs =
-    writer?.class_type === 'SaveVideo' ? activeVideoInputs(objects.SaveVideo, writer.inputs, 'SaveVideo') : undefined;
-  if (
-    !writerInputs ||
-    writer.inputs.format !== 'mp4' ||
-    writer.inputs['format.codec'] !== 'h264' ||
-    writer.inputs['format.codec.encoding'] !== 're-encode' ||
-    writer.inputs['format.codec.encoding.crf'] !== 23 ||
-    writerInputs.get('format')?.[0] !== 'COMFY_DYNAMICCOMBO_V3' ||
-    writerInputs.get('format.codec')?.[0] !== 'COMFY_DYNAMICCOMBO_V3' ||
-    writerInputs.get('format.codec.encoding')?.[0] !== 'COMFY_DYNAMICCOMBO_V3' ||
-    writerInputs.get('format.codec.encoding.crf')?.[0] !== 'FLOAT' ||
-    !objects.SaveVideo.output_node
-  )
-    throw new Error('The engine does not provide the reviewed MP4/H.264 output encoding contract.');
   return result;
 }

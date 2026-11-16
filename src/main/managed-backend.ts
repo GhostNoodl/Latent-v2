@@ -1,3 +1,4 @@
+import { installVideoAttentionNode } from './video-speed-nodes';
 import { beginSetupActivity } from './setup-activity';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -696,6 +697,7 @@ export class ManagedBackend {
       modelPathsYaml(this.paths, (await this.getModelRoots?.()) ?? []),
     );
     await fs.promises.writeFile(path.join(this.paths.runtime, 'comfy-launcher.py'), launcherSource());
+    await installVideoAttentionNode(this.paths);
   }
 
   private async launch(): Promise<void> {

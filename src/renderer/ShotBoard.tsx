@@ -15,7 +15,7 @@ import {
 import { isVideoJob, type StudioJob } from '../shared/types';
 import type { VideoHistoryRecord } from '../shared/video-types';
 import { actionErrorMessage } from '../shared/action-error';
-import { safeVideoHistoryUrl } from './VideoHistory';
+import { safeVideoHistoryUrl } from './video-url';
 import { Modal } from './ui';
 
 type Showing = { kind: 'take'; jobId: string } | { kind: 'playlist'; index: number };

@@ -810,10 +810,6 @@
       "to": "resources/latent-icon.svg"
     },
     {
-      "from": "resources/latent-video-attention.py",
-      "to": "resources/latent-video-attention.py"
-    },
-    {
       "from": "resources/segmentation-worker.py",
       "to": "resources/segmentation-worker.py"
     },

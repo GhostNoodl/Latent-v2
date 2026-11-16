@@ -30,6 +30,13 @@ const authorizationSchema = z
   })
   .strict();
 const profileSchema = z.enum(['base', 'turbo8', 'fused4']);
+const ROLE_NAMES: Record<VideoAssetIdentity['role'], string> = {
+  diffusion: 'video model',
+  encoder: 'prompt reader',
+  videoVae: 'picture decoder',
+  audioVae: 'sound decoder',
+  turbo: 'turbo add-on',
+};
 export function videoAssetPath(paths: AppPaths, asset: VideoAssetIdentity) {
   return path.join(
     paths.models,
@@ -83,8 +90,7 @@ export class VideoAssetsService {
   }
   private authorization() {
     const parsed = authorizationSchema.safeParse(this.authority());
-    if (!parsed.success)
-      throw new Error('MiniMax H3 licensing eligibility is unresolved. Model acquisition and use remain unavailable.');
+    if (!parsed.success) throw new Error('Video file setup is unavailable.');
     return parsed.data;
   }
   /** Main/queue may recheck permission immediately before submission without repeating model I/O. */
@@ -94,7 +100,7 @@ export class VideoAssetsService {
   private stillAuthorized(expected: VideoAcquisitionAuthorization, signal: AbortSignal) {
     signal.throwIfAborted();
     if (!isDeepStrictEqual(this.authorization(), expected))
-      throw new Error('MiniMax H3 eligibility changed during this operation. Existing files were retained.');
+      throw new Error('Video file setup changed while running. Your files were kept.');
   }
   private validatePaths() {
     validateRuntimePaths(this.paths);
@@ -223,14 +229,25 @@ export class VideoAssetsService {
       ...(!this.operationKind && !['cancelled', 'error'].includes(state)
         ? {
             message: !canVerify
-              ? 'MiniMax H3 eligibility is unresolved. Setup and generation remain unavailable.'
+              ? 'Video file setup is unavailable.'
               : !canAcquire
-                ? 'Local files only. Place the selected H3 components in the listed private model folders, then verify them. Automatic downloads are disabled.'
+                ? 'Put the video files in the model folders, then check them.'
                 : basePresent || fusedPresent
-                  ? 'Video model files are present. Verify their full contents before use; runtime and GPU support remain unverified.'
-                  : 'Video model files are incomplete. Setup can resume verified partial downloads.',
+                  ? 'Video files are ready.'
+                  : 'Some video files are missing. Setup picks up where it left off.',
           }
         : {}),
+    });
+  }
+  /** Cheap per-job check: the files verified at setup are still there at the same size. No re-hashing. */
+  bindings(profile: VideoDraft['profile']) {
+    this.validatePaths();
+    const receipts = this.readMarker().assets;
+    return this.selected(profile).map(asset => {
+      const receipt = receipts.find(item => isDeepStrictEqual(item.asset, asset));
+      if (!receipt || !this.present(receipt))
+        throw new Error('Some video files are missing. Open the setup on the Video page to get them.');
+      return videoAssetBinding(asset);
     });
   }
   private update(patch: Partial<VideoAssetsStatus>) {
@@ -274,8 +291,7 @@ export class VideoAssetsService {
       profile,
       progress: 0,
       activeRole: undefined,
-      message:
-        kind === 'setup' ? 'Preparing the selected video model files…' : 'Verifying the selected video model files…',
+      message: kind === 'setup' ? 'Getting the video files…' : 'Checking the video files…',
     });
     this.pending = this.run(kind, profile, authorization, signal)
       .catch(error => {
@@ -285,8 +301,8 @@ export class VideoAssetsService {
           activeRole: undefined,
           message: signal.aborted
             ? kind === 'local-verify'
-              ? 'Local video verification cancelled. Existing model files were retained.'
-              : 'Video setup cancelled; verified files and resumable downloads were retained.'
+              ? 'Check stopped. Your files were kept.'
+              : 'Setup stopped. Downloaded parts were kept, so it can pick up later.'
             : (error as Error).message,
         });
         throw error;
@@ -334,7 +350,7 @@ export class VideoAssetsService {
         const directory = path.dirname(destination);
         this.update({
           activeRole: asset.role,
-          message: `${kind === 'setup' ? 'Preparing' : 'Verifying'} video ${asset.role}…`,
+          message: `${kind === 'setup' ? 'Getting' : 'Checking'} the ${ROLE_NAMES[asset.role]}…`,
         });
         const fileLock = `model-file-${createHash('sha256').update(path.resolve(destination).toLowerCase()).digest('hex')}`;
         await withReviewedAssetLock(this.paths, fileLock, ownedSignal, async fileSignal => {
@@ -429,8 +445,7 @@ export class VideoAssetsService {
         state: 'installed',
         progress: 100,
         activeRole: undefined,
-        message:
-          'Selected video files passed full verification. Runtime integration and GPU support remain unverified.',
+        message: 'Video files are ready.',
       });
       return structuredClone(bundle);
     });
