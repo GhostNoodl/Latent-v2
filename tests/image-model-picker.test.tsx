@@ -61,6 +61,16 @@ it('switches to a downloaded newer model and offers downloads for the rest', asy
     expect(onChooseImageModel).toHaveBeenCalledWith('anima-turbo');
     await act(async () => card('MOSS-Image').click());
     expect(onDownloadImageModel).toHaveBeenCalledWith('moss-image');
+    // Details show the best settings and can reset to them.
+    const detailsLink =
+      card('Anima Turbo').parentElement!.querySelector<HTMLButtonElement>('.image-model-details-link')!;
+    await act(async () => detailsLink.click());
+    const panel = document.querySelector('.image-model-details')!;
+    expect(panel.textContent).toContain('8–12 steps · CFG 1');
+    expect(panel.textContent).toContain('CircleStone Labs');
+    const reset = [...panel.querySelectorAll('button')].find(b => b.textContent?.includes('Reset to best settings'))!;
+    await act(async () => reset.click());
+    expect(onChooseImageModel).toHaveBeenLastCalledWith('anima-turbo', { recommended: true });
   } finally {
     await act(async () => root.unmount());
     host.remove();

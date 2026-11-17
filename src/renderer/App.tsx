@@ -120,6 +120,7 @@ import { acceptHardwareProfileApplication } from '../shared/hardware-profile-app
 import { SharedBackendActivity } from './SharedBackendActivity';
 import { IMAGE_MODELS, type ImageModelId } from '../shared/image-models';
 import { imageModelProblem } from './ImageModelCards';
+import { forgetImageModelSettings, imageModelSettingsFor, rememberImageModelSettings } from './image-model-settings';
 import { queueJobActive, queueJobPresentation, queueView, runningImageJob } from './queue-view';
 import type { HardwareOomAdvice } from '../shared/hardware-profile-types';
 import { Busy, ConfirmDialog, Field, Modal, Notice, Toggle, shortDate, type RunAction } from './ui';
@@ -444,9 +445,10 @@ export default function App() {
     [persist],
   );
   /** Switches Create to a newer image model, putting the SDXL setup aside so switching back restores it. */
-  const chooseImageModel = (id: ImageModelId) => {
+  const chooseImageModel = (id: ImageModelId, options: { recommended?: boolean } = {}) => {
     const current = draftRef.current;
-    if (!current.imageModel)
+    if (current.imageModel) rememberImageModelSettings(current.imageModel, current);
+    else
       sdxlStash.current = {
         family: current.family,
         loras: current.loras,
@@ -458,22 +460,36 @@ export default function App() {
         autoFace: current.autoFace,
         modelSampling: current.modelSampling,
         split: current.split,
+        width: current.width,
+        height: current.height,
+        negativePrompt: current.negativePrompt,
       };
-    const { steps, cfg, sampler, scheduler } = IMAGE_MODELS[id].defaults;
+    if (options.recommended) forgetImageModelSettings(id);
     changeDraft({
       imageModel: id,
       checkpointId: '',
       loras: [],
-      steps,
-      cfg,
-      sampler,
-      scheduler,
+      ...imageModelSettingsFor(id, current, options),
       hiresFix: undefined,
       autoFace: undefined,
       modelSampling: undefined,
       split: undefined,
     });
   };
+  useEffect(() => {
+    if (draft.imageModel) rememberImageModelSettings(draft.imageModel, draft);
+    // Only the remembered fields matter here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    draft.imageModel,
+    draft.steps,
+    draft.cfg,
+    draft.sampler,
+    draft.scheduler,
+    draft.width,
+    draft.height,
+    draft.negativePrompt,
+  ]);
   const flushDraft = useCallback(async () => {
     if (!initialized.current) return;
     let savingRevision: number;
@@ -2953,6 +2969,7 @@ export default function App() {
           imageModel={draft.imageModel}
           onClose={() => setCheckpointOpen(false)}
           onChoose={model => {
+            if (draft.imageModel) rememberImageModelSettings(draft.imageModel, draft);
             const restore = draft.imageModel ? (sdxlStash.current ?? {}) : {};
             sdxlStash.current = undefined;
             changeDraft({
@@ -2963,8 +2980,8 @@ export default function App() {
             });
             setCheckpointOpen(false);
           }}
-          onChooseImageModel={id => {
-            chooseImageModel(id);
+          onChooseImageModel={(id, options) => {
+            chooseImageModel(id, options);
             setCheckpointOpen(false);
           }}
           onDownloadImageModel={id => {

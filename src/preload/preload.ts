@@ -71,6 +71,7 @@ const api: LatentAPI = {
   cancelQwenEditSetup: () => invoke('cancelQwenEditSetup'),
   setupImageModel: id => invoke('setupImageModel', id),
   cancelImageModelSetup: () => invoke('cancelImageModelSetup'),
+  openImageModelPage: (id, page) => invoke('openImageModelPage', id, page),
   enqueueQwenEdit: request => invoke('enqueueQwenEdit', request),
   setupVideoAssets: profile => invoke('setupVideoAssets', profile),
   installVideoExtra: id => invoke('installVideoExtra', id),

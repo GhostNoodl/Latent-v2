@@ -1,13 +1,17 @@
-import { Download, Sparkles, Square } from 'lucide-react';
+import { useState } from 'react';
+import { Download, ExternalLink, Info, Sparkles, Square } from 'lucide-react';
 import {
   IMAGE_MODEL_IDS,
   IMAGE_MODELS,
   engineSupportsImageModel,
   imageModelFileKey,
   imageModelFiles,
+  imageModelSizes,
   type ImageModelId,
 } from '../shared/image-models';
 import type { AppSnapshot } from '../shared/types';
+import { recommendedSummary } from './image-model-settings';
+import { Modal } from './ui';
 
 const gb = (bytes: number) => `${(bytes / 1e9).toFixed(1)} GB`;
 
@@ -72,10 +76,11 @@ export function ImageModelCards({
   snapshot: AppSnapshot;
   selected?: ImageModelId;
   query: string;
-  onChoose(id: ImageModelId): void;
+  onChoose(id: ImageModelId, options?: { recommended?: boolean }): void;
   onDownload(id: ImageModelId): void;
   onCancel(): void;
 }) {
+  const [details, setDetails] = useState<ImageModelId>();
   const status = snapshot.imageModels;
   const ids = IMAGE_MODEL_IDS.filter(id =>
     `${IMAGE_MODELS[id].name} ${IMAGE_MODELS[id].group} ${IMAGE_MODELS[id].blurb}`
@@ -103,28 +108,149 @@ export function ImageModelCards({
           const ready = status.ready.includes(id);
           const engine = engineVersion(snapshot);
           const usable = ready && (!engine || engineSupportsImageModel(engine, id));
+          const example = latestImage(snapshot, id);
           return (
-            <button
-              type="button"
-              className="visual-model-card image-model-card"
-              key={id}
-              aria-pressed={selected === id}
-              disabled={!usable && Boolean(status.installing) && status.installing !== id}
-              title={`${model.promptTip}\n\nLicense: ${model.license.name}. ${model.license.note}`}
-              onClick={() => (usable ? onChoose(id) : status.installing !== id && onDownload(id))}
-            >
-              <span className="model-artwork placeholder" aria-hidden="true">
-                {usable ? <Sparkles /> : <Download />}
-              </span>
-              <strong>{model.name}</strong>
-              <small>{model.blurb}</small>
-              <small>{cardStatus(snapshot, id)}</small>
-              <small className="image-model-license">{model.license.name}</small>
-            </button>
+            <div className="image-model-card-wrap" key={id}>
+              <button
+                type="button"
+                className="visual-model-card image-model-card"
+                aria-pressed={selected === id}
+                disabled={!usable && Boolean(status.installing) && status.installing !== id}
+                onContextMenu={event => {
+                  event.preventDefault();
+                  setDetails(id);
+                }}
+                onKeyDown={event => {
+                  if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+                    event.preventDefault();
+                    setDetails(id);
+                  }
+                }}
+                onClick={() => (usable ? onChoose(id) : status.installing !== id && onDownload(id))}
+              >
+                {example ? (
+                  <img className="model-artwork" src={example} alt={`Made with ${model.name}`} loading="lazy" />
+                ) : (
+                  <span className="model-artwork placeholder" aria-hidden="true">
+                    {usable ? <Sparkles /> : <Download />}
+                  </span>
+                )}
+                <strong>{model.name}</strong>
+                <small>{model.blurb}</small>
+                <small>{cardStatus(snapshot, id)}</small>
+              </button>
+              <button type="button" className="image-model-details-link" onClick={() => setDetails(id)}>
+                <Info size={13} /> Details and best settings
+              </button>
+            </div>
           );
         })}
       </div>
       {!ids.length && <p>No newer models match your search.</p>}
+      {details && (
+        <ImageModelDetails
+          snapshot={snapshot}
+          id={details}
+          selected={selected === details}
+          onClose={() => setDetails(undefined)}
+          onUseRecommended={() => {
+            setDetails(undefined);
+            onChoose(details, { recommended: true });
+          }}
+        />
+      )}
     </>
+  );
+}
+
+/** Most recent saved image made with this model, used as its card art. */
+function latestImage(snapshot: AppSnapshot, id: ImageModelId) {
+  return snapshot.history.find(record => record.imageModel?.id === id)?.imageUrl;
+}
+
+export function ImageModelDetails({
+  snapshot,
+  id,
+  selected,
+  onClose,
+  onUseRecommended,
+}: {
+  snapshot: AppSnapshot;
+  id: ImageModelId;
+  selected: boolean;
+  onClose(): void;
+  onUseRecommended(): void;
+}) {
+  const model = IMAGE_MODELS[id];
+  const { guide } = model;
+  const usable = snapshot.imageModels.ready.includes(id);
+  const sizes = imageModelSizes(id);
+  const total = imageModelFiles(id).reduce((sum, file) => sum + file.bytes, 0);
+  return (
+    <Modal title={model.name} onClose={onClose}>
+      <div className="image-model-details">
+        <p>
+          {model.blurb} <span className="muted">By {guide.maker}.</span>
+        </p>
+        <h3>Best settings</h3>
+        <dl className="metadata">
+          <dt>Steps and CFG</dt>
+          <dd>{recommendedSummary(id)}</dd>
+          <dt>Sampler</dt>
+          <dd>
+            {model.defaults.sampler} / {model.defaults.scheduler}
+          </dd>
+          <dt>Sizes</dt>
+          <dd>
+            About {guide.megapixels.ideal} MP is the sweet spot, up to {Math.min(guide.megapixels.max, 4)} MP:{' '}
+            {sizes.map(size => `${size.width}×${size.height}`).join(', ')}
+          </dd>
+          {guide.qualityTags && (
+            <>
+              <dt>Quality words</dt>
+              <dd>
+                <code>{guide.qualityTags}</code>
+              </dd>
+            </>
+          )}
+          <dt>Negative prompt</dt>
+          <dd>
+            {model.negative === 'zero' || model.defaults.cfg <= 1 ? (
+              'Not used at CFG 1.'
+            ) : guide.negative ? (
+              <code>{guide.negative}</code>
+            ) : (
+              'Optional.'
+            )}
+          </dd>
+        </dl>
+        <h3>Prompt tips</h3>
+        <ul className="image-model-tips">
+          {guide.tips.map(tip => (
+            <li key={tip}>{tip}</li>
+          ))}
+        </ul>
+        <h3>License</h3>
+        <p>
+          {model.license.name}. {model.license.note}
+        </p>
+        <p className="muted small">
+          {(total / 1e9).toFixed(1)} GB across 3 files (model, text encoder, VAE). Shared files are only stored once.
+        </p>
+        <div className="button-row">
+          {usable && (
+            <button type="button" onClick={onUseRecommended}>
+              <Sparkles size={14} /> {selected ? 'Reset to best settings' : 'Use with best settings'}
+            </button>
+          )}
+          <button type="button" onClick={() => void window.latent.openImageModelPage(id, 'source')}>
+            <ExternalLink size={14} /> Model page
+          </button>
+          <button type="button" onClick={() => void window.latent.openImageModelPage(id, 'license')}>
+            <ExternalLink size={14} /> License
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
