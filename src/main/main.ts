@@ -802,7 +802,18 @@ async function initialize() {
     log: text => void desktopLog(text),
   });
   runtimeCoordinator = new RuntimeUpdateCoordinator(models.library, backend, jobs, () => runtimeUpdates.status());
-  runtimeUpdates = new RuntimeUpdateService(paths, store, broadcast, runtimeCoordinator.hooks);
+  runtimeUpdates = new RuntimeUpdateService(paths, store, broadcast, {
+    ...runtimeCoordinator.hooks,
+    // New engine sets ship inside Latent releases, so an engine check also asks the app updater.
+    latestAppRelease: async refresh => {
+      const updater = appUpdates;
+      if (!updater) return undefined;
+      const before = updater.status();
+      if (refresh && before.supported && ['idle', 'error'].includes(before.state))
+        await updater.check().catch(() => undefined);
+      return updater.status().release?.version;
+    },
+  });
   modelLocations = new ModelLocationService(
     paths,
     store,
@@ -1294,6 +1305,10 @@ async function initialize() {
       IPADAPTER_RELEASE.modelCardUrl,
       IPADAPTER_RELEASE.encoderOriginUrl,
       IPADAPTER_RELEASE.codeSourceUrl,
+      // The newest ComfyUI release page found by the engine update check.
+      runtimeUpdates?.status().upstream?.url.startsWith('https://github.com/Comfy-Org/ComfyUI/releases/')
+        ? runtimeUpdates.status().upstream?.url
+        : undefined,
     ].filter(Boolean);
     try {
       const link = new URL(url);

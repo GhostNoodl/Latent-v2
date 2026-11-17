@@ -1686,6 +1686,14 @@
     {
       "from": "tests/remembered-extras.test.ts",
       "to": "tests/remembered-extras.test.ts"
+    },
+    {
+      "from": "src/main/comfy-upstream.ts",
+      "to": "src/main/comfy-upstream.ts"
+    },
+    {
+      "from": "tests/comfy-upstream.test.ts",
+      "to": "tests/comfy-upstream.test.ts"
     }
   ]
 }

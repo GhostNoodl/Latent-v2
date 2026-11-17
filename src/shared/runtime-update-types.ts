@@ -78,13 +78,29 @@ export interface RuntimeUpdateStatus {
   current?: RuntimeUpdateGeneration;
   previous?: RuntimeUpdateGeneration;
   available?: { setId: string; label: string; backendVersion: string; environmentPreparationBytes?: number };
+  /** Newest public ComfyUI release on GitHub. Informational only: Latent installs reviewed sets, never this directly. */
+  upstream?: RuntimeUpstreamRelease;
+  /** Newer Latent app version found by the app updater; new engine sets arrive with app releases. */
+  appUpdateVersion?: string;
   staged?: RuntimeUpdateStage;
   lastCheckedAt?: string;
   progress?: number;
   history: RuntimeUpdateHistory[];
   recoveryRequired: boolean;
 }
+export interface RuntimeUpstreamRelease {
+  version: string;
+  url: string;
+  publishedAt?: string;
+  checkedAt: string;
+  /** True when this release is newer than the newest engine set the app can install. */
+  newer: boolean;
+  /** Set when the last attempt to reach GitHub failed; the other fields keep the last good answer. */
+  error?: string;
+}
 export interface RuntimeUpdateHooks {
+  /** Ask the app updater for a newer Latent release (manual checks may refresh it). Returns its version or undefined. */
+  latestAppRelease?(refresh: boolean): Promise<string | undefined>;
   isIdle(): boolean;
   /** Cold-start recovery may preserve durable queued/running records when no engine/preflight is active. */
   isRecoverySafe?(): boolean;

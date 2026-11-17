@@ -15,7 +15,9 @@ import {
   type RuntimeUpdateSettings,
   type RuntimeUpdateStage,
   type RuntimeUpdateStatus,
+  type RuntimeUpstreamRelease,
 } from '../shared/runtime-update-types';
+import { compareVersions, fetchLatestComfyRelease } from './comfy-upstream';
 import { latestReviewedRuntimeSet, reviewedInstalledRuntime, reviewedRuntimeSet } from './reviewed-runtime-channel';
 import { assistantHash, downloadAssistantAsset } from './assistant-download';
 import { extractRuntimeZip } from './runtime-archive';
@@ -138,6 +140,38 @@ const journalSchema = z
   .strict();
 type Journal = z.infer<typeof journalSchema>;
 const text = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const upstreamSchema = z
+  .object({
+    version: z.string().regex(/^\d{1,4}\.\d{1,4}\.\d{1,4}$/),
+    url: z.url(),
+    publishedAt: z.iso.datetime().optional(),
+    checkedAt: z.iso.datetime(),
+    newer: z.boolean(),
+    error: z.string().max(500).optional(),
+  })
+  .strict();
+function savedUpstream(value: unknown): RuntimeUpstreamRelease | undefined {
+  const parsed = upstreamSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
+/** Plain-language result of a check, honest about releases Latent hasn't reviewed yet. */
+export function checkMessage(
+  availableLabel: string | undefined,
+  installedVersion: string,
+  upstream: RuntimeUpstreamRelease | undefined,
+  appUpdateVersion: string | undefined,
+): string {
+  const appHint = appUpdateVersion
+    ? ` Latent ${appUpdateVersion} is available under App updates, and new engine versions arrive with app updates.`
+    : '';
+  if (availableLabel) return `${availableLabel} is ready to download.${appHint}`;
+  if (upstream?.newer)
+    return `ComfyUI ${upstream.version} is out, but no Latent release includes it yet. You have ${installedVersion}.${appHint || ' It will be offered here once a Latent update brings it.'}`;
+  if (appHint) return `Your engine is the newest one this Latent version includes.${appHint}`;
+  if (!upstream || upstream.error)
+    return `Your engine is the newest one this Latent version includes. Couldn't reach GitHub to see whether ComfyUI has a newer release.`;
+  return `You're up to date. ComfyUI ${upstream.version} is the newest release.`;
+}
 export function runtimeUpdatePaths(paths: AppPaths) {
   const root = path.join(paths.runtime, 'updates');
   return {
@@ -164,6 +198,7 @@ export class RuntimeUpdateService {
     private store: StudioStore,
     private changed: () => void,
     private hooks: RuntimeUpdateHooks,
+    private request: typeof fetch = fetch,
   ) {
     validateRuntimePaths(paths);
     this.files = runtimeUpdatePaths(paths);
@@ -177,8 +212,40 @@ export class RuntimeUpdateService {
       automaticRetryPaused: store.getState<boolean>('runtime-updates.automatic-paused', false) === true,
       history: store.getState<RuntimeUpdateHistory[]>('runtime-updates.history', []).slice(-500),
       lastCheckedAt: store.getState<string | undefined>('runtime-updates.last-check', undefined),
+      upstream: savedUpstream(store.getState<unknown>('runtime-updates.upstream', undefined)),
       recoveryRequired: false,
     };
+  }
+  /**
+   * Looks outside the app: the newest public ComfyUI release and a newer Latent app.
+   * Never fails the check; a GitHub outage only leaves a note next to the last good answer.
+   */
+  private async lookOutside(manual: boolean, newestInstallable: string, signal: AbortSignal) {
+    const at = new Date().toISOString();
+    let upstream: RuntimeUpstreamRelease | undefined = this.current.upstream;
+    try {
+      const release = await fetchLatestComfyRelease(this.request, signal);
+      upstream = {
+        version: release.version,
+        url: release.url,
+        ...(release.publishedAt ? { publishedAt: release.publishedAt } : {}),
+        checkedAt: at,
+        newer: compareVersions(release.version, newestInstallable) > 0,
+      };
+    } catch (error) {
+      if (signal.aborted) throw error;
+      upstream = upstream
+        ? { ...upstream, newer: compareVersions(upstream.version, newestInstallable) > 0, error: text(error) }
+        : undefined;
+    }
+    if (upstream) this.store.setState('runtime-updates.upstream', upstream);
+    let appUpdateVersion: string | undefined;
+    try {
+      appUpdateVersion = await this.hooks.latestAppRelease?.(manual);
+    } catch {
+      appUpdateVersion = this.current.appUpdateVersion;
+    }
+    return { upstream, appUpdateVersion };
   }
   status(): RuntimeUpdateStatus {
     return structuredClone(this.current);
@@ -309,10 +376,10 @@ export class RuntimeUpdateService {
     this.operation = running;
     return running;
   }
-  async check(): Promise<RuntimeUpdateStatus> {
+  async check(manual = true): Promise<RuntimeUpdateStatus> {
     if (!(await updateExists(this.files.marker)))
       throw new Error('Set up the private image engine before checking its runtime channel.');
-    return this.action('checking', 'check', async () => {
+    return this.action('checking', 'check', async signal => {
       const saved = await this.load();
       if (this.current.recoveryRequired)
         throw new Error('A runtime update was interrupted. Recover it before checking for another update.');
@@ -327,12 +394,19 @@ export class RuntimeUpdateService {
               environmentPreparationBytes: latest.environmentPreparationBytes,
             }
           : undefined;
+      const newestInstallable = (available ? latest : installed).backend.version;
+      const { upstream, appUpdateVersion } = await this.lookOutside(manual, newestInstallable, signal);
       const at = new Date().toISOString();
       this.store.setState('runtime-updates.last-check', at);
-      const message = available
-        ? `${available.label} is available in this app’s reviewed channel.`
-        : 'No newer reviewed runtime set is included in this app release.';
-      this.update({ state: saved.staged ? 'staged' : 'idle', available, lastCheckedAt: at, message });
+      const message = checkMessage(available?.label, installed.backend.version, upstream, appUpdateVersion);
+      this.update({
+        state: saved.staged ? 'staged' : 'idle',
+        available,
+        upstream,
+        appUpdateVersion,
+        lastCheckedAt: at,
+        message,
+      });
       this.history('check', 'success', message);
       this.pauseAutomatic(false);
       return this.status();
@@ -936,7 +1010,7 @@ export class RuntimeUpdateService {
     // A corrected system clock must not postpone checks until a future saved date.
     const checkedRecently = elapsed >= 0 && elapsed < settings.intervalHours * 3600000;
     if (!settings.autoCheck || checkedRecently || !(await updateExists(this.files.marker))) return;
-    await this.check();
+    await this.check(false);
     if (!this.current.available || !this.current.settings.autoApply) return;
     if (!this.hooks.isIdle()) {
       this.history('activate', 'deferred', 'Automatic application deferred because studio work is active or queued.');

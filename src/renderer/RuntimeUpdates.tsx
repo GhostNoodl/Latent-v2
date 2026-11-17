@@ -53,7 +53,32 @@ export function RuntimeUpdates({
         <dt>Installed</dt>
         <dd>{status.current?.label ?? 'Not recorded yet'}</dd>
         <dt>Available</dt>
-        <dd>{status.available?.label ?? "You're up to date"}</dd>
+        <dd>
+          {status.available?.label ??
+            (status.upstream?.newer || status.appUpdateVersion
+              ? 'Nothing newer in this Latent version'
+              : "You're up to date")}
+        </dd>
+        <dt>Newest ComfyUI</dt>
+        <dd>
+          {status.upstream ? (
+            <>
+              <a href={status.upstream.url} target="_blank" rel="noreferrer">
+                {status.upstream.version}
+              </a>
+              {status.upstream.newer ? ' · not in a Latent release yet' : ' · nothing newer'}
+              {status.upstream.error ? ` · last check failed: ${status.upstream.error}` : ''}
+            </>
+          ) : (
+            'Not checked yet'
+          )}
+        </dd>
+        {status.appUpdateVersion && (
+          <>
+            <dt>Latent app</dt>
+            <dd>Latent {status.appUpdateVersion} is available under App updates. Engine updates arrive with it.</dd>
+          </>
+        )}
         <dt>Previous</dt>
         <dd>{status.previous?.label ?? 'Kept after your first update, so you can go back'}</dd>
         <dt>Last checked</dt>
@@ -76,7 +101,10 @@ export function RuntimeUpdates({
       <div className="setting-line">
         <div>
           <h3>Automatic checks</h3>
-          <p>New engine versions arrive with Latent app updates.</p>
+          <p>
+            Checks GitHub for the newest ComfyUI and for a newer Latent. Engine versions are tested first, so they
+            install once a Latent update brings them.
+          </p>
         </div>
         <fieldset disabled={working}>
           <Toggle
