@@ -79,3 +79,17 @@ export function recommendedSummary(id: ImageModelId) {
   const range = ([a, b]: [number, number]) => (a === b ? `${a}` : `${a}–${b}`);
   return `${range(steps)} steps · CFG ${range(cfg)}`;
 }
+
+/** Which of steps and CFG sit outside what the makers recommend, so Create can point it out. */
+export function offRecommended(id: ImageModelId, settings: { steps: number; cfg: number }) {
+  const { steps, cfg } = IMAGE_MODELS[id].guide;
+  return {
+    steps: settings.steps < steps[0] || settings.steps > steps[1],
+    cfg: settings.cfg < cfg[0] || settings.cfg > cfg[1],
+  };
+}
+
+/** True when the negative prompt has no effect with this model and guidance. */
+export function negativeUnused(id: ImageModelId, cfg: number) {
+  return IMAGE_MODELS[id].negative === 'zero' || cfg <= 1;
+}
