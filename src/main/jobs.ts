@@ -23,6 +23,7 @@ import type {
 import { buildWorkflow, resolvePrompt, validateAssets, WORKFLOW_VERSION } from '../shared/workflow';
 import {
   IMAGE_MODELS,
+  bindImageModelWorkflow,
   buildImageModelWorkflow,
   compareEngineVersions,
   imageModelNodes,
@@ -1409,6 +1410,7 @@ export class JobService {
         throw new Error(
           `This engine can't run ${IMAGE_MODELS[context.imageModel.id].name} yet (no ${missing}). Update the engine in Settings.`,
         );
+      context.workflow = bindImageModelWorkflow(context.workflow, objects);
     }
     if (context.advancedImage?.hires) validateHiresCapabilities(objects, context.advancedImage);
     if (context.controlNet) validateControlNetCapabilities(objects, context.controlNet.plan.asset);

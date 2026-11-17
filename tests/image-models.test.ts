@@ -3,6 +3,7 @@ import {
   IMAGE_MODEL_IDS,
   IMAGE_MODELS,
   allImageModelFiles,
+  bindImageModelWorkflow,
   buildImageModelWorkflow,
   compareEngineVersions,
   engineSupportsImageModel,
@@ -71,6 +72,28 @@ describe('newer image models', () => {
     expect(workflow['10'].inputs.filename_prefix).toBe('Latent_job-1');
     const used = new Set(Object.values(workflow).map(node => node.class_type));
     expect([...used].every(name => imageModelNodes(id).includes(name))).toBe(true);
+  });
+
+  it('spells loader file names the way a Windows engine lists them', () => {
+    const workflow = buildImageModelWorkflow(draft('anima-turbo'), bundle('anima-turbo'), '1', 'job');
+    const listed = (name: string) => `latent-image-models\\${name}`;
+    const objects = {
+      UNETLoader: {
+        input: { required: { unet_name: [[listed('anima-turbo-v1.1.safetensors'), 'other.safetensors']] } },
+      },
+      CLIPLoader: {
+        input: { required: { clip_name: ['COMBO', { options: [listed('qwen_3_06b_base.safetensors')] }] } },
+      },
+      VAELoader: { input: { required: { vae_name: [[listed('qwen_image_vae.safetensors')]] } } },
+    };
+    const bound = bindImageModelWorkflow(workflow, objects);
+    expect(bound['1'].inputs.unet_name).toBe(listed('anima-turbo-v1.1.safetensors'));
+    expect(bound['2'].inputs.clip_name).toBe(listed('qwen_3_06b_base.safetensors'));
+    expect(bound['3'].inputs.vae_name).toBe(listed('qwen_image_vae.safetensors'));
+    expect(bound['4']).toEqual(workflow['4']);
+    expect(() =>
+      bindImageModelWorkflow(workflow, { ...objects, VAELoader: { input: { required: { vae_name: [[]] } } } }),
+    ).toThrow(/can't see qwen_image_vae/);
   });
 
   it('uses the Klein shift from the official graph', () => {

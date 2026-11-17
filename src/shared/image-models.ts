@@ -471,3 +471,33 @@ export function imageModelNodes(id: ImageModelId): string[] {
 /** Display name for a saved image made with a newer model, if it was. */
 export const recordImageModelName = (record: { imageModel?: Pick<ImageModelBundle, 'id'> }) =>
   record.imageModel ? (IMAGE_MODELS[record.imageModel.id]?.name ?? record.imageModel.id) : undefined;
+
+/**
+ * Spells the loader file names the way the engine lists them. ComfyUI on Windows lists files in
+ * subfolders with backslashes and only accepts an exact match, so `latent-image-models/x` must be
+ * sent as `latent-image-models\x` there.
+ */
+export function bindImageModelWorkflow(
+  workflow: ComfyWorkflow,
+  objects: Record<string, { input?: { required?: Record<string, unknown> } } | undefined>,
+): ComfyWorkflow {
+  const result = structuredClone(workflow);
+  const fields: Record<string, string> = { UNETLoader: 'unet_name', CLIPLoader: 'clip_name', VAELoader: 'vae_name' };
+  for (const node of Object.values(result)) {
+    const field = fields[node.class_type];
+    const value = field ? node.inputs[field] : undefined;
+    if (typeof value !== 'string') continue;
+    const spec = objects[node.class_type]?.input?.required?.[field] as unknown[] | undefined;
+    const options = Array.isArray(spec?.[0])
+      ? (spec[0] as unknown[])
+      : ((spec?.[1] as { options?: unknown[] } | undefined)?.options ?? []);
+    const wanted = value.replaceAll('\\', '/');
+    const matches = options.filter(
+      (option): option is string => typeof option === 'string' && option.replaceAll('\\', '/') === wanted,
+    );
+    if (matches.length !== 1)
+      throw new Error(`The engine can't see ${wanted.split('/').at(-1)}. Restart the engine and try again.`);
+    node.inputs[field] = matches[0];
+  }
+  return result;
+}
