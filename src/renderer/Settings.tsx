@@ -426,9 +426,16 @@ export function StudioSettings({
       <RuntimeUpdates
         onRepair={() => void run('runtime-update', () => window.latent.prepareRuntimeEnvironmentRepair())}
         status={snapshot.runtimeUpdates}
+        appUpdateVersion={snapshot.appUpdates?.release?.version}
         busy={busy['runtime-update'] || busy['runtime-update-settings'] || snapshot.ipAdapter.state === 'activating'}
         onSettings={value => void run('runtime-update-settings', () => window.latent.saveRuntimeUpdateSettings(value))}
-        onCheck={() => void run('runtime-update', () => window.latent.checkRuntimeUpdates())}
+        onCheck={() =>
+          void run('runtime-update', async () => {
+            // New engines arrive inside app updates, so look for one of those too.
+            if (snapshot.appUpdates?.supported) await window.latent.checkAppUpdates().catch(() => undefined);
+            await window.latent.checkRuntimeUpdates();
+          })
+        }
         onStage={kind => void run('runtime-update', () => window.latent.stageRuntimeUpdate(kind))}
         onActivate={() => void run('runtime-update', () => window.latent.activateRuntimeUpdate())}
         onRollback={() => void run('runtime-update', () => window.latent.rollbackRuntimeUpdate())}
