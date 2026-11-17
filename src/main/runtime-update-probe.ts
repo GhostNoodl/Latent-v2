@@ -117,7 +117,7 @@ export async function verifyUpdateEnvironment(
     throw new RuntimeEnvironmentMismatch(
       purpose === 'setup'
         ? "Some of the engine's packages don't match what they should be, so setup isn't finished. Check the engine log in Settings, then try again."
-        : `The private environment differs from the reviewed runtime. ${describeEnvironmentDifference(observed, set)}. No packages were changed. A separately prepared reviewed environment is required before this runtime can start.`,
+        : `Some of the engine's packages don't match what they should be. ${describeEnvironmentDifference(observed, set)}. Nothing was changed. Use Prepare a repair in Engine updates.`,
     );
   return observed;
 }

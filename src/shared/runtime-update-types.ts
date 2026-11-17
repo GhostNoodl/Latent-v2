@@ -80,6 +80,8 @@ export interface RuntimeUpdateStatus {
   available?: { setId: string; label: string; backendVersion: string; environmentPreparationBytes?: number };
   staged?: RuntimeUpdateStage;
   lastCheckedAt?: string;
+  /** Newest stable ComfyUI on GitHub at the last check. Shown only; never installed directly. */
+  newestComfyUI?: string;
   progress?: number;
   history: RuntimeUpdateHistory[];
   recoveryRequired: boolean;

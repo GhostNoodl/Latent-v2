@@ -3,6 +3,8 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod';
+import { latestComfyUIVersion } from './comfyui-release';
+import { newerVersion } from '../shared/app-update-types';
 import type { AppPaths } from '../shared/types';
 import type { StudioStore } from './store';
 import {
@@ -164,6 +166,7 @@ export class RuntimeUpdateService {
     private store: StudioStore,
     private changed: () => void,
     private hooks: RuntimeUpdateHooks,
+    private latestComfyUI: () => Promise<string | undefined> = () => latestComfyUIVersion(),
   ) {
     validateRuntimePaths(paths);
     this.files = runtimeUpdatePaths(paths);
@@ -172,11 +175,12 @@ export class RuntimeUpdateService {
     );
     this.current = {
       state: 'idle',
-      message: 'Check the app’s reviewed runtime channel.',
+      message: 'Check for a newer engine.',
       settings: settings.success ? settings.data : DEFAULT_RUNTIME_UPDATE_SETTINGS,
       automaticRetryPaused: store.getState<boolean>('runtime-updates.automatic-paused', false) === true,
       history: store.getState<RuntimeUpdateHistory[]>('runtime-updates.history', []).slice(-500),
       lastCheckedAt: store.getState<string | undefined>('runtime-updates.last-check', undefined),
+      newestComfyUI: store.getState<string | undefined>('runtime-updates.newest-comfyui', undefined),
       recoveryRequired: false,
     };
   }
@@ -252,7 +256,7 @@ export class RuntimeUpdateService {
       marker.comfyVersion !== set.backend.version ||
       marker.pythonVersion !== set.pythonVersion
     )
-      throw new Error('Install or restore the reviewed private runtime before using its update channel.');
+      throw new Error('Set up the engine before checking for updates.');
     const raw = await readUpdateJson(this.paths.root, this.files.state);
     const saved = raw
       ? stateSchema.parse(raw)
@@ -274,9 +278,7 @@ export class RuntimeUpdateService {
       saved.current.setId !== set.id ||
       (marker.updateGenerationId ?? 'legacy') !== saved.current.id
     )
-      throw new Error(
-        'Runtime update metadata is inconsistent. Recover its pending transaction before starting the engine.',
-      );
+      throw new Error('An engine update was left half done. Choose Finish interrupted update first.');
     this.update({
       current: saved.current,
       previous: saved.previous,
@@ -291,7 +293,7 @@ export class RuntimeUpdateService {
     operation: (signal: AbortSignal) => Promise<T>,
   ): Promise<T> {
     if (this.disposed) throw new Error('The runtime updater was disposed.');
-    if (this.operation) throw new Error('Another runtime maintenance operation is in progress.');
+    if (this.operation) throw new Error('Another engine update step is already running.');
     const controller = new AbortController();
     this.controller = controller;
     this.update({ state, progress: undefined });
@@ -310,12 +312,11 @@ export class RuntimeUpdateService {
     return running;
   }
   async check(): Promise<RuntimeUpdateStatus> {
-    if (!(await updateExists(this.files.marker)))
-      throw new Error('Set up the private image engine before checking its runtime channel.');
+    if (!(await updateExists(this.files.marker))) throw new Error('Set up the engine before checking for updates.');
     return this.action('checking', 'check', async () => {
       const saved = await this.load();
       if (this.current.recoveryRequired)
-        throw new Error('A runtime update was interrupted. Recover it before checking for another update.');
+        throw new Error('An engine update was interrupted. Choose Finish interrupted update first.');
       const latest = latestReviewedRuntimeSet();
       const installed = reviewedRuntimeSet(saved.current.setId);
       const available =
@@ -327,12 +328,25 @@ export class RuntimeUpdateService {
               environmentPreparationBytes: latest.environmentPreparationBytes,
             }
           : undefined;
+      const newest = await this.latestComfyUI();
       const at = new Date().toISOString();
       this.store.setState('runtime-updates.last-check', at);
+      if (newest) this.store.setState('runtime-updates.newest-comfyui', newest);
+      const behind = newest && newerVersion(newest, latest.backend.version);
       const message = available
-        ? `${available.label} is available in this app’s reviewed channel.`
-        : 'No newer reviewed runtime set is included in this app release.';
-      this.update({ state: saved.staged ? 'staged' : 'idle', available, lastCheckedAt: at, message });
+        ? `${available.label} is ready to download.`
+        : behind
+          ? `ComfyUI ${newest} is out. It comes in a Latent update once it's tested.`
+          : newest
+            ? 'You have the newest engine.'
+            : "You have the newest engine Latent offers. Couldn't reach GitHub to check for newer ComfyUI.";
+      this.update({
+        state: saved.staged ? 'staged' : 'idle',
+        available,
+        lastCheckedAt: at,
+        newestComfyUI: newest ?? this.current.newestComfyUI,
+        message,
+      });
       this.history('check', 'success', message);
       this.pauseAutomatic(false);
       return this.status();
@@ -357,7 +371,7 @@ export class RuntimeUpdateService {
       signal,
       (received, total, verifying) =>
         this.update({
-          message: verifying ? 'Verifying the reviewed source archive…' : 'Downloading the reviewed source archive…',
+          message: verifying ? 'Checking the download…' : 'Downloading the engine…',
           progress: (received / total) * 30,
         }),
     );
@@ -379,19 +393,16 @@ export class RuntimeUpdateService {
       // A hard exit may skip catch/finally. Persist the retry barrier before any
       // preparation work; successful staging clears it below.
       this.store.setState('runtime-updates.automatic-paused', true);
-      if (!['update', 'refresh'].includes(kind))
-        throw new Error('Choose a reviewed update or a same-version runtime refresh.');
+      if (!['update', 'refresh'].includes(kind)) throw new Error('Pick an update or a reinstall.');
       const saved = await this.load();
       if (this.current.recoveryRequired)
-        throw new Error('Recover the interrupted runtime transaction before staging another set.');
+        throw new Error('An engine update was interrupted. Choose Finish interrupted update first.');
       const baseline = reviewedRuntimeSet(saved.current.setId);
       const target =
         kind === 'refresh' ? baseline : targetSetId ? reviewedRuntimeSet(targetSetId) : latestReviewedRuntimeSet();
       if (kind === 'update' && target.sequence <= baseline.sequence)
-        throw new Error(
-          'No newer reviewed runtime set is available. A verified refresh can reinstall the current set.',
-        );
-      this.update({ message: 'Checking the active private Python/package environment…' });
+        throw new Error('There is no newer engine yet. You can reinstall this version instead.');
+      this.update({ message: 'Checking the engine’s packages…' });
       if (repairEnvironment) {
         let mismatch = false;
         try {
@@ -400,8 +411,7 @@ export class RuntimeUpdateService {
           if (!(error instanceof RuntimeEnvironmentMismatch)) throw error;
           mismatch = true;
         }
-        if (!mismatch)
-          throw new Error('The active environment already matches its reviewed versions. No repair was prepared.');
+        if (!mismatch) throw new Error('The engine’s packages are already fine. Nothing to repair.');
       } else await this.environment(saved.current, signal);
       const original = await this.archive(baseline, signal);
       const archive = target.id === baseline.id ? original : await this.archive(target, signal);
@@ -420,8 +430,8 @@ export class RuntimeUpdateService {
         baseCustom.files.reduce((sum, file) => sum + file.bytes, 0) +
         64 * 1024 * 1024;
       if (free.bavail * free.bsize < requiredBytes)
-        throw new Error('Not enough free space to stage the reviewed runtime while preserving the active version.');
-      this.update({ message: 'Staging the reviewed backend and existing reviewed custom nodes…', progress: 40 });
+        throw new Error('Not enough free disk space for the update. Free some space and try again.');
+      this.update({ message: 'Unpacking the engine and its add-ons…', progress: 40 });
       await extractRuntimeZip(archive.filename, path.join(destination, 'backend'), `ComfyUI-${target.backend.commit}/`);
       await fs.writeFile(
         path.join(destination, 'backend', '.latent-source.json'),
@@ -444,7 +454,7 @@ export class RuntimeUpdateService {
         !isDeepStrictEqual(baseline.packages, target.packages) || baseline.pythonVersion !== target.pythonVersion;
       if (repairEnvironment || differentPackages || (environmentId && baseline.id !== target.id)) {
         this.update({
-          message: 'Preparing an independent private Python environment; the active engine is unchanged…',
+          message: 'Installing packages in a separate copy. Your current engine keeps working…',
           progress: undefined,
         });
         environmentId = (
@@ -486,14 +496,13 @@ export class RuntimeUpdateService {
       this.update({
         state: 'staged',
         staged: prepared,
-        message:
-          'Verified runtime is staged. Apply while idle to check engine startup and capabilities; generation reverification remains separate.',
+        message: 'The update is downloaded. Install it when nothing is generating.',
         progress: 100,
       });
       this.history(
         kind === 'refresh' ? 'refresh' : 'stage',
         'success',
-        'Reviewed source, syntax and dependency preparation checked; the active runtime was unchanged.',
+        'Downloaded and checked. The current engine was not changed.',
         { setId: target.id, generationId: stageId },
       );
       this.pauseAutomatic(false);
@@ -527,7 +536,7 @@ export class RuntimeUpdateService {
       else missing.push([name, expected] as const);
     }
     if (!missing.length) return;
-    this.update({ message: 'Checking preserved recovery files for the exact previous runtime…' });
+    this.update({ message: 'Checking the saved previous version…' });
     await safeUpdatePath(this.paths.root, this.files.failed);
     const entries = await fs.readdir(this.files.failed, { withFileTypes: true }).catch(error => {
       if (error.code === 'ENOENT') return [];
@@ -559,7 +568,7 @@ export class RuntimeUpdateService {
       );
       const space = await fs.statfs(this.paths.runtime);
       if (space.bavail * space.bsize < required)
-        throw new Error('Not enough space to restore the previous runtime while preserving its recovery files.');
+        throw new Error('Not enough free disk space to go back. Free some space and try again.');
       await safeUpdatePath(this.paths.root, destination);
       await fs.mkdir(destination, { recursive: true });
       for (const [name, expected] of missing) {
@@ -567,27 +576,23 @@ export class RuntimeUpdateService {
         await copyUpdateTree(path.join(candidate, name), temporary, expected, signal);
         await safeUpdatePath(this.paths.root, path.join(destination, name));
         if (await updateExists(path.join(destination, name)))
-          throw new Error('The previous runtime destination changed during recovery. All copies were preserved.');
+          throw new Error('The previous version’s folder changed while going back. Nothing was deleted.');
         await fs.rename(temporary, path.join(destination, name));
       }
       return;
     }
-    throw new Error(
-      'The previous runtime source is missing and no exact preserved recovery copy was found. The current runtime and all retained files were preserved.',
-    );
+    throw new Error('The previous version is missing, so Latent can’t go back. Your current engine was left as it is.');
   }
   private async apply(kind: 'activate' | 'rollback', signal: AbortSignal): Promise<void> {
-    if (!this.hooks.isIdle()) throw new Error('Wait until the studio queue is idle before changing the runtime.');
+    if (!this.hooks.isIdle()) throw new Error('Wait until nothing is generating, then try again.');
     const saved = await this.load();
     if (this.current.recoveryRequired)
-      throw new Error('Recover the interrupted transaction before changing the runtime.');
+      throw new Error('An engine update was interrupted. Choose Finish interrupted update first.');
     const stage = saved.staged;
     const previous = saved.previous;
     if ((kind === 'activate' && !stage) || (kind === 'rollback' && !previous))
       throw new Error(
-        kind === 'activate'
-          ? 'Stage a reviewed runtime set before applying it.'
-          : 'No previous runtime generation is available to restore.',
+        kind === 'activate' ? 'Download the update first.' : 'There is no previous version to go back to.',
       );
     const targetId = kind === 'activate' ? stage!.public.id : previous!.archiveId;
     const targetKind = kind === 'activate' ? 'staged' : 'history';
@@ -622,7 +627,7 @@ export class RuntimeUpdateService {
     const customAfter = await inspectReviewedCustomNodes(path.join(directory, 'custom_nodes'), targetSet, signal);
     if (kind === 'activate') {
       if (stage!.initial.id !== saved.current.id)
-        throw new Error('The active runtime changed after staging. Stage this update again.');
+        throw new Error('The engine changed after the download. Download the update again.');
       assertUpdateTree(backendBefore, stage!.baseBackend, 'The active backend since staging');
       assertUpdateTree(customBefore, stage!.baseCustom, 'Custom nodes since staging');
       assertUpdateTree(customAfter, stage!.targetCustom, 'Staged custom nodes');
@@ -698,7 +703,7 @@ export class RuntimeUpdateService {
       this.paths.python = selected.python;
       transaction.phase = 'verify-startup';
       await writeUpdateJson(this.paths.root, this.files.journal, transaction);
-      this.update({ message: 'Checking the activated engine and mandatory capabilities…' });
+      this.update({ message: 'Starting the new engine to check it works…' });
       await this.hooks.startAndVerify(targetSet, [...new Set(customAfter.files.map(file => file.path.split('/')[0]))]);
       generation.startupVerifiedAt = new Date().toISOString();
       const next: SavedState = {
@@ -718,12 +723,10 @@ export class RuntimeUpdateService {
       transaction.committed = true;
       transaction.phase = 'committed';
       await writeUpdateJson(this.paths.root, this.files.journal, transaction);
-      this.history(
-        kind,
-        'success',
-        'Engine startup and mandatory capabilities passed. Model-generation reverification is recorded separately.',
-        { setId: targetSet.id, generationId },
-      );
+      this.history(kind, 'success', 'The new engine started and has everything Latent needs.', {
+        setId: targetSet.id,
+        generationId,
+      });
       await fs.unlink(this.files.journal);
       this.update({
         state: 'idle',
@@ -734,14 +737,14 @@ export class RuntimeUpdateService {
         recoveryRequired: false,
         message:
           kind === 'rollback'
-            ? 'Previous runtime restored and startup checked.'
-            : 'Runtime applied and startup checked. The previous generation is retained for rollback.',
+            ? 'Back on the previous version. It started fine.'
+            : 'Engine updated and started fine. The old version is kept so you can go back.',
         progress: undefined,
       });
     } catch (error) {
       if (transaction.committed)
         throw new Error(
-          `The runtime was committed but its history could not be finalized. Restart to finish recovery: ${text(error)}`,
+          `The engine updated, but Latent couldn’t finish saving it. Restart Latent to finish: ${text(error)}`,
         );
       await this.hooks.stopBackend();
       try {
@@ -750,13 +753,13 @@ export class RuntimeUpdateService {
         await this.hooks.startAndVerify(currentSet, [
           ...new Set(customBefore.files.map(file => file.path.split('/')[0])),
         ]);
-        this.history('recover', 'success', 'Activation failed; the prior runtime was restored and startup checked.', {
+        this.history('recover', 'success', 'The update didn’t start, so Latent went back to the previous version.', {
           generationId: saved.current.id,
           setId: currentSet.id,
         });
       } catch (recovery) {
         this.update({ recoveryRequired: await updateExists(this.files.journal) });
-        throw new Error(`${text(error)} Recovery also needs attention: ${text(recovery)}`);
+        throw new Error(`${text(error)} Going back also failed: ${text(recovery)}`);
       }
       throw error;
     }
@@ -765,7 +768,7 @@ export class RuntimeUpdateService {
     await safeUpdatePath(this.paths.root, source, false);
     await safeUpdatePath(this.paths.root, destination);
     if (await updateExists(destination))
-      throw new Error('A runtime maintenance destination already exists; all files were preserved.');
+      throw new Error('A leftover update folder is in the way. Nothing was deleted.');
     transaction.phase = phase;
     await writeUpdateJson(this.paths.root, this.files.journal, transaction);
     await fs.mkdir(path.dirname(destination), { recursive: true });
@@ -845,9 +848,7 @@ export class RuntimeUpdateService {
       saved.staged ||
       !isDeepStrictEqual(marker, transaction.markerAfter)
     )
-      throw new Error(
-        'Committed runtime metadata is inconsistent with its pending transaction. All files and the recovery journal were preserved.',
-      );
+      throw new Error('The update records don’t match the engine files. Nothing was deleted.');
     assertUpdateTree(await inspectUpdateTree(this.paths.backend), transaction.backendAfter, 'The committed backend');
     assertUpdateTree(await inspectUpdateTree(this.files.custom), transaction.customAfter, 'The committed custom nodes');
     this.paths.python = selected.python;
@@ -867,7 +868,7 @@ export class RuntimeUpdateService {
   async recover(): Promise<void> {
     if (!(await updateExists(this.files.marker)) && !(await updateExists(this.files.journal))) {
       await safeUpdatePath(this.paths.root, this.files.root);
-      this.update({ state: 'idle', message: 'Set up the private image engine before checking its runtime channel.' });
+      this.update({ state: 'idle', message: 'Set up the engine before checking for updates.' });
       return;
     }
     return this.action('recovering', 'recover', async () => {
@@ -876,7 +877,7 @@ export class RuntimeUpdateService {
         if (!(await updateExists(this.files.marker))) {
           this.update({
             state: 'idle',
-            message: 'Set up the private image engine before checking its runtime channel.',
+            message: 'Set up the engine before checking for updates.',
           });
           return;
         }
@@ -884,7 +885,7 @@ export class RuntimeUpdateService {
         this.paths.python = (await this.environment(saved.current)).python;
         this.update({
           state: this.current.staged ? 'staged' : 'idle',
-          message: 'The reviewed runtime has no interrupted update.',
+          message: 'There is no interrupted update.',
         });
         return;
       }
@@ -894,7 +895,7 @@ export class RuntimeUpdateService {
       await this.hooks.withMaintenance(
         async () => {
           if (!(this.hooks.isRecoverySafe?.() ?? this.hooks.isIdle()))
-            throw new Error('The runtime must be idle and stopped before update recovery.');
+            throw new Error('Wait until nothing is generating, then try again.');
           if (transaction.committed) {
             await this.verifyCommitted(transaction);
             await fs.unlink(this.files.journal);
@@ -908,15 +909,13 @@ export class RuntimeUpdateService {
       this.history(
         'recover',
         'success',
-        transaction.committed
-          ? 'Finished recording an already committed runtime update.'
-          : 'An interrupted update was rolled back before engine startup.',
+        transaction.committed ? 'Finished an update that was already installed.' : 'An interrupted update was undone.',
       );
       await this.load();
       this.update({
         state: 'idle',
         recoveryRequired: false,
-        message: 'Runtime update recovery completed. The previous working files were preserved.',
+        message: 'The interrupted update is sorted. Your files are safe.',
       });
     });
   }
@@ -939,20 +938,20 @@ export class RuntimeUpdateService {
     await this.check();
     if (!this.current.available || !this.current.settings.autoApply) return;
     if (!this.hooks.isIdle()) {
-      this.history('activate', 'deferred', 'Automatic application deferred because studio work is active or queued.');
+      this.history('activate', 'deferred', 'Waiting to install until nothing is generating.');
       return;
     }
     await this.stage('update');
     if (!this.current.settings.autoApply) return;
     if (!this.hooks.isIdle()) {
-      this.history('activate', 'deferred', 'The update remains staged until the studio is idle.');
+      this.history('activate', 'deferred', 'Downloaded. It installs when nothing is generating.');
       return;
     }
     await this.activate();
   }
   async cancel() {
     if (!['checking', 'staging'].includes(this.current.state))
-      throw new Error('Activation and recovery must finish safely. Use rollback after they complete.');
+      throw new Error('Wait for the update to finish, then go back if you need to.');
     this.controller?.abort();
     await Promise.allSettled([this.operation].filter(Boolean));
   }

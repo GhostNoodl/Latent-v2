@@ -3,6 +3,8 @@ import type { RuntimeUpdateSettings, RuntimeUpdateStatus } from '../shared/runti
 import { Notice, Toggle } from './ui';
 export interface RuntimeUpdatesProps {
   status: RuntimeUpdateStatus;
+  /** A newer Latent version found by App updates, since new engines arrive inside app updates. */
+  appUpdateVersion?: string;
   busy?: boolean;
   onSettings(settings: Partial<RuntimeUpdateSettings>): void;
   onRepair(): void;
@@ -15,6 +17,7 @@ export interface RuntimeUpdatesProps {
 }
 export function RuntimeUpdates({
   status,
+  appUpdateVersion,
   busy = false,
   onSettings,
   onRepair,
@@ -36,12 +39,15 @@ export function RuntimeUpdates({
             Engine updates
           </h2>
           <p>
-            ComfyUI, its add-ons and Latent's built-in workflows are tested together and update together, so they always
-            fit.
+            The engine is ComfyUI. Latent tests each new version with its workflows first, so an update never breaks
+            them.
           </p>
         </div>
       </div>
       <Notice error={status.state === 'error'}>{status.message}</Notice>
+      {appUpdateVersion && !status.available && (
+        <p>Latent {appUpdateVersion} is out. Get it in App updates, it may bring a newer engine.</p>
+      )}
       {working && status.progress !== undefined && <progress value={status.progress} max={100} />}
       {status.automaticRetryPaused && (
         <p>
@@ -53,7 +59,9 @@ export function RuntimeUpdates({
         <dt>Installed</dt>
         <dd>{status.current?.label ?? 'Not recorded yet'}</dd>
         <dt>Available</dt>
-        <dd>{status.available?.label ?? "You're up to date"}</dd>
+        <dd>{status.available?.label ?? 'Nothing new yet'}</dd>
+        <dt>Newest ComfyUI</dt>
+        <dd>{status.newestComfyUI ?? 'Not checked yet'}</dd>
         <dt>Previous</dt>
         <dd>{status.previous?.label ?? 'Kept after your first update, so you can go back'}</dd>
         <dt>Last checked</dt>
@@ -76,7 +84,7 @@ export function RuntimeUpdates({
       <div className="setting-line">
         <div>
           <h3>Automatic checks</h3>
-          <p>New engine versions arrive with Latent app updates.</p>
+          <p>Looks for a newer engine, and for new ComfyUI releases on GitHub.</p>
         </div>
         <fieldset disabled={working}>
           <Toggle
