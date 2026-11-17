@@ -63,6 +63,7 @@ import { ControlNetService } from './controlnet';
 import { CollectionService } from './collections';
 import { ModelLocationService } from './model-locations';
 import { QwenEditAssetsService } from './qwen-edit-assets';
+import { ImageModelAssetsService } from './image-model-assets';
 import { FaceDetailerService } from './face-detailer';
 import { IPAdapterService } from './ipadapter';
 import { RuntimeUpdateService } from './runtime-updates';
@@ -135,6 +136,7 @@ let controlNet: ControlNetService;
 let collections: CollectionService;
 let modelLocations: ModelLocationService;
 let qwenEdit: QwenEditAssetsService;
+let imageModels: ImageModelAssetsService;
 let ipAdapter: IPAdapterService;
 let faceDetailer: FaceDetailerService;
 let runtimeUpdates: RuntimeUpdateService;
@@ -231,6 +233,7 @@ function lightSnapshot(): LightSnapshot {
     runtimeUpdates: runtimeUpdateSnapshot(),
     ipAdapter: ipAdapter.status(),
     qwenEdit: qwenEdit.status(),
+    imageModels: imageModels.status(),
     modelLocations: modelLocations.snapshot(),
     collections: collections.snapshot(),
     controlNet: controlNet.status(),
@@ -321,6 +324,7 @@ function appUpdateBusyReason(): string | undefined {
       segmentation.status(),
       faceDetailer.status(),
       qwenEdit.status(),
+      { state: imageModels.status().state === 'installing' ? 'installing' : 'ready' },
       upscaler.status(),
       controlNet.status(),
       ipAdapter.status(),
@@ -589,6 +593,9 @@ function handlerContext() {
     get qwenEdit() {
       return qwenEdit;
     },
+    get imageModels() {
+      return imageModels;
+    },
     get runtimeCoordinator() {
       return runtimeCoordinator;
     },
@@ -694,6 +701,7 @@ async function initialize() {
   wildcards = new WildcardStore(store, broadcast);
   controlNet = new ControlNetService(paths, store, broadcast);
   qwenEdit = new QwenEditAssetsService(paths, store, broadcast);
+  imageModels = new ImageModelAssetsService(paths, broadcast);
   collections = new CollectionService(
     store,
     () => ({ modelIds: models.assets.map(model => model.id), recordIds: store.records().map(record => record.id) }),
@@ -761,6 +769,7 @@ async function initialize() {
     videoQueue,
     () => usesExtraVram(store.settings(), hardware),
   );
+  jobs.setImageModelAssets(imageModels);
   telegram = new TelegramBotService({
     store,
     crypto: safeStorage,
@@ -1488,6 +1497,7 @@ else {
           upscaler?.dispose(),
           controlNet?.dispose(),
           qwenEdit?.dispose(),
+          imageModels?.dispose(),
           ipAdapter?.dispose(),
           faceDetailer?.dispose(),
           videoInspector?.dispose(),

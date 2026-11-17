@@ -1,4 +1,6 @@
 import { QWEN21_SET_ID } from '../../shared/qwen21-release';
+import { IMAGE_MODELS, compareEngineVersions, imageModelIdSchema } from '../../shared/image-models';
+import { IMAGE_MODELS_SET_ID, latestReviewedRuntimeSet, reviewedRuntimeSet } from '../reviewed-runtime-channel';
 import { isQwen21Profile, qwenEditProfileSchema } from '../../shared/qwen-edit-types';
 import { z } from 'zod';
 import { activateIPAdapterWhenIdle } from '../ipadapter-lifecycle';
@@ -53,7 +55,9 @@ export function optionalToolsHandlers(ctx: HandlerContext) {
       const requested = z.boolean().optional().parse(repair) ?? false;
       if (isQwen21Profile(selected)) {
         await ctx.runtimeUpdates.check();
-        if (ctx.runtimeUpdates.status().current?.setId !== QWEN21_SET_ID) {
+        const current = ctx.runtimeUpdates.status().current?.setId;
+        // Newer engines keep Qwen 2.1; only an older one moves to the Qwen 2.1 engine.
+        if (!current || !reviewedRuntimeSet(current).mandatoryNodes.includes('TextEncodeQwenImage21')) {
           await ctx.runtimeUpdates.stage('update', QWEN21_SET_ID);
           await ctx.runtimeCoordinator.activateAndRecover(
             () => ctx.runtimeUpdates.activate(),
@@ -75,6 +79,27 @@ export function optionalToolsHandlers(ctx: HandlerContext) {
           { allowRetainedJobs: false },
         );
       else await ctx.qwenEdit.setup(selected);
+    },
+    setupImageModel: async id => {
+      const model = IMAGE_MODELS[imageModelIdSchema.parse(id)];
+      // Klein and MOSS need a newer engine: move to the latest reviewed one first (with rollback).
+      const target = latestReviewedRuntimeSet();
+      await ctx.runtimeUpdates.check();
+      const current = ctx.runtimeUpdates.status().current?.setId;
+      const engine = current ? reviewedRuntimeSet(current).backend.version : undefined;
+      if (engine && compareEngineVersions(engine, model.minEngine) < 0) {
+        if (target.id !== IMAGE_MODELS_SET_ID && compareEngineVersions(target.backend.version, model.minEngine) < 0)
+          throw new Error(`${model.name} needs a newer engine than this app version includes.`);
+        await ctx.runtimeUpdates.stage('update', target.id);
+        await ctx.runtimeCoordinator.activateAndRecover(
+          () => ctx.runtimeUpdates.activate(),
+          () => ctx.runtimeUpdates.recover(),
+        );
+      }
+      await ctx.imageModels.setup(model.id);
+    },
+    cancelImageModelSetup: async () => {
+      ctx.imageModels.cancel();
     },
     cancelQwenEditSetup: async () => {
       ctx.qwenEdit.cancel();

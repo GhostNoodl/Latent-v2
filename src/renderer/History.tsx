@@ -1,4 +1,5 @@
 import { variationDescription } from './variation-description';
+import { recordImageModelName } from '../shared/image-models';
 import { ImagePreview } from './ImagePreview';
 import { subscribePreviewRecovery } from './image-preview-recovery';
 import { Fragment as ReactFragment, useEffect, useMemo, useRef, useState } from 'react';
@@ -154,7 +155,7 @@ export function History({
   // Collections hold specific versions, so a collection view shows exactly what was put in it.
   const grouping = members ? undefined : groupedIds;
   const matches = (record: GenerationRecord) =>
-    `${record.draft.prompt} ${record.resolvedPrompt} ${record.filename} ${record.checkpoint?.name ?? (record.qwenEdit ? 'Qwen image edit' : 'resize upscale')} ${record.checkpoint?.filename ?? ''} ${(record.loras ?? []).map(model => `${model.name} ${model.filename}`).join(' ')} ${record.actualSeed}`
+    `${record.draft.prompt} ${record.resolvedPrompt} ${record.filename} ${recordImageModelName(record) ?? record.checkpoint?.name ?? (record.qwenEdit ? 'Qwen image edit' : 'resize upscale')} ${record.checkpoint?.filename ?? ''} ${(record.loras ?? []).map(model => `${model.name} ${model.filename}`).join(' ')} ${record.actualSeed}`
       .toLowerCase()
       .includes(query.toLowerCase());
   const filtered = records.filter(
@@ -734,7 +735,8 @@ export function History({
             <dl className="metadata">
               <dt>Checkpoint</dt>
               <dd>
-                {details.checkpoint?.name ??
+                {recordImageModelName(details) ??
+                  details.checkpoint?.name ??
                   (details.qwenEdit ? 'Qwen Image Edit 2511 · INT8' : 'No diffusion model (resize / upscale)')}
               </dd>
               <dt>Seed</dt>

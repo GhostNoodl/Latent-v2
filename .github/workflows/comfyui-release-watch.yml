@@ -1,0 +1,85 @@
+name: ComfyUI release watch
+# Latent only installs engine versions that are reviewed and pinned in
+# src/main/reviewed-runtime-channel.ts, so new ComfyUI releases never reach users
+# on their own. This job notices them and measures the archive digest a new
+# reviewed set needs. It never changes the app.
+on:
+  schedule:
+    - cron: '17 9 * * 1'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/comfyui-release-watch.yml
+      - src/main/reviewed-runtime-channel.ts
+permissions:
+  contents: read
+  issues: write
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Compare with the newest reviewed engine
+        id: compare
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          channel=src/main/reviewed-runtime-channel.ts
+          bundled_commit=$(grep -oE "commit: '[0-9a-f]{40}'" "$channel" | tail -1 | grep -oE '[0-9a-f]{40}')
+          bundled_version=$(grep -oE "version: '[0-9]+\.[0-9]+\.[0-9]+'" "$channel" | tail -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          latest_tag=$(gh api repos/Comfy-Org/ComfyUI/releases/latest --jq .tag_name)
+          latest_version=${latest_tag#v}
+          latest_commit=$(gh api "repos/Comfy-Org/ComfyUI/commits/$latest_tag" --jq .sha)
+          measure() {
+            curl -fsSL --retry 3 -o archive.zip "https://codeload.github.com/Comfy-Org/ComfyUI/zip/$1"
+            echo "$(sha256sum archive.zip | cut -d' ' -f1) $(stat -c %s archive.zip)"
+            rm archive.zip
+          }
+          read -r bundled_sha bundled_bytes <<<"$(measure "$bundled_commit")"
+          newer=false
+          if [ "$(printf '%s\n%s\n' "$bundled_version" "$latest_version" | sort -V | tail -1)" != "$bundled_version" ]; then
+            newer=true
+            read -r latest_sha latest_bytes <<<"$(measure "$latest_commit")"
+          fi
+          {
+            echo "## ComfyUI release watch"
+            echo
+            echo "| | Version | Commit | Archive sha256 | Bytes |"
+            echo "|---|---|---|---|---|"
+            echo "| Newest reviewed in Latent | $bundled_version | \`$bundled_commit\` | \`$bundled_sha\` | $bundled_bytes |"
+            if [ "$newer" = true ]; then
+              echo "| Latest ComfyUI release | $latest_version | \`$latest_commit\` | \`$latest_sha\` | $latest_bytes |"
+            else
+              echo "| Latest ComfyUI release | $latest_version | \`$latest_commit\` | same or older | |"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY" > report.md
+          if grep -q "sha256: 'PENDING'" "$channel"; then
+            echo "::error::The 0.45.2 archive digest is still PENDING. Use sha256 $bundled_sha and bytes $bundled_bytes."
+            exit 1
+          fi
+          echo "newer=$newer" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest_version" >> "$GITHUB_OUTPUT"
+      - name: Open an issue for a newer release
+        if: steps.compare.outputs.newer == 'true' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST: ${{ steps.compare.outputs.latest }}
+        run: |
+          set -euo pipefail
+          title="ComfyUI $LATEST is out"
+          if gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "\"$title\" in:title" --json title --jq '.[].title' | grep -Fxq "$title"; then
+            echo "Issue already exists for $LATEST."
+            exit 0
+          fi
+          {
+            echo "A newer ComfyUI release is out. Latent won't offer it until a reviewed engine set is added."
+            echo
+            cat report.md
+            echo
+            echo "To add it: pin the commit and archive digest above in \`src/main/reviewed-runtime-channel.ts\`, resolve the Windows package list with \`uv pip compile --python-platform x86_64-pc-windows-msvc --python-version 3.12\`, and test the engine on a real GPU."
+          } > body.md
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file body.md

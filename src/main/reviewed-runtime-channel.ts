@@ -12,7 +12,19 @@ import { IPADAPTER_RELEASE } from '../shared/ipadapter-release';
 import type { ReviewedRuntimeSet } from '../shared/runtime-update-types';
 import { RUNTIME_ORIGIN_033_PACKAGES } from './runtime-origin-033-packages';
 import { REVIEWED_RUNTIME_PACKAGES } from './runtime-update-packages';
+import { RUNTIME_045_PACKAGES } from './runtime-045-packages';
+import { IMAGE_MODELS } from '../shared/image-models';
 
+/** Engine set that adds the newer Create models; also the regular update target. */
+export const IMAGE_MODELS_SET_ID = 'comfy-0-45-2-image-models-1';
+/**
+ * Digest of GitHub's codeload archive for the 0.45.2 commit. Measured by the
+ * ComfyUI release watch workflow (codeload is not reachable from every build machine).
+ */
+const COMFY_0452_ARCHIVE = {
+  sha256: '9c75b7bb09d79a30eff87bbc10b849281cdceb12f0d80a0695e9fcefc4724167',
+  bytes: 13719452,
+};
 /** Closed channel: new entries are reviewed application source changes, never remote executable manifests. */
 const CURRENT_RUNTIME_SET: ReviewedRuntimeSet = {
   id: 'comfy-0-34-0-cu130-workflows-1',
@@ -183,6 +195,38 @@ export const REVIEWED_RUNTIME_CHANNEL: readonly ReviewedRuntimeSet[] = [
     mandatoryNodes: [...CURRENT_RUNTIME_SET.mandatoryNodes, 'TextEncodeQwenImage21', 'QwenImage21Cache'],
     notes:
       'Qwen 2.1 creation and editing. Prepared in an independent environment with rollback; existing Lightning and SDXL workflows retained.',
+  },
+  {
+    ...CURRENT_RUNTIME_SET,
+    id: IMAGE_MODELS_SET_ID,
+    sequence: 3,
+    label: 'ComfyUI 0.45.2 · newer image models',
+    releasedAt: '2026-11-12T00:00:00.000Z',
+    backend: {
+      version: '0.45.2',
+      commit: '6e8488ef986067631e9c86e2a14360644b105663',
+      archiveSha256: COMFY_0452_ARCHIVE.sha256,
+      archiveBytes: COMFY_0452_ARCHIVE.bytes,
+      archiveUrl: 'https://codeload.github.com/Comfy-Org/ComfyUI/zip/6e8488ef986067631e9c86e2a14360644b105663',
+    },
+    packages: RUNTIME_045_PACKAGES.map(pin => ({ ...pin })),
+    workflowVersions: [
+      ...CURRENT_RUNTIME_SET.workflowVersions,
+      'qwen-image-2.1@1',
+      'qwen-image-2.1-gguf-q4km@1',
+      ...new Set(Object.values(IMAGE_MODELS).map(model => model.workflowVersion)),
+    ],
+    mandatoryNodes: [
+      ...CURRENT_RUNTIME_SET.mandatoryNodes,
+      'TextEncodeQwenImage21',
+      'QwenImage21Cache',
+      'ConditioningZeroOut',
+      'EmptySD3LatentImage',
+      'EmptyFlux2LatentImage',
+      'ModelSamplingFlux',
+    ],
+    notes:
+      'ComfyUI 0.45.2 with native Anima, Z-Image, FLUX.3 Klein, MOSS-Image and Krea 2. Keeps every earlier workflow, including Qwen 2.1 and video. Prepared in a separate environment with rollback.',
   },
 ];
 export function reviewedRuntimeSet(id: string): ReviewedRuntimeSet {

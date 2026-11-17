@@ -2,6 +2,7 @@ import { followHiresScale } from '../shared/advanced-image-workflow';
 import { SAMPLERS, SCHEDULERS } from '../shared/defaults';
 import type { GenerationDraft, ModelAsset, Preset } from '../shared/types';
 import { draftSchema } from '../shared/validation';
+import { IMAGE_MODELS } from '../shared/image-models';
 
 /**
  * Per-chat txt2img settings layered over the studio's Create settings. Anything a chat never
@@ -9,6 +10,7 @@ import { draftSchema } from '../shared/validation';
  */
 type OverridableKey =
   | 'checkpointId'
+  | 'imageModel'
   | 'family'
   | 'modelSampling'
   | 'loras'
@@ -181,6 +183,7 @@ export function applySetting(
       if (!args) throw new Error('Send /model to see the list, then /model <number or name>.');
       const model = pick(checkpoints(ctx.models), args, 'model', item => item.filename);
       next.checkpointId = model.id;
+      next.imageModel = null;
       next.family = model.family as GenerationDraft['family'];
       // Prediction overrides belong to the model they were set for.
       if (model.id !== current.checkpointId) next.modelSampling = null;
@@ -385,7 +388,7 @@ export function describeSettings(ctx: ControlContext, overrides: TelegramOverrid
   const draft = effectiveDraft(ctx.studio, overrides, '');
   const name = (id: string) => ctx.models.find(model => model.id === id)?.name ?? 'missing model';
   const lines = [
-    `Model: ${draft.checkpointId ? name(draft.checkpointId) : 'none picked yet'}`,
+    `Model: ${draft.imageModel ? IMAGE_MODELS[draft.imageModel].name : draft.checkpointId ? name(draft.checkpointId) : 'none picked yet'}`,
     `LoRAs: ${draft.loras.length ? draft.loras.map(lora => `${name(lora.modelId)} (${lora.weight})`).join(', ') : 'none'}`,
     `Size: ${draft.width}×${draft.height}, ${draft.batchSize} per prompt`,
     `Steps ${draft.steps} · CFG ${draft.cfg} · ${draft.sampler} / ${draft.scheduler}`,

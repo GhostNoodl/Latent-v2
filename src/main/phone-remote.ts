@@ -283,6 +283,7 @@ export class PhoneRemoteService {
       const model = checkpointList(this.ports.models()).find(item => item.id === request.checkpointId);
       if (!model) throw Object.assign(new Error('That model is not installed.'), { status: 400 });
       overrides.checkpointId = model.id;
+      overrides.imageModel = null;
       overrides.family = model.family as GenerationDraft['family'];
       if (model.id !== this.ports.draft().checkpointId) overrides.modelSampling = null;
     }
