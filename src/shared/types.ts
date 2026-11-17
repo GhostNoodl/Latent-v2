@@ -455,6 +455,7 @@ export interface LatentAPI {
   cancelQwenEditSetup(): Promise<void>;
   setupImageModel(id: import('./image-models').ImageModelId): Promise<void>;
   cancelImageModelSetup(): Promise<void>;
+  openImageModelPage(id: import('./image-models').ImageModelId, page: 'source' | 'license'): Promise<void>;
   enqueueQwenEdit(request: QwenEditJobRequest): Promise<GenerationJob>;
   chooseExternalModelRoot(kind: ModelKind): Promise<ModelLocationsSnapshot | null>;
   unregisterExternalModelRoot(rootId: string): Promise<ModelLocationsSnapshot>;

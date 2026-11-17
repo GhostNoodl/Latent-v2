@@ -50,6 +50,22 @@ export interface ImageModelDefinition {
   /** Lowest ComfyUI version with native support for this model. */
   minEngine: string;
   workflowVersion: string;
+  /** What the makers and community guides recommend; drives the details panel and automatic settings. */
+  guide: ImageModelGuide;
+}
+
+export interface ImageModelGuide {
+  maker: string;
+  sourceUrl: string;
+  /** Sizes this model handles well, in megapixels; sides are kept to multiples of 16. */
+  megapixels: { ideal: number; max: number };
+  steps: [number, number];
+  cfg: [number, number];
+  /** Shown as a one-click fill when the model uses a negative prompt (CFG above 1). */
+  negative?: string;
+  /** Optional words that set the model's house look. */
+  qualityTags?: string;
+  tips: string[];
 }
 
 const hf =
@@ -136,6 +152,20 @@ export const IMAGE_MODELS: Readonly<Record<ImageModelId, ImageModelDefinition>> 
     defaults: { steps: 8, cfg: 1, sampler: 'euler', scheduler: 'simple' },
     minEngine: '0.34.0',
     workflowVersion: 'anima-txt2img@1',
+    guide: {
+      maker: 'CircleStone Labs',
+      sourceUrl: 'https://huggingface.co/circlestone-labs/Anima',
+      megapixels: { ideal: 1, max: 2.4 },
+      steps: [8, 12],
+      cfg: [1, 1],
+      qualityTags: 'masterpiece, best quality, score_7, safe,',
+      tips: [
+        'Mix Danbooru tags and plain English. Tag order: quality, count (1girl), character, series, artist, then the rest.',
+        'Use spaces in tags, not underscores. Write artists as @name at the start.',
+        'Add safe, sensitive or nsfw to steer how explicit it gets.',
+        'Keep prompts under a couple of paragraphs. It is weak at drawing text.',
+      ],
+    },
   },
   'anima-aesthetic': {
     id: 'anima-aesthetic',
@@ -161,6 +191,20 @@ export const IMAGE_MODELS: Readonly<Record<ImageModelId, ImageModelDefinition>> 
     defaults: { steps: 30, cfg: 4, sampler: 'euler', scheduler: 'simple' },
     minEngine: '0.34.0',
     workflowVersion: 'anima-txt2img@1',
+    guide: {
+      maker: 'CircleStone Labs',
+      sourceUrl: 'https://huggingface.co/circlestone-labs/Anima',
+      megapixels: { ideal: 1, max: 2.4 },
+      steps: [30, 50],
+      cfg: [4, 5],
+      negative: 'worst quality, low quality, artist name, blurry, jpeg artifacts, chromatic aberration',
+      qualityTags: 'masterpiece, best quality, safe,',
+      tips: [
+        'Same prompting as Anima Turbo, but skip the score_ tags.',
+        'CFG above about 7 starts to burn colors.',
+        'More steps (40+) gives the cleanest results.',
+      ],
+    },
   },
   'z-image-turbo': {
     id: 'z-image-turbo',
@@ -203,6 +247,18 @@ export const IMAGE_MODELS: Readonly<Record<ImageModelId, ImageModelDefinition>> 
     defaults: { steps: 8, cfg: 1, sampler: 'res_multistep', scheduler: 'simple' },
     minEngine: '0.34.0',
     workflowVersion: 'z-image-txt2img@1',
+    guide: {
+      maker: 'Alibaba Tongyi Lab',
+      sourceUrl: 'https://huggingface.co/Tongyi-MAI/Z-Image-Turbo',
+      megapixels: { ideal: 1.5, max: 4 },
+      steps: [8, 10],
+      cfg: [1, 1],
+      tips: [
+        'Write full sentences, like a photo caption.',
+        'Good at English and Chinese text. Put the words in "quotes".',
+        'The negative prompt is ignored at CFG 1.',
+      ],
+    },
   },
   'flux3-klein': {
     id: 'flux3-klein',
@@ -233,6 +289,18 @@ export const IMAGE_MODELS: Readonly<Record<ImageModelId, ImageModelDefinition>> 
     defaults: { steps: 16, cfg: 1, sampler: 'euler', scheduler: 'simple' },
     minEngine: '0.41.0',
     workflowVersion: 'flux3-klein-txt2img@1',
+    guide: {
+      maker: 'Black Forest Labs',
+      sourceUrl: 'https://huggingface.co/black-forest-labs/flux-3-image-klein-comfy',
+      megapixels: { ideal: 1, max: 4 },
+      steps: [4, 16],
+      cfg: [1, 1],
+      tips: [
+        'Describe the whole picture in plain sentences.',
+        'Fewer steps (as low as 4) are faster with a small quality cost.',
+        'The negative prompt is ignored at CFG 1.',
+      ],
+    },
   },
   'moss-image': {
     id: 'moss-image',
@@ -274,6 +342,18 @@ export const IMAGE_MODELS: Readonly<Record<ImageModelId, ImageModelDefinition>> 
     defaults: { steps: 25, cfg: 2.5, sampler: 'er_sde', scheduler: 'simple' },
     minEngine: '0.43.0',
     workflowVersion: 'moss-image-txt2img@1',
+    guide: {
+      maker: 'OpenMOSS',
+      sourceUrl: 'https://huggingface.co/Comfy-Org/MOSS-Image',
+      megapixels: { ideal: 1.5, max: 4 },
+      steps: [25, 30],
+      cfg: [2.5, 3],
+      tips: [
+        'Put any words you want drawn in "quotes". Great for posters and signs.',
+        'Plain English or tags both work. Tag order: quality, meta, year, character, series, artist, the rest.',
+        'It is uncensored, so say what you do not want in the negative prompt.',
+      ],
+    },
   },
   'krea2-turbo': {
     id: 'krea2-turbo',
@@ -303,6 +383,18 @@ export const IMAGE_MODELS: Readonly<Record<ImageModelId, ImageModelDefinition>> 
     defaults: { steps: 8, cfg: 1, sampler: 'euler', scheduler: 'simple' },
     minEngine: '0.34.0',
     workflowVersion: 'krea2-txt2img@1',
+    guide: {
+      maker: 'Krea',
+      sourceUrl: 'https://huggingface.co/krea/Krea-2-Turbo',
+      megapixels: { ideal: 1.5, max: 4 },
+      steps: [8, 8],
+      cfg: [1, 1],
+      tips: [
+        'Write full, detailed sentences. It rewards description of light and texture.',
+        'Up to about 2K works well.',
+        'The negative prompt is ignored at CFG 1.',
+      ],
+    },
   },
 };
 
@@ -500,4 +592,51 @@ export function bindImageModelWorkflow(
     node.inputs[field] = matches[0];
   }
   return result;
+}
+
+const round16 = (value: number) => Math.max(256, Math.round(value / 16) * 16);
+const ASPECTS: Array<[string, number, number]> = [
+  ['Square', 1, 1],
+  ['Portrait', 3, 4],
+  ['Landscape', 4, 3],
+  ['Tall', 9, 16],
+  ['Wide', 16, 9],
+];
+const MAX_SIDE = 2048;
+
+/** Sizes near the model's sweet spot, one per common aspect ratio, sides multiples of 16. */
+export function imageModelSizes(id: ImageModelId) {
+  const pixels = IMAGE_MODELS[id].guide.megapixels.ideal * 1024 * 1024;
+  return ASPECTS.map(([name, w, h]) => {
+    const scale = Math.sqrt(pixels / (w * h));
+    return { name, width: Math.min(MAX_SIDE, round16(w * scale)), height: Math.min(MAX_SIDE, round16(h * scale)) };
+  });
+}
+
+/**
+ * Keeps a size the user picked when the model handles it; otherwise picks the closest
+ * recommended size with the same shape.
+ */
+export function fitImageModelSize(id: ImageModelId, width: number, height: number) {
+  const { max } = IMAGE_MODELS[id].guide.megapixels;
+  const megapixels = (width * height) / (1024 * 1024);
+  if (
+    width % 16 === 0 &&
+    height % 16 === 0 &&
+    Math.max(width, height) <= MAX_SIDE &&
+    megapixels >= 0.5 &&
+    megapixels <= max
+  )
+    return { width, height };
+  const ratio = width / height;
+  const best = imageModelSizes(id).reduce((a, b) =>
+    Math.abs(Math.log(a.width / a.height / ratio)) <= Math.abs(Math.log(b.width / b.height / ratio)) ? a : b,
+  );
+  return { width: best.width, height: best.height };
+}
+
+/** The settings Latent fills in when you switch to a model and haven't tuned it yet. */
+export function imageModelStartingSettings(id: ImageModelId) {
+  const model = IMAGE_MODELS[id];
+  return { ...model.defaults, negativePrompt: model.guide.negative ?? '' };
 }

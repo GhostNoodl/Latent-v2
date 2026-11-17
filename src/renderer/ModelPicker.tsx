@@ -77,7 +77,7 @@ export function ModelPicker({
   onUpdated?(snapshot: AppSnapshot): void;
   /** Newer image model in use (checkpoint picker only). */
   imageModel?: ImageModelId;
-  onChooseImageModel?(id: ImageModelId): void;
+  onChooseImageModel?(id: ImageModelId, options?: { recommended?: boolean }): void;
   onDownloadImageModel?(id: ImageModelId): void;
   kind: 'checkpoint' | 'lora';
   selectedIds: string[];

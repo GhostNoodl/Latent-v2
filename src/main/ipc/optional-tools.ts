@@ -3,6 +3,7 @@ import { IMAGE_MODELS, compareEngineVersions, imageModelIdSchema } from '../../s
 import { IMAGE_MODELS_SET_ID, latestReviewedRuntimeSet, reviewedRuntimeSet } from '../reviewed-runtime-channel';
 import { isQwen21Profile, qwenEditProfileSchema } from '../../shared/qwen-edit-types';
 import { z } from 'zod';
+import { shell } from 'electron';
 import { activateIPAdapterWhenIdle } from '../ipadapter-lifecycle';
 import { qwenConversationSchema } from '../../shared/qwen-conversation';
 import type { HandlerContext, StudioMethods } from '../main';
@@ -100,6 +101,12 @@ export function optionalToolsHandlers(ctx: HandlerContext) {
     },
     cancelImageModelSetup: async () => {
       ctx.imageModels.cancel();
+    },
+    openImageModelPage: async (id, page) => {
+      const model = IMAGE_MODELS[imageModelIdSchema.parse(id)];
+      const url = z.enum(['source', 'license']).parse(page) === 'license' ? model.license.url : model.guide.sourceUrl;
+      if (!url.startsWith('https://huggingface.co/')) throw new Error('Unexpected model page.');
+      await shell.openExternal(url);
     },
     cancelQwenEditSetup: async () => {
       ctx.qwenEdit.cancel();

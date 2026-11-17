@@ -1499,3 +1499,42 @@
 .image-model-download progress {
   flex: 1;
 }
+.image-model-card-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.image-model-card-wrap > .image-model-card {
+  flex: 1;
+}
+.image-model-details-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+.image-model-details-link:hover {
+  color: var(--accent);
+}
+.image-model-details {
+  max-width: 620px;
+}
+.image-model-details h3 {
+  margin: 16px 0 6px;
+}
+.image-model-details code {
+  overflow-wrap: anywhere;
+}
+.image-model-tips {
+  margin: 0;
+  padding-left: 18px;
+}
+.image-model-tips li + li {
+  margin-top: 4px;
+}

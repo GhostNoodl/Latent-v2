@@ -1722,6 +1722,14 @@
     {
       "from": "tests/image-model-picker.test.tsx",
       "to": "tests/image-model-picker.test.tsx"
+    },
+    {
+      "from": "src/renderer/image-model-settings.ts",
+      "to": "src/renderer/image-model-settings.ts"
+    },
+    {
+      "from": "tests/image-model-settings.test.ts",
+      "to": "tests/image-model-settings.test.ts"
     }
   ]
 }
