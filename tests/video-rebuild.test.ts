@@ -9,6 +9,7 @@ import {
 import { bindVideoWorkflow, buildVideoWorkflow, SOL_ATTENTION_NODE } from '../src/shared/video-workflow';
 import { parseVideoContract } from '../src/shared/video-history';
 import { estimateVideoMs } from '../src/renderer/video-url';
+import { videoUpscaleSize } from '../src/shared/video-extras';
 import type { VideoDraft, VideoHistoryRecord } from '../src/shared/video-types';
 
 const jobId = 'a'.repeat(32);
@@ -128,8 +129,46 @@ describe('video graph', () => {
     objects.UNETLoader.input.required.unet_name = windows(contract.workflow['1'].inputs.unet_name);
     objects.CLIPLoader.input.required.clip_name = windows(contract.workflow['2'].inputs.clip_name);
     objects.VAELoader.input.required.vae_name = windows(contract.workflow['3'].inputs.vae_name);
+    objects.FrameInterpolationModelLoader.input.required.model_name = windows(
+      contract.workflow['41'].inputs.model_name,
+    );
     const bound = bindVideoWorkflow(contract, objects);
     expect(String(bound.workflow['1'].inputs.unet_name)).toContain('\\');
+  });
+});
+
+describe('finishing', () => {
+  it('smooths to 48 fps by default and leaves the size alone', () => {
+    const contract = build(draft());
+    expect(contract.workflow['42'].class_type).toBe('FrameInterpolate');
+    expect(contract.workflow['14'].inputs).toMatchObject({ images: ['42', 0], fps: 48 });
+    expect(contract.plan.finishing).toMatchObject({ width: 832, height: 480, fps: 48, frames: 247 });
+    expect(contract.workflow['30']).toBeUndefined();
+  });
+  it('upscales in a second run, before smoothing, keeping the shape', () => {
+    const contract = build(draft({ width: 1344, height: 768, finishing: { smooth: 'rife', upscale: '1080p' } }));
+    // First run: just the plain clip at 24 fps.
+    expect(contract.workflow['30']).toBeUndefined();
+    expect(contract.workflow['14'].inputs).toMatchObject({ images: ['11', 0], fps: 24 });
+    const finish = contract.finish!;
+    expect(finish.inputFilename).toBe(`Latent_${jobId}_raw.mp4`);
+    expect(finish.workflow['50'].inputs.file).toBe(finish.inputFilename);
+    expect(finish.workflow['30'].inputs).toMatchObject({ image: ['51', 0], width: 1890, height: 1080 });
+    expect(finish.workflow['42'].inputs.images).toEqual(['40', 0]);
+    expect(finish.workflow['15'].inputs.filename_prefix).toBe(contract.output.filenamePrefix);
+    expect(contract.plan.finishing).toMatchObject({ width: 1890, height: 1080, fps: 48 });
+    expect(parseVideoContract(JSON.parse(JSON.stringify(contract)), jobId).finish).toEqual(finish);
+  });
+  it('skips smoothing when off and gives old drafts the default', () => {
+    const contract = build(draft({ finishing: { smooth: 'off', upscale: 'off' } }));
+    expect(contract.workflow['14'].inputs).toMatchObject({ images: ['11', 0], fps: 24 });
+    const old = { ...draft() } as Record<string, unknown>;
+    delete old.finishing;
+    expect((videoDraftSchema.parse(old) as VideoDraft).finishing).toEqual({ smooth: 'rife', upscale: 'off' });
+  });
+  it('only lists upscale sizes that grow the clip', () => {
+    expect(videoUpscaleSize(832, 480, '1080p')).toEqual({ width: 1872, height: 1080 });
+    expect(videoUpscaleSize(1920, 1080, '1080p')).toBeNull();
   });
 });
 

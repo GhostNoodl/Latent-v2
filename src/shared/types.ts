@@ -414,6 +414,8 @@ export interface LatentAPI {
   setupVideoAssets(profile: VideoDraft['profile']): Promise<VideoAssetBundle>;
   verifyVideoAssets(profile: VideoDraft['profile']): Promise<VideoAssetBundle>;
   cancelVideoAssetSetup(): Promise<void>;
+  installVideoExtra(id: import('./video-extras').VideoExtraId): Promise<void>;
+  cancelVideoExtra(): Promise<void>;
   revealVideo(id: string): Promise<void>;
   openVideoLicense(): Promise<void>;
   getStorageOverview(): Promise<StorageOverviewSnapshot>;

@@ -1,5 +1,6 @@
 import type { ComfyWorkflow } from './types';
 import type { VideoAssetIdentity, VideoPlan, VideoWorkflowContract } from './video-types';
+import { VIDEO_EXTRAS, videoExtraName } from './video-extras';
 
 export interface VideoAssetBinding {
   role: VideoAssetIdentity['role'];
@@ -67,6 +68,7 @@ export function buildVideoWorkflow(
     names.set(asset.role, safeVideoRelativeFilename(binding.filename, '.safetensors'));
   }
   const filenamePrefix = `Latent_${input.jobId}_video`;
+  const split = plan.finishing.upscale !== null;
   let model: [string, number] = ['1', 0];
   const workflow: ComfyWorkflow = {
     '1': { class_type: 'UNETLoader', inputs: { unet_name: names.get('diffusion')!, weight_dtype: 'default' } },
@@ -132,7 +134,10 @@ export function buildVideoWorkflow(
             temporal_overlap: plan.decode.temporalOverlap,
           },
         },
-    '14': { class_type: 'CreateVideo', inputs: { images: ['11', 0], fps: 24 } },
+    // With the upscaler, this run saves the plain clip and the finish graph does the rest.
+    '14': split
+      ? { class_type: 'CreateVideo', inputs: { images: ['11', 0], fps: 24 } }
+      : { class_type: 'CreateVideo', inputs: { images: finish(workflow, plan, ['11', 0]), fps: plan.finishing.fps } },
     // V3 dynamic inputs are flattened on the API wire; the engine rebuilds the nested choices.
     '15': {
       class_type: 'SaveVideo',
@@ -176,13 +181,109 @@ export function buildVideoWorkflow(
     workflow,
     output: { nodeId: '15', filenamePrefix, extension: '.mp4' },
     sourceFilenames: [...new Set(sourceFilenames)],
+    ...(split ? { finish: finishGraph(plan, input.jobId, filenamePrefix) } : {}),
   };
 }
+/** Second run: load the plain clip, upscale, smooth, and save under the same name pattern. */
+function finishGraph(plan: VideoPlan, jobId: string, filenamePrefix: string) {
+  const inputFilename = `Latent_${jobId}_raw.mp4`;
+  const workflow: ComfyWorkflow = {
+    '50': { class_type: 'LoadVideo', inputs: { file: inputFilename } },
+    '51': { class_type: 'GetVideoComponents', inputs: { video: ['50', 0] } },
+  };
+  workflow['14'] = {
+    class_type: 'CreateVideo',
+    inputs: {
+      images: finish(workflow, plan, ['51', 0]),
+      fps: plan.finishing.fps,
+      ...(plan.draft.audio === 'stereo-candidate' ? { audio: ['51', 1] } : {}),
+    },
+  };
+  workflow['15'] = {
+    class_type: 'SaveVideo',
+    inputs: {
+      video: ['14', 0],
+      filename_prefix: filenamePrefix,
+      format: 'mp4',
+      'format.codec': 'h264',
+      'format.codec.encoding': 're-encode',
+      'format.codec.encoding.crf': 18,
+    },
+  };
+  return { workflow, inputFilename };
+}
 
+const [SEEDVR2_MODEL, SEEDVR2_VAE] = VIDEO_EXTRAS.seedvr2.files;
+/** Settings the upscaler was tested with on a 3090. Bigger VAE tiles spill out of 24 GB and get far slower. */
+const SEEDVR2_TILES = Object.freeze({ tile_size: 512, overlap: 128, temporal_size: 64, temporal_overlap: 8 });
+
+/** Adds the upscaler (30–40) and then the smoother (41–42) after the decode, so the slow upscaler sees half the frames. */
+function finish(workflow: ComfyWorkflow, plan: VideoPlan, frames: [string, number]): [string, number] {
+  const finishing = plan.finishing;
+  let images = frames;
+  if (finishing.upscale) {
+    Object.assign(workflow, {
+      '30': {
+        class_type: 'ImageScale',
+        inputs: {
+          image: images,
+          upscale_method: 'lanczos',
+          width: finishing.upscale.width,
+          height: finishing.upscale.height,
+          crop: 'disabled',
+        },
+      },
+      '31': { class_type: 'SeedVR2Preprocess', inputs: { resized_images: ['30', 0] } },
+      '32': { class_type: 'VAELoader', inputs: { vae_name: videoExtraName(SEEDVR2_VAE) } },
+      '33': { class_type: 'UNETLoader', inputs: { unet_name: videoExtraName(SEEDVR2_MODEL), weight_dtype: 'default' } },
+      '34': { class_type: 'VAEEncodeTiled', inputs: { pixels: ['31', 0], vae: ['32', 0], ...SEEDVR2_TILES } },
+      '35': {
+        class_type: 'SeedVR2TemporalChunk',
+        inputs: { latent: ['34', 0], temporal_overlap: 2, chunking_mode: 'auto' },
+      },
+      '36': { class_type: 'SeedVR2Conditioning', inputs: { model: ['33', 0], vae_conditioning: ['35', 0] } },
+      '37': {
+        class_type: 'KSampler',
+        inputs: {
+          model: ['33', 0],
+          positive: ['36', 0],
+          negative: ['36', 1],
+          latent_image: ['35', 0],
+          seed: Number(plan.actualSeed),
+          steps: 1,
+          cfg: 1,
+          sampler_name: 'euler',
+          scheduler: 'simple',
+          denoise: 1,
+        },
+      },
+      '38': { class_type: 'SeedVR2TemporalMerge', inputs: { latents: ['37', 0], temporal_overlap: ['35', 1] } },
+      '39': { class_type: 'VAEDecodeTiled', inputs: { samples: ['38', 0], vae: ['32', 0], ...SEEDVR2_TILES } },
+      '40': {
+        class_type: 'SeedVR2PostProcessing',
+        inputs: { images: ['39', 0], original_resized_images: ['30', 0], color_correction_method: 'lab' },
+      },
+    } satisfies ComfyWorkflow);
+    images = ['40', 0];
+  }
+  if (finishing.smooth !== 'off') {
+    const [file] = VIDEO_EXTRAS[finishing.smooth].files;
+    workflow['41'] = { class_type: 'FrameInterpolationModelLoader', inputs: { model_name: videoExtraName(file) } };
+    workflow['42'] = { class_type: 'FrameInterpolate', inputs: { interp_model: ['41', 0], images, multiplier: 2 } };
+    images = ['42', 0];
+  }
+  return images;
+}
+
+const ENGINE_UPDATE = 'This engine version can’t do that yet. Update the engine in Settings.';
 const MISSING_NODE_HELP: Record<string, string> = {
   MiniMaxH3ImageToVideo: 'This engine version has no H3 support. Update the engine in Settings.',
   [VIDEO_ATTENTION_NODE]: 'The engine needs a restart to pick up the video speed switch.',
   [SOL_ATTENTION_NODE]: 'Sol isn’t installed. Install it in the Speed panel, or pick Sage.',
+  FrameInterpolate: ENGINE_UPDATE,
+  FrameInterpolationModelLoader: ENGINE_UPDATE,
+  SeedVR2Preprocess: ENGINE_UPDATE,
+  LoadVideo: ENGINE_UPDATE,
 };
 
 /** Light check that the engine has every node and model file this graph needs. Returns the graph with
@@ -192,11 +293,11 @@ export function bindVideoWorkflow(
   objects: Record<string, any>,
 ): VideoWorkflowContract {
   const result = structuredClone(contract);
-  for (const node of Object.values(result.workflow)) {
+  for (const node of [...Object.values(result.workflow), ...Object.values(result.finish?.workflow ?? {})]) {
     const definition = objects[node.class_type];
     if (!definition)
       throw new Error(MISSING_NODE_HELP[node.class_type] ?? `The engine is missing the ${node.class_type} node.`);
-    for (const field of ['unet_name', 'clip_name', 'vae_name', 'lora_name'] as const) {
+    for (const field of ['unet_name', 'clip_name', 'vae_name', 'lora_name', 'model_name'] as const) {
       const value = node.inputs[field];
       if (typeof value !== 'string') continue;
       const spec = definition.input?.required?.[field];

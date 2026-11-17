@@ -149,7 +149,11 @@ const VIDEO_PHASES: Record<string, string> = {
   CreateVideo: 'Saving the clip',
   SaveVideo: 'Saving the clip',
 };
-function videoPhase(kind: string | undefined) {
+function videoPhase(node: string | undefined, kind: string | undefined) {
+  const id = Number(node);
+  // Finishing nodes are numbered 30–42 so the shared loaders and decoders there get their own names.
+  if (id >= 30 && id <= 40) return 'Upscaling';
+  if (id === 41 || id === 42) return 'Smoothing motion';
   return (kind && VIDEO_PHASES[kind]) ?? 'Getting ready';
 }
 export class JobService {
@@ -1177,7 +1181,7 @@ export class JobService {
           if (isVideoJob(job)) {
             const graph = this.videoContext(job).prepared.contract.workflow;
             const kind = node ? graph[node]?.class_type : undefined;
-            job.phase = videoPhase(kind);
+            job.phase = videoPhase(node ?? undefined, kind);
           } else {
             const context = this.recipeForPhase(job.id);
             job.phase = generationPhase(context.workflow, node, context.advancedImage, context.faceDetailer?.plan);
@@ -1667,7 +1671,10 @@ export class JobService {
     try {
       const context = this.videoContext(job);
       if (!context.finalization) throw new Error('The finished video is missing its saving receipt.');
-      const record = await this.videoQueue!.finalize(job, context, this.shutdown.signal);
+      const record = await this.videoQueue!.finalize(job, context, this.shutdown.signal, phase => {
+        job.phase = phase;
+        this.save(job);
+      });
       if (this.disposed) return;
       // Cancellation may have been saved while the CPU decoder was working.
       const latest = this.videoContext(job);

@@ -5,6 +5,24 @@ import type { VideoAvailability, VideoDraft, VideoSpeed } from '../shared/video-
 import { resolveVideoDuration, textOnGpu, videoDraftSchema } from '../shared/video-plan';
 import { videoProfileReady } from '../shared/video-assets';
 import { formatDuration } from './video-url';
+import {
+  VIDEO_EXTRAS,
+  videoExtraBytes,
+  videoExtrasFor,
+  videoUpscaleSize,
+  type VideoExtraId,
+  type VideoFinishing,
+} from '../shared/video-extras';
+
+const megabytes = (bytes: number) =>
+  bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.max(1, Math.round(bytes / 1e6))} MB`;
+function finishLabel(draft: VideoDraft) {
+  const parts = [
+    draft.finishing.smooth !== 'off' && '48 fps',
+    videoUpscaleSize(draft.width, draft.height, draft.finishing.upscale) && draft.finishing.upscale,
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : 'Off';
+}
 
 export const VIDEO_SIZES = [
   { width: 832, height: 480, label: 'Wide' },
@@ -24,7 +42,7 @@ const QUALITY: { profile: VideoDraft['profile']; label: string; hint: string }[]
 ];
 export const qualityName = (profile: VideoDraft['profile']) => QUALITY.find(item => item.profile === profile)!;
 
-type Panel = 'speed' | 'length' | 'size' | 'seed' | 'firstFrame' | 'lastFrame';
+type Panel = 'speed' | 'length' | 'size' | 'finish' | 'seed' | 'firstFrame' | 'lastFrame';
 
 function Seg<T extends string>({
   label,
@@ -123,6 +141,12 @@ export function VideoDock(props: VideoDockProps) {
   }, [open]);
   const update = (patch: Partial<VideoDraft>) => onChange({ ...draft, ...patch });
   const speed = (patch: Partial<VideoSpeed>) => update({ speed: { ...draft.speed, ...patch } });
+  const finishing = (patch: Partial<VideoFinishing>) => update({ finishing: { ...draft.finishing, ...patch } });
+  const extras = status.extras;
+  const missingExtras = extras ? videoExtrasFor(draft.finishing).filter(id => !extras.installed[id]) : [];
+  const getExtra = (id: VideoExtraId) => {
+    void window.latent.installVideoExtra(id).catch(() => undefined);
+  };
   const toggle = (panel: Panel) => setOpen(current => (current === panel ? undefined : panel));
   const parsed = videoDraftSchema.safeParse(draft);
   const filesReady = videoProfileReady(status.assets, draft.profile);
@@ -140,9 +164,11 @@ export function VideoDock(props: VideoDockProps) {
         ? parsed.error.issues[0]?.message
         : !filesReady
           ? 'This quality needs its files. See the setup above.'
-          : !status.canGenerate
-            ? status.message
-            : undefined;
+          : missingExtras.length
+            ? `Get the ${VIDEO_EXTRAS[missingExtras[0]].label.toLowerCase()} files first (Finish).`
+            : !status.canGenerate
+              ? status.message
+              : undefined;
   const gpuText = textOnGpu(draft.speed, status.bigCard === true, draft.profile);
   const chip = (panel: Panel, label: string, value: ReactNode, extra = '') => (
     <button
@@ -414,6 +440,60 @@ export function VideoDock(props: VideoDockProps) {
                   ))}
                 </div>
                 <p className="vp-note">Bigger sizes look sharper and take longer.</p>
+              </div>
+            )}
+          </div>
+          <div className="vp-anchor">
+            {chip('finish', 'Finish', finishLabel(draft))}
+            {open === 'finish' && (
+              <div className="vp-pop vp-pop-speed" role="dialog" aria-label="Finish">
+                <Seg
+                  label="Smooth motion (24 → 48 fps)"
+                  value={draft.finishing.smooth}
+                  options={[
+                    { value: 'off', label: 'Off' },
+                    { value: 'rife', label: 'Quick' },
+                    { value: 'film', label: 'Best' },
+                  ]}
+                  onChange={smooth => finishing({ smooth })}
+                />
+                <Seg
+                  label="Upscale"
+                  value={draft.finishing.upscale}
+                  options={(['off', '1080p', '1440p'] as const).map(value => ({
+                    value,
+                    label: value === 'off' ? 'Off' : value,
+                    disabled: value !== 'off' && !videoUpscaleSize(draft.width, draft.height, value),
+                    title:
+                      value !== 'off' && !videoUpscaleSize(draft.width, draft.height, value)
+                        ? 'The clip is already this big'
+                        : undefined,
+                  }))}
+                  onChange={upscale => finishing({ upscale })}
+                />
+                {extras?.installing ? (
+                  <div className="vp-pop-actions">
+                    <span className="vp-note">
+                      Getting the {VIDEO_EXTRAS[extras.installing.id].label.toLowerCase()} files…{' '}
+                      {Math.round(extras.installing.progress * 100)}%
+                    </span>
+                    <button type="button" onClick={() => void window.latent.cancelVideoExtra()}>
+                      Stop
+                    </button>
+                  </div>
+                ) : (
+                  missingExtras.map(id => (
+                    <button key={id} type="button" className="vp-link" onClick={() => getExtra(id)}>
+                      Get the {VIDEO_EXTRAS[id].label.toLowerCase()} files ({megabytes(videoExtraBytes(id))})
+                    </button>
+                  ))
+                )}
+                {extras?.error && !extras.installing && <p className="vp-note error">{extras.error}</p>}
+                <p className="vp-note">
+                  {draft.finishing.upscale !== 'off'
+                    ? 'The upscaler adds a few minutes per clip. It works best on clips you plan to keep.'
+                    : 'Quick smoothing takes a few seconds. Best handles fast motion a little better.'}
+                </p>
               </div>
             )}
           </div>

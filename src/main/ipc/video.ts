@@ -25,6 +25,8 @@ export function videoHandlers(ctx: HandlerContext) {
     verifyVideoAssets: async profile =>
       ctx.videoAssets.verifyLocal(z.enum(['base', 'turbo8', 'fused4']).parse(profile)),
     cancelVideoAssetSetup: async () => ctx.videoAssets.cancel(),
+    installVideoExtra: async value => ctx.videoExtras.install(z.enum(['rife', 'film', 'seedvr2']).parse(value)),
+    cancelVideoExtra: async () => ctx.videoExtras.cancel(),
     restoreVideoParameters: async value => ctx.videoHistory.restore(ctx.id.parse(value)),
     revealVideo: async value => {
       const recordId = ctx.id.parse(value);

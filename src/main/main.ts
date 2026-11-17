@@ -81,6 +81,7 @@ import { videoFileResponse, VideoMediaInspector, packagedVideoInspectorPath } fr
 import { VideoHistoryService } from './video-history';
 import { VideoAssetsService } from './video-assets';
 import { installSolAttention, solAttentionInstalled } from './video-speed-nodes';
+import { VideoExtrasService } from './video-extras';
 import { localVideoAvailability } from './video-availability';
 import { VideoQueueService } from './video-queue';
 import { isVideoJob } from '../shared/types';
@@ -146,6 +147,7 @@ let backendActivity: BackendActivityService;
 let videoConversations: VideoConversationService;
 let videoHistory: VideoHistoryService;
 let videoAssets: VideoAssetsService;
+let videoExtras: VideoExtrasService;
 let videoInspector: VideoMediaInspector;
 let modelTransferActions: ModelTransferActions;
 let missingOutputs: MissingOutputs;
@@ -212,6 +214,7 @@ function videoStatus(): AppSnapshot['video'] {
   return localVideoAvailability(VIDEO_AVAILABILITY, videoAssets.status(), backend.status().state, {
     bigCard: usesExtraVram(store.settings(), hardware),
     solInstalled: solAttentionInstalled(paths),
+    extras: videoExtras?.status(),
   });
 }
 function snapshot(): AppSnapshot {
@@ -621,6 +624,9 @@ function handlerContext() {
     get videoAssets() {
       return videoAssets;
     },
+    get videoExtras() {
+      return videoExtras;
+    },
     get videoConversations() {
       return videoConversations;
     },
@@ -673,6 +679,7 @@ async function initialize() {
     }),
     broadcast,
   );
+  videoExtras = new VideoExtrasService(paths, broadcast);
   faceDetailer = new FaceDetailerService(paths, store, broadcast, sources);
   segmentation = new SegmentationService(paths, store, broadcast, sources);
   civitai = new CivitaiCatalog(paths, store, models, broadcast, safeStorage);
@@ -732,6 +739,7 @@ async function initialize() {
   );
   const videoQueue = new VideoQueueService(paths, videoAssets, sources, backend, videoHistory, {
     bigCard: () => usesExtraVram(store.settings(), hardware),
+    extras: videoExtras,
     blockedReason: () =>
       runtimeCoordinator?.blockedReason() ??
       (!runtimeCoordinator ? 'Checking interrupted runtime maintenance.' : undefined),

@@ -453,6 +453,9 @@
   color: var(--muted);
   line-height: 1.4;
 }
+.studio .vp-note.error {
+  color: var(--danger);
+}
 
 /* Clips rail */
 .studio .vp-clips {
