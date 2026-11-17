@@ -114,57 +114,50 @@ export class RuntimeUpdateCoordinator {
     return this.recoveryError;
   }
   private async withMaintenance<T>(operation: () => Promise<T>, recovery: boolean): Promise<T> {
-    return this.library.withExclusive(
-      recovery ? 'recovering the reviewed runtime' : 'updating the reviewed runtime',
-      async () => {
-        const state = this.backend.status().state;
-        if (['starting', 'installing'].includes(state))
-          throw new Error('Wait for the image engine to finish starting or installing before runtime maintenance.');
-        const hasJobs = this.queue.jobs().some(activeJob);
-        // A cold-start recovery repairs the source before durable work can resume.
-        // Later recovery may retain work only when the owned engine is stopped.
-        const allowRetainedJobs =
-          recovery && (this.startup || state === 'stopped' || state === 'not-installed') && !this.backend.getUrl();
-        if (hasJobs && !allowRetainedJobs)
-          throw new Error('Finish or cancel queued and running jobs before changing the runtime.');
-        const wasRunning = state === 'ready';
-        return this.queue.withRuntimeMaintenance(
-          async () => {
-            this.maintaining = true;
-            let enteredMaintenance = false;
-            try {
-              if (wasRunning) {
-                const queue = await this.readOwned('/queue');
-                if (!Array.isArray(queue.queue_running) || !Array.isArray(queue.queue_pending))
-                  throw new Error(
-                    'The owned engine did not report a valid queue; runtime maintenance was not started.',
-                  );
-                if (queue.queue_running.length || queue.queue_pending.length)
-                  throw new Error('Finish or cancel work in the owned ComfyUI queue before changing the runtime.');
-              }
-              enteredMaintenance = true;
-              await this.backend.stop();
-              return await operation();
-            } finally {
-              try {
-                if (enteredMaintenance && (this.status().recoveryRequired || !wasRunning)) await this.backend.stop();
-                else if (enteredMaintenance && this.backend.status().state !== 'ready') {
-                  const current = this.status().current;
-                  if (!current)
-                    throw new Error(
-                      'The previous runtime identity is unavailable; start it after recovery in Settings.',
-                    );
-                  await this.startAndVerify(reviewedRuntimeSet(current.setId));
-                }
-              } finally {
-                this.maintaining = false;
-              }
+    return this.library.withExclusive(recovery ? 'finishing an engine update' : 'updating the engine', async () => {
+      const state = this.backend.status().state;
+      if (['starting', 'installing'].includes(state))
+        throw new Error('Wait for the engine to finish starting, then try again.');
+      const hasJobs = this.queue.jobs().some(activeJob);
+      // A cold-start recovery repairs the source before durable work can resume.
+      // Later recovery may retain work only when the owned engine is stopped.
+      const allowRetainedJobs =
+        recovery && (this.startup || state === 'stopped' || state === 'not-installed') && !this.backend.getUrl();
+      if (hasJobs && !allowRetainedJobs)
+        throw new Error('Finish or cancel queued and running jobs before changing the runtime.');
+      const wasRunning = state === 'ready';
+      return this.queue.withRuntimeMaintenance(
+        async () => {
+          this.maintaining = true;
+          let enteredMaintenance = false;
+          try {
+            if (wasRunning) {
+              const queue = await this.readOwned('/queue');
+              if (!Array.isArray(queue.queue_running) || !Array.isArray(queue.queue_pending))
+                throw new Error('The owned engine did not report a valid queue; runtime maintenance was not started.');
+              if (queue.queue_running.length || queue.queue_pending.length)
+                throw new Error('Finish or cancel work in the owned ComfyUI queue before changing the runtime.');
             }
-          },
-          { allowRetainedJobs },
-        );
-      },
-    );
+            enteredMaintenance = true;
+            await this.backend.stop();
+            return await operation();
+          } finally {
+            try {
+              if (enteredMaintenance && (this.status().recoveryRequired || !wasRunning)) await this.backend.stop();
+              else if (enteredMaintenance && this.backend.status().state !== 'ready') {
+                const current = this.status().current;
+                if (!current)
+                  throw new Error('The previous runtime identity is unavailable; start it after recovery in Settings.');
+                await this.startAndVerify(reviewedRuntimeSet(current.setId));
+              }
+            } finally {
+              this.maintaining = false;
+            }
+          }
+        },
+        { allowRetainedJobs },
+      );
+    });
   }
   private async startAndVerify(set: ReviewedRuntimeSet, names: string[] = []) {
     if (!this.maintaining) throw new Error('Runtime startup verification requires the exclusive maintenance gate.');
