@@ -120,7 +120,14 @@ import { acceptHardwareProfileApplication } from '../shared/hardware-profile-app
 import { SharedBackendActivity } from './SharedBackendActivity';
 import { IMAGE_MODELS, type ImageModelId } from '../shared/image-models';
 import { imageModelProblem } from './ImageModelCards';
-import { forgetImageModelSettings, imageModelSettingsFor, rememberImageModelSettings } from './image-model-settings';
+import {
+  forgetImageModelSettings,
+  imageModelSettingsFor,
+  negativeUnused,
+  offRecommended,
+  recommendedSummary,
+  rememberImageModelSettings,
+} from './image-model-settings';
 import { queueJobActive, queueJobPresentation, queueView, runningImageJob } from './queue-view';
 import type { HardwareOomAdvice } from '../shared/hardware-profile-types';
 import { Busy, ConfirmDialog, Field, Modal, Notice, Toggle, shortDate, type RunAction } from './ui';
@@ -1157,6 +1164,9 @@ export default function App() {
   };
   // Live paint brings its own source image, so image-input and Enhance problems don't block it.
   const liveBlocked = draft.enhance || draft.upscale || draft.imageInput ? undefined : cannotGenerate;
+  // A newer model only does text to image, so Create hides the SDXL-only tools while one is picked.
+  const newerModel = draft.imageModel;
+  const offBest = newerModel ? offRecommended(newerModel, draft) : undefined;
   const queueSweep = (drafts: GenerationDraft[]) => {
     if (!drafts.length) return;
     void run('generate', async () => {
@@ -1424,7 +1434,7 @@ export default function App() {
                           </div>
                         )}
                         <div className="two-columns">
-                          <Field label="Steps" className="slider-field">
+                          <Field label="Steps" className={`slider-field${offBest?.steps ? ' off-recommended' : ''}`}>
                             <input
                               type="number"
                               min={1}
@@ -1441,7 +1451,10 @@ export default function App() {
                               onChange={event => changeDraft({ steps: Number(event.target.value) })}
                             />
                           </Field>
-                          <Field label="Guidance (CFG)" className="slider-field">
+                          <Field
+                            label="Guidance (CFG)"
+                            className={`slider-field${offBest?.cfg ? ' off-recommended' : ''}`}
+                          >
                             <input
                               type="number"
                               min={0}
@@ -1461,6 +1474,25 @@ export default function App() {
                             />
                           </Field>
                         </div>
+                        {newerModel && (
+                          <p className="recommended-hint">
+                            <span>
+                              Best for {IMAGE_MODELS[newerModel].name}: {recommendedSummary(newerModel)}
+                            </span>
+                            {(offBest?.steps || offBest?.cfg) && (
+                              <button
+                                type="button"
+                                className="text-button"
+                                onClick={() => {
+                                  const { steps, cfg, sampler, scheduler } = IMAGE_MODELS[newerModel].defaults;
+                                  changeDraft({ steps, cfg, sampler, scheduler });
+                                }}
+                              >
+                                Use these
+                              </button>
+                            )}
+                          </p>
+                        )}
                         {createMode === 'advanced' && (
                           <>
                             <div className="two-columns">
@@ -1510,7 +1542,7 @@ export default function App() {
                             </button>
                           </div>
                         </Field>
-                        {createMode === 'advanced' && (
+                        {createMode === 'advanced' && !newerModel && (
                           <details className="tune-flyout sampling-flyout">
                             <summary>Model sampling</summary>
                             <Field label="Prediction type">
@@ -1559,8 +1591,10 @@ export default function App() {
                         )}
                       </div>
                     </details>
-                    <AdvancedImageControls draft={draft} snapshot={snapshot} onChange={changeDraft} run={run} />
-                    {createMode === 'advanced' && (
+                    {!newerModel && (
+                      <AdvancedImageControls draft={draft} snapshot={snapshot} onChange={changeDraft} run={run} />
+                    )}
+                    {createMode === 'advanced' && !newerModel && (
                       <>
                         <SourceInput
                           snapshot={snapshot}
@@ -1601,12 +1635,12 @@ export default function App() {
                     />
                     <details className="extra-row tune-flyout">
                       <summary>
-                        {createMode === 'advanced' ? 'Regions and wildcards' : 'Wildcards'}
+                        {createMode === 'advanced' && !newerModel ? 'Regions and wildcards' : 'Wildcards'}
                         {(draft.dynamicPrompts?.enabled || draft.regionalPrompts?.settings.enabled) && (
                           <span className="extra-status">On</span>
                         )}
                       </summary>
-                      {createMode === 'advanced' && (
+                      {createMode === 'advanced' && !newerModel && (
                         <RegionalPrompts
                           value={draft.regionalPrompts?.settings}
                           width={draft.width}
@@ -1644,7 +1678,7 @@ export default function App() {
                     </button>
                   </div>
                   <div className="prompt-dock">
-                    {lorasOpen && draft.loras.length > 0 && (
+                    {lorasOpen && draft.loras.length > 0 && !newerModel && (
                       <div className="lora-popover" role="group" aria-label="LoRAs">
                         <div className="lora-list-heading">
                           <strong>LoRAs</strong>
@@ -1947,6 +1981,13 @@ export default function App() {
                       <section id="negative-area" className="negative-prompt">
                         <div className="label-row">
                           <label htmlFor="negative-prompt">Negative</label>
+                          {newerModel && negativeUnused(newerModel, draft.cfg) && (
+                            <span className="muted small">
+                              {IMAGE_MODELS[newerModel].negative === 'zero'
+                                ? `${IMAGE_MODELS[newerModel].name} skips it`
+                                : 'Skipped at CFG 1'}
+                            </span>
+                          )}
                           <button
                             type="button"
                             className="text-button"
@@ -2039,61 +2080,65 @@ export default function App() {
                           'Choose a checkpoint'
                         )}
                       </button>
-                      <button
-                        type="button"
-                        className="dock-chip dock-chip-lora"
-                        aria-haspopup={draft.loras.length ? undefined : 'dialog'}
-                        aria-expanded={draft.loras.length ? lorasOpen : undefined}
-                        title={draft.loras.length ? 'Your LoRAs' : 'Add a LoRA'}
-                        onClick={() => {
-                          if (!draft.loras.length) setLoraOpen(true);
-                          else {
-                            setLorasOpen(!lorasOpen);
-                            setLoraPopover(undefined);
-                          }
-                        }}
-                      >
-                        {draft.loras.length === 0 ? (
-                          <>
-                            <Plus size={13} />
-                            LoRA
-                          </>
-                        ) : (
-                          <>
-                            <span className="lora-stack">
-                              {draft.loras.slice(0, 3).map((lora, index) => {
-                                const asset = findAsset(lora.modelId);
-                                return asset ? (
-                                  <ModelArtwork
-                                    key={`${lora.modelId}-${index}`}
-                                    model={asset}
-                                    history={snapshot.history}
-                                    showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
-                                  />
-                                ) : null;
-                              })}
-                            </span>
-                            <span className="dock-chip-label">
-                              {draft.loras.length === 1
-                                ? findAsset(draft.loras[0].modelId)
-                                  ? modelDisplayName(
-                                      findAsset(draft.loras[0].modelId)!,
-                                      snapshot.settings.civitaiDisplayMetadata !== false,
-                                    )
-                                  : 'Missing LoRA'
-                                : `${draft.loras.length} LoRAs`}
-                            </span>
-                            {draft.loras.length === 1 && (
-                              <span className="dock-chip-value">
-                                {draft.loras[0].off ? 'off' : draft.loras[0].weight}
+                      {(!newerModel || draft.loras.length > 0) && (
+                        <button
+                          type="button"
+                          className="dock-chip dock-chip-lora"
+                          aria-haspopup={draft.loras.length ? undefined : 'dialog'}
+                          aria-expanded={draft.loras.length ? lorasOpen : undefined}
+                          title={draft.loras.length ? 'Your LoRAs' : 'Add a LoRA'}
+                          onClick={() => {
+                            if (!draft.loras.length) setLoraOpen(true);
+                            else {
+                              setLorasOpen(!lorasOpen);
+                              setLoraPopover(undefined);
+                            }
+                          }}
+                        >
+                          {draft.loras.length === 0 ? (
+                            <>
+                              <Plus size={13} />
+                              LoRA
+                            </>
+                          ) : (
+                            <>
+                              <span className="lora-stack">
+                                {draft.loras.slice(0, 3).map((lora, index) => {
+                                  const asset = findAsset(lora.modelId);
+                                  return asset ? (
+                                    <ModelArtwork
+                                      key={`${lora.modelId}-${index}`}
+                                      model={asset}
+                                      history={snapshot.history}
+                                      showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
+                                    />
+                                  ) : null;
+                                })}
                               </span>
-                            )}
-                            {draft.loras.length > 1 && draft.loras.some(lora => lora.off) && (
-                              <span className="dock-chip-value">{draft.loras.filter(lora => lora.off).length} off</span>
-                            )}
-                          </>
-                        )}
-                      </button>
+                              <span className="dock-chip-label">
+                                {draft.loras.length === 1
+                                  ? findAsset(draft.loras[0].modelId)
+                                    ? modelDisplayName(
+                                        findAsset(draft.loras[0].modelId)!,
+                                        snapshot.settings.civitaiDisplayMetadata !== false,
+                                      )
+                                    : 'Missing LoRA'
+                                  : `${draft.loras.length} LoRAs`}
+                              </span>
+                              {draft.loras.length === 1 && (
+                                <span className="dock-chip-value">
+                                  {draft.loras[0].off ? 'off' : draft.loras[0].weight}
+                                </span>
+                              )}
+                              {draft.loras.length > 1 && draft.loras.some(lora => lora.off) && (
+                                <span className="dock-chip-value">
+                                  {draft.loras.filter(lora => lora.off).length} off
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="dock-chip"
@@ -2136,23 +2181,25 @@ export default function App() {
                           Exit Enhance
                         </button>
                       )}
-                      <div className="gen-extras">
-                        <button
-                          type="button"
-                          className="soft-button live-open"
-                          disabled={Boolean(liveBlocked)}
-                          title={liveBlocked || 'Sketch and watch the engine redraw it as you paint'}
-                          onClick={() => void flushDraft().then(() => setLiveOpen(true))}
-                        >
-                          <Brush size={16} />
-                          Live
-                        </button>
-                        <PauseSetup
-                          draft={draft}
-                          disabledReason={cannotGenerate || splitBlockedReason(draft)}
-                          onQueue={queuePaused}
-                        />
-                      </div>
+                      {!newerModel && (
+                        <div className="gen-extras">
+                          <button
+                            type="button"
+                            className="soft-button live-open"
+                            disabled={Boolean(liveBlocked)}
+                            title={liveBlocked || 'Sketch and watch the engine redraw it as you paint'}
+                            onClick={() => void flushDraft().then(() => setLiveOpen(true))}
+                          >
+                            <Brush size={16} />
+                            Live
+                          </button>
+                          <PauseSetup
+                            draft={draft}
+                            disabledReason={cannotGenerate || splitBlockedReason(draft)}
+                            onQueue={queuePaused}
+                          />
+                        </div>
+                      )}
                       <button
                         className="primary generate"
                         type="submit"

@@ -61,3 +61,13 @@ it('ignores junk in saved settings', () => {
     height: 768,
   });
 });
+
+it('spots steps and CFG outside the recommended range', async () => {
+  const { offRecommended, negativeUnused } = await import('../src/renderer/image-model-settings');
+  expect(offRecommended('anima-turbo', { steps: 10, cfg: 1 })).toEqual({ steps: false, cfg: false });
+  expect(offRecommended('anima-turbo', { steps: 30, cfg: 4 })).toEqual({ steps: true, cfg: true });
+  for (const id of IMAGE_MODEL_IDS)
+    expect(offRecommended(id, IMAGE_MODELS[id].defaults)).toEqual({ steps: false, cfg: false });
+  expect(negativeUnused('anima-turbo', 1)).toBe(true);
+  expect(negativeUnused('anima-aesthetic', 4.5)).toBe(false);
+});

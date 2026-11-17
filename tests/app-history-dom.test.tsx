@@ -1109,3 +1109,46 @@ describe('Simple and Advanced Create', () => {
     expect(labels()).toContain('Sampler');
   });
 });
+
+describe('Create with a newer image model', () => {
+  async function bootNewer(draft: GenerationDraft) {
+    await act(async () => {
+      root.unmount();
+    });
+    root = createRoot(host);
+    snapshot = {
+      ...snapshot,
+      draft,
+      imageModels: { state: 'idle', message: '', ready: ['anima-turbo'], readyFiles: [] },
+    } as AppSnapshot;
+    await render();
+  }
+  const summaries = () => [...host.querySelectorAll('summary')].map(node => node.textContent ?? '');
+
+  it('hides the SDXL-only tools and shows the best steps and CFG', async () => {
+    expect(host.querySelector('.dock-chip-lora')).not.toBeNull();
+    expect(summaries().some(text => text.startsWith('Upscale and refine'))).toBe(true);
+    await bootNewer({ ...authored(), checkpointId: '', imageModel: 'anima-turbo', steps: 30, cfg: 1 });
+    expect(host.querySelector('.dock-chip-lora')).toBeNull();
+    expect(host.querySelector('.live-open')).toBeNull();
+    expect(summaries().some(text => text.startsWith('Upscale and refine'))).toBe(false);
+    expect(summaries().some(text => text.startsWith('Model sampling'))).toBe(false);
+    expect(summaries().some(text => text.startsWith('Wildcards'))).toBe(true);
+    const hint = host.querySelector('.recommended-hint')!;
+    expect(hint.textContent).toContain('Best for Anima Turbo: 8–12 steps · CFG 1');
+    expect(host.querySelector('.negative-prompt')!.textContent).toContain('Skipped at CFG 1');
+    await click(button('Use these'));
+    expect(host.querySelector<HTMLInputElement>('.slider-field input[type="number"]')!.value).toBe('8');
+    expect(host.querySelector('.recommended-hint button')).toBeNull();
+  });
+
+  it('still shows leftover LoRAs so they can be removed', async () => {
+    await bootNewer({
+      ...authored(),
+      checkpointId: '',
+      imageModel: 'anima-turbo',
+      loras: [{ modelId: lora.id, weight: 1, clipWeight: 1 }],
+    });
+    expect(host.querySelector('.dock-chip-lora')).not.toBeNull();
+  });
+});
