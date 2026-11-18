@@ -313,8 +313,8 @@
     },
     {
       "path": "src/main/video-assets.ts",
-      "bytes": 20639,
-      "sha256": "9cfcc76c5b60c95d4101639cf5ecb0a79d7b8ab6377d54f7fd234f7507c636e0"
+      "bytes": 20781,
+      "sha256": "557eb65b4b16f69ba8e05b8ed30c404a32b08077ed1592775dbdb4a73f33e6fe"
     },
     {
       "path": "src/main/video-availability.ts",
@@ -1049,12 +1049,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "fdef971d1b8253a3c6fbdc8e6993211213d3297ece8519f1261da13ba9998638"
+      "sha256": "643db2866357cfc1277341531f89ebdbb227b3f3254e79cb4c51fa0a52a89afb"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "c4088bd4a2d6b64f80aa16a410e765fdab2825ef568cb61d75fe836de092fc14"
+      "sha256": "9d7707fdb3a2f6c5fa94d8d2327cf574bac1fb2ec6b1215bbe89874e6f962960"
     },
     {
       "path": "tsconfig.json",
