@@ -343,11 +343,18 @@ export function VideoDock(props: VideoDockProps) {
                   options={QUALITY.map(item => ({
                     value: item.profile,
                     label: `${item.label} · ${item.hint.split(' ')[0]}`,
-                    disabled: !videoProfileReady(status.assets, item.profile) && item.profile !== draft.profile,
-                    title: videoProfileReady(status.assets, item.profile) ? undefined : 'Needs its own files',
+                    // Picking a quality without its files opens its setup, where they can be downloaded or checked.
+                    title: videoProfileReady(status.assets, item.profile)
+                      ? undefined
+                      : 'Needs its files. Pick it to get them.',
                   }))}
                   onChange={profile => update({ profile })}
                 />
+                {!filesReady && (
+                  <p className="vp-note">
+                    {qualityName(draft.profile).label} needs its files. Download or check them in the box above.
+                  </p>
+                )}
                 <hr />
                 <span className="vp-label">Your graphics card{status.bigCard ? ' · extra memory on' : ''}</span>
                 <Switch

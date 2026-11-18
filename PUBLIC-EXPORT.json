@@ -108,13 +108,13 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 115508,
-      "sha256": "4117679f244c135b33ef4037051bbe39f82e47d8c11417de9e81d262db746b77"
+      "bytes": 120132,
+      "sha256": "f264d9f8f7de909cf4f794ec6ad44898c883ebf6cbefd5e0cef1ffb6b32b2e9b"
     },
     {
       "path": "src/main/main.ts",
-      "bytes": 58032,
-      "sha256": "b03f7b4f748b2c1dae5f4710fea24f398970d5850e5b3caf69312bf53d434641"
+      "bytes": 58459,
+      "sha256": "d01e78df715e09fd38c598e71aa0063a4a2f47e66a52db8700a8305f5ed8e1c8"
     },
     {
       "path": "src/main/managed-backend.ts",
@@ -193,8 +193,8 @@
     },
     {
       "path": "src/main/reviewed-runtime-channel.ts",
-      "bytes": 8318,
-      "sha256": "c4411f42ad336d35a3e7f1c646eeaa28cdc2b3a07186ae370a1fc3f04e3e1e51"
+      "bytes": 10120,
+      "sha256": "a3d8baf8d439f4c6232add01a263e98fbfd8ce0668f1f6c0509fdb88ad275c74"
     },
     {
       "path": "src/main/runtime-archive.ts",
@@ -368,8 +368,8 @@
     },
     {
       "path": "src/preload/preload.ts",
-      "bytes": 9957,
-      "sha256": "1d2dfe76cec874ba7191a6206347137d4e994ff0587abf759f1a1b249f1aed61"
+      "bytes": 10153,
+      "sha256": "cdbd13753e1f79dd734958e668994f7f959ebd0a9ec4c2e083d20acf5407c52e"
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
@@ -378,8 +378,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 139836,
-      "sha256": "84ae81cdfcbf11d84c956b5266f450a7a46055608ecc065873eef17d7b7e2933"
+      "bytes": 145757,
+      "sha256": "fe5183fd44c6ae43e4ae16487ad41faf728e33ec1da7d34e51c46f37c48f9f29"
     },
     {
       "path": "src/renderer/assistant.css",
@@ -473,8 +473,8 @@
     },
     {
       "path": "src/renderer/History.tsx",
-      "bytes": 38207,
-      "sha256": "c049357f20a52d00f812e0c6feb148157d88f471ced12f55f7df4edf2d96056f"
+      "bytes": 38353,
+      "sha256": "ce685eaaa3d7e999a28edf5794bb0380cd650124b34aaf99d36811857d5fb994"
     },
     {
       "path": "src/renderer/image-preview-recovery.ts",
@@ -498,8 +498,8 @@
     },
     {
       "path": "src/renderer/LibraryDetail.tsx",
-      "bytes": 4878,
-      "sha256": "a4ce7504a0dfc956fed4ec1015824f3a534bb6ac73d6de2fcefc38138ac96946"
+      "bytes": 4992,
+      "sha256": "ec0f67e0291354fae9757ded82b9d25089294fa2425ab82c56460cd16cd47096"
     },
     {
       "path": "src/renderer/LocalModelMetadata.tsx",
@@ -538,8 +538,8 @@
     },
     {
       "path": "src/renderer/ModelPicker.tsx",
-      "bytes": 6979,
-      "sha256": "3951052e2f8ab75b2ca51827911a2e2a9b2e0e96af06c0ec1fb28cea95046933"
+      "bytes": 8696,
+      "sha256": "7149ebb641fd5c17d4cd6a4230d18baffe4e8d34794bab2a4b0981bafa470754"
     },
     {
       "path": "src/renderer/Models.tsx",
@@ -663,8 +663,8 @@
     },
     {
       "path": "src/renderer/usability.css",
-      "bytes": 29527,
-      "sha256": "589a89c473b0edd71552570a591ec941e113c35cee7c79e8820c95ec1541b0dd"
+      "bytes": 31112,
+      "sha256": "c04e40f24404e1cb0d385485a0b3c7248447ab95e8e6ce5fe8a7620fbfaaf81d"
     },
     {
       "path": "src/renderer/variation-description.ts",
@@ -693,8 +693,8 @@
     },
     {
       "path": "src/renderer/VideoDock.tsx",
-      "bytes": 21199,
-      "sha256": "ab175992ef7d5fca7127dd46fdb6ceb55b882812c9e8e229bb04da88cb3ef3ae"
+      "bytes": 21496,
+      "sha256": "af28f0f92a26c3dec467fac39fc641c52aac3a1f5a1be96704b8bb65697c006f"
     },
     {
       "path": "src/renderer/VideoClips.tsx",
@@ -948,13 +948,13 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 22195,
-      "sha256": "eae83b2e5cd4f547b3cefebd02a3c32396bdf668e2e16d1b29d46368f44f74ff"
+      "bytes": 22695,
+      "sha256": "663128e8ebb0c0732d72e1d8e6140afdf2ee67d84241a90a3e21811fe62ec94a"
     },
     {
       "path": "src/shared/validation.ts",
-      "bytes": 12347,
-      "sha256": "91d80683e5f2ba603118738671d06b0668f25c76fa5b90d0217dbed6d731c344"
+      "bytes": 12447,
+      "sha256": "016012e59c6fab187375641b6868377dde1203476b31205556d96ee9d01e8b3f"
     },
     {
       "path": "src/shared/video-assets.ts",
@@ -1049,12 +1049,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "c1da4381cb7ec317fb9d186178ffafdd118d5655dfcf12a1d1191ece1c0532d3"
+      "sha256": "fdef971d1b8253a3c6fbdc8e6993211213d3297ece8519f1261da13ba9998638"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "1535843b58a5aba5a304020b10d49dc17a587df1203a2ea92f810dd1c47b5e20"
+      "sha256": "c4088bd4a2d6b64f80aa16a410e765fdab2825ef568cb61d75fe836de092fc14"
     },
     {
       "path": "tsconfig.json",
@@ -1273,8 +1273,8 @@
     },
     {
       "path": "src/shared/setup.ts",
-      "bytes": 5112,
-      "sha256": "9932c56db65e026c6afb115fa6a5702abeff75d798e5ad8fee4798cb26160840"
+      "bytes": 5139,
+      "sha256": "da273a6f57cd727fc4c6979c2f6caebbb6eca45feb0a803abdd7367ef4e7565b"
     },
     {
       "path": "src/renderer/SetupHub.tsx",
@@ -1298,8 +1298,8 @@
     },
     {
       "path": "tests/app-history-dom.test.tsx",
-      "bytes": 43455,
-      "sha256": "50b61ee4314c6572e5eb7eb342c048dc4a36676359b6d98369443fd712ccf199"
+      "bytes": 45428,
+      "sha256": "751e1abd8e793cb61315dddbee342bc2e54194ae9ff1ade2dfc3b6514daa8280"
     },
     {
       "path": "tests/image-versions.test.tsx",
@@ -1689,7 +1689,7 @@
     {
       "path": "tests/qwen21.test.ts",
       "bytes": 7631,
-      "sha256": "5776b1330be0465f82cf3eae2e823aac08657864609bacbe61f2aefc8233b565"
+      "sha256": "0253a63886eecab419c5e226dc8f88683147c53bb6258435b036bf984ab1d762"
     },
     {
       "path": "src/renderer/ModelFolders.tsx",
@@ -1813,8 +1813,8 @@
     },
     {
       "path": "src/main/phone-remote.ts",
-      "bytes": 14739,
-      "sha256": "287d08e097d2baf630426603cd7a939999c13833ec03a1dfe1cbf0c9943a6b9c"
+      "bytes": 14774,
+      "sha256": "791f3599bf4f2758b2eb5649606e6c699537c128cc8491506e006e6fdeacca4b"
     },
     {
       "path": "src/shared/graph-builder.ts",
@@ -1843,8 +1843,8 @@
     },
     {
       "path": "src/main/ipc/optional-tools.ts",
-      "bytes": 4819,
-      "sha256": "de6ae2e59ce0239cc7a9a29bdb1bd9efb2202158c8add0fd6e92f57789f4a463"
+      "bytes": 6714,
+      "sha256": "fc6110149427c71defd4d0e45c5be9152831bb87bd47b8d24331c3182eacb279"
     },
     {
       "path": "src/main/ipc/storage-hardware.ts",
@@ -1898,8 +1898,8 @@
     },
     {
       "path": "src/main/telegram-controls.ts",
-      "bytes": 15953,
-      "sha256": "870aa757979078771bd8bccbc2005c6187f98e2d70504b6432c79aaba7a44be3"
+      "bytes": 16112,
+      "sha256": "e904cf45c7fede00f25fac99d112f802c94663dd5436f98d2f3ee71f98de884b"
     },
     {
       "path": "tests/telegram-controls.test.ts",
@@ -2013,8 +2013,8 @@
     },
     {
       "path": "src/renderer/library-filters.ts",
-      "bytes": 1912,
-      "sha256": "5ce84e72c2605937924578f13f5f29538ceeeb5ed675bd73eb0431e5901ec454"
+      "bytes": 2112,
+      "sha256": "1dfcaeae0394714a263b8c0d3a7b6e1c612a0e9f40316fe701d46604bf9f4b5f"
     },
     {
       "path": "src/renderer/lineage.ts",
@@ -2100,6 +2100,51 @@
       "path": "tests/remembered-extras.test.ts",
       "bytes": 1264,
       "sha256": "fc3e68c18859ef14d2b87c407088ee3298d4bf845c1114f9c6da0e1c1ffe568d"
+    },
+    {
+      "path": "src/main/image-model-assets.ts",
+      "bytes": 10698,
+      "sha256": "52c6d0d4f08f96dbdfa7cc127df156bc431f37444165dc32f51f0c58d5037e1f"
+    },
+    {
+      "path": "src/main/runtime-045-packages.ts",
+      "bytes": 4263,
+      "sha256": "ad6d3a65fea60e3d9011754c5925be5d4a69e3a75d8ad4503e29cf8d1cb2f054"
+    },
+    {
+      "path": "src/shared/image-models.ts",
+      "bytes": 23966,
+      "sha256": "e6e85fcd76e4b3093cd6f384211c480fdf1f86659edd7f9483eb1eca7b0df5c8"
+    },
+    {
+      "path": "src/renderer/ImageModelCards.tsx",
+      "bytes": 9444,
+      "sha256": "102e03e521cafa9509d1010281b8cf38afe657198d08a4189aead1663c246874"
+    },
+    {
+      "path": "tests/image-models.test.ts",
+      "bytes": 7012,
+      "sha256": "d2b55f070f540021c3f76cf14cd9e8799bdd83adc97f83ab7023cd8255633d6b"
+    },
+    {
+      "path": ".github/workflows/comfyui-release-watch.yml",
+      "bytes": 4126,
+      "sha256": "2cb51b75ec2a46f2332356a60c2cb9a12299a1d3ab390705c9faad28e04a77b6"
+    },
+    {
+      "path": "tests/image-model-picker.test.tsx",
+      "bytes": 4116,
+      "sha256": "c1015f0fc1d3208d721baf7bd1af3f941f3cfa76e63419d9a0f8b487f45dae6c"
+    },
+    {
+      "path": "src/renderer/image-model-settings.ts",
+      "bytes": 3839,
+      "sha256": "96572bbe4833b85972c8317b682e183680c4d7020fb8b8b3ffa0074dc3bc8ad1"
+    },
+    {
+      "path": "tests/image-model-settings.test.ts",
+      "bytes": 3414,
+      "sha256": "7d635a1df598cb6b4f4aeb722e057f6dec261a6298e405ab0f84aba297c0f98c"
     }
   ],
   "privateHistoryIncluded": false
