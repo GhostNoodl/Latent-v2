@@ -190,7 +190,8 @@ export const LOCAL_ASSISTANT_MODELS: Readonly<Record<LocalAssistantModelId, Loca
   'qwen36-35b': {
     id: 'qwen36-35b',
     name: 'Qwen3.6 35B',
-    blurb: 'Smartest. Needs a 24 GB card and 48 GB of memory. Most of it sits in system memory, so images still fit.',
+    blurb:
+      'Smart and roomy. Needs a 24 GB card and 48 GB of memory. Most of it sits in system memory, so it stays loaded while you render.',
     model: hf(
       'unsloth/Qwen3.6-35B-A3B-GGUF',
       'a483e9e6cbd595906af30beda3187c2663a1118c',
@@ -211,6 +212,29 @@ export const LOCAL_ASSISTANT_MODELS: Readonly<Record<LocalAssistantModelId, Loca
     minRamBytes: 48 * GiB,
     license: 'Apache 2.0',
   },
+  'qwen38-27b': {
+    id: 'qwen38-27b',
+    name: 'Qwen3.8 27B',
+    blurb: 'Newest and smartest. Needs a 24 GB card. Fills most of it, so it steps aside while you render.',
+    model: hf(
+      'unsloth/Qwen3.8-27B-GGUF',
+      '4af51b3542f775b0a8e4b310bfb3f17e01c306c9',
+      'Qwen3.8-27B-UD-Q4_K_M.gguf',
+      16564259744,
+      '1bce504dfecd84153666928a41d8a66706f0158d3a317bc5196b72819d7dc529',
+    ),
+    vision: hf(
+      'unsloth/Qwen3.8-27B-GGUF',
+      '4af51b3542f775b0a8e4b310bfb3f17e01c306c9',
+      'mmproj-F16.gguf',
+      927607488,
+      'cbb841a9ee0636b2ec172f5bb8df2ea8dfeb01e90fe7c6126581d662a0b4e43e',
+    ),
+    gpuMiB: 19000,
+    minVramMiB: 22 * 1024,
+    minRamBytes: 32 * GiB,
+    license: 'Apache 2.0',
+  },
 };
 export const LOCAL_ASSISTANT_MODEL_IDS = Object.keys(LOCAL_ASSISTANT_MODELS) as LocalAssistantModelId[];
 
@@ -223,11 +247,19 @@ export function runtimeBytes(kind: 'cpu' | 'cuda') {
   return LOCAL_ASSISTANT_RUNTIME[kind].reduce((total, file) => total + file.bytes, 0);
 }
 
+/** Graphics memory an image render needs next to the assistant, in MiB. */
+const IMAGE_RENDER_MiB = 12 * 1024;
+
+/** Whether the local model can stay on the graphics card while a render runs. Video always takes the whole card. */
+export function fitsBesideRender(id: LocalAssistantModelId, jobKind: 'image' | 'video', vramMiB: number) {
+  return jobKind === 'image' && vramMiB - LOCAL_ASSISTANT_MODELS[id].gpuMiB >= IMAGE_RENDER_MiB;
+}
+
 /** The local model that suits this PC best. */
 export function recommendedLocalModel(hardware: { vramMiB?: number; ramBytes?: number }): LocalAssistantModelId {
   const vram = Number.isFinite(hardware.vramMiB) ? hardware.vramMiB! : 0;
   const ram = hardware.ramBytes ?? 0;
-  for (const id of ['qwen36-35b', 'qwen35-9b'] as const) {
+  for (const id of ['qwen38-27b', 'qwen36-35b', 'qwen35-9b'] as const) {
     const model = LOCAL_ASSISTANT_MODELS[id];
     if (vram >= model.minVramMiB && ram >= model.minRamBytes) return id;
   }

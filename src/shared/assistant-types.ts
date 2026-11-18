@@ -4,7 +4,7 @@ import type { VideoDraft } from './video-types';
 /** Where the assistant's brain runs. */
 export type AssistantProviderId = 'local' | 'anthropic' | 'openai' | 'gemini' | 'openrouter' | 'custom';
 export type CloudProviderId = Exclude<AssistantProviderId, 'local'>;
-export type LocalAssistantModelId = 'qwen35-4b' | 'qwen35-9b' | 'qwen36-35b';
+export type LocalAssistantModelId = 'qwen35-4b' | 'qwen35-9b' | 'qwen36-35b' | 'qwen38-27b';
 
 /** One-click jobs. `chat` uses whatever the person typed. */
 export type AssistantAction =

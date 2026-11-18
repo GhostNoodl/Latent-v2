@@ -103,8 +103,8 @@
     },
     {
       "path": "src/main/main.ts",
-      "bytes": 59044,
-      "sha256": "6386037515529d82cc21cd462310a5940698c11c60313a1224c525cf8d622468"
+      "bytes": 59494,
+      "sha256": "b61275cc27272a26f8bca775738abe13cae7e4e8cef358cb47886bcfb100e79e"
     },
     {
       "path": "src/main/managed-backend.ts",
@@ -713,8 +713,8 @@
     },
     {
       "path": "src/shared/assistant-types.ts",
-      "bytes": 3966,
-      "sha256": "e22de765214baeed6643b74bc43f2c43ed84fdfe7cbc5cd796a393a9b7d42b39"
+      "bytes": 3981,
+      "sha256": "e577cdbeee5ad6c27f0b65b3c809c55ccd73c6df09a2a0af0b6ac496431dfe0f"
     },
     {
       "path": "src/shared/backend-activity-types.ts",
@@ -2148,8 +2148,8 @@
     },
     {
       "path": "src/main/assistant/service.ts",
-      "bytes": 15083,
-      "sha256": "8765f895b423b4660f3504c63e17ab0762a6bd349aa99479c81a6d5d2bc211e0"
+      "bytes": 15608,
+      "sha256": "81370ef406caf33f8c79c4c2771bf9dff1f326b15a3564cfac3ad0084c59c6d6"
     },
     {
       "path": "src/main/ipc/assistant.ts",
@@ -2183,13 +2183,13 @@
     },
     {
       "path": "src/shared/assistant-catalog.ts",
-      "bytes": 8632,
-      "sha256": "eb4be4e68df88e7a32d083669a02f598b624a3070784f2d3a9a7aed78d11a155"
+      "bytes": 9849,
+      "sha256": "56939071907e0911b4f70f30537cf603bc7209dba02ad97b9ff4ff45eca2f451"
     },
     {
       "path": "tests/assistant.test.ts",
-      "bytes": 9915,
-      "sha256": "b8d9478ac33d071c49fdadfcf3f0e6b1b41b13ad432e066c0cc4e4da69434f9c"
+      "bytes": 10395,
+      "sha256": "1e3d837aa5731d2b33c25ecc21c96a4d3a65211edd3328fcb720563f1d40b9f4"
     }
   ],
   "privateHistoryIncluded": false

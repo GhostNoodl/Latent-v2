@@ -450,8 +450,16 @@ const snapshots = new SnapshotSender({
     takeChangedJobIds: () => jobs.takeChangedJobIds(),
   },
 });
+/** What the engine is rendering now, so the local assistant can step off the graphics card. */
+function renderActive(): 'image' | 'video' | undefined {
+  const active = jobs?.jobs().filter(job => ['queued', 'running'].includes(job.status)) ?? [];
+  if (!active.length) return undefined;
+  return active.some(isVideoJob) ? 'video' : 'image';
+}
 function broadcast() {
   scheduleRuntimeIdleCheck();
+  const rendering = renderActive();
+  if (rendering) assistant?.makeRoomFor(rendering);
   if (closed || closing || broadcastTimer) return;
   broadcastTimer = setTimeout(() => {
     broadcastTimer = undefined;
@@ -664,6 +672,7 @@ async function initialize() {
     imagePath: async ref =>
       ref.kind === 'source' ? (await sources.resolve(ref.id)).normalizedPath : outputPath(ref.id),
     changed: broadcast,
+    renderActive,
   });
   for (const key of OLD_CONVERSATION_KEYS) store.takeState(key);
   sources = new SourceImageService(paths, store);

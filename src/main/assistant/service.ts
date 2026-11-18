@@ -17,6 +17,7 @@ import {
   DEFAULT_ASSISTANT_SETTINGS,
   LOCAL_ASSISTANT_MODEL_IDS,
   LOCAL_ASSISTANT_MODELS,
+  fitsBesideRender,
   pickDefaultModel,
   recommendedLocalModel,
 } from '../../shared/assistant-catalog';
@@ -89,6 +90,8 @@ export interface AssistantServiceOptions {
   /** Path of a source image or a saved output, checked by their own services. */
   imagePath: (ref: { kind: 'source' | 'output'; id: string }) => Promise<string>;
   changed: () => void;
+  /** What is rendering right now, if anything. */
+  renderActive?: () => 'image' | 'video' | undefined;
 }
 
 /** The prompt assistant: one place that knows which brain to ask and how. */
@@ -231,8 +234,7 @@ export class AssistantService {
   makeRoomFor(jobKind: 'image' | 'video') {
     if (this.request || !this.local.onGpu()) return;
     const vram = this.options.hardware().vramMiB ?? 0;
-    // Big cards keep the model loaded next to image work; video takes the whole card.
-    if (jobKind === 'image' && vram >= 20 * 1024) return;
+    if (fitsBesideRender(this.settings().localModel, jobKind, vram)) return;
     void this.local.stop('Unloaded to make room for your render. It loads again when you send.').catch(() => undefined);
   }
 
@@ -300,6 +302,15 @@ export class AssistantService {
       const release = this.local.hold();
       try {
         const device = resolveDevice(settings.localModel, settings.localDevice, this.options.hardware());
+        const rendering = this.options.renderActive?.();
+        if (
+          device === 'gpu' &&
+          rendering &&
+          !fitsBesideRender(settings.localModel, rendering, this.options.hardware().vramMiB ?? 0)
+        )
+          throw new AssistantProviderError(
+            `${LOCAL_ASSISTANT_MODELS[settings.localModel].name} needs the graphics card, and your ${rendering} is using it. Send again when it's done, or use a cloud assistant.`,
+          );
         const server = await this.local.ensure(settings.localModel, device, signal);
         label = `${LOCAL_ASSISTANT_MODELS[settings.localModel].name} on this PC${server.device === 'gpu' ? '' : ' (processor)'}`;
         text = await streamOpenAIStyle(

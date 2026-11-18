@@ -13,7 +13,12 @@ import {
 import { AssistantKeys } from '../src/main/assistant/keys';
 import { localServerArguments, resolveDevice } from '../src/main/assistant/local';
 import { streamOpenAIStyle } from '../src/main/assistant/providers';
-import { LOCAL_ASSISTANT_MODELS, pickDefaultModel, recommendedLocalModel } from '../src/shared/assistant-catalog';
+import {
+  LOCAL_ASSISTANT_MODELS,
+  fitsBesideRender,
+  pickDefaultModel,
+  recommendedLocalModel,
+} from '../src/shared/assistant-catalog';
 import { wordDiff } from '../src/renderer/assistant/word-diff';
 
 const GiB = 1024 ** 3;
@@ -121,10 +126,18 @@ describe('assistant keys', () => {
 
 describe('local assistant', () => {
   it('suggests a model that fits the PC', () => {
-    expect(recommendedLocalModel({ vramMiB: 24576, ramBytes: 64 * GiB })).toBe('qwen36-35b');
+    expect(recommendedLocalModel({ vramMiB: 24576, ramBytes: 64 * GiB })).toBe('qwen38-27b');
     expect(recommendedLocalModel({ vramMiB: 16384, ramBytes: 32 * GiB })).toBe('qwen35-9b');
-    expect(recommendedLocalModel({ vramMiB: 24576, ramBytes: 32 * GiB })).toBe('qwen35-9b');
+    expect(recommendedLocalModel({ vramMiB: 24576, ramBytes: 32 * GiB })).toBe('qwen38-27b');
+    expect(recommendedLocalModel({ vramMiB: 24576, ramBytes: 16 * GiB })).toBe('qwen35-9b');
     expect(recommendedLocalModel({ ramBytes: 16 * GiB })).toBe('qwen35-4b');
+  });
+
+  it('steps off the graphics card when a render needs it', () => {
+    expect(fitsBesideRender('qwen36-35b', 'image', 24576)).toBe(true);
+    expect(fitsBesideRender('qwen38-27b', 'image', 24576)).toBe(false);
+    expect(fitsBesideRender('qwen35-9b', 'image', 16384)).toBe(false);
+    expect(fitsBesideRender('qwen35-4b', 'video', 24576)).toBe(false);
   });
 
   it('runs on the processor without an NVIDIA card', () => {
