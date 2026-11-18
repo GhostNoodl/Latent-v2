@@ -1,6 +1,14 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+/** Packages published without a license file. Their license text comes from upstream, pinned by revision. */
+const LICENSE_OVERRIDES = {
+  'node_modules/standardwebhooks': {
+    file: 'licenses/STANDARDWEBHOOKS-MIT.txt',
+    source:
+      'https://github.com/standard-webhooks/standard-webhooks/blob/3d65b1824b6697f05a5a4584e7062bd23512fc8e/libraries/LICENSE',
+  },
+};
 export async function renderNotices(project = path.resolve(import.meta.dirname, '..')) {
   const pkg = JSON.parse(await fs.readFile(path.join(project, 'package.json'), 'utf8'));
   const lock = JSON.parse(await fs.readFile(path.join(project, 'package-lock.json'), 'utf8'));
@@ -20,6 +28,14 @@ export async function renderNotices(project = path.resolve(import.meta.dirname, 
     }
     if (installed.version !== entry.version) throw Error('Notice dependency differs from lock: ' + name);
     const files = (await fs.readdir(folder)).filter(n => /^(licen[sc]e|copying|notice)(?:$|[.-])/i.test(n)).sort();
+    const override = LICENSE_OVERRIDES[name];
+    if (!files.length && override) {
+      sections.push(
+        `${installed.name} ${installed.version}\nDeclared license: ${installed.license}\nThe package ships without a license file; text from ${override.source}`,
+        'LICENSE\n' + (await fs.readFile(path.join(project, override.file), 'utf8')),
+      );
+      continue;
+    }
     if (!files.length) throw Error('Missing dependency license: ' + name);
     sections.push(
       `${installed.name} ${installed.version}\nDeclared license: ${installed.license ?? 'See included license'}\nSource: ${typeof installed.repository === 'string' ? installed.repository : (installed.repository?.url ?? installed.homepage ?? 'See npm package metadata')}`,

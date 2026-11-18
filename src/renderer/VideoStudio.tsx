@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Clapperboard, FolderOpen, RotateCcw, Sparkles, Undo2 } from 'lucide-react';
 import type { AppSnapshot, GenerationRecord } from '../shared/types';
 import { isVideoJob } from '../shared/types';
@@ -17,7 +17,8 @@ import { estimateVideoMs, formatDuration, safeVideoHistoryUrl } from './video-ur
 import { Busy, Notice, type RunAction } from './ui';
 import './video-studio.css';
 import './video-page.css';
-import { PromptAssistant } from './PromptAssistant';
+import { AssistantPanel, assistantAnchor } from './assistant/AssistantPanel';
+import { openAssistantSettings } from './assistant/open-settings';
 import { ShotBoard } from './ShotBoard';
 import { DEFAULT_DRAFT } from '../shared/defaults';
 
@@ -36,10 +37,18 @@ export interface VideoStudioProps {
   selectedRecord?: GenerationRecord;
   visible: boolean;
   run: RunAction;
+  /** Opens Settings on the Assistant tab. */
+  onOpenSettings?: () => void;
 }
 /** Remains mounted after first opening so navigation cannot discard a pending close flush. */
-export function VideoStudio({ snapshot, selectedRecord: selectedImage, visible, run }: VideoStudioProps) {
-  const [assistantOpen, setAssistantOpen] = useState(false);
+export function VideoStudio({
+  snapshot,
+  selectedRecord: selectedImage,
+  visible,
+  run,
+  onOpenSettings,
+}: VideoStudioProps) {
+  const [assistantPlace, setAssistantPlace] = useState<CSSProperties>();
   const [shotBoardOpen, setShotBoardOpen] = useState(false);
   const makeSession = () => newSession(DEFAULT_VIDEO_DRAFT);
   const [conversation, setConversation] = useState<VideoConversation>();
@@ -391,7 +400,16 @@ export function VideoStudio({ snapshot, selectedRecord: selectedImage, visible, 
           <button type="button" className="vp-ghost" onClick={() => setShotBoardOpen(true)}>
             <Clapperboard size={15} /> Shot board
           </button>
-          <button type="button" className="vp-ghost" disabled={!active} onClick={() => setAssistantOpen(true)}>
+          <button
+            type="button"
+            className="vp-ghost"
+            disabled={!active}
+            aria-expanded={Boolean(assistantPlace)}
+            onClick={event => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              setAssistantPlace(place => (place ? undefined : assistantAnchor(rect)));
+            }}
+          >
             <Sparkles size={15} /> Help me write
           </button>
         </div>
@@ -538,17 +556,27 @@ export function VideoStudio({ snapshot, selectedRecord: selectedImage, visible, 
         onCancel={id => action('cancel', () => window.latent.cancelJob(id))}
         onRetrySave={id => action('retry-save', () => window.latent.retryVideoSave(id))}
       />
-      {visible && assistantOpen && active && (
-        <PromptAssistant
+      {visible && assistantPlace && active && (
+        <AssistantPanel
           target="video"
           videoContext={active.draft}
           status={snapshot.assistant}
           draft={{ ...DEFAULT_DRAFT, prompt: active.draft.prompt, negativePrompt: '' }}
-          run={run}
-          onClose={() => setAssistantOpen(false)}
-          onApply={suggestion => {
+          place={assistantPlace}
+          images={
+            active.draft.mode === 'img2vid' && active.draft.firstFrame
+              ? [{ ref: { kind: 'source', id: active.draft.firstFrame.sourceId }, label: 'First frame' }]
+              : []
+          }
+          onClose={() => setAssistantPlace(undefined)}
+          onOpenSettings={() => {
+            setAssistantPlace(undefined);
+            openAssistantSettings();
+            onOpenSettings?.();
+          }}
+          onApply={option => {
             setPrevious({ id: active.id, draft: structuredClone(active.draft) });
-            updateSession({ draft: { ...active.draft, prompt: suggestion.proposedDraft.prompt } });
+            updateSession({ draft: { ...active.draft, prompt: option.prompt } });
           }}
         />
       )}

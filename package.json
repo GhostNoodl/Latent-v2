@@ -1,6 +1,6 @@
 {
   "name": "latent-v2",
-  "version": "0.2.35",
+  "version": "0.2.36",
   "private": true,
   "description": "A local desktop image studio with a separately managed ComfyUI backend",
   "type": "module",
@@ -27,6 +27,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.10.0",
     "@fontsource-variable/geist": "5.3.0",
     "adm-zip": "0.6.1",
     "lucide-react": "1.41.0",

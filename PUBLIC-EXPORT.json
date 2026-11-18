@@ -2,19 +2,9 @@
   "schema": 1,
   "files": [
     {
-      "path": "src/main/assistant-config.ts",
-      "bytes": 12407,
-      "sha256": "5c4996ddf1228092d6b42d7c065970fa8143a51125abc7d7bc7f4f1653ffbe70"
-    },
-    {
       "path": "src/main/assistant-download.ts",
       "bytes": 10006,
       "sha256": "ecc03b1230508fc25a4c4be4aee0f5fcc1642128f581da33a35208ce5c70e25c"
-    },
-    {
-      "path": "src/main/assistant-files.ts",
-      "bytes": 2290,
-      "sha256": "e4b6c3aa48f9af82f9fb6710832314947b2fcb118d0f853d28bb9940bc8bfddb"
     },
     {
       "path": "src/main/backend-activity.ts",
@@ -113,8 +103,8 @@
     },
     {
       "path": "src/main/main.ts",
-      "bytes": 58459,
-      "sha256": "d01e78df715e09fd38c598e71aa0063a4a2f47e66a52db8700a8305f5ed8e1c8"
+      "bytes": 59044,
+      "sha256": "6386037515529d82cc21cd462310a5940698c11c60313a1224c525cf8d622468"
     },
     {
       "path": "src/main/managed-backend.ts",
@@ -160,11 +150,6 @@
       "path": "src/main/portable-studio.ts",
       "bytes": 4455,
       "sha256": "0b5977ab7b831ab8c3f5730bff0eb61d5d1e43275c0fb9b7a2e5da9a082ca2a6"
-    },
-    {
-      "path": "src/main/prompt-assistant.ts",
-      "bytes": 25793,
-      "sha256": "6de02120dee3bc09ad483ef51a40103dc967d06ba2d1b3961898eef5b064ea53"
     },
     {
       "path": "src/main/python-home.ts",
@@ -283,8 +268,8 @@
     },
     {
       "path": "src/main/storage-catalog.ts",
-      "bytes": 13601,
-      "sha256": "8f1679766b620075f9a5425e6d2265399329ac061dc2eecfb562303ef9c1dc3c"
+      "bytes": 13473,
+      "sha256": "d6df5c94bfd82cf2db7ceb892b7ac01150b848b592f15af4a49a4f71eb0f5f8f"
     },
     {
       "path": "src/main/storage-locations.ts",
@@ -373,8 +358,8 @@
     },
     {
       "path": "src/preload/preload.ts",
-      "bytes": 10153,
-      "sha256": "cdbd13753e1f79dd734958e668994f7f959ebd0a9ec4c2e083d20acf5407c52e"
+      "bytes": 10499,
+      "sha256": "3955fa8919bde1531bfb63104683ec08656882860d9a994814e0a006237430fe"
     },
     {
       "path": "src/renderer/AdvancedImageControls.tsx",
@@ -383,13 +368,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 145757,
-      "sha256": "fe5183fd44c6ae43e4ae16487ad41faf728e33ec1da7d34e51c46f37c48f9f29"
-    },
-    {
-      "path": "src/renderer/assistant.css",
-      "bytes": 11164,
-      "sha256": "ee259a26ad57e920921b69b401b7f98366d046b4ac33ee82e213b7987cc2a1d7"
+      "bytes": 146901,
+      "sha256": "0db35a5ddbe46d618e9a9a73ee042382f75175bc24e00c3765a72d18a2b33a56"
     },
     {
       "path": "src/renderer/CanvasViewport.tsx",
@@ -572,11 +552,6 @@
       "sha256": "f972510d58d75b986d4252ad256946f9b2772023f33109b9224d3d3f47afc09f"
     },
     {
-      "path": "src/renderer/PromptAssistant.tsx",
-      "bytes": 31462,
-      "sha256": "e3066c0a6d482ea899fca104d86c7eca1c630b977e1f83e38080aa98c692eb99"
-    },
-    {
       "path": "src/renderer/queue-view.ts",
       "bytes": 4565,
       "sha256": "c52e41a9f5f8d98c823d1983ad40af26241aeb836f66f478b0656092610f5c1b"
@@ -613,8 +588,8 @@
     },
     {
       "path": "src/renderer/Settings.tsx",
-      "bytes": 28864,
-      "sha256": "81acb16240e151b760121dd0cd708ca89364a69d4d695d3241ad6b2614d4f5c6"
+      "bytes": 29009,
+      "sha256": "c963558d79c5dc279ce6912f37b965a10d0b896ab6d6213c709d02b92966a530"
     },
     {
       "path": "src/renderer/SharedBackendActivity.tsx",
@@ -693,8 +668,8 @@
     },
     {
       "path": "src/renderer/VideoStudio.tsx",
-      "bytes": 23917,
-      "sha256": "a83cc845ad581cae4845240dfedc541ddf1d2bd19b2cb45b9e8f1550b07e11ab"
+      "bytes": 24792,
+      "sha256": "eda530d1bb2add7b3ac32b4538a21c06b3db5d70fdb561e375cdaf38b8cbd833"
     },
     {
       "path": "src/renderer/VideoDock.tsx",
@@ -733,13 +708,13 @@
     },
     {
       "path": "src/shared/assistant-conversation.ts",
-      "bytes": 1202,
-      "sha256": "52c9ada9046fded3a4839da3183ff0545c078728fca5015af85da0e72d295700"
+      "bytes": 1772,
+      "sha256": "e7156cd8130736e1e7d99bfb797d180f0f82853732caf759baf626bdaafd2e7d"
     },
     {
       "path": "src/shared/assistant-types.ts",
-      "bytes": 1638,
-      "sha256": "cb82bb706aed0c3fec118c5a3dbc4af6e18c88a8b708a85378b2602655a59420"
+      "bytes": 3966,
+      "sha256": "e22de765214baeed6643b74bc43f2c43ed84fdfe7cbc5cd796a393a9b7d42b39"
     },
     {
       "path": "src/shared/backend-activity-types.ts",
@@ -953,8 +928,8 @@
     },
     {
       "path": "src/shared/types.ts",
-      "bytes": 22695,
-      "sha256": "663128e8ebb0c0732d72e1d8e6140afdf2ee67d84241a90a3e21811fe62ec94a"
+      "bytes": 23107,
+      "sha256": "7591ea5cfa86c08f517d7054e5ba9ac8962ba349cdc475cfe312d501c22b1c78"
     },
     {
       "path": "src/shared/validation.ts",
@@ -1053,13 +1028,13 @@
     },
     {
       "path": "package.json",
-      "bytes": 4562,
-      "sha256": "568fecc4be07f823379a53e8d48af684a6c5cf9931e5b33c81d6dcd87f612968"
+      "bytes": 4598,
+      "sha256": "7245b01b4a23991b4179547641c8e5201080575977b0cf5f91f7063bb6bfe6c0"
     },
     {
       "path": "package-lock.json",
-      "bytes": 253120,
-      "sha256": "af6929138f5e7b9909ebd429755949e3074cf36dd6c09e52be2df51a20791da6"
+      "bytes": 249032,
+      "sha256": "db0c211e528ff56f53fa4ae466fee83dd6d0c87a5b12ac3561751a03038b6816"
     },
     {
       "path": "tsconfig.json",
@@ -1088,8 +1063,8 @@
     },
     {
       "path": "scripts/packaging-resources.mjs",
-      "bytes": 19957,
-      "sha256": "230c7f5a3cf29279b52f7a5929dd59056462e9c5399b20a66a65c19f3807ec88"
+      "bytes": 19990,
+      "sha256": "d6eae28d73322f6191235e11b8577e55c9a8d4a19a30e7f09d55ee60161ae419"
     },
     {
       "path": "scripts/packaging-hooks.cjs",
@@ -1318,8 +1293,8 @@
     },
     {
       "path": "scripts/third-party-notices.mjs",
-      "bytes": 4931,
-      "sha256": "27d728e92c10660e268a6ddc935215e77680cfb0d01e77c8cdc5a40b9eff7399"
+      "bytes": 5684,
+      "sha256": "f2b1e0457ee65ebc4608f97aed4ca5264570931c82a7016e5e9422eaa6eb5a44"
     },
     {
       "path": "scripts/windows-distribution.mjs",
@@ -1333,8 +1308,8 @@
     },
     {
       "path": "THIRD-PARTY-NOTICES.txt",
-      "bytes": 108584,
-      "sha256": "4a1c1ef525d3d32c7c67e3fd39b92bff29b8df053ea2dcbd108f39f886832541"
+      "bytes": 141654,
+      "sha256": "2c156809d6c0069add2f3fb3c0a4446f3d48a9a83d1cc1373497589473e79a11"
     },
     {
       "path": "README-WINDOWS.txt",
@@ -1838,13 +1813,13 @@
     },
     {
       "path": "src/main/ipc/assistant-sources.ts",
-      "bytes": 3264,
-      "sha256": "1e062d9bee33924cc78a681a8102c8071f42b791866b15309f69ba5f2df1b3b2"
+      "bytes": 1909,
+      "sha256": "a763126f321035e9b5fe28c5dbf683582eb3733c182def1fc05e554e6209c830"
     },
     {
       "path": "src/main/ipc/gate.ts",
-      "bytes": 1173,
-      "sha256": "6dec88996eb40e21700709a2e18c1207119f32a9fddbcff8f230d861ba6dc071"
+      "bytes": 1246,
+      "sha256": "0849b24c4b89c79cfe1644879ac0a1877bb69917f7f049c8d91d2169ee44e784"
     },
     {
       "path": "src/main/ipc/library.ts",
@@ -1920,16 +1895,6 @@
       "path": "docs/TELEGRAM-REMOTE.md",
       "bytes": 6126,
       "sha256": "3be2a7564b9ad30e4a443fd4da1a862130b2ea729aa7ce9d9680b14df21fc691"
-    },
-    {
-      "path": "tests/assistant-conversation-keys.test.ts",
-      "bytes": 2541,
-      "sha256": "229b44561a2519944082d9aa265a1f20563b9bc0080ae12480a2538b360af82a"
-    },
-    {
-      "path": "tests/prompt-assistant.test.ts",
-      "bytes": 5492,
-      "sha256": "b3c05116405f8c7583ab3b37511470fce6cf0029aaa981cf2824ea7a45c15f1e"
     },
     {
       "path": "src/main/snapshot-sender.ts",
@@ -2155,6 +2120,76 @@
       "path": "tests/image-model-settings.test.ts",
       "bytes": 3414,
       "sha256": "7d635a1df598cb6b4f4aeb722e057f6dec261a6298e405ab0f84aba297c0f98c"
+    },
+    {
+      "path": "licenses/STANDARDWEBHOOKS-MIT.txt",
+      "bytes": 1088,
+      "sha256": "5ec8c7b26b64d881a6706617bed25c049f97f2f35de034c756de8546fd6dbe27"
+    },
+    {
+      "path": "src/main/assistant/keys.ts",
+      "bytes": 3419,
+      "sha256": "0ac82802e1c7d323ebeda944e256bc254b6a556ed7392eba224f25c541b5111f"
+    },
+    {
+      "path": "src/main/assistant/local.ts",
+      "bytes": 23896,
+      "sha256": "9ac1d4a89eb2fd01bbc96c621843384662a384dac44cdcefa11cff85d403b091"
+    },
+    {
+      "path": "src/main/assistant/prompts.ts",
+      "bytes": 14958,
+      "sha256": "b59ea569297e20358c3d221d0c89a29fea505842406369819c0006e3ab27c89d"
+    },
+    {
+      "path": "src/main/assistant/providers.ts",
+      "bytes": 11760,
+      "sha256": "fa3f586ae087abd845a3209a8cefbab84f2e570231609ae979aacea1af76fe8d"
+    },
+    {
+      "path": "src/main/assistant/service.ts",
+      "bytes": 15083,
+      "sha256": "8765f895b423b4660f3504c63e17ab0762a6bd349aa99479c81a6d5d2bc211e0"
+    },
+    {
+      "path": "src/main/ipc/assistant.ts",
+      "bytes": 2038,
+      "sha256": "303c7e01a8187b1568bdb223620ede16d40b9534ee14ec5d464f64d77f0a7de2"
+    },
+    {
+      "path": "src/renderer/assistant/AssistantPanel.tsx",
+      "bytes": 19619,
+      "sha256": "8043e4c9aef2facf1396b4aad3a03ab9bfa5530745f30a937ed9b56be314b92e"
+    },
+    {
+      "path": "src/renderer/assistant/AssistantSettings.tsx",
+      "bytes": 13565,
+      "sha256": "aea7fa74d3808c951fca463e07bbd423ffce95f137463ae2011c67bfbad5a526"
+    },
+    {
+      "path": "src/renderer/assistant/assistant.css",
+      "bytes": 7655,
+      "sha256": "0179505af56689e13c7b43d040300f7fe113eda352ec5eb1220130180a20926a"
+    },
+    {
+      "path": "src/renderer/assistant/open-settings.ts",
+      "bytes": 422,
+      "sha256": "a0524b9f3d5a2b2f67ea50a595f48c533965f7537a3b2c701b5d6f0795b529b1"
+    },
+    {
+      "path": "src/renderer/assistant/word-diff.ts",
+      "bytes": 2221,
+      "sha256": "0da3cbbc6739a57aec6f344fa0b76db06790bb9af89a9c41a2caa809619e6c67"
+    },
+    {
+      "path": "src/shared/assistant-catalog.ts",
+      "bytes": 8632,
+      "sha256": "eb4be4e68df88e7a32d083669a02f598b624a3070784f2d3a9a7aed78d11a155"
+    },
+    {
+      "path": "tests/assistant.test.ts",
+      "bytes": 9915,
+      "sha256": "b8d9478ac33d071c49fdadfcf3f0e6b1b41b13ad432e066c0cc4e4da69434f9c"
     }
   ],
   "privateHistoryIncluded": false

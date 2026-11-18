@@ -5,6 +5,9 @@ const STORAGE_SAFE_WRITES = new Set([
   'saveShotBoard',
   'saveQwenConversation',
   'saveAssistantConversation',
+  'assistantCancel',
+  'assistantCancelInstall',
+  'assistantStopLocal',
   'savePreviewSelection',
   'copyText',
 ]);

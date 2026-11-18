@@ -1,9 +1,13 @@
 import type { AppUpdateSettings, AppUpdateStatus } from './app-update-types';
 import type {
   AssistantConversation,
+  AssistantModelOption,
+  AssistantReply,
+  AssistantRequest,
+  AssistantSettings,
   AssistantStatus,
-  AssistantSuggestion,
-  AssistantSuggestionRequest,
+  CloudProviderId,
+  LocalAssistantModelId,
 } from './assistant-types';
 import type { SourceImageAsset, SourceImageInventory, SourceMaskAsset, SourceMaskSaveOptions } from './source-types';
 import type {
@@ -497,13 +501,17 @@ export interface LatentAPI {
   importLiveSketch(bytes: Uint8Array): Promise<SourceImageAsset>;
   discardLiveSketches(ids: string[]): Promise<number>;
   saveSourceMask(sourceId: string, pngBytes: Uint8Array, options?: SourceMaskSaveOptions): Promise<SourceMaskAsset>;
-  setupAssistant(repair?: boolean): Promise<void>;
-  startAssistant(): Promise<void>;
-  stopAssistant(): Promise<void>;
-  suggestPrompt(request: AssistantSuggestionRequest): Promise<AssistantSuggestion>;
-  cancelAssistant(): Promise<void>;
-  getAssistantConversation(target?: 'image' | 'video'): Promise<AssistantConversation | null>;
-  saveAssistantConversation(conversation: AssistantConversation, target?: 'image' | 'video'): Promise<void>;
+  assistantSuggest(request: AssistantRequest): Promise<AssistantReply>;
+  assistantCancel(): Promise<void>;
+  assistantSaveSettings(patch: Partial<AssistantSettings>): Promise<AssistantStatus>;
+  assistantSetKey(provider: CloudProviderId, key: string | null): Promise<void>;
+  assistantListModels(provider: CloudProviderId): Promise<AssistantModelOption[]>;
+  assistantInstallLocal(model?: LocalAssistantModelId): Promise<void>;
+  assistantCancelInstall(): Promise<void>;
+  assistantRemoveLocal(model: LocalAssistantModelId): Promise<void>;
+  assistantStopLocal(): Promise<void>;
+  getAssistantConversation(target: 'image' | 'video'): Promise<AssistantConversation | null>;
+  saveAssistantConversation(conversation: AssistantConversation, target: 'image' | 'video'): Promise<void>;
   copyText(text: string): Promise<void>;
   dismissActivity(scope: 'queue' | 'notifications', keys: string[] | null): Promise<AppSnapshot>;
   getSnapshot(): Promise<AppSnapshot>;

@@ -39,7 +39,17 @@ import './civitai.css';
 import { variationDescription } from './variation-description';
 import { ImagePreview } from './ImagePreview';
 import { LibraryDetail } from './LibraryDetail';
-import { Suspense, lazy, memo, useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
+import {
+  Suspense,
+  lazy,
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+} from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -95,7 +105,8 @@ import { History } from './History';
 import { Models } from './Models';
 import { StudioSettings } from './Settings';
 import { StudioHelp } from './StudioHelp';
-import { PromptAssistant } from './PromptAssistant';
+import { AssistantPanel, assistantAnchor } from './assistant/AssistantPanel';
+import { openAssistantSettings } from './assistant/open-settings';
 import { SourceInput } from './SourceInput';
 import { CompareImage } from './CompareImage';
 import { DynamicPrompts } from './DynamicPrompts';
@@ -259,7 +270,8 @@ export default function App() {
   const presetNameRevision = useRef(0);
   const [loraOpen, setLoraOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantPlace, setAssistantPlace] = useState<CSSProperties>();
+  const assistantOpen = Boolean(assistantPlace);
   const [compareRecord, setCompareRecord] = useState<GenerationRecord>();
   const [compareAgainst, setCompareAgainst] = useState<GenerationRecord>();
   const compare = (record: GenerationRecord, against?: GenerationRecord) => {
@@ -1945,7 +1957,11 @@ export default function App() {
                             type="button"
                             className="text-button"
                             title="Help me write"
-                            onClick={() => setAssistantOpen(true)}
+                            aria-expanded={assistantOpen}
+                            onClick={event => {
+                              const rect = event.currentTarget.getBoundingClientRect();
+                              setAssistantPlace(place => (place ? undefined : assistantAnchor(rect)));
+                            }}
                           >
                             <Sparkles size={13} />
                             Help me write
@@ -2568,7 +2584,13 @@ export default function App() {
             <ErrorBoundary label="Video" resetKey={page}>
               <div hidden={page !== 'video'}>
                 <Suspense fallback={<Busy active />}>
-                  <VideoStudio snapshot={snapshot} selectedRecord={selected} visible={page === 'video'} run={run} />
+                  <VideoStudio
+                    snapshot={snapshot}
+                    selectedRecord={selected}
+                    visible={page === 'video'}
+                    run={run}
+                    onOpenSettings={() => setPage('settings')}
+                  />
                 </Suspense>
               </div>
             </ErrorBoundary>
@@ -2962,21 +2984,31 @@ export default function App() {
           </div>
         </div>
       )}
-      {assistantOpen && (
-        <PromptAssistant
+      {assistantPlace && page === 'create' && (
+        <AssistantPanel
+          target="image"
           status={snapshot.assistant}
           draft={draft}
+          place={assistantPlace}
+          checkpointName={models.find(model => model.id === draft.checkpointId)?.name}
           loraNames={draft.loras.map(lora => models.find(model => model.id === lora.modelId)?.name ?? lora.modelId)}
-          onClose={() => setAssistantOpen(false)}
-          run={run}
-          onApply={suggestion => {
+          images={[
+            ...(draft.imageInput?.sourceId
+              ? [{ ref: { kind: 'source' as const, id: draft.imageInput.sourceId }, label: 'Source picture' }]
+              : []),
+            ...(selected ? [{ ref: { kind: 'output' as const, id: selected.id }, label: 'Picture on screen' }] : []),
+          ]}
+          onClose={() => setAssistantPlace(undefined)}
+          onOpenSettings={() => {
+            setAssistantPlace(undefined);
+            openAssistantSettings();
+            setPage('settings');
+          }}
+          onApply={option => {
             if (closing.current) return;
             setPreviousDraft(copyDraft(draftRef.current));
-            changeDraft({
-              prompt: suggestion.proposedDraft.prompt,
-              negativePrompt: suggestion.proposedDraft.negativePrompt,
-            });
-            setNotice({ text: 'Suggested prompts applied. Your previous draft is available with Undo.' });
+            changeDraft({ prompt: option.prompt, negativePrompt: option.negativePrompt });
+            setNotice({ text: 'Prompt updated. Undo brings back the old one.' });
           }}
         />
       )}

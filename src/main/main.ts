@@ -6,6 +6,7 @@ import { updatesHandlers } from './ipc/updates';
 import { optionalToolsHandlers } from './ipc/optional-tools';
 import { libraryHandlers } from './ipc/library';
 import { assistantSourcesHandlers } from './ipc/assistant-sources';
+import { assistantHandlers } from './ipc/assistant';
 import { createDesktopLog } from './desktop-log';
 import { AppUpdateService } from './app-updates';
 import { withPausedModelEngine } from './model-maintenance';
@@ -52,7 +53,9 @@ import { StudioStore } from './store';
 import { ModelService } from './models';
 import { JobService } from './jobs';
 import { ManagedBackend } from './managed-backend';
-import { PromptAssistant } from './prompt-assistant';
+import { AssistantService } from './assistant/service';
+import { OLD_CONVERSATION_KEYS } from '../shared/assistant-conversation';
+import { CLOUD_PROVIDERS } from '../shared/assistant-catalog';
 import { SourceImageService } from './source-images';
 import { SegmentationService } from './segmentation';
 import { CivitaiCatalog } from './civitai-catalog';
@@ -125,7 +128,7 @@ let backend: ManagedBackend;
 let jobs: JobService;
 let telegram: TelegramBotService;
 let phone: PhoneRemoteService;
-let assistant: PromptAssistant;
+let assistant: AssistantService;
 let sources: SourceImageService;
 let segmentation: SegmentationService;
 let civitai: CivitaiCatalog;
@@ -319,8 +322,8 @@ function appUpdateBusyReason(): string | undefined {
   if (storageChanging || storageRestartPending || pendingOperations.size || modelChangeInProgress)
     return 'Waiting for studio operations to finish.';
   if (
+    assistant.busy() ||
     [
-      assistant.status(),
       segmentation.status(),
       faceDetailer.status(),
       qwenEdit.status(),
@@ -653,7 +656,16 @@ async function initialize() {
   );
   draft = store.draft();
   models = new ModelService(paths, store, broadcast);
-  assistant = new PromptAssistant(paths, store, broadcast);
+  assistant = new AssistantService({
+    paths,
+    store,
+    crypto: safeStorage,
+    hardware: () => hardware,
+    imagePath: async ref =>
+      ref.kind === 'source' ? (await sources.resolve(ref.id)).normalizedPath : outputPath(ref.id),
+    changed: broadcast,
+  });
+  for (const key of OLD_CONVERSATION_KEYS) store.takeState(key);
   sources = new SourceImageService(paths, store);
   videoConversations = new VideoConversationService(store);
   videoInspector = new VideoMediaInspector({
@@ -1195,6 +1207,7 @@ async function initialize() {
     ...optionalToolsHandlers(handlerContext()),
     ...libraryHandlers(handlerContext()),
     ...assistantSourcesHandlers(handlerContext()),
+    ...assistantHandlers(handlerContext()),
   };
   for (const [method, handler] of Object.entries(methods))
     ipcMain.handle(`latent:${method}`, (event, ...args: unknown[]) => {
@@ -1303,6 +1316,7 @@ async function initialize() {
       IPADAPTER_RELEASE.modelCardUrl,
       IPADAPTER_RELEASE.encoderOriginUrl,
       IPADAPTER_RELEASE.codeSourceUrl,
+      ...Object.values(CLOUD_PROVIDERS).map(provider => provider.keyUrl),
     ].filter(Boolean);
     try {
       const link = new URL(url);
