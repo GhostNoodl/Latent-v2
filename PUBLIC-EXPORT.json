@@ -362,6 +362,11 @@
       "sha256": "d995939299e712e60f6043f265de013f9112589cd6b5e3f16dac843f42e1c112"
     },
     {
+      "path": "src/renderer/video-missing.ts",
+      "bytes": 1747,
+      "sha256": "fab78cf02c7ed6477084b0bc09ca8e460b3d345ae46f981b96dd46b17069836c"
+    },
+    {
       "path": "src/main/wildcards.ts",
       "bytes": 825,
       "sha256": "fb98731e2e38bbf6a1eafc90015580343a086fa4925b2c1c34cd748acbb2a7ed"
@@ -688,13 +693,13 @@
     },
     {
       "path": "src/renderer/VideoStudio.tsx",
-      "bytes": 22701,
-      "sha256": "5331acc195491f4864fbcc4229103a2284c8af882d35c34ee63d25270f41f02e"
+      "bytes": 23917,
+      "sha256": "a83cc845ad581cae4845240dfedc541ddf1d2bd19b2cb45b9e8f1550b07e11ab"
     },
     {
       "path": "src/renderer/VideoDock.tsx",
-      "bytes": 21496,
-      "sha256": "af28f0f92a26c3dec467fac39fc641c52aac3a1f5a1be96704b8bb65697c006f"
+      "bytes": 22585,
+      "sha256": "c171a9a0dfb9a99b3ceb700521f3fa08b656b5497260079a0c12db7bb637373b"
     },
     {
       "path": "src/renderer/VideoClips.tsx",
@@ -1049,12 +1054,12 @@
     {
       "path": "package.json",
       "bytes": 4562,
-      "sha256": "643db2866357cfc1277341531f89ebdbb227b3f3254e79cb4c51fa0a52a89afb"
+      "sha256": "568fecc4be07f823379a53e8d48af684a6c5cf9931e5b33c81d6dcd87f612968"
     },
     {
       "path": "package-lock.json",
       "bytes": 253120,
-      "sha256": "9d7707fdb3a2f6c5fa94d8d2327cf574bac1fb2ec6b1215bbe89874e6f962960"
+      "sha256": "af6929138f5e7b9909ebd429755949e3074cf36dd6c09e52be2df51a20791da6"
     },
     {
       "path": "tsconfig.json",
@@ -1125,6 +1130,11 @@
       "path": "tests/comfyui-release.test.ts",
       "bytes": 1152,
       "sha256": "6dade79cebdc5dd54f32b7b0909e89fc50bd6953384186112dbd015beb1d4db8"
+    },
+    {
+      "path": "tests/video-missing.test.ts",
+      "bytes": 1791,
+      "sha256": "0dceebee454af327b59c953522f0d5977246eabc0a098b51f9d2aefeb55a7b55"
     },
     {
       "path": "tests/video-rebuild.test.ts",
