@@ -373,11 +373,11 @@ export class VideoAssetsService {
                 this.update({ progress: Math.min(99, ((completed + received) / total) * 100) });
               },
             );
-          } else if (
-            authorization.scope !== 'local-files-only' &&
-            !receipts.some(receipt => isDeepStrictEqual(receipt.asset, asset) && this.present(receipt))
-          )
-            throw new Error('Install the complete selected video profile before verification.');
+          } else if (!fs.existsSync(destination))
+            // Files already on disk (copied in, or from another install) are adopted once their hash matches the pin.
+            throw new Error(
+              `The ${ROLE_NAMES[asset.role]} isn't in models/${VIDEO_ASSET_DIRECTORIES[asset.role]}/minimax-h3 yet. Use Download instead.`,
+            );
           this.stillAuthorized(authorization, fileSignal);
           this.validatePaths();
           const verified = await this.verifier.verify(destination, asset, fileSignal);
@@ -391,6 +391,7 @@ export class VideoAssetsService {
             throw new Error('Video asset receipts changed during verification. Their original data was preserved.');
           if (
             kind === 'setup' ||
+            !receipts.some(receipt => isDeepStrictEqual(receipt.asset, asset)) ||
             (authorization.scope === 'local-files-only' &&
               !receipts.some(
                 receipt =>
