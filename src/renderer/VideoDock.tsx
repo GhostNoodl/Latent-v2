@@ -5,6 +5,8 @@ import type { VideoAvailability, VideoDraft, VideoSpeed } from '../shared/video-
 import { resolveVideoDuration, textOnGpu, videoDraftSchema } from '../shared/video-plan';
 import { videoProfileReady } from '../shared/video-assets';
 import { formatDuration } from './video-url';
+import { listMissing, videoMissing, type VideoMissingItem } from './video-missing';
+import type { SageAttentionStatus } from '../shared/types';
 import {
   VIDEO_EXTRAS,
   videoExtraBytes,
@@ -116,6 +118,11 @@ export interface VideoDockProps {
   onUseSelectedImage(role: 'firstFrame' | 'lastFrame'): void;
   onInstallSol(): void;
   solBusy: boolean;
+  /** SageAttention add-on state in the engine. */
+  sage?: SageAttentionStatus['state'];
+  /** Installs everything in the list, one after another. */
+  onGetMissing(items: VideoMissingItem[]): void;
+  gettingMissing: boolean;
   onGenerate(): void;
 }
 
@@ -149,6 +156,9 @@ export function VideoDock(props: VideoDockProps) {
   };
   const toggle = (panel: Panel) => setOpen(current => (current === panel ? undefined : panel));
   const parsed = videoDraftSchema.safeParse(draft);
+  const missing = videoMissing(draft, status, props.sage);
+  const sageUnusable =
+    draft.speed.attention !== 'normal' && (props.sage === 'unsupported' || props.sage === 'unavailable');
   const filesReady = videoProfileReady(status.assets, draft.profile);
   let frames = 0;
   try {
@@ -162,10 +172,10 @@ export function VideoDock(props: VideoDockProps) {
       ? 'Pick a first or last frame.'
       : !parsed.success
         ? parsed.error.issues[0]?.message
-        : !filesReady
-          ? 'This quality needs its files. See the setup above.'
-          : missingExtras.length
-            ? `Get the ${VIDEO_EXTRAS[missingExtras[0]].label.toLowerCase()} files first (Finish).`
+        : missing.length
+          ? `Needs ${listMissing(missing)}.`
+          : sageUnusable
+            ? 'Sage can’t run on this PC. Pick Normal in Speed.'
             : !status.canGenerate
               ? status.message
               : undefined;
@@ -544,9 +554,21 @@ export function VideoDock(props: VideoDockProps) {
         </div>
       </div>
       <div className="vp-go-col">
-        <button type="submit" className="vp-go" disabled={busy || Boolean(problem)}>
-          Make clip
-        </button>
+        {missing.length && !props.gettingMissing ? (
+          <button
+            type="button"
+            className="vp-go"
+            disabled={busy || missing.some(item => item.kind === 'files' && status.assets?.canAcquire !== true)}
+            title="Downloads and installs what this clip needs. Files already on the PC are checked, not downloaded again."
+            onClick={() => props.onGetMissing(missing)}
+          >
+            Get what’s missing
+          </button>
+        ) : (
+          <button type="submit" className="vp-go" disabled={busy || Boolean(problem) || props.gettingMissing}>
+            {props.gettingMissing ? 'Getting files…' : 'Make clip'}
+          </button>
+        )}
         <span className="vp-estimate" title={problem}>
           {problem ?? (props.estimateMs ? `About ${formatDuration(props.estimateMs)}` : '')}
         </span>

@@ -9,6 +9,7 @@ import { videoConversationSchema, type VideoConversation, type VideoEditorSessio
 import { actionErrorMessage } from '../shared/action-error';
 import { VideoAssetSetup } from './VideoAssetSetup';
 import { VideoDock } from './VideoDock';
+import type { VideoMissingItem } from './video-missing';
 import { VideoClips, activeVideoJobs, jobPercent } from './VideoClips';
 import { applyVideoHistoryRestore, selectVideoHistory } from './video-history-state';
 import { videoHistoryRevision } from './queue-view';
@@ -335,6 +336,31 @@ export function VideoStudio({ snapshot, selectedRecord: selectedImage, visible, 
       'Sol is installed. The engine restarted.',
     ).finally(() => setSolBusy(false));
   };
+  const [gettingMissing, setGettingMissing] = useState(false);
+  /** One button for everything a clip needs: files, finishing models and engine add-ons, one after another. */
+  const getMissing = (items: VideoMissingItem[]) => {
+    const profile = active?.draft.profile;
+    if (gettingMissing || !profile) return;
+    setGettingMissing(true);
+    void run(
+      'video-missing',
+      async () => {
+        try {
+          for (const item of items) {
+            if (item.kind === 'files') await window.latent.setupVideoAssets(profile);
+            else if (item.kind === 'extra') await window.latent.installVideoExtra(item.id);
+            else if (item.kind === 'sage') await window.latent.installSageAttention();
+            else await window.latent.installSolAttention();
+          }
+          setMessage('');
+        } catch (cause) {
+          setError(actionErrorMessage(cause));
+          throw cause;
+        }
+      },
+      'All set. You can make the clip now.',
+    ).finally(() => setGettingMissing(false));
+  };
   const draft = active?.draft;
   const selectedId = active?.selectedRecordId ?? activeVideoJobs(snapshot.jobs)[0]?.id ?? history[0]?.id;
   const selectedJob = snapshot.jobs.find(job => job.id === selectedId && isVideoJob(job));
@@ -494,6 +520,9 @@ export function VideoStudio({ snapshot, selectedRecord: selectedImage, visible, 
             }
             onInstallSol={installSol}
             solBusy={solBusy}
+            sage={snapshot.sageAttention.state}
+            onGetMissing={getMissing}
+            gettingMissing={gettingMissing}
             onGenerate={queueVideo}
           />
         )}

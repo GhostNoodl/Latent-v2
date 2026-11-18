@@ -290,6 +290,10 @@
       "to": "src/main/comfyui-release.ts"
     },
     {
+      "from": "src/renderer/video-missing.ts",
+      "to": "src/renderer/video-missing.ts"
+    },
+    {
       "from": "src/main/wildcards.ts",
       "to": "src/main/wildcards.ts"
     },
@@ -900,6 +904,10 @@
     {
       "from": "tests/comfyui-release.test.ts",
       "to": "tests/comfyui-release.test.ts"
+    },
+    {
+      "from": "tests/video-missing.test.ts",
+      "to": "tests/video-missing.test.ts"
     },
     {
       "from": "tests/video-rebuild.test.ts",
