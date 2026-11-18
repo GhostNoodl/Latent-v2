@@ -62,7 +62,7 @@ const settingsSchema = z
 
 export const assistantRequestSchema = z
   .object({
-    target: z.enum(['image', 'video']),
+    target: z.enum(['image', 'video', 'edit']),
     action: z.enum(['chat', 'improve', 'expand', 'shorten', 'tags', 'sentences', 'variations', 'describe', 'motion']),
     instruction: z.string().max(4000).optional(),
     draft: draftSchema,
@@ -354,7 +354,7 @@ export class AssistantService {
       .slice(0, request.action === 'variations' ? 3 : 1)
       .map(option => {
         const negativePrompt =
-          request.target === 'video' ? '' : ignoresNegative ? request.draft.negativePrompt : option.negativePrompt;
+          request.target !== 'image' ? '' : ignoresNegative ? request.draft.negativePrompt : option.negativePrompt;
         const dropped = missingProtectedParts(request, option.prompt);
         return { prompt: option.prompt, negativePrompt, ...(dropped.length ? { dropped } : {}) };
       });

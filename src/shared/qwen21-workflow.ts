@@ -84,6 +84,7 @@ export function buildQwen21Workflow(input: QwenEditWorkflowInput, bundle: QwenEd
   else if (input.source || input.references?.length)
     throw new Error('Create starts from text only. Choose Edit to use reference images.');
   if ((input.references?.length ?? 0) > 1) throw new Error('This station supports one additional reference image.');
+  if (input.area || input.output) throw new Error('Painted areas and saved sizes use the Qwen Edit models.');
   const aligned = qwenInferenceSize(settings.width, settings.height);
   const native = { width: Math.floor(aligned.width / 32) * 32, height: Math.floor(aligned.height / 32) * 32 };
   const filenamePrefix = `Latent_${input.jobId}_qwen_edit`;

@@ -66,7 +66,7 @@ it('keeps native historical recipes and loaders unchanged', () => {
     const bundle = qwenBundle(profile);
     const before = JSON.stringify(bundle);
     const plan = buildQwenEditWorkflow(input(profile), bundle);
-    expect(plan.workflowVersion).toBe('qwen-image-edit-2511-int8@2');
+    expect(plan.workflowVersion).toBe('qwen-image-edit-2511-int8@3');
     expect(plan.workflow['1'].class_type).toBe('UNETLoader');
     expect(plan.settings.steps).toBe(profile === 'base' ? 40 : 4);
     expect(JSON.stringify(bundle)).toBe(before);
@@ -77,7 +77,7 @@ it('keeps native historical recipes and loaders unchanged', () => {
 });
 it('uses the smaller pinned GGUF with Lightning and the aligned reference canvas', () => {
   const plan = buildQwenEditWorkflow(input('compact'), qwenBundle('compact'));
-  expect(plan.workflowVersion).toBe('qwen-image-edit-2511-gguf-q4ks@1');
+  expect(plan.workflowVersion).toBe('qwen-image-edit-2511-gguf-q4ks@2');
   expect(plan.workflow['1']).toEqual({
     class_type: 'UnetLoaderGGUF',
     inputs: { unet_name: 'qwen-edit-2511/qwen-image-edit-2511-Q4_K_S.gguf' },

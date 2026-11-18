@@ -1,24 +1,28 @@
 import { droppedImage, imageDropProps, sourceFromDrop, startRecordDrag, type DroppedImage } from './image-drag';
-import { PackageSetupStorage } from './PackageSetupStorage';
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
-  ArrowLeftRight,
-  Check,
-  CircleStop,
+  Brush,
+  ChevronDown,
+  ChevronRight,
   Dices,
   Download,
-  FileImage,
-  History,
+  Eraser,
+  ExternalLink,
   ImagePlus,
   LoaderCircle,
+  MousePointerClick,
+  Pencil,
   Play,
   Plus,
-  RotateCcw,
-  Send,
+  RefreshCw,
+  Square,
   Sparkles,
   Trash2,
+  Type,
   Undo2,
+  X,
 } from 'lucide-react';
 import { isImageJob, type AppSnapshot, type GenerationJob, type GenerationRecord } from '../shared/types';
 import type { SourceImageAsset } from '../shared/source-types';
@@ -37,12 +41,15 @@ import {
   type QwenConversationDraft,
   type QwenConversationStore,
 } from '../shared/qwen-conversation';
+import { qwenSameSize, qwenWorkingSize } from '../shared/qwen-area';
+import { DEFAULT_DRAFT } from '../shared/defaults';
 import { CompareImage } from './CompareImage';
-import { bytes, Field, Modal, Notice, shortDate, type RunAction } from './ui';
-import { qwenInferenceSize } from '../shared/qwen-edit-canvas';
+import { bytes, Notice, type RunAction } from './ui';
 import { actionErrorMessage as errorMessage } from '../shared/action-error';
 import { qwenConversationJobs } from './queue-view';
+import { EditPaint, type EditPaintHandle, type PaintTool } from './EditPaint';
 import './qwen-editor.css';
+import './edit-page.css';
 
 export interface QwenEditorProps {
   embedded?: boolean;
@@ -56,91 +63,71 @@ export interface QwenEditorProps {
   /** An image dropped on the Edit button in the side rail, used as the starting image once loaded. */
   dropped?: DroppedImage;
   onDroppedUsed?: () => void;
+  onOpenInCreate?: (record: GenerationRecord) => void;
 }
-/** Live previews use accepted job values, never the previously selected saved version. */
-export function QwenLivePreviewDetails({ job }: { job: GenerationJob }) {
-  const recipe = job.draft.qwenEdit;
-  return (
-    <div className="qwen-version-detail" aria-label="Current generation details">
-      <strong>Generating this edit</strong>
-      <small>
-        {job.draft.width} × {job.draft.height} saved size · {recipe?.settings.steps ?? job.draft.steps} steps · seed{' '}
-        {job.actualSeed}
-      </small>
-      <small>
-        Job {job.id.slice(0, 8)}
-        {recipe?.lineage.parentRecordId && ` · parent ${recipe.lineage.parentRecordId.slice(0, 8)}`}
-      </small>
-      <p>{recipe?.instruction ?? job.draft.prompt}</p>
-      <small>This preview is unfinished. Select a saved version below to continue, branch, or reuse it.</small>
-    </div>
-  );
-}
-export function QwenSelectedStudioImageDetails({
-  record,
-  locked,
-  onUse,
-}: {
-  record: GenerationRecord;
-  locked: boolean;
-  onUse: () => void;
-}) {
-  return (
-    <div className="qwen-version-detail" aria-label="Image selected in Create">
-      <strong>
-        {record.width} × {record.height}
-      </strong>
-      <small>You're looking at an image from Create. Nothing in your Qwen chat changes unless you use it.</small>
-      <button type="button" disabled={locked} onClick={onUse}>
-        <ImagePlus size={14} />
-        Use this image as input
-      </button>
-    </div>
-  );
-}
-/** A submitted job remains durable while offline; that does not mean it is still sampling. */
-export function QwenQueueJobDetails({ job }: { job: GenerationJob }) {
-  const running = job.status === 'running' && job.queueState === 'running';
-  const label =
-    job.status === 'running'
-      ? running
-        ? 'Editing image'
-        : job.queueState === 'pending'
-          ? 'Waiting its turn'
-          : job.queueState === 'submitting'
-            ? 'Sending to the engine'
-            : 'Checking engine state'
-      : job.status === 'queued'
-        ? 'Queued image edit'
-        : job.status === 'failed'
-          ? 'Image edit failed'
-          : job.status === 'completed'
-            ? 'Image edit complete'
-            : 'Image edit cancelled';
-  const detail = running
-    ? job.progressMax
-      ? `${job.progress} / ${job.progressMax} steps`
-      : 'Working…'
-    : job.status === 'queued'
-      ? 'Saved in the studio queue'
-      : label;
-  return (
-    <div>
-      <strong>
-        {label} · {job.actualSeed}
-      </strong>
-      {running && <progress value={job.progress} max={job.progressMax || 1} />}
-      <small>
-        {job.error || detail}
-        {job.draft.qwenEdit && ` · branch ${job.draft.qwenEdit.lineage.branchId.slice(0, 6)}`}
-      </small>
-    </div>
-  );
-}
+
 const emptyStore = (): QwenConversationStore => ({ schemaVersion: 1, conversations: [] });
 const sourceUrl = (id: string) => `latent-asset://source/${encodeURIComponent(id)}`;
-const sizes = Array.from({ length: 13 }, (_, index) => 256 + index * 64);
-const clampSize = (size: number) => Math.max(256, Math.min(1024, Math.round(size / 64) * 64));
+const maskUrl = (id: string) => `latent-asset://mask/${encodeURIComponent(id)}`;
+
+const QUALITY: Array<{ profile: QwenEditProfile; label: string; detail: string }> = [
+  { profile: 'fast', label: 'Fast', detail: '4 steps' },
+  { profile: 'lightning8', label: 'Good', detail: '8 steps' },
+  { profile: 'base', label: 'Best', detail: '40 steps, slow' },
+];
+export function qualityLabel(profile: QwenEditProfile) {
+  if (profile === 'compact') return 'Fast · small files';
+  if (profile === 'qwen21') return 'Qwen Image 2.1';
+  return QUALITY.find(item => item.profile === profile)?.label ?? 'Good';
+}
+const CREATE_SIZES = {
+  square: { width: 1024, height: 1024, label: 'Square' },
+  portrait: { width: 768, height: 1024, label: 'Portrait' },
+  landscape: { width: 1024, height: 768, label: 'Landscape' },
+} as const;
+
+/** One click fills in a tested instruction. Some also switch to painting. */
+const QUICK: Array<{ label: string; text: string; area?: boolean; open?: boolean }> = [
+  {
+    label: 'Remove background',
+    text: 'Replace the background with a plain, clean white backdrop. Keep the subject exactly as it is, including the edges of hair and clothes.',
+  },
+  {
+    label: 'Remove object',
+    text: 'Remove what is in the painted area and fill it in so it matches the surroundings.',
+    area: true,
+  },
+  { label: 'Change outfit', text: 'Change the outfit to ', open: true },
+  {
+    label: 'Relight',
+    text: 'Relight the picture with soft, warm evening light coming from the left. Keep everything else the same.',
+  },
+  {
+    label: 'Restyle',
+    text: 'Turn this into a watercolor painting. Keep the composition, the people and their poses the same.',
+  },
+  {
+    label: 'Fix face',
+    text: 'Fix the face in the painted area so it looks natural and sharp. Keep the same person, expression and angle.',
+    area: true,
+  },
+];
+const MORE_QUICK: typeof QUICK = [
+  { label: 'Change hair', text: 'Change the hair to ', open: true },
+  {
+    label: 'Make it night',
+    text: 'Make it night time with moonlight and soft city lights. Keep everything else the same.',
+  },
+  {
+    label: 'Restore old photo',
+    text: 'Restore this old photo: remove scratches, dust and noise, fix faded colours and sharpen details. Keep the people exactly the same.',
+  },
+  { label: 'Add text', text: 'Add the words "" in clean bold lettering at the top.', open: true },
+  {
+    label: 'Close-up',
+    text: 'Zoom in to a close-up of the main subject. Keep the same look, lighting and style.',
+  },
+];
 
 /** Exact replay derives only from retained recipe metadata, not current bundle
  * defaults or the normal Create draft. Selecting a preview never calls this.
@@ -151,6 +138,7 @@ export function qwenReplayDraft(record: GenerationRecord, existing?: QwenConvers
   const plan = edit.plan;
   const assets = plan.bundle.assets;
   const base = existing ?? createQwenConversationDraft('Replayed image edit', edit.lineage.conversationId);
+  const request = record.draft?.qwenEdit;
   return {
     ...base,
     id: edit.lineage.conversationId,
@@ -165,6 +153,8 @@ export function qwenReplayDraft(record: GenerationRecord, existing?: QwenConvers
     instruction: plan.instruction,
     negativePrompt: plan.negativePrompt,
     settings: { ...plan.settings, seed: record.actualSeed },
+    mode: plan.area ? 'area' : 'whole',
+    tries: 1,
     frozenRecipe: {
       reusedRecordId: record.id,
       workflowVersion: plan.workflowVersion,
@@ -174,28 +164,77 @@ export function qwenReplayDraft(record: GenerationRecord, existing?: QwenConvers
         vae: assets.vae.sha256,
         ...(assets.lightning ? { lightning: assets.lightning.sha256 } : {}),
       },
+      ...(plan.area ? { area: structuredClone(plan.area) } : {}),
+      ...(request?.output ? { output: structuredClone(request.output) } : {}),
     },
     updatedAt: new Date().toISOString(),
   };
 }
 
-function StationFrame({
-  embedded,
-  children,
+/** A step in the timeline: one edit, with all the tries that were made for it. */
+interface Step {
+  key: string;
+  records: GenerationRecord[];
+  parentRecordId?: string;
+  number: number;
+  parentStep?: number;
+  branch: boolean;
+}
+export function buildSteps(records: GenerationRecord[]): Step[] {
+  const groups = new Map<string, GenerationRecord[]>();
+  for (const record of records) {
+    const key = record.qwenEdit?.lineage.group ?? record.id;
+    groups.set(key, [...(groups.get(key) ?? []), record]);
+  }
+  const steps: Step[] = [];
+  for (const [key, items] of groups) {
+    const parentRecordId = items[0].qwenEdit?.lineage.parentRecordId;
+    const parentIndex = steps.findIndex(step => step.records.some(record => record.id === parentRecordId));
+    steps.push({
+      key,
+      records: items,
+      parentRecordId,
+      number: steps.length + 1,
+      parentStep: parentIndex >= 0 ? parentIndex + 1 : undefined,
+      branch: steps.length > 0 && parentIndex !== steps.length - 1,
+    });
+  }
+  return steps;
+}
+
+function Popover({
+  open,
   onClose,
+  children,
+  className = '',
 }: {
-  embedded?: boolean;
-  children: ReactNode;
+  open: boolean;
   onClose: () => void;
+  children: ReactNode;
+  className?: string;
 }) {
-  return embedded ? (
-    <section className="qwen-station" aria-label="Qwen Image Station">
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (event: PointerEvent) => {
+      const anchor = box.current?.parentElement;
+      if (anchor && !anchor.contains(event.target as Node)) onClose();
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('pointerdown', away);
+    window.addEventListener('keydown', escape);
+    return () => {
+      window.removeEventListener('pointerdown', away);
+      window.removeEventListener('keydown', escape);
+    };
+  }, [open, onClose]);
+  if (!open) return null;
+  return (
+    <div ref={box} className={`ed-pop ${className}`} role="dialog">
       {children}
-    </section>
-  ) : (
-    <Modal title="Qwen Image Station" onClose={onClose}>
-      {children}
-    </Modal>
+    </div>
   );
 }
 
@@ -210,6 +249,7 @@ export function QwenEditor({
   initialMode = 'preview',
   dropped,
   onDroppedUsed,
+  onOpenInCreate,
 }: QwenEditorProps) {
   const [dropOver, setDropOver] = useState(false);
   const [saved, setSaved] = useState<QwenConversationStore>(emptyStore);
@@ -218,14 +258,22 @@ export function QwenEditor({
   const [error, setError] = useState('');
   const [saveError, setSaveError] = useState('');
   const [notice, setNotice] = useState('');
-  const [saveState, setSaveState] = useState<'saved' | 'pending' | 'saving'>('saved');
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const [extraSources, setExtraSources] = useState<SourceImageAsset[]>([]);
   const [previous, setPrevious] = useState<QwenConversationStore>();
   const [compare, setCompare] = useState<GenerationRecord>();
-  const [initialPreview, setInitialPreview] = useState<GenerationRecord | undefined>(initialRecord);
-  const [showLive, setShowLive] = useState(false);
+  const [view, setView] = useState<'after' | 'before'>('after');
+  const [triesGroup, setTriesGroup] = useState<string>();
+  const [menu, setMenu] = useState<string>();
+  const [tool, setTool] = useState<PaintTool>('brush');
+  const [brush, setBrush] = useState(46);
+  const [painted, setPainted] = useState(false);
   const [imageError, setImageError] = useState('');
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const [fit, setFit] = useState({ width: 0, height: 0 });
+  const paint = useRef<EditPaintHandle>(null);
+  const canvasArea = useRef<HTMLDivElement>(null);
+  const textBox = useRef<HTMLTextAreaElement>(null);
   const current = useRef(saved);
   const live = useRef(snapshot);
   live.current = snapshot;
@@ -239,17 +287,22 @@ export function QwenEditor({
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const activeActions = useRef(new Set<string>());
   const criticalActions = useRef(new Set<Promise<unknown>>());
-  const lastQueued = useRef<{ id: string; conversationId: string; selectedRecordId?: string } | undefined>(undefined);
+  const lastQueued = useRef<{ ids: string[]; conversationId: string; group?: string; selectedRecordId?: string }>(
+    undefined,
+  );
   const loadEpoch = useRef(0);
   const initial = useRef({ record: initialRecord, mode: initialMode });
-  const fieldId = useId();
+  const closeMenu = useCallback(() => setMenu(undefined), []);
+
+  useEffect(() => {
+    setSlot(document.getElementById('edit-top-slot'));
+  }, []);
 
   const changeStore = useCallback((value: QwenConversationStore) => {
     current.current = structuredClone(value);
     version.current++;
     if (mounted.current) {
       setSaved(current.current);
-      setSaveState('pending');
       setSaveError('');
     }
   }, []);
@@ -258,26 +311,19 @@ export function QwenEditor({
       .catch(() => {})
       .then(async () => {
         if (revision <= persisted.current) return;
-        if (mounted.current) setSaveState('saving');
         await window.latent.saveQwenConversation(qwenConversationSchema.parse(value));
         persisted.current = revision;
-        if (mounted.current) {
-          setSaveError('');
-          setSaveState(persisted.current === version.current ? 'saved' : 'pending');
-        }
+        if (mounted.current) setSaveError('');
       });
     saveQueue.current = task;
     return task.catch(reason => {
-      if (mounted.current) {
-        setSaveError(errorMessage(reason));
-        setSaveState('pending');
-      }
+      if (mounted.current) setSaveError(errorMessage(reason));
       throw reason;
     });
   }, []);
   const flush = useCallback(async () => {
     if (!hydrated.current) return;
-    // Preview selection can change while a save is awaiting IPC, including during
+    // Selection can change while a save is awaiting IPC, including during
     // close. Drain every intervening revision before allowing the editor to leave.
     do {
       await persist(structuredClone(current.current), version.current);
@@ -298,9 +344,7 @@ export function QwenEditor({
         const conversationId = record.qwenEdit.lineage.conversationId;
         const existing = next.conversations.find(item => item.id === conversationId);
         if (!existing && next.conversations.length >= QWEN_CONVERSATION_LIMIT) {
-          setNotice(
-            'You already have 50 saved Qwen drafts, which is the limit. Delete one you no longer need to edit this image.',
-          );
+          setNotice('You have 50 saved edits, which is the limit. Remove one you no longer need first.');
         } else {
           const draft =
             initial.current.mode === 'reuse'
@@ -316,9 +360,7 @@ export function QwenEditor({
           };
           if (initial.current.mode === 'reuse') {
             setPrevious(value);
-            setNotice(
-              'Exact Qwen recipe restored, including its actual seed and recorded model hashes. Generate is still your choice.',
-            );
+            setNotice('Recipe restored with its exact seed. Press Edit to run it again.');
           }
         }
       }
@@ -326,23 +368,16 @@ export function QwenEditor({
         next = { ...next, activeConversationId: next.conversations[0].id };
       if (!next.conversations.length) {
         const draft = createQwenConversationDraft();
-        if (embedded) {
-          draft.settings = { ...draft.settings, profile: 'qwen21', width: 1024, height: 1024 };
-          draft.operation = 'create';
-        }
         next = { ...next, activeConversationId: draft.id, conversations: [draft] };
       }
       current.current = next;
       setSaved(next);
       hydrated.current = true;
       setLoaded(true);
-      if (JSON.stringify(next) !== JSON.stringify(value)) {
-        version.current++;
-        setSaveState('pending');
-      }
+      if (JSON.stringify(next) !== JSON.stringify(value)) version.current++;
     } catch (reason) {
       if (mounted.current && epoch === loadEpoch.current)
-        setError(`Image editor could not be opened: ${errorMessage(reason)}`);
+        setError(`Edit could not open your saved edits: ${errorMessage(reason)}`);
     } finally {
       if (mounted.current && epoch === loadEpoch.current) setLoading(false);
     }
@@ -353,8 +388,9 @@ export function QwenEditor({
     return () => {
       mounted.current = false;
       loadEpoch.current++;
-      if (embedded && hydrated.current) void run('qwen-save', flush);
+      if (hydrated.current) void run('qwen-save', flush);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
   useEffect(() => {
     let cancelled = false;
@@ -364,7 +400,7 @@ export function QwenEditor({
         if (!cancelled) snapshotReceiver.current?.(value);
       })
       .catch(reason => {
-        if (!cancelled) setError(`Could not refresh image editing readiness: ${errorMessage(reason)}`);
+        if (!cancelled) setError(`Could not check whether editing is ready: ${errorMessage(reason)}`);
       });
     return () => {
       cancelled = true;
@@ -420,54 +456,39 @@ export function QwenEditor({
   const records = snapshot.history
     .filter(record => draft && record.qwenEdit?.lineage.conversationId === draft.id)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
-  const selected =
-    initialPreview ?? snapshot.history.find(record => record.id === draft?.selectedRecordId) ?? records.at(-1);
-  const showingStudioSelection = Boolean(
-    initialPreview && (!initialPreview.qwenEdit || initialPreview.qwenEdit.lineage.conversationId !== draft?.id),
-  );
-  const jobs = qwenConversationJobs(snapshot.jobs, draft?.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const activeJob = jobs.find(job => job.status === 'running');
+  const steps = buildSteps(records);
+  const selected = snapshot.history.find(record => record.id === draft?.selectedRecordId);
+  const chainSelected = selected?.qwenEdit?.lineage.conversationId === draft?.id ? selected : undefined;
+  const rootSource = records[0]?.qwenEdit?.plan.source ?? source;
+  const jobs = qwenConversationJobs(snapshot.jobs, draft?.id).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const currentJobs = jobs.filter(job => ['queued', 'running'].includes(job.status));
-  const failedJobs = jobs.filter(job => ['failed', 'cancelled'].includes(job.status)).slice(0, 2);
+  const failedJobs = jobs.filter(job => ['failed'].includes(job.status)).slice(-2);
   const historyConversations = [
     ...new Set(snapshot.history.flatMap(record => (record.qwenEdit ? [record.qwenEdit.lineage.conversationId] : []))),
   ];
   const allConversationIds = [...new Set([...saved.conversations.map(item => item.id), ...historyConversations])];
+  const creating = draft?.operation === 'create';
+  const mode = creating ? 'whole' : (draft?.mode ?? 'whole');
   const profile = draft?.settings.profile ?? 'lightning8';
-  const profileReady = isQwen21Profile(profile)
-    ? snapshot.qwenEdit.qwen21Ready === true && snapshot.runtimeUpdates?.current?.setId === 'comfy-0-37-0-qwen21-1'
-    : profile === 'lightning8'
-      ? snapshot.qwenEdit.lightning8Ready === true
-      : profile === 'compact'
-        ? snapshot.qwenEdit.compactReady === true
-        : profile === 'base'
-          ? snapshot.qwenEdit.baseReady
-          : snapshot.qwenEdit.fastReady;
+  const readyFor = (value: QwenEditProfile) =>
+    isQwen21Profile(value)
+      ? snapshot.qwenEdit.qwen21Ready === true && snapshot.runtimeUpdates?.current?.setId === 'comfy-0-37-0-qwen21-1'
+      : value === 'lightning8'
+        ? snapshot.qwenEdit.lightning8Ready === true
+        : value === 'compact'
+          ? snapshot.qwenEdit.compactReady === true
+          : value === 'base'
+            ? snapshot.qwenEdit.baseReady
+            : snapshot.qwenEdit.fastReady;
+  const profileReady = readyFor(profile);
   const repairNeeded = snapshot.qwenEdit.state === 'error';
   const engineSetup =
     isQwen21Profile(profile) && ['staging', 'applying', 'checking'].includes(snapshot.runtimeUpdates?.state ?? '');
   const installing = snapshot.qwenEdit.state === 'installing' || pending.setup || engineSetup;
   const locked = !loaded || pending.close || pending.source || pending.reference || pending.queue;
   const recent = snapshot.history.filter(record => record.imageUrl).slice(0, 8);
-  const usedDrop = useRef<DroppedImage>(undefined);
-  useEffect(() => {
-    if (!loaded || !dropped || usedDrop.current === dropped) return;
-    usedDrop.current = dropped;
-    onDroppedUsed?.();
-    void startFromDrop(dropped);
-    // Runs once per dropped image, after the saved drafts load.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, dropped]);
-  const profileLabel =
-    profile === 'qwen21'
-      ? 'Qwen Image 2.1'
-      : profile === 'lightning8'
-        ? 'Lightning 8-step'
-        : profile === 'compact'
-          ? 'Compact'
-          : profile === 'fast'
-            ? 'Fast'
-            : 'Base';
+  const tries = draft?.frozenRecipe ? 1 : (draft?.tries ?? 1);
+  const sizeChoice = draft?.size ?? (creating ? 'square' : 'same');
   const profileBytes =
     profile === 'qwen21'
       ? (snapshot.qwenEdit.qwen21Bytes ?? 17283091112)
@@ -478,65 +499,87 @@ export function QwenEditor({
           : profile === 'fast'
             ? snapshot.qwenEdit.fastBytes
             : snapshot.qwenEdit.baseBytes;
-  const steps = draft?.settings.steps ?? qwenProfileSteps(profile);
-  const guidance = draft?.settings.guidance ?? (isQwen21Profile(profile) || isFastQwenProfile(profile) ? 1 : 4);
-  const request: QwenEditJobRequest | undefined =
-    draft && (draft.source || draft.operation === 'create')
-      ? {
-          mode: 'qwen-edit',
-          sourceId: draft.operation === 'create' ? undefined : draft.source?.id,
-          sourceSha256: draft.operation === 'create' ? undefined : draft.source?.sha256,
-          operation: draft.operation,
-          transparent: draft.transparent,
-          references: draft.references,
-          instruction: draft.instruction,
-          negativePrompt: draft.negativePrompt,
-          settings: draft.settings,
-          lineage: {
-            conversationId: draft.id,
-            branchId: draft.branchId,
-            parentRecordId: draft.operation === 'create' ? undefined : draft.source?.parentRecordId,
-          },
-          assetHashes: draft.frozenRecipe?.assetHashes,
-          workflowVersion: draft.frozenRecipe?.workflowVersion,
-        }
+  const steps_ = draft?.settings.steps ?? qwenProfileSteps(profile);
+  const usesNegative = !isQwen21Profile(profile) && !isFastQwenProfile(profile);
+  const usedDrop = useRef<DroppedImage>(undefined);
+  useEffect(() => {
+    if (!loaded || !dropped || usedDrop.current === dropped) return;
+    usedDrop.current = dropped;
+    onDroppedUsed?.();
+    void startFromDrop(dropped);
+    // Runs once per dropped image, after the saved drafts load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, dropped]);
+
+  // The picture the next edit starts from, and what the stage shows.
+  const inputRecord = chainSelected ?? (selected && !selected.qwenEdit ? selected : undefined);
+  const baseSize = inputRecord
+    ? { width: inputRecord.width, height: inputRecord.height }
+    : source
+      ? { width: source.normalized.width, height: source.normalized.height }
       : undefined;
-  const parsedRequest = qwenEditJobRequestSchema.safeParse(request);
-  const seedValid = Boolean(
-    draft &&
-    (draft.settings.seed === 'random' ||
-      (/^\d+$/.test(draft.settings.seed) && BigInt(draft.settings.seed) <= BigInt(Number.MAX_SAFE_INTEGER))),
-  );
-  const sourceParent = source?.originGenerationId
-    ? snapshot.history.find(record => record.id === source.originGenerationId)
-    : undefined;
-  const showingLive = Boolean(showLive && snapshot.settings.showGenerationPreview && activeJob?.previewUrl);
-  const imageUrl = showingLive
-    ? activeJob!.previewUrl
-    : (selected?.imageUrl ?? (source ? sourceUrl(source.id) : undefined));
+  const runningJob = currentJobs.find(job => job.status === 'running');
+  const livePreview =
+    runningJob?.previewUrl && snapshot.settings.showGenerationPreview && !triesGroup
+      ? runningJob.previewUrl
+      : undefined;
+  const beforeUrl = chainSelected?.qwenEdit?.plan.source ? sourceUrl(chainSelected.qwenEdit.plan.source.id) : undefined;
+  const pictureUrl =
+    view === 'before' && beforeUrl
+      ? beforeUrl
+      : (livePreview ?? inputRecord?.imageUrl ?? (source && !creating ? sourceUrl(source.id) : undefined));
+  const tryRecords = triesGroup ? records.filter(record => record.qwenEdit?.lineage.group === triesGroup) : [];
+  const tryJobs = triesGroup ? currentJobs.filter(job => job.draft.qwenEdit?.lineage.group === triesGroup) : [];
+  const showTries = Boolean(triesGroup && tryRecords.length + tryJobs.length > 1);
   useEffect(() => {
     setImageError('');
-  }, [imageUrl]);
+  }, [pictureUrl]);
+  useEffect(() => {
+    if (view === 'before' && !beforeUrl) setView('after');
+  }, [view, beforeUrl]);
+  // Size the picture frame to fit the stage, so the paint layer lines up exactly.
+  useLayoutEffect(() => {
+    const area = canvasArea.current;
+    if (!area || !baseSize) return;
+    const measure = () => {
+      const pad = 28;
+      const width = Math.max(0, area.clientWidth - pad);
+      const height = Math.max(0, area.clientHeight - pad);
+      const scale = Math.min(width / baseSize.width, height / baseSize.height);
+      setFit({ width: Math.floor(baseSize.width * scale), height: Math.floor(baseSize.height * scale) });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(area);
+    return () => observer.disconnect();
+  }, [baseSize?.width, baseSize?.height, showTries]);
+  // A new picture size means old paint no longer lines up.
+  useEffect(() => {
+    paint.current?.clear();
+  }, [baseSize?.width, baseSize?.height]);
+
+  // When queued tries finish, show the first one, and the tries grid when there are several.
   useEffect(() => {
     const queued = lastQueued.current;
     if (!queued) return;
-    const job = snapshot.jobs.find(item => item.id === queued.id);
-    if (!job || !isImageJob(job) || !['completed', 'failed', 'cancelled'].includes(job.status)) return;
-    const output = snapshot.history.find(record => job.outputIds.includes(record.id));
-    if (job.status === 'completed' && !output) return;
-    lastQueued.current = undefined;
-    const draft = current.current.conversations.find(item => item.id === current.current.activeConversationId);
-    if (output && draft?.id === queued.conversationId && draft.selectedRecordId === queued.selectedRecordId) {
+    const finished = queued.ids
+      .map(id => snapshot.jobs.find(item => item.id === id))
+      .filter((job): job is GenerationJob => Boolean(job && isImageJob(job)));
+    const outputs = snapshot.history.filter(record => finished.some(job => job.outputIds.includes(record.id)));
+    const latest = current.current.conversations.find(item => item.id === current.current.activeConversationId);
+    if (outputs.length && latest?.id === queued.conversationId && latest.selectedRecordId === queued.selectedRecordId) {
+      const first = outputs.sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
       changeStore({
         ...current.current,
         conversations: current.current.conversations.map(item =>
-          item.id === draft.id ? { ...item, selectedRecordId: output.id } : item,
+          item.id === latest.id ? { ...item, selectedRecordId: first.id } : item,
         ),
       });
-      setInitialPreview(undefined);
-      setShowLive(false);
-      setNotice('New version saved. Review it, then Continue from this version for the next edit.');
+      queued.selectedRecordId = first.id;
+      setView('after');
     }
+    if (finished.length === queued.ids.length && finished.every(job => !['queued', 'running'].includes(job.status)))
+      lastQueued.current = undefined;
   }, [snapshot.jobs, snapshot.history, changeStore]);
 
   const action = useCallback(
@@ -551,8 +594,6 @@ export function QwenEditor({
         async () => {
           try {
             acceptedWork = task();
-            // The parent reports errors as false. Close must observe an accepted
-            // request's actual failure, while a declined task adds nothing to drain.
             if (critical) criticalActions.current.add(acceptedWork);
             await acceptedWork;
           } catch (reason) {
@@ -587,17 +628,14 @@ export function QwenEditor({
   function edit(patch: Partial<QwenConversationDraft>, recipeChange = true) {
     const latest = getDraft();
     if (!latest) return;
-    if (recipeChange && latest.frozenRecipe)
-      setNotice(
-        'You changed the restored recipe. Its model/workflow freeze was cleared; the next edit uses the selected current bundle.',
-      );
+    if (recipeChange && latest.frozenRecipe) setNotice('You changed the restored recipe, so it runs as a new edit.');
     replaceDraft({ ...latest, ...patch, ...(recipeChange ? { frozenRecipe: undefined } : {}) });
   }
-  function selectRecord(record: GenerationRecord) {
+  function selectRecord(record?: GenerationRecord) {
     lastQueued.current = undefined;
-    edit({ selectedRecordId: record.id }, false);
-    setInitialPreview(undefined);
-    setShowLive(false);
+    edit({ selectedRecordId: record?.id }, false);
+    setTriesGroup(undefined);
+    setView('after');
   }
   function canAddConversation(id?: string) {
     return (
@@ -605,54 +643,48 @@ export function QwenEditor({
       current.current.conversations.length < QWEN_CONVERSATION_LIMIT
     );
   }
-  function newConversation() {
+  function newConversation(operation: 'edit' | 'create' = 'edit') {
     if (!canAddConversation()) {
-      setError(
-        'There are 50 saved editor drafts. Remove an unused editor draft before creating another; generated versions are kept.',
-      );
+      setError('You have 50 saved edits. Remove one you no longer need first. Every picture stays in the Library.');
       return;
     }
-    const next = createQwenConversationDraft();
+    const next = createQwenConversationDraft(operation === 'create' ? 'New picture' : 'New edit');
     const prior = getDraft();
-    if (prior) {
-      next.settings = { ...prior.settings, seed: 'random' };
-      next.operation = prior.operation;
-    } else if (embedded) {
-      next.settings.profile = 'qwen21';
+    if (operation === 'create') {
       next.operation = 'create';
-    }
+      next.settings = { ...next.settings, profile: 'qwen21', width: 1024, height: 1024, resize: 'stretch' };
+      next.size = 'square';
+    } else if (prior && !isQwen21Profile(prior.settings.profile))
+      next.settings = { ...next.settings, profile: prior.settings.profile };
     replaceDraft(next, true);
-    setInitialPreview(undefined);
-    setShowLive(false);
-    setNotice('New image-edit conversation. Choose a starting image.');
+    setTriesGroup(undefined);
+    setMenu(undefined);
+    paint.current?.clear();
   }
   function openConversation(id: string) {
     const existing = current.current.conversations.find(item => item.id === id);
     if (existing) changeStore({ ...current.current, activeConversationId: id });
     else {
       if (!canAddConversation(id)) {
-        setError(
-          'Remove an unused editor draft before reopening this conversation. Its versions remain in the Library.',
-        );
+        setError('Remove a saved edit you no longer need before reopening this one. Its pictures are in the Library.');
         return;
       }
       const latest = [...live.current.history]
         .filter(record => record.qwenEdit?.lineage.conversationId === id)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-      replaceDraft({ ...createQwenConversationDraft('Saved image edits', id), selectedRecordId: latest?.id });
+      replaceDraft({ ...createQwenConversationDraft('Saved edit', id), selectedRecordId: latest?.id });
     }
-    setInitialPreview(undefined);
-    setShowLive(false);
+    setTriesGroup(undefined);
+    setMenu(undefined);
     setError('');
   }
-  function removeDraft() {
-    const latest = getDraft();
-    if (!latest) return;
+  function removeConversation(id: string) {
     setPrevious(structuredClone(current.current));
-    const conversations = current.current.conversations.filter(item => item.id !== latest.id);
-    changeStore({ schemaVersion: 1, conversations, activeConversationId: conversations[0]?.id });
-    setInitialPreview(undefined);
-    setNotice('Saved editor draft removed. Every generated version and its complete recipe remains in the Library.');
+    const conversations = current.current.conversations.filter(item => item.id !== id);
+    const active =
+      current.current.activeConversationId === id ? conversations[0]?.id : current.current.activeConversationId;
+    changeStore({ schemaVersion: 1, conversations, activeConversationId: active });
+    setNotice('Removed from the list. Its pictures stay in the Library.');
   }
   function hasChildren(record: GenerationRecord) {
     return (
@@ -665,9 +697,10 @@ export function QwenEditor({
       )
     );
   }
-  function assignSource(next: SourceImageAsset, parent?: GenerationRecord, forceBranch = false) {
+  /** Starts a new edit chain from a picture (import, drop, or a picture from Create or the Library). */
+  function assignSource(next: SourceImageAsset, parent?: GenerationRecord) {
     if (next.originGenerationId !== parent?.id)
-      throw new Error('The imported source does not match the selected parent image. The editor was not changed.');
+      throw new Error('The imported picture does not match the picture you picked. Nothing changed.');
     const prior = getDraft();
     const conversationId = parent?.qwenEdit?.lineage.conversationId;
     let target = conversationId ? current.current.conversations.find(item => item.id === conversationId) : undefined;
@@ -675,48 +708,37 @@ export function QwenEditor({
       !conversationId &&
       prior &&
       !prior.source &&
+      prior.operation !== 'create' &&
       !live.current.history.some(record => record.qwenEdit?.lineage.conversationId === prior.id)
         ? prior
         : undefined;
     if (!target && startingDraft) target = startingDraft;
     if (!target && !canAddConversation(conversationId))
-      throw new Error(
-        'Remove an unused editor draft before starting another conversation. Generated versions are kept.',
-      );
+      throw new Error('Remove a saved edit you no longer need before starting another. Pictures are kept.');
+    const profile = prior && !isQwen21Profile(prior.settings.profile) ? prior.settings.profile : 'lightning8';
     target ??= {
-      ...createQwenConversationDraft(parent ? 'Image edit continuation' : next.name.slice(0, 80), conversationId),
-      settings: { ...(prior?.settings ?? createQwenConversationDraft().settings) },
+      ...createQwenConversationDraft(next.name.slice(0, 80) || 'Image edit', conversationId),
+      settings: { ...createQwenConversationDraft().settings, profile },
     };
-    const branchId =
-      parent?.qwenEdit && !forceBranch && !hasChildren(parent) ? parent.qwenEdit.lineage.branchId : crypto.randomUUID();
     setExtraSources(value => [...value.filter(item => item.id !== next.id), next]);
     replaceDraft(
       {
         ...target,
         operation: 'edit',
-        branchId,
+        branchId: parent?.qwenEdit && !hasChildren(parent) ? parent.qwenEdit.lineage.branchId : crypto.randomUUID(),
         source: { id: next.id, sha256: next.normalized.sha256, parentRecordId: next.originGenerationId },
         instruction: startingDraft ? target.instruction : '',
         frozenRecipe: undefined,
-        selectedRecordId: parent?.id,
-        settings: startingDraft
-          ? target.settings
-          : {
-              ...target.settings,
-              seed: 'random',
-              width: clampSize(parent?.width ?? 512),
-              height: clampSize(parent?.height ?? 512),
-            },
+        selectedRecordId: parent?.qwenEdit ? parent.id : undefined,
+        settings: {
+          ...target.settings,
+          profile: isQwen21Profile(target.settings.profile) ? 'lightning8' : target.settings.profile,
+        },
       },
       true,
     );
-    setInitialPreview(undefined);
-    setShowLive(false);
-    setNotice(
-      parent
-        ? 'This version is now the one being edited. Describe the next change.'
-        : 'Starting image imported. Describe the first change.',
-    );
+    setTriesGroup(undefined);
+    paint.current?.clear();
   }
   async function importImage() {
     await action(
@@ -735,14 +757,27 @@ export function QwenEditor({
       true,
     );
   }
-  async function importReference() {
+  async function addReference(fromFile?: File, fromRecord?: GenerationRecord) {
     await action(
       'reference',
       async () => {
-        const ref = await window.latent.importSourceImage();
+        const ref = fromRecord
+          ? await window.latent.useOutputAsSource(fromRecord.id)
+          : fromFile
+            ? await sourceFromDrop({ kind: 'file', file: fromFile })
+            : await window.latent.importSourceImage();
         if (!ref) return;
+        const latest = getDraft();
+        if (!latest) return;
         setExtraSources(value => [...value.filter(item => item.id !== ref.id), ref]);
-        edit({ references: [{ sourceId: ref.id, sha256: ref.normalized.sha256 }] });
+        const list = [
+          ...(latest.references ?? []).filter(item => item.sourceId !== ref.id),
+          {
+            sourceId: ref.id,
+            sha256: ref.normalized.sha256,
+          },
+        ].slice(-2);
+        edit({ references: list });
         await flush();
         onSnapshot?.(await window.latent.getSnapshot());
       },
@@ -750,17 +785,23 @@ export function QwenEditor({
       true,
     );
   }
-  async function applyRecord(record: GenerationRecord, branch = false) {
+  async function startFromRecord(record: GenerationRecord) {
     const id = record.qwenEdit?.lineage.conversationId;
     if (!canAddConversation(id) && !(getDraft() && !getDraft()!.source && !id)) {
-      setError('Remove an unused editor draft before branching into this conversation. All versions are kept.');
+      setError('Remove a saved edit you no longer need first. Every picture stays in the Library.');
+      return;
+    }
+    if (record.qwenEdit) {
+      openConversation(record.qwenEdit.lineage.conversationId);
+      const latest = getDraft();
+      if (latest) replaceDraft({ ...latest, selectedRecordId: record.id });
       return;
     }
     await action(
       'source',
       async () => {
         const source = await window.latent.useOutputAsSource(record.id);
-        assignSource(source, record, branch);
+        assignSource(source, record);
         await flush();
         onSnapshot?.(await window.latent.getSnapshot());
       },
@@ -769,9 +810,9 @@ export function QwenEditor({
     );
   }
   async function startFromDrop(drop: DroppedImage) {
-    if (drop.kind === 'record') return applyRecord(drop.record);
+    if (drop.kind === 'record') return startFromRecord(drop.record);
     if (!canAddConversation(undefined) && !(getDraft() && !getDraft()!.source)) {
-      setError('Remove an unused editor draft before starting another conversation. All versions are kept.');
+      setError('Remove a saved edit you no longer need first. Every picture stays in the Library.');
       return;
     }
     await action(
@@ -785,58 +826,1232 @@ export function QwenEditor({
       true,
     );
   }
-  function replay(record: GenerationRecord) {
-    try {
-      if (!record.qwenEdit || !canAddConversation(record.qwenEdit.lineage.conversationId)) {
-        setError('Remove an unused editor draft before restoring this recipe.');
-        return;
-      }
-      const existing = current.current.conversations.find(item => item.id === record.qwenEdit!.lineage.conversationId);
-      replaceDraft(qwenReplayDraft(record, existing), true);
-      setInitialPreview(undefined);
-      setShowLive(false);
-      setNotice(
-        'Exact recipe restored with recorded source, instruction, actual seed, settings, and model hashes. Generation has not started.',
-      );
-    } catch (reason) {
-      setError(
-        `Could not restore this image edit: ${errorMessage(reason)} Recover the original generation metadata. Your editor draft and Undo are unchanged.`,
-      );
+  /** The saved input picture for the next edit: the selected step, or the chain's own picture. */
+  async function inputSource(latest: QwenConversationDraft) {
+    const pick = live.current.history.find(record => record.id === latest.selectedRecordId);
+    if (pick && pick.id !== latest.source?.parentRecordId) {
+      const made = await window.latent.useOutputAsSource(pick.id);
+      setExtraSources(value => [...value.filter(item => item.id !== made.id), made]);
+      return { asset: made, parent: pick };
     }
+    const asset = [...extraSources, ...live.current.sourceImages.sources].find(item => item.id === latest.source?.id);
+    if (!asset || asset.normalized.sha256 !== latest.source?.sha256)
+      throw new Error('The picture this edit starts from is missing or changed. Pick it again.');
+    const parent = latest.source.parentRecordId
+      ? live.current.history.find(record => record.id === latest.source!.parentRecordId)
+      : undefined;
+    return { asset, parent };
   }
-  async function queueEdit() {
+  async function pickArea(x: number, y: number) {
+    const latest = getDraft();
+    if (!latest) return;
+    await action('pick', async () => {
+      const { asset } = await inputSource(latest);
+      const result = await window.latent.suggestMask({ sourceId: asset.id, points: [{ x, y, label: 1 }] });
+      await paint.current?.addMask(maskUrl(result.mask.id));
+    });
+  }
+  async function tidyUp() {
+    const latest = getDraft();
+    if (!latest?.instruction.trim()) {
+      setError('Type roughly what you want first, then Tidy up rewrites it.');
+      return;
+    }
+    await action('tidy', async () => {
+      const picture = latest.selectedRecordId
+        ? { kind: 'output' as const, id: latest.selectedRecordId }
+        : latest.source
+          ? { kind: 'source' as const, id: latest.source.id }
+          : undefined;
+      const reply = await window.latent.assistantSuggest({
+        target: 'edit',
+        action: 'improve',
+        draft: { ...structuredClone(DEFAULT_DRAFT), prompt: latest.instruction, negativePrompt: '' },
+        ...(picture && live.current.assistant?.vision ? { image: picture } : {}),
+      });
+      const text = reply.options[0]?.prompt?.trim();
+      if (text) edit({ instruction: text.slice(0, 4000) });
+      setNotice(reply.message);
+    });
+  }
+  async function queueEdit(sameAgain = false) {
+    const latest = getDraft();
     if (
       closing.current ||
       locked ||
-      !parsedRequest.success ||
-      (draft?.operation !== 'create' && (sourceChanged || !source)) ||
+      !latest ||
+      !latest.instruction.trim() ||
       !profileReady ||
       live.current.backend.state !== 'ready'
     )
       return;
-    const frozen = structuredClone(parsedRequest.data);
     const submittedVersion = version.current;
-    const selectedRecordId = getDraft()?.selectedRecordId;
     await action(
       'queue',
       async () => {
         await flush();
-        const job = await window.latent.enqueueQwenEdit(frozen);
-        // Browsing another saved version during preparation is an explicit preview
-        // choice. A later acceptance/completion must not take that selection back.
-        if (version.current === submittedVersion) {
-          lastQueued.current = { id: job.id, conversationId: frozen.lineage.conversationId, selectedRecordId };
-          setShowLive(true);
+        const create = latest.operation === 'create';
+        const frozen = latest.frozenRecipe;
+        let request: QwenEditJobRequest;
+        let nextSource = latest.source;
+        let branchId = latest.branchId;
+        if (create) {
+          const size = CREATE_SIZES[latest.size as keyof typeof CREATE_SIZES] ?? CREATE_SIZES.square;
+          request = {
+            mode: 'qwen-edit',
+            operation: 'create',
+            transparent: latest.transparent,
+            instruction: latest.instruction,
+            negativePrompt: latest.negativePrompt,
+            settings: { ...latest.settings, width: size.width, height: size.height },
+            lineage: { conversationId: latest.id, branchId: latest.branchId },
+          };
+        } else if (frozen) {
+          request = {
+            mode: 'qwen-edit',
+            sourceId: latest.source?.id,
+            sourceSha256: latest.source?.sha256,
+            operation: latest.operation,
+            transparent: latest.transparent,
+            references: latest.references,
+            instruction: latest.instruction,
+            negativePrompt: latest.negativePrompt,
+            settings: latest.settings,
+            ...(frozen.area ? { area: frozen.area } : {}),
+            ...(frozen.output ? { output: frozen.output } : {}),
+            lineage: {
+              conversationId: latest.id,
+              branchId: latest.branchId,
+              parentRecordId: latest.source?.parentRecordId,
+            },
+            assetHashes: frozen.assetHashes,
+            workflowVersion: frozen.workflowVersion,
+          };
+        } else {
+          const { asset, parent } = await inputSource(latest);
+          const inChain = parent?.qwenEdit?.lineage.conversationId === latest.id;
+          const chainHasSteps = live.current.history.some(
+            record => record.qwenEdit?.lineage.conversationId === latest.id,
+          );
+          branchId =
+            parent?.qwenEdit && inChain
+              ? hasChildren(parent) && !sameAgain
+                ? crypto.randomUUID()
+                : parent.qwenEdit.lineage.branchId
+              : chainHasSteps && !sameAgain
+                ? crypto.randomUUID()
+                : latest.branchId;
+          nextSource = { id: asset.id, sha256: asset.normalized.sha256, parentRecordId: asset.originGenerationId };
+          const size = { width: asset.normalized.width, height: asset.normalized.height };
+          let area: QwenEditJobRequest['area'];
+          if ((latest.mode ?? 'whole') === 'area') {
+            const png = await paint.current?.exportMask();
+            if (!png) throw new Error('Paint the part you want to change first, or switch to Whole picture.');
+            const mask = await window.latent.saveSourceMask(asset.id, png);
+            area = { maskId: mask.id, maskSha256: mask.sha256, blend: latest.blend ?? 12 };
+          }
+          const working = qwenWorkingSize(size.width, size.height);
+          request = {
+            mode: 'qwen-edit',
+            sourceId: asset.id,
+            sourceSha256: asset.normalized.sha256,
+            operation: 'edit',
+            references: latest.references?.length ? latest.references : undefined,
+            instruction: latest.instruction,
+            negativePrompt: latest.negativePrompt,
+            settings: { ...latest.settings, ...working, resize: 'stretch', steps: undefined, guidance: undefined },
+            ...(area ? { area } : {}),
+            ...(!area && (latest.size ?? 'same') === 'same' ? { output: qwenSameSize(size.width, size.height) } : {}),
+            lineage: { conversationId: latest.id, branchId, parentRecordId: asset.originGenerationId },
+          };
         }
+        const count = frozen ? 1 : Math.max(1, Math.min(4, latest.tries ?? 1));
+        const group = count > 1 ? crypto.randomUUID() : undefined;
+        const seed = request.settings.seed;
+        const ids: string[] = [];
+        for (let index = 0; index < count; index++) {
+          const next = structuredClone(request);
+          if (group) next.lineage.group = group;
+          if (seed !== 'random' && /^\d+$/.test(seed) && index > 0)
+            next.settings.seed = String(BigInt(seed) + BigInt(index));
+          const parsed = qwenEditJobRequestSchema.parse(next);
+          const job = await window.latent.enqueueQwenEdit(parsed);
+          ids.push(job.id);
+        }
+        const now = getDraft();
+        if (now && now.id === latest.id)
+          replaceDraft({ ...now, source: nextSource, branchId, frozenRecipe: undefined });
+        if (version.current >= submittedVersion)
+          lastQueued.current = {
+            ids,
+            conversationId: latest.id,
+            group,
+            selectedRecordId: getDraft()?.selectedRecordId,
+          };
+        setTriesGroup(group);
         onSnapshot?.(await window.latent.getSnapshot());
-        setNotice(
-          `Image edit queued · seed ${job.actualSeed}. The input and instruction remain available while it runs.`,
-        );
+        setNotice('');
       },
       undefined,
       true,
     );
   }
+
+  // ---------- View pieces ----------
+  const chainTitle = draft?.title ?? 'New edit';
+  const chainThumb = records.at(-1)?.imageUrl ?? (rootSource ? sourceUrl(rootSource.id) : undefined);
+  const topBar = (
+    <div className="ed-top">
+      <div className="ed-anchor">
+        <button
+          type="button"
+          className="ed-chain"
+          aria-haspopup="dialog"
+          aria-expanded={menu === 'chains'}
+          onClick={() => setMenu(menu === 'chains' ? undefined : 'chains')}
+        >
+          {chainThumb ? <img src={chainThumb} alt="" /> : <span className="ed-chain-empty" />}
+          <span>{chainTitle}</span>
+          <small>
+            {steps.length} step{steps.length === 1 ? '' : 's'}
+          </small>
+          <ChevronDown size={15} />
+        </button>
+        <Popover open={menu === 'chains'} onClose={closeMenu} className="ed-pop-down ed-chains">
+          {draft && (
+            <label className="ed-rename">
+              Name
+              <input
+                value={draft.title}
+                maxLength={80}
+                disabled={locked}
+                onChange={event => edit({ title: event.target.value || 'Untitled edit' }, false)}
+              />
+            </label>
+          )}
+          <div className="ed-chain-list" role="list">
+            {allConversationIds.map(id => {
+              const stored = saved.conversations.find(item => item.id === id);
+              const pics = snapshot.history.filter(record => record.qwenEdit?.lineage.conversationId === id);
+              const thumb = pics.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.imageUrl;
+              return (
+                <div key={id} role="listitem" className={id === draft?.id ? 'on' : ''}>
+                  <button type="button" disabled={locked} onClick={() => openConversation(id)}>
+                    {thumb ? <img src={thumb} alt="" /> : <span className="ed-chain-empty" />}
+                    <span>
+                      {stored?.title ?? 'Saved edit'}
+                      <small>
+                        {pics.length} picture{pics.length === 1 ? '' : 's'}
+                      </small>
+                    </span>
+                  </button>
+                  {stored && (
+                    <button
+                      type="button"
+                      className="ed-icon"
+                      title="Remove from this list. The pictures stay in the Library."
+                      aria-label={`Remove ${stored.title} from the list`}
+                      disabled={locked}
+                      onClick={() => removeConversation(id)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Popover>
+      </div>
+      <div className="ed-anchor">
+        <button
+          type="button"
+          className="ed-ghost"
+          disabled={locked}
+          aria-haspopup="dialog"
+          aria-expanded={menu === 'new'}
+          onClick={() => setMenu(menu === 'new' ? undefined : 'new')}
+        >
+          <Plus size={15} />
+          New edit
+        </button>
+        <Popover open={menu === 'new'} onClose={closeMenu} className="ed-pop-down ed-menu">
+          <button
+            type="button"
+            onClick={() => {
+              newConversation('edit');
+              void importImage();
+            }}
+          >
+            <ImagePlus size={15} />
+            Start from a picture
+          </button>
+          <button type="button" onClick={() => newConversation('create')}>
+            <Type size={15} />
+            Start from text
+            <small>Qwen Image 2.1</small>
+          </button>
+        </Popover>
+      </div>
+    </div>
+  );
+
+  const stepLabel = (record: GenerationRecord) => {
+    const plan = record.qwenEdit?.plan;
+    if (!plan) return '';
+    return qualityLabel(plan.settings.profile);
+  };
+  const seconds = (record: GenerationRecord) =>
+    record.durationMs ? `${Math.max(1, Math.round(record.durationMs / 1000))} s` : '';
+
+  const timeline = (
+    <aside className="ed-side" aria-label="Steps">
+      <header>
+        <strong>Steps</strong>
+        <small>Click a step to keep going from it</small>
+      </header>
+      <div className="ed-steps">
+        {rootSource && !creating && (
+          <button
+            type="button"
+            className={`ed-step ${!chainSelected ? 'sel' : ''}`}
+            onClick={() => selectRecord(undefined)}
+            disabled={locked}
+          >
+            <img src={sourceUrl(rootSource.id)} alt="" />
+            <span>
+              <b>Original</b>
+              <small>
+                {rootSource.normalized.width} × {rootSource.normalized.height}
+              </small>
+            </span>
+          </button>
+        )}
+        {steps.map(step => {
+          const pick = step.records.find(record => record.id === chainSelected?.id) ?? step.records[0];
+          const plan = pick.qwenEdit!.plan;
+          const isSelected = step.records.some(record => record.id === chainSelected?.id);
+          return (
+            <div
+              key={step.key}
+              className={`ed-step ${isSelected ? 'sel' : ''} ${step.branch ? 'branch' : ''}`}
+              role="button"
+              tabIndex={0}
+              draggable
+              onDragStart={event => startRecordDrag(event, pick)}
+              onClick={() => selectRecord(pick)}
+              onKeyDown={event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  selectRecord(pick);
+                }
+              }}
+            >
+              <img src={pick.imageUrl} alt="" />
+              <span>
+                <b>{plan.instruction}</b>
+                <small>
+                  {plan.operation === 'create' ? (
+                    <em className="tag">From text</em>
+                  ) : plan.area ? (
+                    <em className="tag acc">Painted area</em>
+                  ) : (
+                    <em className="tag">Whole picture</em>
+                  )}
+                  {step.branch && (
+                    <em className="tag">{step.parentStep ? `From step ${step.parentStep}` : 'From original'}</em>
+                  )}
+                  {(plan.references?.length ?? 0) > 0 && <em className="tag">+{plan.references!.length} pic</em>}
+                  {stepLabel(pick)}
+                  {seconds(pick) && ` · ${seconds(pick)}`}
+                </small>
+                {step.records.length > 1 && (
+                  <span className="ed-tries">
+                    {step.records.map(record => (
+                      <img
+                        key={record.id}
+                        src={record.imageUrl}
+                        alt=""
+                        className={record.id === pick.id ? 'k' : ''}
+                        onClick={event => {
+                          event.stopPropagation();
+                          selectRecord(record);
+                        }}
+                      />
+                    ))}
+                  </span>
+                )}
+              </span>
+            </div>
+          );
+        })}
+        {currentJobs.length > 0 && (
+          <div className="ed-step run sel" aria-live="polite">
+            <span className="ed-step-wait">
+              <LoaderCircle className="spin" size={18} />
+            </span>
+            <span>
+              <b>{currentJobs[0].draft.qwenEdit?.instruction ?? 'Editing'}</b>
+              <small>
+                {runningJob
+                  ? `Working · ${runningJob.progress} of ${runningJob.progressMax || '?'} steps`
+                  : 'Waiting its turn'}
+                {currentJobs.length > 1 && ` · ${currentJobs.length} left`}
+              </small>
+              {runningJob && (
+                <span className="ed-bar">
+                  <i style={{ width: `${(100 * runningJob.progress) / Math.max(1, runningJob.progressMax)}%` }} />
+                </span>
+              )}
+              <span className="ed-step-actions">
+                {currentJobs.map(job => (
+                  <button
+                    key={job.id}
+                    type="button"
+                    className="ed-link"
+                    disabled={busy[`cancel-${job.id}`] || pending[`cancel-${job.id}`]}
+                    onClick={() =>
+                      void action(`cancel-${job.id}`, () => window.latent.cancelJob(job.id), undefined, true)
+                    }
+                  >
+                    Stop{currentJobs.length > 1 ? ` ${currentJobs.indexOf(job) + 1}` : ''}
+                  </button>
+                ))}
+              </span>
+            </span>
+          </div>
+        )}
+        {failedJobs.map(job => (
+          <div key={job.id} className="ed-step failed">
+            <span className="ed-step-wait">
+              <X size={18} />
+            </span>
+            <span>
+              <b>{job.draft.qwenEdit?.instruction ?? 'Edit'}</b>
+              <small>{job.error ?? 'This edit failed.'}</small>
+              <button
+                type="button"
+                className="ed-link"
+                disabled={pending[`retry-${job.id}`] || snapshot.backend.state !== 'ready'}
+                onClick={() =>
+                  void action(
+                    `retry-${job.id}`,
+                    async () => {
+                      await window.latent.retryJob(job.id);
+                      onSnapshot?.(await window.latent.getSnapshot());
+                    },
+                    undefined,
+                    true,
+                  )
+                }
+              >
+                Try again
+              </button>
+            </span>
+          </div>
+        ))}
+      </div>
+      <footer>
+        <button
+          type="button"
+          className="ed-btn"
+          disabled={locked || !previous}
+          onClick={() => {
+            if (previous) {
+              changeStore(previous);
+              setPrevious(undefined);
+            }
+          }}
+        >
+          <Undo2 size={15} />
+          Undo
+        </button>
+        <button
+          type="button"
+          className="ed-btn"
+          disabled={!inputRecord || !onOpenInCreate}
+          onClick={() => inputRecord && onOpenInCreate?.(inputRecord)}
+        >
+          <ExternalLink size={15} />
+          Open in Create
+        </button>
+      </footer>
+    </aside>
+  );
+
+  const empty = !creating && !source && !inputRecord;
+  const references = (draft?.references ?? []).map(ref => sources.find(item => item.id === ref.sourceId));
+  const segmentationReady = ['ready', 'stopped', 'starting', 'segmenting'].includes(snapshot.segmentation?.state ?? '');
+  const statusText =
+    !snapshot.backend || snapshot.backend.state !== 'ready'
+      ? 'Start the engine to edit.'
+      : !profileReady
+        ? installing
+          ? `Getting ${qualityLabel(profile)} files · ${Math.round(snapshot.qwenEdit.installProgress ?? 0)}%`
+          : `${qualityLabel(profile)} needs its model files (${bytes(profileBytes)}).`
+        : !draft?.instruction.trim()
+          ? creating
+            ? 'Describe the picture to make.'
+            : 'Describe the change.'
+          : runningJob
+            ? `Working · ${runningJob.progress} of ${runningJob.progressMax || '?'} steps`
+            : `${tries} ${tries === 1 ? 'try' : 'tries'} · ${steps_} steps each · Ctrl+Enter`;
+
+  const stage = (
+    <section className="ed-stage">
+      {!showTries ? (
+        <div className="ed-toolbar">
+          {!creating && !empty && (
+            <span className="ed-seg" role="group" aria-label="What to change">
+              <button
+                type="button"
+                aria-pressed={mode === 'whole'}
+                disabled={locked || Boolean(draft?.frozenRecipe)}
+                onClick={() => edit({ mode: 'whole' })}
+              >
+                <Square size={14} />
+                Whole picture
+              </button>
+              <button
+                type="button"
+                aria-pressed={mode === 'area'}
+                disabled={locked || Boolean(draft?.frozenRecipe)}
+                onClick={() => edit({ mode: 'area' })}
+              >
+                <Brush size={14} />
+                Painted area
+              </button>
+            </span>
+          )}
+          {mode === 'area' && !empty && (
+            <span className="ed-tools">
+              <button
+                type="button"
+                className={tool === 'brush' ? 'on' : ''}
+                title="Brush"
+                aria-label="Brush"
+                aria-pressed={tool === 'brush'}
+                onClick={() => setTool('brush')}
+              >
+                <Pencil size={15} />
+              </button>
+              <button
+                type="button"
+                className={tool === 'erase' ? 'on' : ''}
+                title="Eraser"
+                aria-label="Eraser"
+                aria-pressed={tool === 'erase'}
+                onClick={() => setTool('erase')}
+              >
+                <Eraser size={15} />
+              </button>
+              <button
+                type="button"
+                className={tool === 'pick' ? 'on' : ''}
+                title={
+                  segmentationReady
+                    ? 'Auto pick: click a thing to paint it'
+                    : 'Auto pick needs Smart select. Set it up from a picture in Create first.'
+                }
+                aria-label="Auto pick"
+                aria-pressed={tool === 'pick'}
+                disabled={!segmentationReady}
+                onClick={() => setTool('pick')}
+              >
+                {pending.pick ? <LoaderCircle className="spin" size={15} /> : <MousePointerClick size={15} />}
+              </button>
+              <label className="ed-size">
+                Brush
+                <input
+                  type="range"
+                  min={8}
+                  max={180}
+                  value={brush}
+                  onChange={event => setBrush(Number(event.target.value))}
+                  aria-label="Brush size"
+                />
+                <span>{brush}</span>
+              </label>
+              <button
+                type="button"
+                title="Clear the paint"
+                aria-label="Clear the paint"
+                onClick={() => paint.current?.clear()}
+              >
+                <Trash2 size={15} />
+              </button>
+            </span>
+          )}
+          {mode === 'area' && !empty && (
+            <span className="ed-hint">
+              {painted ? (
+                <>
+                  Only the <b>painted part</b> changes. The rest stays the same.
+                </>
+              ) : (
+                'Paint over the part you want to change.'
+              )}
+            </span>
+          )}
+          {mode === 'whole' && !empty && !creating && <span className="ed-hint">The whole picture gets redrawn.</span>}
+          <span className="ed-spacer" />
+          {beforeUrl && (
+            <span className="ed-seg" role="group" aria-label="Compare">
+              <button type="button" aria-pressed={view === 'after'} onClick={() => setView('after')}>
+                After
+              </button>
+              <button type="button" aria-pressed={view === 'before'} onClick={() => setView('before')}>
+                Before
+              </button>
+              <button type="button" onClick={() => chainSelected && setCompare(chainSelected)}>
+                Slider
+              </button>
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className="ed-toolbar">
+          <span className="ed-hint ed-hint-strong">
+            <b>{tryRecords.length + tryJobs.length} tries</b> · click the one to keep going from
+          </span>
+          <span className="ed-spacer" />
+          <button type="button" className="ed-btn" onClick={() => setTriesGroup(undefined)}>
+            Done
+          </button>
+          <button
+            type="button"
+            className="ed-btn"
+            disabled={locked || !profileReady || snapshot.backend.state !== 'ready'}
+            onClick={() => {
+              const first = tryRecords[0];
+              if (first?.qwenEdit?.lineage.parentRecordId) {
+                const parent = snapshot.history.find(record => record.id === first.qwenEdit!.lineage.parentRecordId);
+                if (parent) edit({ selectedRecordId: parent.id }, false);
+              }
+              void queueEdit(true);
+            }}
+          >
+            <RefreshCw size={15} />
+            {tries} more tries
+          </button>
+        </div>
+      )}
+      <div
+        ref={canvasArea}
+        className={`ed-canvas ${dropOver ? 'drop-over' : ''}`}
+        {...imageDropProps(
+          setDropOver,
+          transfer => {
+            const drop = droppedImage(transfer, snapshot.history);
+            if (drop) void startFromDrop(drop);
+            else setError('Drop a PNG, JPG or WebP picture.');
+          },
+          locked,
+        )}
+      >
+        {showTries ? (
+          <div className={`ed-grid n${Math.min(4, tryRecords.length + tryJobs.length)}`}>
+            {tryRecords.map((record, index) => (
+              <button
+                type="button"
+                key={record.id}
+                className={`ed-try ${record.id === chainSelected?.id ? 'pick' : ''}`}
+                onClick={() => selectRecord(record)}
+                aria-label={`Keep try ${index + 1}`}
+              >
+                <img src={record.imageUrl} alt="" />
+                <span className={`ed-pill ${record.id === chainSelected?.id ? 'acc' : ''}`}>
+                  {index + 1}
+                  {record.id === chainSelected?.id ? ' · picked' : ''}
+                </span>
+              </button>
+            ))}
+            {tryJobs.map((job, index) => (
+              <div key={job.id} className="ed-try waiting">
+                {job.previewUrl && snapshot.settings.showGenerationPreview ? <img src={job.previewUrl} alt="" /> : null}
+                <span className="ed-pill">
+                  {tryRecords.length + index + 1} · {job.status === 'running' ? 'working…' : 'waiting'}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : empty ? (
+          <div className="ed-empty">
+            <strong>Start with a picture</strong>
+            <p>Drop one here, pick a recent one, or import a file.</p>
+            {recent.length > 0 && (
+              <div className="ed-recent" aria-label="Recent pictures">
+                {recent.map(record => (
+                  <button
+                    type="button"
+                    key={record.id}
+                    title="Edit this picture"
+                    aria-label={`Edit ${record.resolvedPrompt || record.draft.prompt || 'picture'}`}
+                    disabled={locked}
+                    draggable
+                    onDragStart={event => startRecordDrag(event, record)}
+                    onClick={() => void startFromRecord(record)}
+                  >
+                    <img src={record.imageUrl} alt="" />
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="ed-row">
+              <button type="button" className="ed-btn" disabled={locked} onClick={() => void importImage()}>
+                <ImagePlus size={15} />
+                Import picture
+              </button>
+              <button type="button" className="ed-btn" disabled={locked} onClick={() => newConversation('create')}>
+                <Type size={15} />
+                Start from text
+              </button>
+            </div>
+          </div>
+        ) : creating && !inputRecord ? (
+          <div className="ed-empty">
+            <strong>Make a picture from text</strong>
+            <p>Describe it below. Qwen Image 2.1 makes it, then you can keep editing.</p>
+          </div>
+        ) : pictureUrl && baseSize ? (
+          <div className="ed-frame" style={{ width: fit.width, height: fit.height }}>
+            <img
+              src={pictureUrl}
+              alt={view === 'before' ? 'Before this step' : 'Picture being edited'}
+              onError={() => setImageError('This picture could not be shown. Pick another step or import it again.')}
+            />
+            {mode === 'area' && view === 'after' && !livePreview && (
+              <EditPaint
+                ref={paint}
+                width={baseSize.width}
+                height={baseSize.height}
+                tool={tool}
+                brush={brush}
+                onPaintedChange={setPainted}
+                onPick={(x, y) => void pickArea(x, y)}
+              />
+            )}
+          </div>
+        ) : null}
+        {!showTries && !empty && baseSize && (
+          <div className="ed-corner tr">
+            <span className="ed-pill">
+              {baseSize.width} × {baseSize.height}
+            </span>
+          </div>
+        )}
+        {!showTries && chainSelected && (
+          <div className="ed-corner bl">
+            <span className="ed-pill acc">
+              {livePreview
+                ? 'Working on it…'
+                : `Step ${steps.findIndex(step => step.records.some(record => record.id === chainSelected.id)) + 1} · ${chainSelected.qwenEdit?.plan.instruction ?? ''}`}
+            </span>
+          </div>
+        )}
+        {imageError && <p className="ed-corner tl ed-error">{imageError}</p>}
+      </div>
+      {(error || saveError) && (
+        <Notice error>
+          {error || `Your edit list could not be saved: ${saveError}`}
+          {saveError && (
+            <button type="button" className="ed-link" onClick={() => void flush().catch(() => {})}>
+              Try saving again
+            </button>
+          )}
+        </Notice>
+      )}
+      {draft && (
+        <div className="ed-dock">
+          {!creating && (
+            <div className="ed-quick" role="group" aria-label="Quick actions">
+              {QUICK.map(item => (
+                <button
+                  type="button"
+                  key={item.label}
+                  className="ed-chip"
+                  disabled={locked || empty}
+                  onClick={() => {
+                    edit({ instruction: item.text, ...(item.area ? { mode: 'area' as const } : {}) });
+                    if (item.open)
+                      requestAnimationFrame(() => {
+                        const box = textBox.current;
+                        if (!box) return;
+                        box.focus();
+                        const at = item.text.includes('""') ? item.text.indexOf('""') + 1 : item.text.length;
+                        box.setSelectionRange(at, at);
+                      });
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+              <span className="ed-anchor">
+                <button
+                  type="button"
+                  className="ed-chip"
+                  disabled={locked || empty}
+                  aria-expanded={menu === 'more'}
+                  onClick={() => setMenu(menu === 'more' ? undefined : 'more')}
+                >
+                  More
+                </button>
+                <Popover open={menu === 'more'} onClose={closeMenu} className="ed-menu">
+                  {MORE_QUICK.map(item => (
+                    <button
+                      type="button"
+                      key={item.label}
+                      onClick={() => {
+                        edit({ instruction: item.text });
+                        setMenu(undefined);
+                        requestAnimationFrame(() => {
+                          const box = textBox.current;
+                          if (!box || !item.open) return;
+                          box.focus();
+                          const at = item.text.includes('""') ? item.text.indexOf('""') + 1 : item.text.length;
+                          box.setSelectionRange(at, at);
+                        });
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </Popover>
+              </span>
+            </div>
+          )}
+          <div className="ed-write">
+            {!creating && (
+              <div className="ed-refs" aria-label="Pictures used">
+                <div className="ed-ref">
+                  {pictureUrl && view === 'after' ? <img src={inputRecord?.imageUrl ?? pictureUrl} alt="" /> : null}
+                  <b>1</b>
+                </div>
+                {[0, 1].map(index => {
+                  const ref = references[index];
+                  return ref ? (
+                    <div className="ed-ref" key={index}>
+                      <img src={sourceUrl(ref.id)} alt="" />
+                      <b>{index + 2}</b>
+                      <button
+                        type="button"
+                        className="ed-ref-x"
+                        aria-label={`Remove picture ${index + 2}`}
+                        disabled={locked}
+                        onClick={() =>
+                          edit({ references: (draft.references ?? []).filter(item => item.sourceId !== ref.id) })
+                        }
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ) : index === (draft.references?.length ?? 0) ? (
+                    <button
+                      type="button"
+                      key={index}
+                      className="ed-ref add"
+                      disabled={locked || empty || isQwen21Profile(profile)}
+                      title={`Add picture ${index + 2}: drop one here or click to import. Then write things like "the jacket from picture ${index + 2}".`}
+                      onClick={() => void addReference()}
+                      {...imageDropProps(
+                        () => {},
+                        transfer => {
+                          const drop = droppedImage(transfer, snapshot.history);
+                          if (drop?.kind === 'record') void addReference(undefined, drop.record);
+                          else if (drop?.kind === 'file') void addReference(drop.file);
+                        },
+                        locked,
+                      )}
+                    >
+                      <Plus size={14} />
+                      Pic {index + 2}
+                    </button>
+                  ) : null;
+                })}
+              </div>
+            )}
+            <div className="ed-text">
+              <textarea
+                ref={textBox}
+                aria-label={creating ? 'Describe the picture' : 'What should change?'}
+                value={draft.instruction}
+                maxLength={4000}
+                rows={2}
+                disabled={locked}
+                placeholder={
+                  creating
+                    ? 'A fox in a yellow raincoat on a rainy street at night…'
+                    : mode === 'area'
+                      ? 'What should the painted part become?'
+                      : 'What should change? For example: make the coat deep red, keep everything else.'
+                }
+                onChange={event => edit({ instruction: event.target.value })}
+              />
+              <button
+                type="button"
+                className="ed-chip ed-tidy"
+                disabled={locked || pending.tidy || !draft.instruction.trim()}
+                title={
+                  snapshot.assistant?.ready
+                    ? 'Let the assistant rewrite this so the model gets it right'
+                    : snapshot.assistant?.reason
+                }
+                onClick={() => void tidyUp()}
+              >
+                {pending.tidy ? <LoaderCircle className="spin" size={13} /> : <Sparkles size={13} />}
+                Tidy up
+              </button>
+            </div>
+          </div>
+          <div className="ed-run">
+            <span className="ed-anchor">
+              <button
+                type="button"
+                className="ed-chip set"
+                disabled={locked || creating || Boolean(draft.frozenRecipe)}
+                aria-expanded={menu === 'quality'}
+                onClick={() => setMenu(menu === 'quality' ? undefined : 'quality')}
+              >
+                <em>Quality</em> {qualityLabel(profile)} · {steps_} steps <ChevronDown size={13} />
+              </button>
+              <Popover open={menu === 'quality'} onClose={closeMenu} className="ed-menu">
+                {QUALITY.map(item => (
+                  <button
+                    type="button"
+                    key={item.profile}
+                    aria-pressed={profile === item.profile}
+                    onClick={() => {
+                      edit({
+                        settings: { ...draft.settings, profile: item.profile, steps: undefined, guidance: undefined },
+                      });
+                      setMenu(undefined);
+                    }}
+                  >
+                    {item.label}
+                    <small>
+                      {item.detail}
+                      {readyFor(item.profile) ? '' : ' · needs download'}
+                    </small>
+                  </button>
+                ))}
+              </Popover>
+            </span>
+            {!draft.frozenRecipe && (
+              <span className="ed-anchor">
+                <button
+                  type="button"
+                  className="ed-chip set"
+                  disabled={locked}
+                  aria-expanded={menu === 'tries'}
+                  onClick={() => setMenu(menu === 'tries' ? undefined : 'tries')}
+                >
+                  <em>Tries</em> {tries} <ChevronDown size={13} />
+                </button>
+                <Popover open={menu === 'tries'} onClose={closeMenu} className="ed-menu ed-menu-row">
+                  {[1, 2, 3, 4].map(count => (
+                    <button
+                      type="button"
+                      key={count}
+                      aria-pressed={tries === count}
+                      onClick={() => {
+                        edit({ tries: count }, false);
+                        setMenu(undefined);
+                      }}
+                    >
+                      {count}
+                    </button>
+                  ))}
+                </Popover>
+              </span>
+            )}
+            {mode === 'whole' && !draft.frozenRecipe && (
+              <span className="ed-anchor">
+                <button
+                  type="button"
+                  className="ed-chip set"
+                  disabled={locked}
+                  aria-expanded={menu === 'size'}
+                  onClick={() => setMenu(menu === 'size' ? undefined : 'size')}
+                >
+                  <em>Size</em>{' '}
+                  {creating
+                    ? (CREATE_SIZES[sizeChoice as keyof typeof CREATE_SIZES]?.label ?? 'Square')
+                    : sizeChoice === 'working'
+                      ? 'About 1 MP'
+                      : 'Same as picture'}{' '}
+                  <ChevronDown size={13} />
+                </button>
+                <Popover open={menu === 'size'} onClose={closeMenu} className="ed-menu">
+                  {(creating
+                    ? (
+                        Object.entries(CREATE_SIZES) as Array<
+                          [string, { label: string; width: number; height: number }]
+                        >
+                      ).map(([key, value]) => [key, value.label, `${value.width} × ${value.height}`] as const)
+                    : ([
+                        [
+                          'same',
+                          'Same as picture',
+                          baseSize
+                            ? `${qwenSameSize(baseSize.width, baseSize.height).width} × ${qwenSameSize(baseSize.width, baseSize.height).height}`
+                            : '',
+                        ],
+                        [
+                          'working',
+                          'About 1 MP',
+                          baseSize
+                            ? `${qwenWorkingSize(baseSize.width, baseSize.height).width} × ${qwenWorkingSize(baseSize.width, baseSize.height).height}`
+                            : '',
+                        ],
+                      ] as const)
+                  ).map(([key, label, detail]) => (
+                    <button
+                      type="button"
+                      key={key}
+                      aria-pressed={sizeChoice === key}
+                      onClick={() => {
+                        edit({ size: key as QwenConversationDraft['size'] }, false);
+                        setMenu(undefined);
+                      }}
+                    >
+                      {label}
+                      <small>{detail}</small>
+                    </button>
+                  ))}
+                </Popover>
+              </span>
+            )}
+            {mode === 'area' && (
+              <span className="ed-chip set ed-static">
+                <em>Size</em> Same as picture
+              </span>
+            )}
+            <span className="ed-anchor">
+              <button
+                type="button"
+                className="ed-chip set"
+                disabled={locked}
+                aria-expanded={menu === 'tune'}
+                onClick={() => setMenu(menu === 'tune' ? undefined : 'tune')}
+              >
+                <em>Tune</em> {mode === 'area' ? 'seed, edge blend' : 'seed, things to avoid'}{' '}
+                <ChevronRight size={13} />
+              </button>
+              <Popover open={menu === 'tune'} onClose={closeMenu} className="ed-menu ed-tune">
+                <label>
+                  Seed
+                  <span className="ed-inline">
+                    <input
+                      value={draft.settings.seed}
+                      maxLength={32}
+                      onChange={event => edit({ settings: { ...draft.settings, seed: event.target.value } })}
+                    />
+                    <button
+                      type="button"
+                      className="ed-icon"
+                      aria-label="Use a random seed"
+                      title="Random"
+                      onClick={() => edit({ settings: { ...draft.settings, seed: 'random' } })}
+                    >
+                      <Dices size={15} />
+                    </button>
+                  </span>
+                </label>
+                {mode === 'area' && (
+                  <label>
+                    Edge blend · {draft.blend ?? 12} px
+                    <input
+                      type="range"
+                      min={0}
+                      max={64}
+                      value={draft.blend ?? 12}
+                      onChange={event => edit({ blend: Number(event.target.value) })}
+                    />
+                  </label>
+                )}
+                <label>
+                  Things to avoid
+                  <textarea
+                    rows={2}
+                    value={draft.negativePrompt}
+                    maxLength={4000}
+                    disabled={!usesNegative}
+                    placeholder={usesNegative ? 'Blurry, extra fingers…' : 'Only Best quality uses this.'}
+                    onChange={event => edit({ negativePrompt: event.target.value })}
+                  />
+                </label>
+                {!creating && (
+                  <label className="ed-check">
+                    <input
+                      type="checkbox"
+                      checked={profile === 'compact'}
+                      disabled={Boolean(draft.frozenRecipe)}
+                      onChange={event =>
+                        edit({
+                          settings: {
+                            ...draft.settings,
+                            profile: event.target.checked ? 'compact' : 'lightning8',
+                            steps: undefined,
+                            guidance: undefined,
+                          },
+                        })
+                      }
+                    />
+                    <span>
+                      Smaller model files
+                      <small>For 12–16 GB cards. Uses Fast quality.</small>
+                    </span>
+                  </label>
+                )}
+                {creating && (
+                  <label className="ed-check">
+                    <input
+                      type="checkbox"
+                      checked={draft.transparent ?? false}
+                      onChange={event => edit({ transparent: event.target.checked })}
+                    />
+                    <span>Transparent background</span>
+                  </label>
+                )}
+              </Popover>
+            </span>
+            <span className="ed-go">
+              <small>{notice || statusText}</small>
+              {snapshot.backend.state !== 'ready' ? (
+                <button
+                  type="button"
+                  className="ed-primary"
+                  disabled={pending.start || !['stopped', 'error'].includes(snapshot.backend.state)}
+                  onClick={() => void action('start', () => window.latent.startBackend())}
+                >
+                  <Play size={16} />
+                  Start the engine
+                </button>
+              ) : !profileReady || repairNeeded ? (
+                installing ? (
+                  <button
+                    type="button"
+                    className="ed-primary"
+                    disabled={pending.cancelSetup}
+                    onClick={() =>
+                      void action('cancelSetup', async () => {
+                        if (engineSetup) await window.latent.cancelRuntimeUpdate();
+                        else await window.latent.cancelQwenEditSetup();
+                      })
+                    }
+                  >
+                    <X size={16} />
+                    Stop download
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="ed-primary"
+                    disabled={!loaded || pending.setup}
+                    onClick={() =>
+                      void action('setup', async () => {
+                        await window.latent.setupQwenEdit(profile, repairNeeded);
+                        onSnapshot?.(await window.latent.getSnapshot());
+                      })
+                    }
+                  >
+                    <Download size={16} />
+                    {repairNeeded ? 'Check and repair files' : `Get files · ${bytes(profileBytes)}`}
+                  </button>
+                )
+              ) : (
+                <button
+                  type="button"
+                  className="ed-primary"
+                  disabled={
+                    locked ||
+                    empty ||
+                    !draft.instruction.trim() ||
+                    (!creating && sourceChanged && !chainSelected) ||
+                    (mode === 'area' && !painted && !draft.frozenRecipe)
+                  }
+                  onClick={() => void queueEdit()}
+                >
+                  {pending.queue ? (
+                    <LoaderCircle className="spin" size={16} />
+                  ) : creating ? (
+                    <Sparkles size={16} />
+                  ) : (
+                    <Pencil size={16} />
+                  )}
+                  {creating ? 'Make it' : 'Edit'}
+                  {tries > 1 ? ` · ${tries} tries` : ''}
+                </button>
+              )}
+            </span>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+
+  return (
+    <div
+      className="ed-root"
+      onKeyDown={event => {
+        if (
+          !event.nativeEvent.isComposing &&
+          !event.defaultPrevented &&
+          (event.ctrlKey || event.metaKey) &&
+          event.key === 'Enter'
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!compare) void queueEdit();
+        }
+      }}
+    >
+      {slot ? createPortal(topBar, slot) : topBar}
+      {loading ? (
+        <div className="ed-loading">
+          <LoaderCircle className="spin" />
+          Opening your edits…
+        </div>
+      ) : !loaded ? (
+        <div className="ed-loading">
+          {error && <Notice error>{error}</Notice>}
+          <button type="button" className="ed-btn" onClick={() => void load()}>
+            Try again
+          </button>
+        </div>
+      ) : (
+        <section className="ed" aria-label="Edit">
+          {stage}
+          {timeline}
+        </section>
+      )}
+      {!embedded && (
+        <button type="button" className="ed-btn ed-close" onClick={() => void close()}>
+          Done
+        </button>
+      )}
+      {compare?.qwenEdit?.plan.source && (
+        <CompareImage
+          before={{
+            url: sourceUrl(compare.qwenEdit.plan.source.id),
+            label: 'Before',
+            width: compare.qwenEdit.plan.source.normalized.width,
+            height: compare.qwenEdit.plan.source.normalized.height,
+          }}
+          after={{
+            url: compare.imageUrl,
+            label: 'After',
+            width: compare.width,
+            height: compare.height,
+          }}
+          sourceFittingSize={compare.qwenEdit.plan.area ? undefined : compare.qwenEdit.plan.canvas?.sourceFitting}
+          alignment={compare.qwenEdit.plan.area ? 'stretch' : compare.qwenEdit.plan.settings.resize}
+          onClose={() => setCompare(undefined)}
+        />
+      )}
+    </div>
+  );
+
   async function close() {
     if (compare) {
       setCompare(undefined);
@@ -854,827 +2069,4 @@ export function QwenEditor({
       onClose();
     });
   }
-
-  return (
-    <div
-      className="qwen-editor"
-      onKeyDown={event => {
-        if (
-          !event.nativeEvent.isComposing &&
-          !event.defaultPrevented &&
-          (event.ctrlKey || event.metaKey) &&
-          event.key === 'Enter'
-        ) {
-          event.preventDefault();
-          event.stopPropagation();
-          if (!compare) void queueEdit();
-        }
-      }}
-    >
-      {!compare && (
-        <StationFrame
-          embedded={embedded}
-          onClose={() => {
-            void close();
-          }}
-        >
-          <div className="qwen-intro">
-            <div className="qwen-emblem">
-              <Sparkles size={22} />
-            </div>
-            <div>
-              <strong>Create and edit with Qwen.</strong>
-              <p>Make a focused change, inspect the result, then continue or branch from an earlier version.</p>
-            </div>
-            <span className="qwen-state">Local · experimental</span>
-          </div>
-          {!profileReady && <PackageSetupStorage packageId={`qwen-${profile}`} />}
-          {repairNeeded &&
-            profile !== 'compact' &&
-            !['stopped', 'error', 'not-installed'].includes(snapshot.backend.state) && (
-              <p>Stop the engine in Settings before repairing the Qwen files.</p>
-            )}
-          <div className="qwen-runtime">
-            <div>
-              <strong>{engineSetup ? snapshot.runtimeUpdates?.message : snapshot.qwenEdit.message}</strong>
-              <small>
-                {isQwen21Profile(profile)
-                  ? 'Create images, edit with references or generate transparent assets. The first image takes longer while the models load.'
-                  : 'Edit an image with the existing Qwen 2511 models.'}
-              </small>
-              {installing && (
-                <>
-                  <progress max={100} value={Math.max(0, Math.min(100, snapshot.qwenEdit.installProgress ?? 0))} />
-                  <small>
-                    {snapshot.qwenEdit.activeRole
-                      ? `Preparing ${snapshot.qwenEdit.activeRole}`
-                      : 'Preparing model bundle'}{' '}
-                    · {Math.round(snapshot.qwenEdit.installProgress ?? 0)}%
-                  </small>
-                </>
-              )}
-            </div>
-            <div className="button-row">
-              {installing ? (
-                <button
-                  type="button"
-                  disabled={pending.cancelSetup}
-                  onClick={() => {
-                    void action('cancelSetup', async () => {
-                      if (engineSetup) await window.latent.cancelRuntimeUpdate();
-                      else await window.latent.cancelQwenEditSetup();
-                    });
-                  }}
-                >
-                  <CircleStop size={15} />
-                  Cancel download
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={
-                    !loaded ||
-                    pending.setup ||
-                    (profileReady && !repairNeeded) ||
-                    (repairNeeded &&
-                      profile !== 'compact' &&
-                      !['stopped', 'error', 'not-installed'].includes(snapshot.backend.state))
-                  }
-                  onClick={() => {
-                    void action(
-                      'setup',
-                      async () => {
-                        await window.latent.setupQwenEdit(profile, repairNeeded);
-                        onSnapshot?.(await window.latent.getSnapshot());
-                      },
-                      'Qwen image-edit bundle is ready.',
-                    );
-                  }}
-                >
-                  {profileReady && !repairNeeded ? <Check size={15} /> : <Download size={15} />}
-                  {repairNeeded
-                    ? 'Verify / repair Qwen bundle'
-                    : profileReady
-                      ? `${profileLabel} bundle ready`
-                      : `Install ${profileLabel} · ${bytes(profileBytes)}`}
-                </button>
-              )}
-              {snapshot.backend.state !== 'ready' && (
-                <button
-                  type="button"
-                  disabled={pending.start || !['stopped', 'error'].includes(snapshot.backend.state)}
-                  onClick={() => {
-                    void action('start', () => window.latent.startBackend());
-                  }}
-                >
-                  <Play size={15} />
-                  Start image engine
-                </button>
-              )}
-            </div>
-          </div>
-          {snapshot.qwenEdit.verification?.state === 'verifying' && (
-            <div className="qwen-runtime" role="status">
-              <div>
-                <strong>Model file verification</strong>
-                <small>{snapshot.qwenEdit.verification.message}</small>
-                <progress
-                  aria-label="Model file verification"
-                  max={100}
-                  value={snapshot.qwenEdit.verification.progress}
-                />
-                <small>
-                  {bytes(snapshot.qwenEdit.verification.completedBytes)} of{' '}
-                  {bytes(snapshot.qwenEdit.verification.totalBytes)} checked
-                </small>
-              </div>
-            </div>
-          )}
-          {pending.queue && (
-            <p className="qwen-notice" role="status">
-              Preparing edit… Checking the source and model files before adding it to the queue.
-            </p>
-          )}
-          {(error || saveError) && <Notice error>{error || `Editor draft could not be saved: ${saveError}`}</Notice>}
-          {notice && (
-            <p className="qwen-notice" role="status">
-              {notice}
-            </p>
-          )}
-          {loading ? (
-            <div className="qwen-loading">
-              <LoaderCircle className="spin" />
-              Opening saved image-edit drafts…
-            </div>
-          ) : !loaded ? (
-            <button
-              type="button"
-              onClick={() => {
-                void load();
-              }}
-            >
-              Retry opening editor
-            </button>
-          ) : (
-            <>
-              <div className="qwen-conversation-bar">
-                <label htmlFor={`${fieldId}-conversation`}>
-                  Conversation
-                  <select
-                    id={`${fieldId}-conversation`}
-                    value={draft?.id ?? ''}
-                    disabled={locked}
-                    onChange={event => openConversation(event.target.value)}
-                  >
-                    <option value="" disabled>
-                      Choose a conversation…
-                    </option>
-                    {allConversationIds.map(id => {
-                      const stored = saved.conversations.find(item => item.id === id);
-                      const versions = snapshot.history.filter(
-                        record => record.qwenEdit?.lineage.conversationId === id,
-                      ).length;
-                      return (
-                        <option key={id} value={id}>
-                          {stored?.title ?? 'Saved image edits'} · {versions} version{versions === 1 ? '' : 's'} ·{' '}
-                          {id.slice(0, 6)}
-                          {!stored ? ' (history)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </label>
-                <div className="button-row">
-                  <button
-                    type="button"
-                    disabled={locked || saved.conversations.length >= QWEN_CONVERSATION_LIMIT}
-                    onClick={newConversation}
-                  >
-                    <Plus size={15} />
-                    New edit
-                  </button>
-                  <button
-                    type="button"
-                    disabled={locked || !previous}
-                    onClick={() => {
-                      if (previous) {
-                        changeStore(previous);
-                        setPrevious(undefined);
-                        setNotice('Previous image-editor draft restored.');
-                        setInitialPreview(undefined);
-                      }
-                    }}
-                  >
-                    <Undo2 size={15} />
-                    Undo
-                  </button>
-                  <button
-                    type="button"
-                    disabled={locked || !draft}
-                    title="Remove only this saved editor draft; retain every generated version"
-                    onClick={removeDraft}
-                  >
-                    <Trash2 size={15} />
-                    Remove draft
-                  </button>
-                </div>
-              </div>
-              {saved.conversations.length >= QWEN_CONVERSATION_LIMIT && (
-                <Notice>
-                  50 editor drafts are saved. Remove an unused draft to start another conversation. Every generated
-                  version remains in the Library.
-                </Notice>
-              )}
-              <div className="qwen-workspace">
-                <section className="qwen-viewer" aria-label="Image versions">
-                  <div className="qwen-preview-heading">
-                    <strong>
-                      {showingLive
-                        ? 'Live generation preview'
-                        : showingStudioSelection
-                          ? 'Image selected in Create'
-                          : selected
-                            ? `Version ${selected.qwenEdit?.lineage.version ?? 'preview'}`
-                            : 'Starting image'}
-                    </strong>
-                    {activeJob?.previewUrl && snapshot.settings.showGenerationPreview && (
-                      <button type="button" className="text-button" onClick={() => setShowLive(!showLive)}>
-                        {showLive
-                          ? showingStudioSelection
-                            ? 'Show selected image'
-                            : 'Show selected version'
-                          : 'Show live preview'}
-                      </button>
-                    )}
-                  </div>
-                  <div
-                    className={`qwen-preview ${dropOver ? 'drop-over' : ''}`}
-                    {...imageDropProps(
-                      setDropOver,
-                      transfer => {
-                        const drop = droppedImage(transfer, snapshot.history);
-                        if (drop) void startFromDrop(drop);
-                        else setError('Drop a PNG, JPG or WebP image.');
-                      },
-                      locked,
-                    )}
-                  >
-                    {imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        alt={
-                          showingLive
-                            ? 'Current generation preview'
-                            : showingStudioSelection
-                              ? 'Image selected in Create; current edit input unchanged'
-                              : selected
-                                ? 'Selected saved image version'
-                                : 'Starting image for editing'
-                        }
-                        onError={() =>
-                          setImageError('The image preview could not be loaded. Its saved recipe is retained.')
-                        }
-                      />
-                    ) : (
-                      <div>
-                        <FileImage size={38} />
-                        <strong>Start with an image.</strong>
-                        <p>Drop one here, import a file, or pick a recent one.</p>
-                        {recent.length > 0 && (
-                          <div className="qwen-recent" aria-label="Recent images">
-                            {recent.map(record => (
-                              <button
-                                type="button"
-                                key={record.id}
-                                disabled={locked}
-                                title="Edit this image"
-                                aria-label={`Edit ${record.resolvedPrompt || record.draft.prompt || 'image'}`}
-                                draggable
-                                onDragStart={event => startRecordDrag(event, record)}
-                                onClick={() => void applyRecord(record)}
-                              >
-                                <img src={record.imageUrl} alt="" loading="lazy" />
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {imageError && (
-                    <p className="qwen-image-error" role="alert">
-                      {imageError}
-                    </p>
-                  )}
-                  {showingLive && activeJob && <QwenLivePreviewDetails job={activeJob} />}
-                  {!showingLive && showingStudioSelection && selected && (
-                    <QwenSelectedStudioImageDetails
-                      record={selected}
-                      locked={locked}
-                      onUse={() => {
-                        void applyRecord(selected);
-                      }}
-                    />
-                  )}
-                  {!showingLive && !showingStudioSelection && selected && (
-                    <div className="qwen-version-detail">
-                      <div>
-                        <strong>
-                          {selected.width} × {selected.height}
-                          {selected.qwenEdit &&
-                            ` · ${selected.qwenEdit.plan.settings.steps} steps · seed ${selected.actualSeed}`}
-                        </strong>
-                        <small>
-                          {shortDate(selected.createdAt)}
-                          {selected.qwenEdit && ` · branch ${selected.qwenEdit.lineage.branchId.slice(0, 6)}`}
-                          {selected.qwenEdit?.lineage.parentRecordId &&
-                            ` · parent ${selected.qwenEdit.lineage.parentRecordId.slice(0, 8)}`}
-                        </small>
-                      </div>
-                      {selected.qwenEdit && <p>{selected.qwenEdit.plan.instruction}</p>}
-                      <div className="button-row">
-                        <button
-                          type="button"
-                          disabled={locked}
-                          onClick={() => {
-                            void applyRecord(selected);
-                          }}
-                        >
-                          <ImagePlus size={14} />
-                          {hasChildren(selected) ? 'Branch from this version' : 'Continue from this version'}
-                        </button>
-                        {selected.qwenEdit && (
-                          <>
-                            <button type="button" disabled={locked} onClick={() => replay(selected)}>
-                              <RotateCcw size={14} />
-                              Reuse exact recipe
-                            </button>
-                            <button
-                              type="button"
-                              disabled={!selected.qwenEdit.plan.source}
-                              onClick={() => setCompare(selected)}
-                            >
-                              <ArrowLeftRight size={14} />
-                              Compare input
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {draft && (
-                    <div className="qwen-dock">
-                      <Field
-                        label={draft.operation === 'create' ? 'Describe your image' : 'What should change?'}
-                        hint={`${draft.instruction.length.toLocaleString()} / 4,000 characters · Ctrl+Enter to queue`}
-                      >
-                        <textarea
-                          value={draft.instruction}
-                          maxLength={4000}
-                          rows={5}
-                          disabled={locked}
-                          onChange={event => edit({ instruction: event.target.value })}
-                          placeholder="Keep the character and composition. Change the coat to deep red and make the background a rainy street…"
-                        />
-                      </Field>
-                      <div className="qwen-queue-action">
-                        <small>
-                          {snapshot.backend.state !== 'ready'
-                            ? 'Start the image engine to queue this edit.'
-                            : !profileReady
-                              ? 'Install the selected Qwen bundle above.'
-                              : draft.operation !== 'create' && !draft.source
-                                ? 'Choose an input image.'
-                                : !draft.instruction.trim()
-                                  ? 'Describe the change to make.'
-                                  : `${draft.settings.width} × ${draft.settings.height} · ${steps} steps · one image`}
-                        </small>
-                        <button
-                          type="button"
-                          className="primary"
-                          disabled={
-                            locked ||
-                            !parsedRequest.success ||
-                            (draft?.operation !== 'create' && (sourceChanged || !source)) ||
-                            !profileReady ||
-                            snapshot.backend.state !== 'ready'
-                          }
-                          onClick={() => {
-                            void queueEdit();
-                          }}
-                        >
-                          {pending.queue ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}
-                          {pending.queue
-                            ? 'Preparing edit…'
-                            : draft.operation === 'create'
-                              ? 'Generate image'
-                              : 'Queue image edit'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </section>
-                <aside className="qwen-side">
-                  <h2 className="qwen-side-heading">Steps</h2>
-                  <div className="qwen-version-strip" aria-label="Saved versions">
-                    {records.length ? (
-                      records.map(record => (
-                        <button
-                          type="button"
-                          key={record.id}
-                          className={record.id === selected?.id && !showingLive ? 'selected' : ''}
-                          onClick={() => selectRecord(record)}
-                          aria-label={`Preview version ${record.qwenEdit!.lineage.version}, branch ${record.qwenEdit!.lineage.branchId.slice(0, 6)}; leave editor input unchanged`}
-                          aria-pressed={record.id === selected?.id && !showingLive}
-                        >
-                          <img src={record.imageUrl} alt="" />
-                          <span>
-                            v{record.qwenEdit!.lineage.version} · {record.qwenEdit!.lineage.branchId.slice(0, 4)}
-                          </span>
-                        </button>
-                      ))
-                    ) : (
-                      <p>
-                        <History size={16} />
-                        Your edits show up here.
-                      </p>
-                    )}
-                  </div>
-                  <section className="qwen-composer" aria-label="Next image edit">
-                    {draft ? (
-                      <>
-                        <Field
-                          label="Model"
-                          hint={`${steps} steps · CFG ${guidance}${draft.frozenRecipe ? ' · recorded recipe' : ''}`}
-                        >
-                          <select
-                            value={profile}
-                            disabled={locked || installing}
-                            onChange={event => {
-                              const profile = event.target.value as QwenEditProfile;
-                              edit({
-                                operation: 'edit',
-                                transparent: false,
-                                references: [],
-                                settings: {
-                                  ...draft.settings,
-                                  profile,
-                                  steps: qwenProfileSteps(profile),
-                                  guidance: isQwen21Profile(profile) || isFastQwenProfile(profile) ? 1 : 4,
-                                },
-                              });
-                            }}
-                          >
-                            <option value="qwen21">Qwen Image 2.1 · 25 steps</option>
-                            <option value="lightning8">Lightning · 8 steps</option>
-                            <option value="base">Base · {profile === 'base' ? steps : 40} steps</option>
-                            <option value="fast">Fast · 4 steps with Lightning adapter</option>
-                            <option value="compact">Compact · smaller model, 4 steps</option>
-                          </select>
-                        </Field>
-                        {isQwen21Profile(profile) && (
-                          <>
-                            <Field label="Task">
-                              <select
-                                aria-label="Qwen task"
-                                value={draft.operation ?? 'edit'}
-                                disabled={locked}
-                                onChange={event =>
-                                  edit({
-                                    operation: event.target.value as 'edit' | 'create',
-                                    source: undefined,
-                                    references: [],
-                                  })
-                                }
-                              >
-                                <option value="edit">Edit an image</option>
-                                <option value="create">Create from a prompt</option>
-                              </select>
-                            </Field>
-                            <label>
-                              <input
-                                type="checkbox"
-                                checked={draft.transparent ?? false}
-                                disabled={locked}
-                                onChange={event => edit({ transparent: event.target.checked })}
-                              />
-                              Transparent background
-                            </label>
-                            <p className="muted small">
-                              Uses the publisher’s Research License. Needs {bytes(profileBytes)} of models and an engine
-                              update.
-                            </p>
-                          </>
-                        )}
-                        <Field label="Conversation name">
-                          <input
-                            value={draft.title}
-                            maxLength={80}
-                            disabled={locked}
-                            onChange={event => edit({ title: event.target.value || 'Untitled image edit' }, false)}
-                          />
-                        </Field>
-                        {draft.operation !== 'create' && (
-                          <div className="qwen-source">
-                            <div className="label-row">
-                              <strong>Input for the next edit</strong>
-                              <button
-                                type="button"
-                                disabled={locked}
-                                onClick={() => {
-                                  void importImage();
-                                }}
-                              >
-                                <ImagePlus size={14} />
-                                Import image
-                              </button>
-                            </div>
-                            <Field label="Saved source">
-                              <select
-                                value={draft.source?.id ?? ''}
-                                disabled={locked}
-                                onChange={event => {
-                                  const chosen = sources.find(item => item.id === event.target.value);
-                                  if (!chosen) return;
-                                  try {
-                                    const parent = chosen.originGenerationId
-                                      ? snapshot.history.find(record => record.id === chosen.originGenerationId)
-                                      : undefined;
-                                    assignSource(chosen, parent);
-                                  } catch (reason) {
-                                    setError(errorMessage(reason));
-                                  }
-                                }}
-                              >
-                                <option value="">Choose a starting image…</option>
-                                {draft.source && !source && (
-                                  <option value={draft.source.id}>Missing source · {draft.source.id.slice(-8)}</option>
-                                )}
-                                {sources.map(item => (
-                                  <option key={item.id} value={item.id}>
-                                    {item.name} · {item.normalized.width} × {item.normalized.height}
-                                  </option>
-                                ))}
-                              </select>
-                            </Field>
-                            {source && (
-                              <div className="qwen-source-chip">
-                                <img src={sourceUrl(source.id)} alt="Current edit input" />
-                                <span>
-                                  {source.name}
-                                  <small>
-                                    {source.normalized.width} × {source.normalized.height}
-                                    {sourceParent?.qwenEdit
-                                      ? ` · version ${sourceParent.qwenEdit.lineage.version}`
-                                      : sourceParent
-                                        ? ' · saved studio image'
-                                        : ' · imported original'}
-                                  </small>
-                                </span>
-                              </div>
-                            )}
-                            {sourceChanged && (
-                              <Notice error>
-                                The image this edit started from is missing or has changed. Pick the image you want to
-                                edit before generating.
-                              </Notice>
-                            )}
-                            <small>
-                              Choosing a version above previews it. Continue from that version to change this input.
-                            </small>
-                          </div>
-                        )}
-                        {isQwen21Profile(profile) && draft.operation !== 'create' && (
-                          <Field
-                            label="Second reference (optional)"
-                            hint="Refer to your input as <image1> and this reference as <image2>."
-                          >
-                            <select
-                              aria-label="Second reference"
-                              value={draft.references?.[0]?.sourceId ?? ''}
-                              disabled={locked}
-                              onChange={event => {
-                                const ref = sources.find(item => item.id === event.target.value);
-                                edit({ references: ref ? [{ sourceId: ref.id, sha256: ref.normalized.sha256 }] : [] });
-                              }}
-                            >
-                              <option value="">No second reference</option>
-                              {sources.map(item => (
-                                <option key={item.id} value={item.id}>
-                                  {item.name}
-                                </option>
-                              ))}
-                            </select>
-                            <button type="button" disabled={locked} onClick={() => void importReference()}>
-                              Import reference
-                            </button>
-                          </Field>
-                        )}
-                        {draft.frozenRecipe && (
-                          <div className="qwen-frozen">
-                            <Check size={14} />
-                            <span>
-                              Exact recipe replay · source, seed and model hashes retained. Changing the edit or its
-                              settings clears the freeze.
-                            </span>
-                          </div>
-                        )}
-                        <details>
-                          <summary>Negative instruction</summary>
-                          <textarea
-                            aria-label="Negative instruction"
-                            value={draft.negativePrompt}
-                            maxLength={4000}
-                            rows={2}
-                            disabled={locked}
-                            onChange={event => edit({ negativePrompt: event.target.value })}
-                            placeholder="Unwanted changes or artifacts…"
-                          />
-                        </details>
-                        <div className="two-columns">
-                          <Field label="Saved width">
-                            <select
-                              value={draft.settings.width}
-                              disabled={locked}
-                              onChange={event =>
-                                edit({ settings: { ...draft.settings, width: Number(event.target.value) } })
-                              }
-                            >
-                              {sizes.map(size => (
-                                <option key={size}>{size}</option>
-                              ))}
-                            </select>
-                          </Field>
-                          <Field label="Saved height">
-                            <select
-                              value={draft.settings.height}
-                              disabled={locked}
-                              onChange={event =>
-                                edit({ settings: { ...draft.settings, height: Number(event.target.value) } })
-                              }
-                            >
-                              {sizes.map(size => (
-                                <option key={size}>{size}</option>
-                              ))}
-                            </select>
-                          </Field>
-                        </div>
-                        <Field label="Fit input to output">
-                          <select
-                            value={draft.settings.resize}
-                            disabled={locked}
-                            onChange={event =>
-                              edit({
-                                settings: {
-                                  ...draft.settings,
-                                  resize: event.target.value as 'stretch' | 'center-crop',
-                                },
-                              })
-                            }
-                          >
-                            <option value="center-crop">Center crop</option>
-                            <option value="stretch">Stretch to fit</option>
-                          </select>
-                        </Field>
-                        <Field label="Seed">
-                          <div className="input-with-button">
-                            <input
-                              value={draft.settings.seed}
-                              maxLength={32}
-                              disabled={locked}
-                              onChange={event => edit({ settings: { ...draft.settings, seed: event.target.value } })}
-                            />
-                            <button
-                              type="button"
-                              disabled={locked}
-                              aria-label="Use random seed"
-                              onClick={() => edit({ settings: { ...draft.settings, seed: 'random' } })}
-                            >
-                              <Dices size={16} />
-                            </button>
-                          </div>
-                        </Field>
-                        {!seedValid && (
-                          <p className="qwen-image-error">
-                            Use random or a whole-number seed from 0 to {Number.MAX_SAFE_INTEGER.toLocaleString()}. Your
-                            unfinished text is saved.
-                          </p>
-                        )}
-                        <small>
-                          {draft.frozenRecipe?.workflowVersion === 'qwen-image-edit-2511-int8@1'
-                            ? `Older recipe: renders at ${draft.settings.width} × ${draft.settings.height}, so framing can differ.`
-                            : `Renders at ${qwenInferenceSize(draft.settings.width, draft.settings.height).width} × ${qwenInferenceSize(draft.settings.width, draft.settings.height).height}, then resizes to the saved size.`}
-                        </small>
-                      </>
-                    ) : (
-                      <div className="qwen-no-draft">
-                        <p>
-                          Create a saved editor draft or open a conversation from history. Removing a draft keeps every
-                          generated version.
-                        </p>
-                        <button type="button" onClick={newConversation}>
-                          <Plus size={15} />
-                          New image edit
-                        </button>
-                      </div>
-                    )}
-                  </section>
-                </aside>
-              </div>
-              {(currentJobs.length > 0 || failedJobs.length > 0) && (
-                <div className="qwen-jobs" aria-label="Image edit queue">
-                  {[...currentJobs, ...failedJobs].map(job => (
-                    <div className="qwen-job" key={job.id}>
-                      <QwenQueueJobDetails job={job} />
-                      {['running', 'queued'].includes(job.status) ? (
-                        <button
-                          type="button"
-                          disabled={busy[`cancel-${job.id}`] || pending[`cancel-${job.id}`]}
-                          onClick={() => {
-                            void action(`cancel-${job.id}`, () => window.latent.cancelJob(job.id), undefined, true);
-                          }}
-                        >
-                          <CircleStop size={14} />
-                          Cancel
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={pending[`retry-${job.id}`] || snapshot.backend.state !== 'ready'}
-                          onClick={() => {
-                            void action(
-                              `retry-${job.id}`,
-                              async () => {
-                                await window.latent.retryJob(job.id);
-                                onSnapshot?.(await window.latent.getSnapshot());
-                              },
-                              undefined,
-                              true,
-                            );
-                          }}
-                        >
-                          <RotateCcw size={14} />
-                          Retry exact job
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-          <div className="qwen-footer">
-            <small>
-              {saveState === 'saved'
-                ? 'Editor draft saved locally.'
-                : saveState === 'saving'
-                  ? 'Saving editor draft…'
-                  : 'Editor draft has unsaved changes.'}{' '}
-              Everything you generate is also saved in your Library. Closing the editor doesn't stop queued edits.
-            </small>
-            <div className="button-row">
-              {saveError && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    void flush().catch(() => {});
-                  }}
-                >
-                  Retry save
-                </button>
-              )}
-              <button
-                type="button"
-                disabled={pending.close}
-                onClick={() => {
-                  void close();
-                }}
-              >
-                {pending.close ? <LoaderCircle className="spin" size={15} /> : null}Done
-              </button>
-            </div>
-          </div>
-        </StationFrame>
-      )}
-      {compare?.qwenEdit?.plan.source && (
-        <CompareImage
-          before={{
-            url: sourceUrl(compare.qwenEdit.plan.source.id),
-            label: 'Recorded edit input',
-            width: compare.qwenEdit.plan.source.normalized.width,
-            height: compare.qwenEdit.plan.source.normalized.height,
-          }}
-          after={{
-            url: compare.imageUrl,
-            label: `Version ${compare.qwenEdit.lineage.version}`,
-            width: compare.width,
-            height: compare.height,
-          }}
-          sourceFittingSize={compare.qwenEdit.plan.canvas?.sourceFitting}
-          alignment={compare.qwenEdit.plan.settings.resize}
-          onClose={() => setCompare(undefined)}
-        />
-      )}
-    </div>
-  );
 }

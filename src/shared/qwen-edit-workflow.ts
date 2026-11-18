@@ -10,12 +10,16 @@ import {
   QWEN_EDIT_IDENTITIES,
   qwenEditSettingsSchema,
   qwenEditWorkflowVersionSchema,
+  isQwenEditV3,
+  qwenOutputSizeSchema,
+  qwenAreaSchema,
   type QwenEditBundle,
   type QwenEditProfile,
   type QwenEditWorkflowInput,
   type QwenEditWorkflowPlan,
 } from './qwen-edit-types';
 import { qwenInferenceSize } from './qwen-edit-canvas';
+import { qwenWorkingSize } from './qwen-area';
 
 export function validateQwenEditBundle(bundle: QwenEditBundle, profile: QwenEditProfile = bundle?.profile) {
   if (isQwen21Profile(profile)) {
@@ -83,8 +87,8 @@ function sourceFilename(value: string) {
 /** Native one-image 2511 recipe. Its input pixels must be resolved and rehashed by the job service. */
 export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: QwenEditBundle): QwenEditWorkflowPlan {
   if (isQwen21Profile(input.settings.profile)) return buildQwen21Workflow(input, bundle);
-  if (input.operation === 'create' || input.transparent || input.references?.length)
-    throw new Error('Creation, transparency and additional references require Qwen Image 2.1.');
+  if (input.operation === 'create' || input.transparent)
+    throw new Error('Creation and transparency require Qwen Image 2.1.');
   if (!input.source || !input.sourceFilename) throw new Error('Choose an input image before editing.');
   const parsed = qwenEditSettingsSchema.parse(input.settings);
   validateQwenEditBundle(bundle, parsed.profile);
@@ -95,13 +99,18 @@ export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: Qwen
   };
   const workflowVersion = qwenEditWorkflowVersionSchema.parse(
     input.workflowVersion ??
-      (parsed.profile === 'compact' ? 'qwen-image-edit-2511-gguf-q4ks@1' : 'qwen-image-edit-2511-int8@2'),
+      (parsed.profile === 'compact' ? 'qwen-image-edit-2511-gguf-q4ks@2' : 'qwen-image-edit-2511-int8@3'),
   );
   if (
     workflowVersion.startsWith('qwen-image-2.1') ||
-    (parsed.profile === 'compact') !== (workflowVersion === 'qwen-image-edit-2511-gguf-q4ks@1')
+    (parsed.profile === 'compact') !== workflowVersion.startsWith('qwen-image-edit-2511-gguf')
   )
     throw new Error('The Qwen model route does not match this recorded recipe.');
+  const v3 = isQwenEditV3(workflowVersion);
+  const references = input.references ?? [];
+  if (references.length && !v3) throw new Error('This older recipe does not use extra pictures.');
+  if (references.length > 2) throw new Error('Qwen Edit takes up to two extra pictures.');
+  if ((input.area || input.output) && !v3) throw new Error('This older recipe edits the whole picture.');
   const aligned = workflowVersion !== 'qwen-image-edit-2511-int8@1';
   const native = aligned
     ? qwenInferenceSize(settings.width, settings.height)
@@ -135,6 +144,41 @@ export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: Qwen
     throw new Error('Enter an edit instruction of 1–4000 characters.');
   const negativePrompt = input.negativePrompt ?? '';
   const filenamePrefix = `Latent_${input.jobId}_qwen_edit`;
+  for (const reference of references) {
+    const ref = reference.source?.normalized;
+    if (
+      !/^src_[0-9a-f-]{36}$/i.test(reference.source?.id ?? '') ||
+      !/^[0-9a-f]{64}$/.test(ref?.sha256 ?? '') ||
+      ref?.mimeType !== 'image/png'
+    )
+      throw new Error('An extra picture is missing its saved identity.');
+    sourceFilename(reference.filename);
+  }
+  const area = input.area ? qwenAreaSchema.parse(input.area) : undefined;
+  const crop = area?.crop;
+  if (area) {
+    if (!crop || !input.maskFilename) throw new Error('A painted edit needs its painted area.');
+    sourceFilename(input.maskFilename);
+    if (
+      crop.x % 8 ||
+      crop.y % 8 ||
+      crop.x + crop.width > size.width ||
+      crop.y + crop.height > size.height ||
+      (crop.width % 8 && crop.x + crop.width !== size.width) ||
+      (crop.height % 8 && crop.y + crop.height !== size.height)
+    )
+      throw new Error('The painted area lies outside the picture.');
+    const working = qwenWorkingSize(crop.width, crop.height);
+    if (settings.width !== working.width || settings.height !== working.height || settings.resize !== 'stretch')
+      throw new Error('A painted edit works at the size of its painted area.');
+  }
+  const output = area
+    ? { width: size.width, height: size.height }
+    : input.output
+      ? qwenOutputSizeSchema.parse(input.output)
+      : { width: settings.width, height: settings.height };
+  if (area && input.output && (input.output.width !== size.width || input.output.height !== size.height))
+    throw new Error('A painted edit keeps the size of the picture.');
   const workflow: ComfyWorkflow = {
     '1':
       parsed.profile === 'compact'
@@ -156,7 +200,7 @@ export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: Qwen
     '5': {
       class_type: 'ImageScale',
       inputs: {
-        image: ['4', 0],
+        image: [crop ? '30' : '4', 0],
         upscale_method: 'lanczos',
         width: native.width,
         height: native.height,
@@ -164,7 +208,10 @@ export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: Qwen
       },
     },
     '6': { class_type: 'VAEEncode', inputs: { pixels: ['5', 0], vae: ['3', 0] } },
-    '7': { class_type: 'SaveImage', inputs: { images: [aligned ? '17' : '16', 0], filename_prefix: filenamePrefix } },
+    '7': {
+      class_type: 'SaveImage',
+      inputs: { images: [crop ? '37' : aligned ? '17' : '16', 0], filename_prefix: filenamePrefix },
+    },
     '8': {
       class_type: 'TextEncodeQwenImageEditPlus',
       inputs: { clip: ['2', 0], prompt: input.instruction, vae: ['3', 0], image1: ['5', 0] },
@@ -216,16 +263,59 @@ export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: Qwen
       inputs: {
         image: ['16', 0],
         upscale_method: 'lanczos',
-        width: settings.width,
-        height: settings.height,
+        width: crop ? crop.width : output.width,
+        height: crop ? crop.height : output.height,
         crop: 'disabled',
       },
     };
+  references.forEach((reference, index) => {
+    const id = String(40 + index);
+    workflow[id] = { class_type: 'LoadImage', inputs: { image: sourceFilename(reference.filename) } };
+    workflow['8'].inputs[`image${index + 2}`] = [id, 0];
+    workflow['9'].inputs[`image${index + 2}`] = [id, 0];
+  });
+  if (area && crop) {
+    const rect = { width: crop.width, height: crop.height, x: crop.x, y: crop.y };
+    workflow['30'] = { class_type: 'ImageCrop', inputs: { image: ['4', 0], ...rect } };
+    workflow['31'] = { class_type: 'LoadImageMask', inputs: { image: input.maskFilename!, channel: 'red' } };
+    workflow['32'] = { class_type: 'CropMask', inputs: { mask: ['31', 0], ...rect } };
+    let mask: [string, number] = ['32', 0];
+    if (area.blend > 0) {
+      workflow['33'] = {
+        class_type: 'GrowMask',
+        inputs: { mask: ['32', 0], expand: area.blend, tapered_corners: true },
+      };
+      workflow['34'] = { class_type: 'MaskToImage', inputs: { mask: ['33', 0] } };
+      workflow['35'] = {
+        class_type: 'ImageBlur',
+        inputs: {
+          image: ['34', 0],
+          blur_radius: Math.min(31, area.blend),
+          sigma: Math.round(Math.min(10, Math.max(0.1, area.blend / 3)) * 10) / 10,
+        },
+      };
+      workflow['36'] = { class_type: 'ImageToMask', inputs: { image: ['35', 0], channel: 'red' } };
+      mask = ['36', 0];
+    }
+    workflow['37'] = {
+      class_type: 'ImageCompositeMasked',
+      inputs: {
+        destination: ['4', 0],
+        source: ['17', 0],
+        x: crop.x,
+        y: crop.y,
+        resize_source: false,
+        mask,
+      },
+    };
+  }
   return {
     workflow,
     workflowVersion,
     bundle: structuredClone(bundle),
     source: structuredClone(source),
+    ...(references.length ? { references: structuredClone(references) } : {}),
+    ...(area && crop ? { area: { ...structuredClone(area), crop: { ...crop } } } : {}),
     instruction: input.instruction,
     negativePrompt,
     settings,
@@ -238,7 +328,7 @@ export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: Qwen
       cfgNorm: 1,
       textEncoderDevice: input.textEncoderDevice ?? 'cpu',
     },
-    output: { nodeId: '7', filenamePrefix, width: settings.width, height: settings.height, batchSize: 1 },
+    output: { nodeId: '7', filenamePrefix, width: output.width, height: output.height, batchSize: 1 },
     expectedOutputCount: 1,
     ...(aligned
       ? {
@@ -246,7 +336,7 @@ export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: Qwen
             sourceFitting: { ...native, mode: settings.resize },
             inference: { ...native },
             reference: { ...native },
-            output: { width: settings.width, height: settings.height, method: 'lanczos' as const },
+            output: { width: output.width, height: output.height, method: 'lanczos' as const },
           },
         }
       : {}),
@@ -254,17 +344,44 @@ export function buildQwenEditWorkflow(input: QwenEditWorkflowInput, bundle: Qwen
 }
 
 /** Read-only preflight using fresh /object_info; model enums must include the registered private paths. */
-export function validateQwenEditCapabilities(objects: Record<string, any>, bundle: QwenEditBundle) {
+export function validateQwenEditCapabilities(
+  objects: Record<string, any>,
+  bundle: QwenEditBundle,
+  plan?: Pick<QwenEditWorkflowPlan, 'references' | 'area'>,
+) {
   if (isQwen21Profile(bundle.profile)) {
     validateQwen21Capabilities(objects, bundle);
     return;
   }
   validateQwenEditBundle(bundle);
+  const extraPictures = plan?.references?.length ?? 0;
   const fields: Record<string, Record<string, string>> = {
+    ...(plan?.area
+      ? {
+          ImageCrop: { image: 'IMAGE', width: 'INT', height: 'INT', x: 'INT', y: 'INT' },
+          CropMask: { mask: 'MASK', x: 'INT', y: 'INT', width: 'INT', height: 'INT' },
+          ImageCompositeMasked: { destination: 'IMAGE', source: 'IMAGE', x: 'INT', y: 'INT', mask: 'MASK' },
+          ...(plan.area.blend > 0
+            ? {
+                GrowMask: { mask: 'MASK', expand: 'INT', tapered_corners: 'BOOLEAN' },
+                MaskToImage: { mask: 'MASK' },
+                ImageBlur: { image: 'IMAGE', blur_radius: 'INT', sigma: 'FLOAT' },
+                ImageToMask: { image: 'IMAGE' },
+              }
+            : {}),
+        }
+      : {}),
     VAEEncode: { pixels: 'IMAGE', vae: 'VAE' },
     VAEDecode: { samples: 'LATENT', vae: 'VAE' },
     ImageScale: { image: 'IMAGE', width: 'INT', height: 'INT' },
-    TextEncodeQwenImageEditPlus: { clip: 'CLIP', prompt: 'STRING', vae: 'VAE', image1: 'IMAGE' },
+    TextEncodeQwenImageEditPlus: {
+      clip: 'CLIP',
+      prompt: 'STRING',
+      vae: 'VAE',
+      image1: 'IMAGE',
+      ...(extraPictures ? { image2: 'IMAGE' } : {}),
+      ...(extraPictures > 1 ? { image3: 'IMAGE' } : {}),
+    },
     FluxKontextMultiReferenceLatentMethod: { conditioning: 'CONDITIONING' },
     ModelSamplingAuraFlow: { model: 'MODEL', shift: 'FLOAT' },
     CFGNorm: { model: 'MODEL', strength: 'FLOAT', pre_cfg: 'BOOLEAN' },
@@ -307,6 +424,8 @@ export function validateQwenEditCapabilities(objects: Record<string, any>, bundl
     ['FluxKontextMultiReferenceLatentMethod', 'reference_latents_method', 'index_timestep_zero'],
     ['KSampler', 'sampler_name', 'euler'],
     ['KSampler', 'scheduler', 'simple'],
+    ...(plan?.area ? [['LoadImageMask', 'channel', 'red']] : []),
+    ...(plan?.area && plan.area.blend > 0 ? [['ImageToMask', 'channel', 'red']] : []),
     ...(isFastQwenProfile(bundle.profile)
       ? [['LoraLoaderModelOnly', 'lora_name', bundle.assets.lightning!.filename]]
       : []),
@@ -335,6 +454,17 @@ export function validateQwenEditCapabilities(objects: Record<string, any>, bundl
     KSampler: 'LATENT',
     SaveImage: 'IMAGE',
     ...(isFastQwenProfile(bundle.profile) ? { LoraLoaderModelOnly: 'MODEL' } : {}),
+    ...(plan?.area
+      ? {
+          ImageCrop: 'IMAGE',
+          LoadImageMask: 'MASK',
+          CropMask: 'MASK',
+          ImageCompositeMasked: 'IMAGE',
+          ...(plan.area.blend > 0
+            ? { GrowMask: 'MASK', MaskToImage: 'IMAGE', ImageBlur: 'IMAGE', ImageToMask: 'MASK' }
+            : {}),
+        }
+      : {}),
   };
   for (const [node, type] of Object.entries(outputs))
     if (objects[node]?.output?.[0] !== type) throw new Error(`The engine does not provide reviewed ${node} output.`);
@@ -344,7 +474,7 @@ export function validateQwenEditCapabilities(objects: Record<string, any>, bundl
 
 /** Windows reports backslashes in model COMBO values. Bind only the exact canonical reviewed name. */
 export function bindQwenEditWorkflow(plan: QwenEditWorkflowPlan, objects: Record<string, any>): QwenEditWorkflowPlan {
-  validateQwenEditCapabilities(objects, plan.bundle);
+  validateQwenEditCapabilities(objects, plan.bundle, plan);
   const result = structuredClone(plan);
   const fields = [
     ['1', 'unet_name', plan.bundle.assets.diffusion.filename],

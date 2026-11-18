@@ -65,6 +65,20 @@ const FAMILY_STYLE = {
 const VIDEO = `You are writing for MiniMax H3, a video model. Write one clear paragraph of natural language that covers the subject, the scene, what moves and how it changes over time, and how the camera moves (static, slow push in, pan left, handheld, orbit and so on). Keep the action doable in the clip length you are given. Describe sound or speech only when audio is on and the person asks for it. H3 has no negative prompt, so negativePrompt is always an empty string. Do not use image tag lists or quality tags.
 - Copy every item in keepExactly into the prompt unchanged.`;
 
+const EDIT = `You are writing an edit instruction for Qwen Image Edit. It changes an existing picture by following a short instruction, so the instruction says what to do to the picture, not what the whole picture looks like.
+- Write one to three short, plain sentences in the imperative: name exactly what to change (the object, its colour, material, shape, position, the light or the style) and say what must stay the same (the person's face and identity, pose, framing, background, style), unless the person wants those changed.
+- If extra pictures are in use, call them picture 2 and picture 3, for example "Put the jacket from picture 2 on her."
+- If only a painted part of the picture is being edited, write about that part only.
+- No tag lists, no quality words like masterpiece, no weights.
+- negativePrompt is always an empty string.
+- If a picture is attached, it is the picture being edited. Use it to name what is really there.`;
+
+const EDIT_TASKS: Partial<Record<AssistantAction, string>> = {
+  improve:
+    "Rewrite the edit instruction so the edit model gets it right first time: clear, specific, and saying what to keep. Keep the person's intent and every detail they asked for.",
+  describe: 'Look at the attached picture and suggest one useful edit instruction for it.',
+};
+
 const ACTIONS: Record<AssistantAction, { image: string; video: string; label: string }> = {
   chat: { label: 'Chat', image: '', video: '' },
   improve: {
@@ -150,6 +164,7 @@ function imageModelGuide(request: AssistantRequest): string {
 
 export function systemPrompt(request: AssistantRequest): string {
   if (request.target === 'video') return `${BASE}\n\n${VIDEO}`;
+  if (request.target === 'edit') return `${BASE}\n\n${EDIT}`;
   return `${BASE}\n\n${imageModelGuide(request)}\n\n${SYNTAX}`;
 }
 
@@ -188,25 +203,32 @@ export function missingProtectedParts(request: Pick<AssistantRequest, 'draft'>, 
 
 /** The person's turn: what to do, then the current state as JSON. */
 export function userTurn(request: AssistantRequest): string {
-  const task = request.action === 'chat' ? '' : ACTIONS[request.action][request.target];
+  const task =
+    request.action === 'chat'
+      ? ''
+      : request.target === 'edit'
+        ? (EDIT_TASKS[request.action] ?? ACTIONS[request.action].image)
+        : ACTIONS[request.action][request.target];
   const typed = request.instruction?.trim();
   const ask = [task, typed && (task ? `The person adds: ${typed}` : typed)].filter(Boolean).join('\n');
   const context =
-    request.target === 'video'
-      ? {
-          mode: request.videoContext?.mode === 'img2vid' ? 'picture to video' : 'text to video',
-          clipSeconds: request.videoContext?.requestedDurationSeconds,
-          audio: request.videoContext?.audio === 'stereo-candidate' ? 'on' : 'off',
-          currentPrompt: request.draft.prompt,
-          keepExactly: protectedParts(request),
-        }
-      : {
-          loras: request.loraNames ?? [],
-          currentPrompt: request.draft.prompt,
-          currentNegativePrompt: request.draft.negativePrompt,
-          keepExactly: protectedParts(request),
-        };
-  return `${ask || 'Improve the current prompt.'}\n\nCurrent state:\n${JSON.stringify(context, null, 1)}`;
+    request.target === 'edit'
+      ? { currentInstruction: request.draft.prompt }
+      : request.target === 'video'
+        ? {
+            mode: request.videoContext?.mode === 'img2vid' ? 'picture to video' : 'text to video',
+            clipSeconds: request.videoContext?.requestedDurationSeconds,
+            audio: request.videoContext?.audio === 'stereo-candidate' ? 'on' : 'off',
+            currentPrompt: request.draft.prompt,
+            keepExactly: protectedParts(request),
+          }
+        : {
+            loras: request.loraNames ?? [],
+            currentPrompt: request.draft.prompt,
+            currentNegativePrompt: request.draft.negativePrompt,
+            keepExactly: protectedParts(request),
+          };
+  return `${ask || (request.target === 'edit' ? 'Improve the edit instruction.' : 'Improve the current prompt.')}\n\nCurrent state:\n${JSON.stringify(context, null, 1)}`;
 }
 
 /** Builds the conversation, trimming old turns to stay under a rough character budget. */
