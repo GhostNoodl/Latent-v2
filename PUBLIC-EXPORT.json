@@ -693,8 +693,8 @@
     },
     {
       "path": "src/renderer/VideoDock.tsx",
-      "bytes": 21199,
-      "sha256": "ab175992ef7d5fca7127dd46fdb6ceb55b882812c9e8e229bb04da88cb3ef3ae"
+      "bytes": 21496,
+      "sha256": "af28f0f92a26c3dec467fac39fc641c52aac3a1f5a1be96704b8bb65697c006f"
     },
     {
       "path": "src/renderer/VideoClips.tsx",
