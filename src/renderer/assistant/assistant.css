@@ -315,7 +315,7 @@
 }
 .assistant-models {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 .assistant-model {
@@ -379,7 +379,12 @@
   overflow: auto;
   font-size: 11px;
 }
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
+  .assistant-models {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
   .assistant-models {
     grid-template-columns: 1fr;
   }

@@ -252,3 +252,31 @@ describe('word diff joins neighbours', () => {
     ).toEqual(['wet hair']);
   });
 });
+
+describe('assistant settings', () => {
+  it('saves one change at a time and keeps the rest', async () => {
+    const { AssistantService } = await import('../src/main/assistant/service');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const root = path.join(os.tmpdir(), 'latent-assistant-settings-test');
+    const state = new Map<string, unknown>();
+    const service = new AssistantService({
+      paths: { runtime: root, models: root, cache: root, logs: root } as never,
+      store: {
+        getState: <T>(key: string, fallback: T) => (state.has(key) ? (state.get(key) as T) : fallback),
+        setState: (key, value) => void state.set(key, value),
+      },
+      hardware: () => ({ vramMiB: 24576, ramBytes: 64 * GiB }),
+      imagePath: async () => '',
+      changed: () => undefined,
+    });
+    service.saveSettings({ localModel: 'qwen35-4b' });
+    service.saveSettings({ provider: 'openai', models: { openai: 'gpt-5' } });
+    expect(service.settings()).toMatchObject({
+      provider: 'openai',
+      localModel: 'qwen35-4b',
+      models: { anthropic: 'claude-opus-5-5', openai: 'gpt-5' },
+    });
+    expect(() => service.saveSettings({ customUrl: 'not a web address' })).toThrow(/web address/);
+  });
+});

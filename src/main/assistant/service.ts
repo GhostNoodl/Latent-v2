@@ -46,7 +46,7 @@ const providerSchema = z.enum(ASSISTANT_PROVIDER_IDS as [string, ...string[]]);
 const settingsSchema = z
   .object({
     provider: providerSchema,
-    models: z.record(z.enum(CLOUD_PROVIDER_IDS as [string, ...string[]]), z.string().trim().min(1).max(300)),
+    models: z.partialRecord(z.enum(CLOUD_PROVIDER_IDS as [string, ...string[]]), z.string().trim().min(1).max(300)),
     customUrl: z
       .string()
       .trim()
@@ -116,11 +116,17 @@ export class AssistantService {
     return parsed.success ? ({ ...fallback, ...parsed.data } as AssistantSettings) : structuredClone(fallback);
   }
   saveSettings(patch: Partial<AssistantSettings>) {
-    const next = settingsSchema.parse({
+    const parsed = settingsSchema.safeParse({
       ...this.settings(),
       ...patch,
       models: { ...this.settings().models, ...patch.models },
     });
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      // Our own refine messages are written for people; anything else gets a plain fallback.
+      throw new Error(issue?.code === 'custom' ? issue.message : "That setting couldn't be saved. Try again.");
+    }
+    const next = parsed.data;
     this.options.store.setState(SETTINGS_KEY, next);
     this.options.changed();
     return this.status();
