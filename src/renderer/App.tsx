@@ -279,7 +279,18 @@ export default function App() {
     setCompareRecord(record);
   };
   const [faceEditor, setFaceEditor] = useState<{ record?: GenerationRecord }>();
-  const [qwenEditor, setQwenEditor] = useState<{ record?: GenerationRecord; mode?: 'preview' | 'reuse' }>();
+  const [qwenEditor, setQwenEditorState] = useState<{
+    record?: GenerationRecord;
+    mode?: 'preview' | 'reuse';
+    key: number;
+  }>();
+  /** Edit always opens on the Edit page. Pictures from Create or the Library start a new edit there. */
+  const setQwenEditor = (value?: { record?: GenerationRecord; mode?: 'preview' | 'reuse' }) => {
+    if (!value?.record) return;
+    if (value.record.qwenEdit) setQwenEditorState({ ...value, key: Date.now() });
+    else setEditDrop({ kind: 'record', record: value.record });
+    setPage('qwen');
+  };
   useEffect(() => {
     if (!notice || notice.error || previousDraft) return;
     const timer = setTimeout(() => setNotice(undefined), 8000);
@@ -1288,12 +1299,15 @@ export default function App() {
             <span>Settings</span>
           </button>
         </nav>
-        <main className={`main ${page === 'create' ? 'main-create' : page === 'video' ? 'main-video' : ''}`}>
+        <main
+          className={`main ${page === 'create' ? 'main-create' : page === 'video' ? 'main-video' : page === 'qwen' ? 'main-edit' : ''}`}
+        >
           <header className={`page-top ${page === 'create' || page === 'video' ? 'page-top-compact' : ''}`}>
             <div className="page-top-title">
               <h1>{pages[page][0]}</h1>
-              {page !== 'create' && page !== 'video' && <p>{pages[page][1]}</p>}
+              {page !== 'create' && page !== 'video' && page !== 'qwen' && <p>{pages[page][1]}</p>}
             </div>
+            {page === 'qwen' && <div className="page-top-slot" id="edit-top-slot" />}
             {(page === 'models' || page === 'discover') && (
               <div className="page-tabs" role="group" aria-label="Models">
                 <button aria-pressed={page === 'models'} onClick={() => setPage('models')}>
@@ -2599,7 +2613,11 @@ export default function App() {
             <ErrorBoundary label="Qwen editing" resetKey={page}>
               <Suspense fallback={<Busy active />}>
                 <QwenEditor
+                  key={qwenEditor?.key ?? 0}
                   embedded
+                  initialRecord={qwenEditor?.record}
+                  initialMode={qwenEditor?.mode}
+                  onOpenInCreate={selectImage}
                   dropped={editDrop}
                   onDroppedUsed={() => setEditDrop(undefined)}
                   snapshot={snapshot}
@@ -3025,19 +3043,6 @@ export default function App() {
             setViewLivePreview(true);
           }}
         />
-      )}
-      {qwenEditor && (
-        <Suspense fallback={<Busy active />}>
-          <QwenEditor
-            snapshot={snapshot}
-            run={run}
-            busy={busy}
-            initialRecord={qwenEditor.record}
-            initialMode={qwenEditor.mode}
-            onSnapshot={receive}
-            onClose={() => setQwenEditor(undefined)}
-          />
-        </Suspense>
       )}
       {checkpointOpen && (
         <ModelPicker

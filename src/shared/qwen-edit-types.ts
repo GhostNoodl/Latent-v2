@@ -23,10 +23,44 @@ export const qwenEditWorkflowVersionSchema = z.enum([
   'qwen-image-edit-2511-int8@1',
   'qwen-image-edit-2511-int8@2',
   'qwen-image-edit-2511-gguf-q4ks@1',
+  'qwen-image-edit-2511-int8@3',
+  'qwen-image-edit-2511-gguf-q4ks@2',
   'qwen-image-2.1@1',
   'qwen-image-2.1-gguf-q4km@1',
 ]);
 export type QwenEditWorkflowVersion = z.infer<typeof qwenEditWorkflowVersionSchema>;
+/** Recipes that know extra pictures, painted areas and a separate saved size. */
+export const isQwenEditV3 = (version: QwenEditWorkflowVersion | undefined) =>
+  version === 'qwen-image-edit-2511-int8@3' || version === 'qwen-image-edit-2511-gguf-q4ks@2';
+export const QWEN_MAX_OUTPUT_SIDE = 4096;
+export const QWEN_MAX_OUTPUT_PIXELS = 16 * 1024 * 1024;
+const areaRectangleSchema = z
+  .object({
+    x: z.number().int().min(0).max(8191),
+    y: z.number().int().min(0).max(8191),
+    width: z.number().int().min(8).max(8192),
+    height: z.number().int().min(8).max(8192),
+  })
+  .strict();
+/** Only the painted part is edited, then blended back into the untouched picture. */
+export const qwenAreaSchema = z
+  .object({
+    maskId: z.string().regex(/^mask_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/),
+    maskSha256: z.string().regex(/^[a-f0-9]{64}$/),
+    /** Soft edge in source pixels. */
+    blend: z.number().int().min(0).max(64),
+    /** Filled in by the app from the mask when the edit is queued. */
+    crop: areaRectangleSchema.optional(),
+  })
+  .strict();
+export type QwenEditArea = z.infer<typeof qwenAreaSchema>;
+export const qwenOutputSizeSchema = z
+  .object({
+    width: z.number().int().min(64).max(QWEN_MAX_OUTPUT_SIDE),
+    height: z.number().int().min(64).max(QWEN_MAX_OUTPUT_SIDE),
+  })
+  .strict()
+  .refine(value => value.width * value.height <= QWEN_MAX_OUTPUT_PIXELS, 'The saved size is too large.');
 export type QwenEditAssetRole = 'diffusion' | 'encoder' | 'vae' | 'lightning';
 /** Renderer-safe publisher identities; acquisition additionally verifies tensor-header pins. */
 export const QWEN_EDIT_IDENTITIES = Object.freeze({
@@ -165,8 +199,10 @@ export const qwenEditJobRequestSchema = z
           .object({ sourceId: z.string().regex(/^src_[a-f0-9-]{36}$/), sha256: z.string().regex(/^[a-f0-9]{64}$/) })
           .strict(),
       )
-      .max(1)
+      .max(2)
       .optional(),
+    area: qwenAreaSchema.optional(),
+    output: qwenOutputSizeSchema.optional(),
     instruction: z
       .string()
       .min(1)
@@ -194,6 +230,8 @@ export const qwenEditJobRequestSchema = z
           .string()
           .regex(/^[a-f0-9]{32}$/)
           .optional(),
+        /** Tries queued together for one step share a group. */
+        group: z.uuid().optional(),
       })
       .strict(),
     assetHashes: z
@@ -222,6 +260,9 @@ export interface QwenEditWorkflowInput {
   operation?: 'edit' | 'create';
   transparent?: boolean;
   references?: Array<{ source: SourceImageAsset; filename: string }>;
+  area?: QwenEditArea;
+  maskFilename?: string;
+  output?: { width: number; height: number };
   instruction: string;
   negativePrompt?: string;
   jobId: string;
@@ -238,6 +279,8 @@ export interface QwenEditWorkflowPlan {
   operation?: 'edit' | 'create';
   transparent?: boolean;
   references?: Array<{ source: SourceImageAsset; filename: string }>;
+  /** Painted-area edit: the crop that was edited and blended back. */
+  area?: QwenEditArea & { crop: NonNullable<QwenEditArea['crop']> };
   instruction: string;
   negativePrompt: string;
   settings: QwenEditSettings & { steps: number; guidance: number };

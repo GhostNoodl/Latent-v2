@@ -70,7 +70,8 @@ export interface AssistantImageRef {
 }
 
 export interface AssistantRequest {
-  target: 'image' | 'video';
+  /** edit = a Qwen Edit instruction for the picture on the Edit page. */
+  target: 'image' | 'video' | 'edit';
   action: AssistantAction;
   /** What the person typed. Required for chat, optional extra for the others. */
   instruction?: string;

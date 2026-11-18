@@ -278,6 +278,22 @@
       "to": "src/main/comfyui-release.ts"
     },
     {
+      "from": "src/renderer/EditPaint.tsx",
+      "to": "src/renderer/EditPaint.tsx"
+    },
+    {
+      "from": "src/renderer/edit-page.css",
+      "to": "src/renderer/edit-page.css"
+    },
+    {
+      "from": "src/shared/qwen-area.ts",
+      "to": "src/shared/qwen-area.ts"
+    },
+    {
+      "from": "tests/qwen-edit-v3.test.ts",
+      "to": "tests/qwen-edit-v3.test.ts"
+    },
+    {
       "from": "src/renderer/video-missing.ts",
       "to": "src/renderer/video-missing.ts"
     },

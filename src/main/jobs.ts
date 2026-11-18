@@ -61,6 +61,7 @@ import { augmentCropInpaintWorkflow, validateFrozenCropInpaintWorkflow } from '.
 import { DEFAULT_DRAFT } from '../shared/defaults';
 import { qwenEditJobRequestSchema, type QwenEditJobRequest, type QwenEditRecord } from '../shared/qwen-edit-types';
 import { bindQwenEditWorkflow, buildQwenEditWorkflow } from '../shared/qwen-edit-workflow';
+import { qwenAreaCrop, qwenWorkingSize } from '../shared/qwen-area';
 import type { QwenEditAssetsService } from './qwen-edit-assets';
 import { RegionalMaskService } from './regional-masks';
 import {
@@ -915,6 +916,28 @@ export class JobService {
         };
       }),
     );
+    let maskFilename: string | undefined;
+    if (request.area) {
+      if (!source || request.operation === 'create') throw new Error('Pick the picture to paint on first.');
+      const mask = await this.sources.resolveMask(request.area.maskId);
+      if (
+        mask.mask.sha256 !== request.area.maskSha256 ||
+        mask.mask.sourceId !== source.source.id ||
+        mask.mask.sourceSha256 !== source.source.normalized.sha256
+      )
+        throw new Error('The painted area belongs to a different picture. Paint it again.');
+      const decoded = await this.decodeVerifiedMask(mask);
+      const red = new Uint8Array(decoded.width * decoded.height);
+      for (let index = 0; index < red.length; index++) red[index] = decoded.data[index * 4];
+      const crop = qwenAreaCrop(red, decoded.width, decoded.height, request.area.blend);
+      if (request.area.crop && JSON.stringify(request.area.crop) !== JSON.stringify(crop))
+        throw new Error('The painted area changed since this recipe was saved. Paint it again.');
+      request.area = { ...request.area, crop };
+      const working = qwenWorkingSize(crop.width, crop.height);
+      request.settings = { ...request.settings, width: working.width, height: working.height, resize: 'stretch' };
+      request.output = { width: source.source.normalized.width, height: source.source.normalized.height };
+      maskFilename = path.relative(this.paths.inputs, mask.path).replaceAll('\\', '/');
+    }
     const bundle = await this.qwenEditAssets.verify(request.settings.profile);
     const hashes = Object.fromEntries(
       Object.entries(bundle.assets).map(([role, asset]) => [role, asset.sha256]),
@@ -941,6 +964,9 @@ export class JobService {
         operation: request.operation,
         transparent: request.transparent,
         references,
+        area: request.area,
+        maskFilename,
+        output: request.output,
         instruction: request.instruction,
         negativePrompt: request.negativePrompt,
         jobId: id,
@@ -1386,6 +1412,14 @@ export class JobService {
             expected.workflow['4'].inputs.image
         )
           throw new Error('The queued Qwen source differs from its frozen edit recipe.');
+      }
+      if (expected.area) {
+        const mask = await this.sources.resolveMask(expected.area.maskId);
+        if (
+          mask.mask.sha256 !== expected.area.maskSha256 ||
+          path.relative(this.paths.inputs, mask.path).replaceAll('\\', '/') !== expected.workflow['31']?.inputs.image
+        )
+          throw new Error('The painted area changed after this edit was queued.');
       }
       for (const ref of expected.references ?? []) {
         const actual = await this.sources.resolve(ref.source.id);
@@ -2007,6 +2041,9 @@ export class JobService {
         operation: request.operation,
         transparent: request.transparent,
         references: saved.plan.references,
+        area: request.area,
+        maskFilename: request.area ? `source-images/${request.area.maskId}/mask.png` : undefined,
+        output: request.output,
         instruction: request.instruction,
         negativePrompt: request.negativePrompt,
         settings: { ...request.settings, seed: request.settings.seed },

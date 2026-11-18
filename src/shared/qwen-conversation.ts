@@ -52,6 +52,12 @@ export const qwenConversationDraftSchema = z
     transparent: z.boolean().optional(),
     references: qwenEditJobRequestSchema.shape.references,
     selectedRecordId: recordId.optional(),
+    /** whole = edit the whole picture, area = only the painted part. */
+    mode: z.enum(['whole', 'area']).optional(),
+    tries: z.number().int().min(1).max(4).optional(),
+    /** same = save at the picture's own size, working = about one megapixel. */
+    size: z.enum(['same', 'working', 'square', 'portrait', 'landscape']).optional(),
+    blend: z.number().int().min(0).max(64).optional(),
     instruction: text(4000),
     negativePrompt: text(4000),
     settings: qwenEditorSettingsSchema,
@@ -60,6 +66,8 @@ export const qwenConversationDraftSchema = z
         assetHashes: qwenEditJobRequestSchema.shape.assetHashes.unwrap(),
         workflowVersion: qwenEditWorkflowVersionSchema,
         reusedRecordId: recordId,
+        area: qwenEditJobRequestSchema.shape.area,
+        output: qwenEditJobRequestSchema.shape.output,
       })
       .strict()
       .optional(),
