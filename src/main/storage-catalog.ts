@@ -1,7 +1,12 @@
 import path from 'node:path';
 import type { AppPaths, AppSnapshot } from '../shared/types';
 import type { FaceDetailerStatus } from '../shared/face-detailer-types';
-import { ASSISTANT_RELEASE, assistantPaths } from './assistant-config';
+import { localPaths } from './assistant/local';
+import {
+  LOCAL_ASSISTANT_MODEL_IDS,
+  LOCAL_ASSISTANT_MODELS,
+  LOCAL_ASSISTANT_RUNTIME,
+} from '../shared/assistant-catalog';
 import { selectedQwenAssets, qwenEditAssetPath } from './qwen-edit-assets';
 import { IPADAPTER_RELEASE } from '../shared/ipadapter-release';
 import { ipAdapterPaths } from './ipadapter';
@@ -72,7 +77,7 @@ export function builtInStorageCatalog(
     artifacts,
     unknownRequirements,
   });
-  const assistant = assistantPaths(paths);
+  const assistant = localPaths(paths);
   const segmentation = segmentationPaths(paths);
   const control = controlNetPaths(paths);
   const upscale = upscalerPaths(paths);
@@ -147,31 +152,25 @@ export function builtInStorageCatalog(
     ),
     entry(
       'assistant',
-      'Local prompt assistant',
-      statuses.assistant,
-      [assistant.modelDirectory, assistant.runtime, assistant.downloads],
-      ['Private llama.cpp CPU binaries'],
+      'Prompt assistant (on this PC)',
+      statuses.assistant?.local,
+      [assistant.models, assistant.runtime, assistant.downloads],
+      ['Private llama.cpp server'],
       [
-        artifact(
-          {
-            filename: ASSISTANT_RELEASE.modelFilename,
-            bytes: ASSISTANT_RELEASE.modelBytes,
-            sha256: ASSISTANT_RELEASE.modelSha256,
-            url: `https://huggingface.co/${ASSISTANT_RELEASE.modelId}/resolve/${ASSISTANT_RELEASE.modelRevision}/${ASSISTANT_RELEASE.modelFilename}`,
-          },
-          assistant.model,
+        ...LOCAL_ASSISTANT_MODEL_IDS.filter(
+          id =>
+            id === (statuses.assistant?.settings.localModel ?? 'qwen35-9b') ||
+            statuses.assistant?.local.installed.includes(id),
+        ).flatMap(id =>
+          [LOCAL_ASSISTANT_MODELS[id].model, LOCAL_ASSISTANT_MODELS[id].vision].map(pin =>
+            artifact(pin, path.join(assistant.modelDirectory(id), pin.filename)),
+          ),
         ),
-        artifact(
-          {
-            filename: ASSISTANT_RELEASE.archiveFilename,
-            bytes: ASSISTANT_RELEASE.archiveBytes,
-            sha256: ASSISTANT_RELEASE.archiveSha256,
-            url: `https://github.com/ggml-org/llama.cpp/releases/download/${ASSISTANT_RELEASE.runtimeBuild}/${ASSISTANT_RELEASE.archiveFilename}`,
-          },
-          path.join(assistant.downloads, ASSISTANT_RELEASE.archiveFilename),
+        ...LOCAL_ASSISTANT_RUNTIME[statuses.assistant?.local.gpu ? 'cuda' : 'cpu'].map(pin =>
+          artifact(pin, path.join(assistant.downloads, pin.filename)),
         ),
       ],
-      ['Extracted CPU binaries and installation headroom are additional to the known download payload.'],
+      ['Shows the picked model and any already downloaded. Unpacked server files add a little more.'],
     ),
     entry(
       'qwen-qwen21',

@@ -2,6 +2,7 @@ import { PhoneRemote } from './PhoneRemote';
 import { SetupActivityPanel } from './SetupActivityPanel';
 import { AppUpdates } from './AppUpdates';
 import { TelegramRemote } from './TelegramRemote';
+import { AssistantSettings } from './assistant/AssistantSettings';
 import { PackageSetupStorage } from './PackageSetupStorage';
 import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { ArrowUpRight, Check, Copy, Download, Play, RotateCcw, Square, Terminal } from 'lucide-react';
@@ -421,6 +422,7 @@ export function StudioSettings({
           onCancel={() => void run('app-update-cancel', () => window.latent.cancelAppUpdate())}
         />
       )}
+      <AssistantSettings status={snapshot.assistant} run={run} busy={busy} />
       {snapshot.telegram && <TelegramRemote status={snapshot.telegram} run={run} busy={Boolean(busy.telegram)} />}
       {snapshot.phone && <PhoneRemote status={snapshot.phone} run={run} busy={Boolean(busy.phone)} />}
       <RuntimeUpdates

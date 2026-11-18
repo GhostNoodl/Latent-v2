@@ -2,16 +2,8 @@
   "schema": 1,
   "files": [
     {
-      "from": "src/main/assistant-config.ts",
-      "to": "src/main/assistant-config.ts"
-    },
-    {
       "from": "src/main/assistant-download.ts",
       "to": "src/main/assistant-download.ts"
-    },
-    {
-      "from": "src/main/assistant-files.ts",
-      "to": "src/main/assistant-files.ts"
     },
     {
       "from": "src/main/backend-activity.ts",
@@ -128,10 +120,6 @@
     {
       "from": "src/main/portable-studio.ts",
       "to": "src/main/portable-studio.ts"
-    },
-    {
-      "from": "src/main/prompt-assistant.ts",
-      "to": "src/main/prompt-assistant.ts"
     },
     {
       "from": "src/main/python-home.ts",
@@ -310,10 +298,6 @@
       "to": "src/renderer/App.tsx"
     },
     {
-      "from": "src/renderer/assistant.css",
-      "to": "src/renderer/assistant.css"
-    },
-    {
       "from": "src/renderer/CanvasViewport.tsx",
       "to": "src/renderer/CanvasViewport.tsx"
     },
@@ -456,10 +440,6 @@
     {
       "from": "src/renderer/preview-selection.ts",
       "to": "src/renderer/preview-selection.ts"
-    },
-    {
-      "from": "src/renderer/PromptAssistant.tsx",
-      "to": "src/renderer/PromptAssistant.tsx"
     },
     {
       "from": "src/renderer/queue-view.ts",
@@ -1552,14 +1532,6 @@
       "to": "docs/TELEGRAM-REMOTE.md"
     },
     {
-      "from": "tests/assistant-conversation-keys.test.ts",
-      "to": "tests/assistant-conversation-keys.test.ts"
-    },
-    {
-      "from": "tests/prompt-assistant.test.ts",
-      "to": "tests/prompt-assistant.test.ts"
-    },
-    {
       "from": "src/main/snapshot-sender.ts",
       "to": "src/main/snapshot-sender.ts"
     },
@@ -1738,6 +1710,62 @@
     {
       "from": "tests/image-model-settings.test.ts",
       "to": "tests/image-model-settings.test.ts"
+    },
+    {
+      "from": "licenses/STANDARDWEBHOOKS-MIT.txt",
+      "to": "licenses/STANDARDWEBHOOKS-MIT.txt"
+    },
+    {
+      "from": "src/main/assistant/keys.ts",
+      "to": "src/main/assistant/keys.ts"
+    },
+    {
+      "from": "src/main/assistant/local.ts",
+      "to": "src/main/assistant/local.ts"
+    },
+    {
+      "from": "src/main/assistant/prompts.ts",
+      "to": "src/main/assistant/prompts.ts"
+    },
+    {
+      "from": "src/main/assistant/providers.ts",
+      "to": "src/main/assistant/providers.ts"
+    },
+    {
+      "from": "src/main/assistant/service.ts",
+      "to": "src/main/assistant/service.ts"
+    },
+    {
+      "from": "src/main/ipc/assistant.ts",
+      "to": "src/main/ipc/assistant.ts"
+    },
+    {
+      "from": "src/renderer/assistant/AssistantPanel.tsx",
+      "to": "src/renderer/assistant/AssistantPanel.tsx"
+    },
+    {
+      "from": "src/renderer/assistant/AssistantSettings.tsx",
+      "to": "src/renderer/assistant/AssistantSettings.tsx"
+    },
+    {
+      "from": "src/renderer/assistant/assistant.css",
+      "to": "src/renderer/assistant/assistant.css"
+    },
+    {
+      "from": "src/renderer/assistant/open-settings.ts",
+      "to": "src/renderer/assistant/open-settings.ts"
+    },
+    {
+      "from": "src/renderer/assistant/word-diff.ts",
+      "to": "src/renderer/assistant/word-diff.ts"
+    },
+    {
+      "from": "src/shared/assistant-catalog.ts",
+      "to": "src/shared/assistant-catalog.ts"
+    },
+    {
+      "from": "tests/assistant.test.ts",
+      "to": "tests/assistant.test.ts"
     }
   ]
 }

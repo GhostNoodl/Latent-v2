@@ -1,9 +1,8 @@
 import { dialog } from 'electron';
 import { z } from 'zod';
-import { assistantConversationSchema } from '../../shared/assistant-conversation';
 import type { HandlerContext, StudioMethods } from '../main';
 
-/** Source images, mask suggestions and the prompt assistant. */
+/** Source images and mask suggestions. */
 export function assistantSourcesHandlers(ctx: HandlerContext) {
   return {
     setupSegmentation: async repair => ctx.segmentation.setup(z.boolean().optional().parse(repair) ?? false),
@@ -43,27 +42,5 @@ export function assistantSourcesHandlers(ctx: HandlerContext) {
       ctx.broadcast();
       return mask;
     },
-    setupAssistant: async repair => ctx.assistant.setup(z.boolean().optional().parse(repair) ?? false),
-    startAssistant: async () => ctx.assistant.start(),
-    stopAssistant: async () => ctx.assistant.stop(),
-    suggestPrompt: async request => ctx.assistant.suggest(request),
-    cancelAssistant: async () => ctx.assistant.cancel(),
-    getAssistantConversation: async target => {
-      const scope = z.enum(['image', 'video']).optional().parse(target);
-      const key = conversationKey(scope);
-      // 0.2.2 and 0.2.3 saved under a mistyped key; move that conversation back where it belongs.
-      const misplaced = ctx.store.takeState(`ctx.${key}`);
-      if (misplaced !== undefined) ctx.store.setState(key, misplaced);
-      const saved = ctx.store.getState(key, null);
-      return saved ? assistantConversationSchema.parse(saved) : null;
-    },
-    saveAssistantConversation: async (value, target) => {
-      const scope = z.enum(['image', 'video']).optional().parse(target);
-      ctx.store.setState(conversationKey(scope), assistantConversationSchema.parse(value));
-    },
   } satisfies Partial<StudioMethods>;
-}
-
-export function conversationKey(scope: 'image' | 'video' | undefined) {
-  return scope === 'video' ? 'assistant.video.conversation' : 'assistant.conversation';
 }

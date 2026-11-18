@@ -212,7 +212,7 @@ export async function writePackagingMetadata(project = PROJECT) {
   const compiled = path.join(cache, 'latent-release-pins.cjs');
   await build({
     stdin: {
-      contents: `export { RUNTIME_RELEASE } from './src/main/runtime-config'; export { REVIEWED_RUNTIME_CHANNEL } from './src/main/reviewed-runtime-channel'; export { ASSISTANT_RELEASE } from './src/main/assistant-config'; export { SEGMENTATION_RELEASE } from './src/main/segmentation'; export { UPSCALER_RELEASE } from './src/main/upscaler'; export { CONTROLNET_RELEASE } from './src/main/controlnet'; export { QWEN_EDIT_ASSETS,QWEN_COMPACT_ASSET,QWEN_LIGHTNING8_ASSET,QWEN_EDIT_RUNTIME } from './src/main/qwen-edit-assets'; export { QWEN_GGUF_RELEASE } from './src/shared/qwen-gguf-release'; export { IPADAPTER_RELEASE } from './src/shared/ipadapter-release'; export { FACE_DETAILER_RELEASE } from './src/main/face-detailer-release';`,
+      contents: `export { RUNTIME_RELEASE } from './src/main/runtime-config'; export { REVIEWED_RUNTIME_CHANNEL } from './src/main/reviewed-runtime-channel'; export { LOCAL_ASSISTANT_RUNTIME, LOCAL_ASSISTANT_MODELS } from './src/shared/assistant-catalog'; export { SEGMENTATION_RELEASE } from './src/main/segmentation'; export { UPSCALER_RELEASE } from './src/main/upscaler'; export { CONTROLNET_RELEASE } from './src/main/controlnet'; export { QWEN_EDIT_ASSETS,QWEN_COMPACT_ASSET,QWEN_LIGHTNING8_ASSET,QWEN_EDIT_RUNTIME } from './src/main/qwen-edit-assets'; export { QWEN_GGUF_RELEASE } from './src/shared/qwen-gguf-release'; export { IPADAPTER_RELEASE } from './src/shared/ipadapter-release'; export { FACE_DETAILER_RELEASE } from './src/main/face-detailer-release';`,
       resolveDir: project,
       loader: 'ts',
     },
