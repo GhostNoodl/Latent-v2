@@ -1049,12 +1049,12 @@
     {
       "path": "package.json",
       "bytes": 4598,
-      "sha256": "dcabb2bc53d83ff0369d41de0426998116bca12cad61484f2cc4aeb5e5420da6"
+      "sha256": "148aff4a3c8aed0544ada9fff9d2b0d5ef76a83629229eb60befcfa4cb22b7cc"
     },
     {
       "path": "package-lock.json",
       "bytes": 249032,
-      "sha256": "5935efbac5e2ff8725c5f34515de25569f5700771d7256902ffcb31b9bf14327"
+      "sha256": "54922a91ae6006d3ae7fc6eff9e093dc3cd4e0b65121ebb1e63f3a657253e024"
     },
     {
       "path": "tsconfig.json",
@@ -2168,8 +2168,8 @@
     },
     {
       "path": "src/main/assistant/service.ts",
-      "bytes": 15616,
-      "sha256": "38a6ddfe2f6d6003852aa4d1ee2af241fa159487b2ff1b84a77cfe99dc118d0c"
+      "bytes": 15942,
+      "sha256": "2f0f1565e089931fe916c7733b6b51ad290ae7f77eac30edbf705ae2a4fb520f"
     },
     {
       "path": "src/main/ipc/assistant.ts",
@@ -2188,8 +2188,8 @@
     },
     {
       "path": "src/renderer/assistant/assistant.css",
-      "bytes": 7655,
-      "sha256": "0179505af56689e13c7b43d040300f7fe113eda352ec5eb1220130180a20926a"
+      "bytes": 7766,
+      "sha256": "f3c78e0c71143476e6776e9d47b51514b88d4f48f93e0df34069adde25044e99"
     },
     {
       "path": "src/renderer/assistant/open-settings.ts",
@@ -2208,8 +2208,8 @@
     },
     {
       "path": "tests/assistant.test.ts",
-      "bytes": 10395,
-      "sha256": "1e3d837aa5731d2b33c25ecc21c96a4d3a65211edd3328fcb720563f1d40b9f4"
+      "bytes": 11658,
+      "sha256": "da28ad9a8907675504f08344b300b800669558500260c778701290ee26c9f4dc"
     }
   ],
   "privateHistoryIncluded": false
