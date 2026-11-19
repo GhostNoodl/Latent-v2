@@ -1,4 +1,6 @@
-import { SAMPLERS, SCHEDULERS } from '../shared/defaults';
+import { DEFAULT_DRAFT, SAMPLERS, SCHEDULERS } from '../shared/defaults';
+import type { GenerationDraft } from '../shared/types';
+import { draftSchema } from '../shared/validation';
 import { IMAGE_MODELS, fitImageModelSize, imageModelStartingSettings, type ImageModelId } from '../shared/image-models';
 
 /** Settings Latent remembers for each newer model, so your tweaks come back when you switch to it again. */
@@ -92,4 +94,75 @@ export function offRecommended(id: ImageModelId, settings: { steps: number; cfg:
 /** True when the negative prompt has no effect with this model and guidance. */
 export function negativeUnused(id: ImageModelId, cfg: number) {
   return IMAGE_MODELS[id].negative === 'zero' || cfg <= 1;
+}
+
+/** The SDXL/classic fields put aside while a newer model is in use. */
+const CLASSIC_FIELDS = [
+  'family',
+  'loras',
+  'steps',
+  'cfg',
+  'sampler',
+  'scheduler',
+  'hiresFix',
+  'autoFace',
+  'modelSampling',
+  'split',
+  'width',
+  'height',
+  'negativePrompt',
+] as const satisfies readonly (keyof GenerationDraft)[];
+export type ClassicSettings = Pick<GenerationDraft, (typeof CLASSIC_FIELDS)[number]>;
+
+const classicKey = 'latent.classic-settings';
+
+/** Puts the SDXL setup aside (also across restarts) so switching back from a newer model restores it. */
+export function rememberClassicSettings(draft: GenerationDraft) {
+  const settings = Object.fromEntries(CLASSIC_FIELDS.map(field => [field, draft[field]]));
+  try {
+    localStorage.setItem(classicKey, JSON.stringify(settings));
+  } catch {
+    /* Storage can be unavailable; switching back then uses the usual SDXL settings. */
+  }
+}
+
+/**
+ * What to fill in when going back to an SDXL/classic checkpoint: the setup you had before
+ * switching to a newer model, or the usual SDXL settings if there is none.
+ */
+export function classicSettingsToRestore(): ClassicSettings {
+  const defaults: ClassicSettings = {
+    family: DEFAULT_DRAFT.family,
+    loras: [],
+    steps: DEFAULT_DRAFT.steps,
+    cfg: DEFAULT_DRAFT.cfg,
+    sampler: DEFAULT_DRAFT.sampler,
+    scheduler: DEFAULT_DRAFT.scheduler,
+    hiresFix: undefined,
+    autoFace: undefined,
+    modelSampling: undefined,
+    split: undefined,
+    width: DEFAULT_DRAFT.width,
+    height: DEFAULT_DRAFT.height,
+    negativePrompt: DEFAULT_DRAFT.negativePrompt,
+  };
+  let raw: unknown;
+  try {
+    raw = JSON.parse(localStorage.getItem(classicKey) ?? 'null');
+  } catch {
+    return defaults;
+  }
+  if (!raw || typeof raw !== 'object') return defaults;
+  const picked = Object.fromEntries(
+    CLASSIC_FIELDS.filter(field => Object.hasOwn(raw, field)).map(field => [
+      field,
+      (raw as Record<string, unknown>)[field],
+    ]),
+  );
+  const checked = draftSchema.safeParse({ ...DEFAULT_DRAFT, ...picked });
+  if (!checked.success) return defaults;
+  const restored = { ...defaults };
+  for (const field of CLASSIC_FIELDS)
+    if (Object.hasOwn(picked, field)) Object.assign(restored, { [field]: checked.data[field] });
+  return restored;
 }
