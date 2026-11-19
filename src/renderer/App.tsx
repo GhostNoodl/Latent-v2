@@ -134,6 +134,8 @@ import { imageModelProblem } from './ImageModelCards';
 import {
   forgetImageModelSettings,
   imageModelSettingsFor,
+  classicSettingsToRestore,
+  rememberClassicSettings,
   negativeUnused,
   offRecommended,
   recommendedSummary,
@@ -198,8 +200,6 @@ export default function App() {
   const closeRequested = useRef(false);
   const closeEpoch = useRef(0);
   const pendingGeneration = useRef<Promise<unknown>>(Promise.resolve());
-  /** The SDXL setup put aside while a newer image model is in use, restored when switching back. */
-  const sdxlStash = useRef<Partial<GenerationDraft> | undefined>(undefined);
   const pendingUserWrites = useRef(new Set<Promise<unknown>>());
   const revision = useRef(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -394,9 +394,14 @@ export default function App() {
         !Object.hasOwn(change, 'modelSampling')
       )
         change = { ...change, modelSampling: undefined };
-      // Picking any checkpoint (presets, reuse settings…) leaves the newer image model behind.
-      if (change.checkpointId && draftRef.current.imageModel && !Object.hasOwn(change, 'imageModel'))
-        change = { ...change, imageModel: undefined };
+      // Picking any checkpoint (picker, Models page, presets, reuse settings…) leaves the newer
+      // image model behind and brings back the SDXL setup from before it. Anything the change sets
+      // itself (a preset's steps, say) wins over the restored setup.
+      if (
+        draftRef.current.imageModel &&
+        (Object.hasOwn(change, 'imageModel') ? !change.imageModel : Boolean(change.checkpointId))
+      )
+        change = { ...classicSettingsToRestore(), ...change, imageModel: undefined };
       change = reconcileEnhancementChange(draftRef.current, change);
       const applied = applyTriggerResolutionChange(draftRef.current, change);
       let merged: GenerationDraft;
@@ -478,22 +483,7 @@ export default function App() {
   const chooseImageModel = (id: ImageModelId, options: { recommended?: boolean } = {}) => {
     const current = draftRef.current;
     if (current.imageModel) rememberImageModelSettings(current.imageModel, current);
-    else
-      sdxlStash.current = {
-        family: current.family,
-        loras: current.loras,
-        steps: current.steps,
-        cfg: current.cfg,
-        sampler: current.sampler,
-        scheduler: current.scheduler,
-        hiresFix: current.hiresFix,
-        autoFace: current.autoFace,
-        modelSampling: current.modelSampling,
-        split: current.split,
-        width: current.width,
-        height: current.height,
-        negativePrompt: current.negativePrompt,
-      };
+    else rememberClassicSettings(current);
     if (options.recommended) forgetImageModelSettings(id);
     changeDraft({
       imageModel: id,
@@ -3054,11 +3044,7 @@ export default function App() {
           onClose={() => setCheckpointOpen(false)}
           onChoose={model => {
             if (draft.imageModel) rememberImageModelSettings(draft.imageModel, draft);
-            const restore = draft.imageModel ? (sdxlStash.current ?? {}) : {};
-            sdxlStash.current = undefined;
             changeDraft({
-              ...restore,
-              imageModel: undefined,
               checkpointId: model.id,
               ...(model.family !== 'unknown' ? { family: model.family } : {}),
             });

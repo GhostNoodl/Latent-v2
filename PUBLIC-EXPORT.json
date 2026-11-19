@@ -388,8 +388,8 @@
     },
     {
       "path": "src/renderer/App.tsx",
-      "bytes": 147305,
-      "sha256": "1b8608f7712c36993f86d706ebc24f9e51b54d43008c8015fdeed54e735b2f41"
+      "bytes": 146802,
+      "sha256": "6f2b3ddedd764bf1f92333255ddd56d3b364264e76e61c1509414b9ee40e6363"
     },
     {
       "path": "src/renderer/CanvasViewport.tsx",
@@ -1049,12 +1049,12 @@
     {
       "path": "package.json",
       "bytes": 4598,
-      "sha256": "148aff4a3c8aed0544ada9fff9d2b0d5ef76a83629229eb60befcfa4cb22b7cc"
+      "sha256": "87a3c9ed1b1cc86bdc0bfba5e3a024411c7b0a1b2e70135df15eb923aff5c9d4"
     },
     {
       "path": "package-lock.json",
       "bytes": 249032,
-      "sha256": "54922a91ae6006d3ae7fc6eff9e093dc3cd4e0b65121ebb1e63f3a657253e024"
+      "sha256": "17e42564b39ed225e08f6840a05ca2dfe2f9adac1af901d3f0e1734dc667d713"
     },
     {
       "path": "tsconfig.json",
@@ -2133,13 +2133,13 @@
     },
     {
       "path": "src/renderer/image-model-settings.ts",
-      "bytes": 3839,
-      "sha256": "96572bbe4833b85972c8317b682e183680c4d7020fb8b8b3ffa0074dc3bc8ad1"
+      "bytes": 6229,
+      "sha256": "784631ae4ffa58b5ce113f0de7e9cc254f53af892a251ca853e93c1164a24642"
     },
     {
       "path": "tests/image-model-settings.test.ts",
-      "bytes": 3414,
-      "sha256": "7d635a1df598cb6b4f4aeb722e057f6dec261a6298e405ab0f84aba297c0f98c"
+      "bytes": 4749,
+      "sha256": "1f89f58da63dc1ffe4ad295c87011965ddf02ad69788b414ea8a33bb0db93de9"
     },
     {
       "path": "licenses/STANDARDWEBHOOKS-MIT.txt",

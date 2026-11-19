@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { beforeEach, expect, it } from 'vitest';
 import { IMAGE_MODEL_IDS, IMAGE_MODELS, fitImageModelSize, imageModelSizes } from '../src/shared/image-models';
+import { DEFAULT_DRAFT } from '../src/shared/defaults';
 import {
+  classicSettingsToRestore,
+  rememberClassicSettings,
   forgetImageModelSettings,
   imageModelSettingsFor,
   rememberImageModelSettings,
@@ -70,4 +73,44 @@ it('spots steps and CFG outside the recommended range', async () => {
     expect(offRecommended(id, IMAGE_MODELS[id].defaults)).toEqual({ steps: false, cfg: false });
   expect(negativeUnused('anima-turbo', 1)).toBe(true);
   expect(negativeUnused('anima-aesthetic', 4.5)).toBe(false);
+});
+
+it('brings back the SDXL setup from before a newer model, or the usual SDXL settings', () => {
+  expect(classicSettingsToRestore()).toMatchObject({
+    steps: DEFAULT_DRAFT.steps,
+    cfg: DEFAULT_DRAFT.cfg,
+    sampler: DEFAULT_DRAFT.sampler,
+    scheduler: DEFAULT_DRAFT.scheduler,
+    width: DEFAULT_DRAFT.width,
+    height: DEFAULT_DRAFT.height,
+    loras: [],
+  });
+  rememberClassicSettings({
+    ...DEFAULT_DRAFT,
+    checkpointId: 'sdxl',
+    steps: 34,
+    cfg: 6.5,
+    sampler: 'dpmpp_2m',
+    scheduler: 'karras',
+    width: 832,
+    height: 1216,
+    negativePrompt: 'lowres',
+    loras: [{ modelId: 'detail', weight: 0.7, clipWeight: 1 }],
+    hiresFix: undefined,
+  });
+  expect(classicSettingsToRestore()).toMatchObject({
+    steps: 34,
+    cfg: 6.5,
+    sampler: 'dpmpp_2m',
+    scheduler: 'karras',
+    width: 832,
+    height: 1216,
+    negativePrompt: 'lowres',
+    loras: [{ modelId: 'detail', weight: 0.7, clipWeight: 1 }],
+  });
+});
+
+it('ignores a broken saved SDXL setup', () => {
+  localStorage.setItem('latent.classic-settings', JSON.stringify({ steps: -4, sampler: 'nope' }));
+  expect(classicSettingsToRestore()).toMatchObject({ steps: DEFAULT_DRAFT.steps, sampler: DEFAULT_DRAFT.sampler });
 });
