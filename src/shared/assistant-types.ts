@@ -67,11 +67,13 @@ export interface AssistantStatus {
 export interface AssistantImageRef {
   kind: 'source' | 'output';
   id: string;
+  /** A saved mask for this source: the painted part is tinted so the assistant can see it. */
+  maskId?: string;
 }
 
 export interface AssistantRequest {
-  /** edit = a Qwen Edit instruction for the picture on the Edit page. */
-  target: 'image' | 'video' | 'edit';
+  /** edit = a Qwen Edit instruction for the picture on the Edit page. inpaint = a prompt for a painted spot. */
+  target: 'image' | 'video' | 'edit' | 'inpaint';
   action: AssistantAction;
   /** What the person typed. Required for chat, optional extra for the others. */
   instruction?: string;
@@ -81,6 +83,8 @@ export interface AssistantRequest {
   checkpointName?: string;
   loraNames?: string[];
   image?: AssistantImageRef;
+  /** Inpaint only: how the painted spot gets redrawn. */
+  inpaint?: { strength: number; fill: 'keep' | 'blur' | 'blank'; area: 'painted' | 'whole' };
   history?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 

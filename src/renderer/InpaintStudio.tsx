@@ -12,9 +12,13 @@ import {
   Paintbrush,
   Pencil,
   Play,
+  Plus,
+  Sparkles,
   Trash2,
   Undo2,
   X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import { droppedImage, imageDropProps, sourceFromDrop, startRecordDrag, type DroppedImage } from './image-drag';
 import { isImageJob, type AppSnapshot, type GenerationDraft, type GenerationRecord } from '../shared/types';
@@ -34,6 +38,7 @@ import { CompareImage } from './CompareImage';
 import { EditPaint, type EditPaintHandle, type PaintTool } from './EditPaint';
 import { Popover } from './EditPopover';
 import { Notice } from './ui';
+import { ModelArtwork, ModelPicker, modelDisplayName } from './ModelPicker';
 import './edit-page.css';
 import './inpaint-studio.css';
 
@@ -139,6 +144,12 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
   const [error, setError] = useState('');
   const [dropOver, setDropOver] = useState(false);
   const [fit, setFit] = useState({ width: 0, height: 0 });
+  /** Zoom and pan of the picture: scale, then offset in screen pixels from the centre. */
+  const [zoom, setZoom] = useState({ scale: 1, x: 0, y: 0 });
+  const [picker, setPicker] = useState<'checkpoint' | 'lora'>();
+  const [assistNote, setAssistNote] = useState('');
+  const pan = useRef<{ id: number; x: number; y: number; from: { x: number; y: number } }>(undefined);
+  const spaceHeld = useRef(false);
   const [lastBatch, setLastBatch] = useState<string[]>([]);
   const paint = useRef<EditPaintHandle>(null);
   const canvasArea = useRef<HTMLDivElement>(null);
@@ -180,6 +191,7 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
   }
   function pickSource(next: SourceImageAsset) {
     setSource(next);
+    setZoom({ scale: 1, x: 0, y: 0 });
     setPicked(undefined);
     setView('after');
     paint.current?.clear();
@@ -293,24 +305,7 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
         const seed =
           state.seed !== 'random' && /^\d+$/.test(state.seed) ? String(BigInt(state.seed) + BigInt(index)) : 'random';
         const draft: GenerationDraft = {
-          ...structuredClone(DEFAULT_DRAFT),
-          family: checkpoint.family === 'illustrious' ? 'illustrious' : 'sdxl',
-          checkpointId: checkpoint.id,
-          loras: structuredClone(state.loras),
-          prompt: state.prompt,
-          negativePrompt: state.negativePrompt,
-          steps: state.steps,
-          cfg: state.cfg,
-          sampler: state.sampler,
-          scheduler: state.scheduler,
-          seed,
-          batchSize: 1,
-          // The engine picks the real working size from the painted area.
-          width: 1024,
-          height: 1024,
-          autoTriggers: createDraft.autoTriggers,
-          triggerResolutionVersion: createDraft.triggerResolutionVersion ?? 'visible@3',
-          ...(createDraft.triggerWords ? { triggerWords: structuredClone(createDraft.triggerWords) } : {}),
+          ...studioDraft(seed)!,
           imageInput: {
             mode: 'inpaint',
             sourceId: source.id,
@@ -331,18 +326,109 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
     });
   }
 
+  const showCivitai = snapshot.settings.civitaiDisplayMetadata !== false;
+  const nameOf = (model: (typeof snapshot.models)[number]) => modelDisplayName(model, showCivitai);
   const modelLabel = checkpoint
-    ? `${checkpoint.name}${activeLoras.length ? ` + ${activeLoras.length} LoRA${activeLoras.length === 1 ? '' : 's'}` : ''}`
+    ? `${nameOf(checkpoint)}${activeLoras.length ? ` + ${activeLoras.length} LoRA${activeLoras.length === 1 ? '' : 's'}` : ''}`
     : 'Pick one';
-  const statusText = !engineReady
-    ? 'Start the engine to inpaint.'
+  // Why Inpaint can't run yet, shown on the button's tooltip so the dock never changes size.
+  const blockedReason = !source
+    ? 'Pick a picture first.'
     : !checkpoint
       ? 'Pick an SDXL model first.'
       : !painted
-        ? 'Paint the part to change.'
-        : working.length
-          ? `Working · ${working.length} left`
-          : '';
+        ? 'Paint the part to change first.'
+        : undefined;
+
+  // Zoom with the mouse wheel around the pointer; pan with the middle or right button, or Space + drag.
+  const zoomTo = (scale: number, around?: { x: number; y: number }) =>
+    setZoom(value => {
+      const next = Math.min(8, Math.max(1, scale));
+      if (next === 1) return { scale: 1, x: 0, y: 0 };
+      const point = around ?? { x: 0, y: 0 };
+      return {
+        scale: next,
+        x: point.x - ((point.x - value.x) * next) / value.scale,
+        y: point.y - ((point.y - value.y) * next) / value.scale,
+      };
+    });
+  const fromCentre = (event: { clientX: number; clientY: number }) => {
+    const rect = canvasArea.current!.getBoundingClientRect();
+    return { x: event.clientX - rect.left - rect.width / 2, y: event.clientY - rect.top - rect.height / 2 };
+  };
+  useEffect(() => {
+    const typing = (target: EventTarget | null) =>
+      target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName);
+    const down = (event: KeyboardEvent) => {
+      if (event.code === 'Space' && !typing(event.target)) {
+        spaceHeld.current = true;
+        event.preventDefault();
+      }
+    };
+    const up = (event: KeyboardEvent) => {
+      if (event.code === 'Space') spaceHeld.current = false;
+    };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+    };
+  }, []);
+
+  /** The setup the engine and the assistant both get. */
+  function studioDraft(seed = 'random'): GenerationDraft | undefined {
+    if (!checkpoint) return undefined;
+    return {
+      ...structuredClone(DEFAULT_DRAFT),
+      family: checkpoint.family === 'illustrious' ? 'illustrious' : 'sdxl',
+      checkpointId: checkpoint.id,
+      loras: structuredClone(state.loras),
+      prompt: state.prompt,
+      negativePrompt: state.negativePrompt,
+      steps: state.steps,
+      cfg: state.cfg,
+      sampler: state.sampler,
+      scheduler: state.scheduler,
+      seed,
+      batchSize: 1,
+      // The engine picks the real working size from the painted area.
+      width: 1024,
+      height: 1024,
+      autoTriggers: createDraft.autoTriggers,
+      triggerResolutionVersion: createDraft.triggerResolutionVersion ?? 'visible@3',
+      ...(createDraft.triggerWords ? { triggerWords: structuredClone(createDraft.triggerWords) } : {}),
+    };
+  }
+  const assistant = snapshot.assistant;
+  async function askAssistant(kind: 'improve' | 'describe') {
+    if (!source || !checkpoint) return;
+    await action('assist', async () => {
+      setAssistNote('');
+      const draft = studioDraft();
+      if (!draft) return;
+      if (kind === 'improve' && !state.prompt.trim()) throw new Error('Type roughly what you want first.');
+      const png = assistant?.vision ? await paint.current?.exportMask() : undefined;
+      if (kind === 'describe' && !png) throw new Error('Paint the part to change first.');
+      const mask = png ? await window.latent.saveSourceMask(source.id, png) : undefined;
+      const reply = await window.latent.assistantSuggest({
+        target: 'inpaint',
+        action: kind,
+        draft,
+        checkpointName: nameOf(checkpoint),
+        loraNames: activeLoras.flatMap(lora => {
+          const asset = loraAssets.find(model => model.id === lora.modelId);
+          return asset ? [nameOf(asset)] : [];
+        }),
+        inpaint: { strength: state.denoise, fill: settings.fill, area: settings.area },
+        ...(mask ? { image: { kind: 'source' as const, id: source.id, maskId: mask.id } } : {}),
+      });
+      const option = reply.options[0];
+      if (option?.prompt.trim())
+        edit({ prompt: option.prompt.slice(0, 16000), negativePrompt: option.negativePrompt.slice(0, 16000) });
+      setAssistNote(reply.message);
+    });
+  }
 
   const toolbar = (
     <div className="ed-toolbar">
@@ -458,7 +544,35 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
       {toolbar}
       <div
         ref={canvasArea}
-        className={`ed-canvas ${dropOver ? 'drop-over' : ''}`}
+        className={`ed-canvas ${dropOver ? 'drop-over' : ''} ${zoom.scale > 1 ? 'ip-zoomed' : ''}`}
+        onWheel={event => {
+          if (!source) return;
+          zoomTo(zoom.scale * Math.exp(-event.deltaY * 0.0015), fromCentre(event));
+        }}
+        onPointerDownCapture={event => {
+          if (!source || !(event.button === 1 || event.button === 2 || spaceHeld.current)) return;
+          event.preventDefault();
+          event.stopPropagation();
+          event.currentTarget.setPointerCapture(event.pointerId);
+          pan.current = { id: event.pointerId, x: event.clientX, y: event.clientY, from: { x: zoom.x, y: zoom.y } };
+        }}
+        onPointerMoveCapture={event => {
+          const start = pan.current;
+          if (!start || start.id !== event.pointerId) return;
+          event.stopPropagation();
+          setZoom(value => ({
+            ...value,
+            x: start.from.x + event.clientX - start.x,
+            y: start.from.y + event.clientY - start.y,
+          }));
+        }}
+        onPointerUpCapture={event => {
+          if (pan.current?.id === event.pointerId) {
+            pan.current = undefined;
+            event.stopPropagation();
+          }
+        }}
+        onContextMenu={event => event.preventDefault()}
         {...imageDropProps(
           setDropOver,
           transfer => {
@@ -506,7 +620,14 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
             </div>
           </div>
         ) : (
-          <div className="ed-frame" style={{ width: fit.width, height: fit.height }}>
+          <div
+            className="ed-frame"
+            style={{
+              width: fit.width,
+              height: fit.height,
+              transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})`,
+            }}
+          >
             <img
               src={showingResult ? shown!.imageUrl : sourceUrl(source.id)}
               alt={showingResult ? 'Result' : 'Picture'}
@@ -531,6 +652,23 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
             </span>
           </div>
         )}
+        {source && (
+          <div className="ed-corner br ip-zoom">
+            <button type="button" aria-label="Zoom out" onClick={() => zoomTo(zoom.scale / 1.25)}>
+              <ZoomOut size={14} />
+            </button>
+            <button
+              type="button"
+              title="Fit the picture (wheel to zoom, middle or right drag, or Space + drag, to move)"
+              onClick={() => setZoom({ scale: 1, x: 0, y: 0 })}
+            >
+              {zoom.scale === 1 ? 'Fit' : `${Math.round(zoom.scale * 100)}%`}
+            </button>
+            <button type="button" aria-label="Zoom in" onClick={() => zoomTo(zoom.scale * 1.25)}>
+              <ZoomIn size={14} />
+            </button>
+          </div>
+        )}
         {shown && (
           <div className="ed-corner bl">
             <span className="ed-pill acc">
@@ -547,6 +685,15 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
       </div>
       {error && <Notice error>{error}</Notice>}
       <div className="ed-dock">
+        {assistNote && (
+          <p className="ip-note">
+            <Sparkles size={13} />
+            <span>{assistNote}</span>
+            <button type="button" className="ed-icon" aria-label="Dismiss" onClick={() => setAssistNote('')}>
+              <X size={13} />
+            </button>
+          </p>
+        )}
         <div className="ed-quick" role="group" aria-label="Quick setups">
           {QUICK.map(item => (
             <button
@@ -568,14 +715,50 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
           ))}
         </div>
         <div className="ip-write">
-          <textarea
-            aria-label="What should the painted part show?"
-            value={state.prompt}
-            maxLength={16000}
-            rows={2}
-            placeholder="What should the painted part show? For example: a red wool scarf"
-            onChange={event => edit({ prompt: event.target.value })}
-          />
+          <div className="ed-text">
+            <textarea
+              aria-label="What should the painted part show?"
+              value={state.prompt}
+              maxLength={16000}
+              rows={2}
+              placeholder="What should the painted part show? For example: a red wool scarf"
+              onChange={event => edit({ prompt: event.target.value })}
+            />
+            <span className="ip-assist">
+              <button
+                type="button"
+                className="ed-chip"
+                disabled={
+                  !source || !checkpoint || pending.assist || !assistant?.ready || !assistant.vision || !painted
+                }
+                title={
+                  !assistant?.ready
+                    ? (assistant?.reason ?? 'Set up the assistant in Settings first.')
+                    : !assistant.vision
+                      ? 'The assistant needs a model that can see pictures for this. Pick one in Settings.'
+                      : 'The assistant looks at the painted part and writes a prompt for it'
+                }
+                onClick={() => void askAssistant('describe')}
+              >
+                {pending.assist ? <LoaderCircle className="spin" size={13} /> : <Sparkles size={13} />}
+                Fill in for me
+              </button>
+              <button
+                type="button"
+                className="ed-chip"
+                disabled={!source || !checkpoint || pending.assist || !assistant?.ready || !state.prompt.trim()}
+                title={
+                  assistant?.ready
+                    ? 'The assistant rewrites this for just the painted part, in the way your model likes'
+                    : (assistant?.reason ?? 'Set up the assistant in Settings first.')
+                }
+                onClick={() => void askAssistant('improve')}
+              >
+                <Sparkles size={13} />
+                Tidy up
+              </button>
+            </span>
+          </div>
           <textarea
             aria-label="Things to avoid"
             value={state.negativePrompt}
@@ -596,17 +779,27 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
               <em>Model</em> <span>{modelLabel}</span> <ChevronDown size={13} />
             </button>
             <Popover open={menu === 'model'} onClose={closeMenu} className="ed-menu ed-tune ip-model">
-              <label>
-                SDXL model
-                <select value={state.checkpointId} onChange={event => edit({ checkpointId: event.target.value })}>
-                  {!checkpoint && <option value="">Pick a model…</option>}
-                  {checkpoints.map(model => (
-                    <option key={model.id} value={model.id}>
-                      {model.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="ip-pick">
+                <span className="ip-thumb big">
+                  {checkpoint && (
+                    <ModelArtwork model={checkpoint} history={snapshot.history} showCivitai={showCivitai} />
+                  )}
+                </span>
+                <span>
+                  <small>SDXL model</small>
+                  <b title={checkpoint?.filename}>{checkpoint ? nameOf(checkpoint) : 'None picked'}</b>
+                </span>
+                <button
+                  type="button"
+                  className="ed-btn"
+                  onClick={() => {
+                    setMenu(undefined);
+                    setPicker('checkpoint');
+                  }}
+                >
+                  {checkpoint ? 'Change' : 'Pick'}
+                </button>
+              </div>
               <label className="ed-check">
                 <input
                   type="checkbox"
@@ -627,7 +820,7 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
                     <div key={lora.modelId} className={`ip-lora ${lora.off ? 'off' : ''}`}>
                       <input
                         type="checkbox"
-                        aria-label={`Use ${asset?.name ?? 'this LoRA'}`}
+                        aria-label={`Use ${asset ? nameOf(asset) : 'this LoRA'}`}
                         checked={!lora.off}
                         onChange={event =>
                           edit({
@@ -637,7 +830,10 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
                           })
                         }
                       />
-                      <span title={asset?.name ?? lora.modelId}>{asset?.name ?? 'Missing LoRA'}</span>
+                      <span className="ip-thumb">
+                        {asset && <ModelArtwork model={asset} history={snapshot.history} showCivitai={showCivitai} />}
+                      </span>
+                      <span title={asset?.filename ?? lora.modelId}>{asset ? nameOf(asset) : 'Missing LoRA'}</span>
                       <input
                         type="range"
                         min={-2}
@@ -666,24 +862,17 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
                     </div>
                   );
                 })}
-                <select
-                  value=""
-                  aria-label="Add a LoRA"
-                  onChange={event => {
-                    const id = event.target.value;
-                    if (id && !state.loras.some(item => item.modelId === id))
-                      edit({ loras: [...state.loras, { modelId: id, weight: 0.8, clipWeight: 0.8 }] });
+                <button
+                  type="button"
+                  className="ed-btn ip-add"
+                  onClick={() => {
+                    setMenu(undefined);
+                    setPicker('lora');
                   }}
                 >
-                  <option value="">Add a LoRA…</option>
-                  {loraAssets
-                    .filter(model => !state.loras.some(item => item.modelId === model.id))
-                    .map(model => (
-                      <option key={model.id} value={model.id}>
-                        {model.name}
-                      </option>
-                    ))}
-                </select>
+                  <Plus size={14} />
+                  Add a LoRA
+                </button>
               </div>
               <button
                 type="button"
@@ -955,7 +1144,6 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
             </Popover>
           </span>
           <span className="ed-go">
-            {statusText && <small>{statusText}</small>}
             {!engineReady ? (
               <button
                 type="button"
@@ -971,6 +1159,7 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
                 type="button"
                 className="ed-primary"
                 disabled={!source || !checkpoint || !painted || busy || Boolean(tooBig)}
+                title={blockedReason}
                 onClick={() => void inpaint()}
               >
                 {pending.queue ? <LoaderCircle className="spin" size={16} /> : <Paintbrush size={16} />}
@@ -1086,6 +1275,22 @@ export function InpaintStudio({ snapshot, onSnapshot, createDraft, dropped, onDr
         {stage}
         {side}
       </section>
+      {picker && (
+        <ModelPicker
+          snapshot={snapshot}
+          kind={picker}
+          family={checkpoint?.family}
+          selectedIds={picker === 'checkpoint' ? [state.checkpointId] : state.loras.map(lora => lora.modelId)}
+          onUpdated={onSnapshot}
+          onClose={() => setPicker(undefined)}
+          onChoose={model => {
+            if (picker === 'checkpoint') edit({ checkpointId: model.id });
+            else if (!state.loras.some(lora => lora.modelId === model.id))
+              edit({ loras: [...state.loras, { modelId: model.id, weight: 0.8, clipWeight: 0.8 }] });
+            setPicker(undefined);
+          }}
+        />
+      )}
       {compare && source && (
         <CompareImage
           before={{

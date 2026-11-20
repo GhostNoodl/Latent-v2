@@ -62,7 +62,7 @@ const settingsSchema = z
 
 export const assistantRequestSchema = z
   .object({
-    target: z.enum(['image', 'video', 'edit']),
+    target: z.enum(['image', 'video', 'edit', 'inpaint']),
     action: z.enum(['chat', 'improve', 'expand', 'shorten', 'tags', 'sentences', 'variations', 'describe', 'motion']),
     instruction: z.string().max(4000).optional(),
     draft: draftSchema,
@@ -70,7 +70,22 @@ export const assistantRequestSchema = z
     checkpointName: z.string().max(300).optional(),
     loraNames: z.array(z.string().min(1).max(300)).max(12).optional(),
     image: z
-      .object({ kind: z.enum(['source', 'output']), id: z.string().min(1).max(200) })
+      .object({
+        kind: z.enum(['source', 'output']),
+        id: z.string().min(1).max(200),
+        maskId: z
+          .string()
+          .regex(/^mask_[a-f0-9-]{36}$/)
+          .optional(),
+      })
+      .strict()
+      .optional(),
+    inpaint: z
+      .object({
+        strength: z.number().min(0).max(1),
+        fill: z.enum(['keep', 'blur', 'blank']),
+        area: z.enum(['painted', 'whole']),
+      })
       .strict()
       .optional(),
     history: z
@@ -89,6 +104,8 @@ export interface AssistantServiceOptions {
   hardware: () => LocalHardware;
   /** Path of a source image or a saved output, checked by their own services. */
   imagePath: (ref: { kind: 'source' | 'output'; id: string }) => Promise<string>;
+  /** Path of a saved mask and the source it belongs to. */
+  maskPath?: (id: string) => Promise<{ path: string; sourceId: string }>;
   changed: () => void;
   /** What is rendering right now, if anything. */
   renderActive?: () => 'image' | 'video' | undefined;
@@ -244,14 +261,30 @@ export class AssistantService {
     void this.local.stop('Unloaded to make room for your render. It loads again when you send.').catch(() => undefined);
   }
 
-  private async loadImage(ref: { kind: 'source' | 'output'; id: string }) {
+  private async loadImage(ref: { kind: 'source' | 'output'; id: string; maskId?: string }) {
     const filename = await this.options.imagePath(ref);
-    const data = await sharp(filename, { limitInputPixels: 80_000_000 })
+    const base = sharp(filename, { limitInputPixels: 80_000_000 })
       .rotate()
       .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
-      .flatten({ background: '#808080' })
-      .jpeg({ quality: 86 })
-      .toBuffer();
+      .flatten({ background: '#808080' });
+    if (ref.maskId) {
+      if (ref.kind !== 'source' || !this.options.maskPath)
+        throw new Error('That painted area belongs to another picture.');
+      const mask = await this.options.maskPath(ref.maskId);
+      if (mask.sourceId !== ref.id) throw new Error('That painted area belongs to another picture.');
+      const { data, info } = await base.removeAlpha().raw().toBuffer({ resolveWithObject: true });
+      const painted = await sharp(mask.path, { limitInputPixels: 80_000_000 })
+        .resize(info.width, info.height, { fit: 'fill' })
+        .extractChannel(0)
+        .raw()
+        .toBuffer();
+      const marked = markPaintedArea(data, painted, info.width, info.height);
+      const jpeg = await sharp(marked, { raw: { width: info.width, height: info.height, channels: 3 } })
+        .jpeg({ quality: 86 })
+        .toBuffer();
+      return { mediaType: 'image/jpeg' as const, base64: jpeg.toString('base64') };
+    }
+    const data = await base.jpeg({ quality: 86 }).toBuffer();
     return { mediaType: 'image/jpeg' as const, base64: data.toString('base64') };
   }
 
@@ -360,7 +393,11 @@ export class AssistantService {
       .slice(0, request.action === 'variations' ? 3 : 1)
       .map(option => {
         const negativePrompt =
-          request.target !== 'image' ? '' : ignoresNegative ? request.draft.negativePrompt : option.negativePrompt;
+          request.target !== 'image' && request.target !== 'inpaint'
+            ? ''
+            : ignoresNegative
+              ? request.draft.negativePrompt
+              : option.negativePrompt;
         const dropped = missingProtectedParts(request, option.prompt);
         return { prompt: option.prompt, negativePrompt, ...(dropped.length ? { dropped } : {}) };
       });
@@ -392,4 +429,21 @@ export class AssistantService {
     await this.cancel();
     await this.local.dispose();
   }
+}
+
+/** Tints the painted part magenta and draws a bright edge around it, so a vision model can see the spot. */
+export function markPaintedArea(rgb: Uint8Array, mask: Uint8Array, width: number, height: number): Buffer {
+  const out = Buffer.from(rgb);
+  const on = (x: number, y: number) => x >= 0 && y >= 0 && x < width && y < height && mask[y * width + x] > 127;
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      if (!on(x, y)) continue;
+      const at = (y * width + x) * 3;
+      const edge = !on(x - 2, y) || !on(x + 2, y) || !on(x, y - 2) || !on(x, y + 2);
+      const tint = edge ? 1 : 0.45;
+      out[at] = Math.round(out[at] * (1 - tint) + 255 * tint);
+      out[at + 1] = Math.round(out[at + 1] * (1 - tint));
+      out[at + 2] = Math.round(out[at + 2] * (1 - tint) + 255 * tint);
+    }
+  return out;
 }

@@ -702,6 +702,10 @@ async function initialize() {
     hardware: () => hardware,
     imagePath: async ref =>
       ref.kind === 'source' ? (await sources.resolve(ref.id)).normalizedPath : outputPath(ref.id),
+    maskPath: async id => {
+      const mask = await sources.resolveMask(id);
+      return { path: mask.path, sourceId: mask.mask.sourceId };
+    },
     changed: broadcast,
     renderActive,
   });

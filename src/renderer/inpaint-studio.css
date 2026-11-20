@@ -67,7 +67,7 @@
   justify-content: center;
 }
 .studio .ip-model {
-  width: 360px;
+  width: 420px;
 }
 .studio .ip-label {
   color: var(--muted);
@@ -79,7 +79,7 @@
 }
 .studio .ip-lora {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) 88px 34px auto;
+  grid-template-columns: auto 28px minmax(0, 1fr) 80px 34px auto;
   align-items: center;
   gap: 6px;
   font-size: 13px;
@@ -108,4 +108,122 @@
 }
 .studio .ip-empty-side {
   padding: 8px 6px;
+}
+
+.studio .ip-write .ed-text textarea {
+  padding-right: 236px;
+}
+.studio .ip-assist {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  display: flex;
+  gap: 6px;
+}
+.studio .ip-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--soft);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.studio .ip-note > svg {
+  color: var(--accent);
+  flex: none;
+  margin-top: 3px;
+}
+.studio .ip-note > span {
+  flex: 1;
+}
+.studio .ip-note .ed-icon {
+  width: 22px;
+  height: 22px;
+}
+.studio .ip-thumb {
+  display: block;
+  width: 28px;
+  height: 36px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--raised);
+  flex: none;
+}
+.studio .ip-thumb.big {
+  width: 48px;
+  height: 64px;
+  border-radius: 8px;
+}
+.studio .ip-thumb .model-artwork {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  color: var(--muted);
+}
+.studio .ip-thumb .model-artwork svg {
+  width: 16px;
+  height: 16px;
+}
+.studio .ip-pick {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.studio .ip-pick > span:nth-child(2) {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.studio .ip-pick small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .ip-pick b {
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio .ip-add {
+  justify-content: center;
+}
+.studio .ip-zoomed .ed-frame > img {
+  border-radius: 0;
+}
+.studio .ed-corner.br {
+  right: 12px;
+  bottom: 12px;
+  pointer-events: auto;
+}
+.studio .ip-zoom {
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: #000a;
+  backdrop-filter: blur(6px);
+}
+.studio .ip-zoom button {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #ececee;
+  font-size: 12px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.studio .ip-zoom button:hover {
+  background: #ffffff1f;
 }

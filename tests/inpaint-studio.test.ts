@@ -155,3 +155,36 @@ describe('inpaint studio', () => {
 function graph4(graph: ComfyWorkflow) {
   return graph['4']?.class_type;
 }
+
+describe('inpaint assistant', () => {
+  it('writes for the painted spot only, in the model style, with the inpaint settings', async () => {
+    const { systemPrompt, userTurn } = await import('../src/main/assistant/prompts');
+    const request = {
+      target: 'inpaint' as const,
+      action: 'describe' as const,
+      draft: { ...structuredClone(DEFAULT_DRAFT), family: 'illustrious' as const, prompt: 'red scarf' },
+      inpaint: { strength: 0.75, fill: 'keep' as const, area: 'painted' as const },
+    };
+    const system = systemPrompt(request);
+    expect(system).toContain('painted part');
+    expect(system).toContain('Danbooru');
+    expect(system).toContain('keepExactly');
+    const turn = userTurn(request);
+    expect(turn).toContain('magenta part is what gets redrawn');
+    expect(turn).toContain('"strength": 0.75');
+  });
+
+  it('tints the painted pixels and edges them', async () => {
+    const { markPaintedArea } = await import('../src/main/assistant/service');
+    const rgb = new Uint8Array(10 * 10 * 3).fill(100);
+    const mask = new Uint8Array(100);
+    for (let y = 2; y < 8; y++) for (let x = 2; x < 8; x++) mask[y * 10 + x] = 255;
+    const out = markPaintedArea(rgb, mask, 10, 10);
+    expect([...out.subarray(0, 3)]).toEqual([100, 100, 100]);
+    const edge = (2 * 10 + 2) * 3;
+    expect([...out.subarray(edge, edge + 3)]).toEqual([255, 0, 255]);
+    const inside = (5 * 10 + 5) * 3;
+    expect(out[inside]).toBeGreaterThan(100);
+    expect(out[inside + 1]).toBeLessThan(100);
+  });
+});

@@ -73,6 +73,22 @@ const EDIT = `You are writing an edit instruction for Qwen Image Edit. It change
 - negativePrompt is always an empty string.
 - If a picture is attached, it is the picture being edited. Use it to name what is really there.`;
 
+const INPAINT = `You are writing the prompt for inpainting. The person painted over part of an existing picture, and their own model will redraw only that painted part from your prompt, then blend it into the rest. The rest of the picture never changes.
+- Describe only what should be inside the painted part: the thing itself, its material, colour and detail. Then add a few words for the look it has to match so it blends in: the medium or style, the lighting and the colour mood of the picture.
+- Do not describe the whole scene or other people and things outside the painted part. The model would try to squeeze them into the spot.
+- If the person wants something removed, describe the background that belongs there instead (for example: brick wall, grass, empty sky), never the removed thing.
+- If the painted part is a face, hands or another part of a person, describe that part only and keep it the same character, unless asked to change it.
+- The negative prompt lists things that would look wrong in the spot (extra fingers, a second face, blur, seams, text). Keep it short.
+- If a picture is attached, the painted part is tinted magenta with a bright magenta edge. That tint is only a marker: never mention magenta or the tint in the prompt.
+- inpaint.strength is how much the spot may change (1 = fully new). If it looks too low or too high for what they want, or the fill should change (blur first for removing things, blank for something new), say so briefly in message.`;
+
+const INPAINT_TASKS: Partial<Record<AssistantAction, string>> = {
+  improve:
+    'Rewrite the prompt so it describes only the painted part, in the way this model understands best, with just enough style and lighting words to blend in. Keep what the person asked for.',
+  describe:
+    "Look at the attached picture. The magenta part is what gets redrawn. Write a prompt for what should fill it. Use the person's words if there are any. If there are none, pick the most natural fix: a cleaner, better drawn version of what is there, or the background if it looks like something unwanted. In message, say in a few words what you think is there and what you wrote for.",
+};
+
 const EDIT_TASKS: Partial<Record<AssistantAction, string>> = {
   improve:
     "Rewrite the edit instruction so the edit model gets it right first time: clear, specific, and saying what to keep. Keep the person's intent and every detail they asked for.",
@@ -165,6 +181,7 @@ function imageModelGuide(request: AssistantRequest): string {
 export function systemPrompt(request: AssistantRequest): string {
   if (request.target === 'video') return `${BASE}\n\n${VIDEO}`;
   if (request.target === 'edit') return `${BASE}\n\n${EDIT}`;
+  if (request.target === 'inpaint') return `${BASE}\n\n${imageModelGuide(request)}\n\n${INPAINT}\n\n${SYNTAX}`;
   return `${BASE}\n\n${imageModelGuide(request)}\n\n${SYNTAX}`;
 }
 
@@ -208,26 +225,36 @@ export function userTurn(request: AssistantRequest): string {
       ? ''
       : request.target === 'edit'
         ? (EDIT_TASKS[request.action] ?? ACTIONS[request.action].image)
-        : ACTIONS[request.action][request.target];
+        : request.target === 'inpaint'
+          ? (INPAINT_TASKS[request.action] ?? ACTIONS[request.action].image)
+          : ACTIONS[request.action][request.target];
   const typed = request.instruction?.trim();
   const ask = [task, typed && (task ? `The person adds: ${typed}` : typed)].filter(Boolean).join('\n');
   const context =
     request.target === 'edit'
       ? { currentInstruction: request.draft.prompt }
-      : request.target === 'video'
+      : request.target === 'inpaint'
         ? {
-            mode: request.videoContext?.mode === 'img2vid' ? 'picture to video' : 'text to video',
-            clipSeconds: request.videoContext?.requestedDurationSeconds,
-            audio: request.videoContext?.audio === 'stereo-candidate' ? 'on' : 'off',
-            currentPrompt: request.draft.prompt,
-            keepExactly: protectedParts(request),
-          }
-        : {
+            inpaint: request.inpaint,
             loras: request.loraNames ?? [],
             currentPrompt: request.draft.prompt,
             currentNegativePrompt: request.draft.negativePrompt,
             keepExactly: protectedParts(request),
-          };
+          }
+        : request.target === 'video'
+          ? {
+              mode: request.videoContext?.mode === 'img2vid' ? 'picture to video' : 'text to video',
+              clipSeconds: request.videoContext?.requestedDurationSeconds,
+              audio: request.videoContext?.audio === 'stereo-candidate' ? 'on' : 'off',
+              currentPrompt: request.draft.prompt,
+              keepExactly: protectedParts(request),
+            }
+          : {
+              loras: request.loraNames ?? [],
+              currentPrompt: request.draft.prompt,
+              currentNegativePrompt: request.draft.negativePrompt,
+              keepExactly: protectedParts(request),
+            };
   return `${ask || (request.target === 'edit' ? 'Improve the edit instruction.' : 'Improve the current prompt.')}\n\nCurrent state:\n${JSON.stringify(context, null, 1)}`;
 }
 
