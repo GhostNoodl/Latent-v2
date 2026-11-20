@@ -45,11 +45,12 @@ it('applies selected preset choices, preserves custom lists, and resolves the re
         .querySelector('input')!,
     );
     await click([...host.querySelectorAll('button')].find(b => b.textContent === 'Apply to prompt')!);
-    expect(onSave.mock.calls[0][0].starter_species).toEqual(['wolf']);
-    expect(onSave.mock.calls[0][0].personal).toEqual(['custom', 'custom']);
+    // Saving hashes the entries with crypto.subtle first, which can finish after act returns.
     await act(async () => {
       await vi.waitFor(() => expect(onApply).toHaveBeenCalledWith('portrait, __starter_species__'));
     });
+    expect(onSave.mock.calls[0][0].starter_species).toEqual(['wolf']);
+    expect(onSave.mock.calls[0][0].personal).toEqual(['custom', 'custom']);
     const result = await prepareDynamicPromptDraft(
       { prompt: onApply.mock.calls[0][0], negativePrompt: '', dynamicPrompts: { enabled: true } },
       '1',
@@ -84,11 +85,17 @@ it('keeps the prompt unchanged when saving fails and permits retry', async () =>
       ),
     );
     const button = () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Apply to prompt')!;
-    await act(async () => button().click());
+    // Saving hashes the entries with crypto.subtle first, which can finish after act returns.
+    await act(async () => {
+      button().click();
+      await vi.waitFor(() => expect(onSave).toHaveBeenCalledOnce());
+    });
     expect(onApply).not.toHaveBeenCalled();
     expect(host.textContent).toContain('Disk unavailable');
     await act(async () => button().click());
-    expect(onApply).toHaveBeenCalledOnce();
+    await act(async () => {
+      await vi.waitFor(() => expect(onApply).toHaveBeenCalledOnce());
+    });
   } finally {
     await act(async () => root.unmount());
     host.remove();
