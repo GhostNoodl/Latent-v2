@@ -437,7 +437,7 @@ export function validateQwenEditCapabilities(
       )
     )
       throw new Error(
-        `The engine does not offer reviewed ${node}.${field}; verify model paths and restart the private engine.`,
+        "The engine can't see the Edit model files. Restart the engine and try again.",
       );
   const outputs: Record<string, string> = {
     [loader]: 'MODEL',
