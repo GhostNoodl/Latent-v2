@@ -98,8 +98,8 @@
     },
     {
       "path": "src/main/jobs.ts",
-      "bytes": 122291,
-      "sha256": "1f26d154d57830faefacb5744c458e7c21993d4c847c2003d4473193d242fea7"
+      "bytes": 122184,
+      "sha256": "f95d125e3f610624e4bef5caa55db2a5d5821f7c9b132554a9f656f8b26f4b5d"
     },
     {
       "path": "src/main/main.ts",
@@ -888,8 +888,8 @@
     },
     {
       "path": "src/shared/qwen-edit-workflow.ts",
-      "bytes": 20716,
-      "sha256": "5bb5971c36fe4dad363012aa4bf13420170f63d7832824c1ca16eb500b541e5a"
+      "bytes": 20672,
+      "sha256": "65a82c816d1c3a391d3a10ab1438bd5e8ba067746ef654617d2bacefef813f1b"
     },
     {
       "path": "src/shared/regional-prompt-editor.ts",
@@ -1049,12 +1049,12 @@
     {
       "path": "package.json",
       "bytes": 4598,
-      "sha256": "841f2b84c4e2aae6dca8d0aae72f5d6a2b86813b45c1c92eae90223ad0e2ecfd"
+      "sha256": "b758164bb178b8ffd60865acd0d450050cd3f40c2c206f64f6b1cc896b52b896"
     },
     {
       "path": "package-lock.json",
       "bytes": 249032,
-      "sha256": "c06978a580c0ee53669f45c076c5bceb2ed1f3818ec0c9ad72c8bf77a54a2d23"
+      "sha256": "96b94a6f7967a0498c5774ecbe6db69e01eedbc053b2f6cf4c193a6bed154551"
     },
     {
       "path": "tsconfig.json",
@@ -2250,6 +2250,16 @@
       "path": "tests/thumbnails.test.ts",
       "bytes": 2727,
       "sha256": "b3611fe4a344d0d6d965f57b6ce07f513716479879fdf48f331aba779e00a407"
+    },
+    {
+      "path": "src/shared/engine-input-check.ts",
+      "bytes": 1180,
+      "sha256": "3aec358969986188b956b6a29b6f01495c6c3f13065bd8883e8b6ab8129d24ec"
+    },
+    {
+      "path": "tests/engine-input-check.test.ts",
+      "bytes": 1644,
+      "sha256": "67d9f1c8c1b849c3deb2d21328508898966db4b8a35421e63a65caeac0084e88"
     }
   ],
   "privateHistoryIncluded": false

@@ -436,9 +436,7 @@ export function validateQwenEditCapabilities(
         option => typeof option === 'string' && option.replaceAll('\\', '/') === value,
       )
     )
-      throw new Error(
-        `The engine does not offer reviewed ${node}.${field}; verify model paths and restart the private engine.`,
-      );
+      throw new Error("The engine can't see the Edit model files. Restart the engine and try again.");
   const outputs: Record<string, string> = {
     [loader]: 'MODEL',
     CLIPLoader: 'CLIP',

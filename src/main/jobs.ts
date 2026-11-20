@@ -59,6 +59,7 @@ import { cropInpaintPlanSchema, type CropInpaintPlan } from '../shared/crop-inpa
 import { createCropInpaintPlan, redMaskFromRgba } from '../shared/crop-inpaint-geometry';
 import { augmentCropInpaintWorkflow, validateFrozenCropInpaintWorkflow } from '../shared/crop-inpaint-workflow';
 import { DEFAULT_DRAFT } from '../shared/defaults';
+import { unofferedInputMessage } from '../shared/engine-input-check';
 import { qwenEditJobRequestSchema, type QwenEditJobRequest, type QwenEditRecord } from '../shared/qwen-edit-types';
 import { bindQwenEditWorkflow, buildQwenEditWorkflow } from '../shared/qwen-edit-workflow';
 import { qwenAreaCrop, qwenWorkingSize } from '../shared/qwen-area';
@@ -1420,6 +1421,8 @@ export class JobService {
           path.relative(this.paths.inputs, mask.path).replaceAll('\\', '/') !== expected.workflow['31']?.inputs.image
         )
           throw new Error('The painted area changed after this edit was queued.');
+        // The engine's mask dropdown lists only top-level files; this nested mask is verified above.
+        verifiedImage('LoadImageMask', mask.path);
       }
       for (const ref of expected.references ?? []) {
         const actual = await this.sources.resolve(ref.source.id);
@@ -1428,6 +1431,7 @@ export class JobService {
           path.relative(this.paths.inputs, actual.normalizedPath).replaceAll('\\', '/') !== ref.filename
         )
           throw new Error('A queued Qwen reference changed.');
+        verifiedImage('LoadImage', actual.normalizedPath);
       }
       const bound = bindQwenEditWorkflow(expected, objects);
       context.qwenEdit.plan = bound;
@@ -1466,13 +1470,8 @@ export class JobService {
           definition?.[0] === 'COMBO'
             ? (definition?.[1] as { options?: unknown[] } | undefined)?.options
             : definition?.[0];
-        // Comfy's upload dropdown lists only top-level files; VALIDATE_INPUTS also
-        // accepts nested paths. Exempt only the exact independently verified input.
-        if (name === 'image' && typeof value === 'string' && verifiedImages.get(node.class_type)?.has(value)) continue;
-        if (Array.isArray(allowed) && !Array.isArray(value) && !allowed.includes(value))
-          throw new Error(
-            `The engine does not offer ${String(value)} for ${node.class_type}.${name}. Refresh models and try again.`,
-          );
+        const problem = unofferedInputMessage(node.class_type, name, value, allowed, verifiedImages);
+        if (problem) throw new Error(problem);
       }
     }
   }

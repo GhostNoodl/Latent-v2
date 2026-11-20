@@ -1814,6 +1814,14 @@
     {
       "from": "tests/thumbnails.test.ts",
       "to": "tests/thumbnails.test.ts"
+    },
+    {
+      "from": "src/shared/engine-input-check.ts",
+      "to": "src/shared/engine-input-check.ts"
+    },
+    {
+      "from": "tests/engine-input-check.test.ts",
+      "to": "tests/engine-input-check.test.ts"
     }
   ]
 }
