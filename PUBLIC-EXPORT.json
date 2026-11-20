@@ -888,8 +888,8 @@
     },
     {
       "path": "src/shared/qwen-edit-workflow.ts",
-      "bytes": 20689,
-      "sha256": "3d89f609f354add36b5db7c8ea7956a7ca3c73c2d90241e7c7b28be05364da77"
+      "bytes": 20672,
+      "sha256": "65a82c816d1c3a391d3a10ab1438bd5e8ba067746ef654617d2bacefef813f1b"
     },
     {
       "path": "src/shared/regional-prompt-editor.ts",
