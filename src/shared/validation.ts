@@ -5,6 +5,7 @@ import { SAMPLERS, SCHEDULERS } from './defaults';
 import { dynamicPromptAuthoringSchema } from './dynamic-prompt-recipe';
 import { controlNetSettingsSchema } from './controlnet-types';
 import { cropInpaintSettingsSchema, cropInpaintPlanSchema } from './crop-inpaint-types';
+import { inpaintStudioSettingsSchema } from './inpaint-studio';
 import { qwenEditJobRequestSchema } from './qwen-edit-types';
 import { regionalPromptPlanSchema, regionalPromptSettingsSchema } from './regional-prompt-types';
 import { ipAdapterPlanSchema, ipAdapterSettingsSchema } from './ipadapter-types';
@@ -126,6 +127,7 @@ export const draftSchema = z
       .object({
         cropPlan: cropInpaintPlanSchema.optional(),
         crop: cropInpaintSettingsSchema.optional(),
+        studio: inpaintStudioSettingsSchema.optional(),
         mode: z.enum(['img2img', 'inpaint']),
         sourceId: z.string().regex(/^src_[a-f0-9-]{36}$/),
         sourceSha256: z.string().regex(/^[a-f0-9]{64}$/),
