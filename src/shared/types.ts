@@ -490,6 +490,8 @@ export interface LatentAPI {
   newPhoneCode(): Promise<void>;
   forgetPhones(): Promise<void>;
   openCivitaiModel(modelId: number, versionId?: number): Promise<void>;
+  /** Shows a checkpoint or LoRA file in Explorer. */
+  revealModel(modelId: string): Promise<void>;
   setupSegmentation(repair?: boolean): Promise<void>;
   startSegmentation(): Promise<void>;
   stopSegmentation(): Promise<void>;

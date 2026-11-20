@@ -26,6 +26,7 @@ import {
   ClipboardItem,
   dialog,
   ipcMain,
+  Menu,
   nativeImage,
   nativeTheme,
   net,
@@ -36,6 +37,8 @@ import {
   shell,
 } from 'electron';
 import { copyStudioText } from './clipboard';
+import { ThumbnailCache, isCivitaiImageUrl, thumbnailSource } from './thumbnails';
+import { isNonPublicHost } from './network-hosts';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
@@ -507,6 +510,34 @@ function watchOutputs() {
   } catch {
     // Window focus still re-checks when the folder cannot be watched.
   }
+}
+/** Follows at most three redirects by hand so a preview link can't be bounced to the user's own network. */
+async function fetchPreview(url: string): Promise<Response> {
+  let current = url;
+  for (let hop = 0; hop < 4; hop++) {
+    const target = new URL(current);
+    if (target.protocol !== 'https:' || isNonPublicHost(target.hostname)) throw new Error('Preview link refused.');
+    const response = await net.fetch(current, { redirect: 'manual', credentials: 'omit' });
+    const next = response.status >= 300 && response.status < 400 ? response.headers.get('location') : null;
+    if (!next) return response;
+    current = new URL(next, current).toString();
+  }
+  throw new Error('Too many redirects for this preview.');
+}
+const thumbnails = new ThumbnailCache(path.join(paths.cache, 'thumbnails'), {
+  outputPath: id => outputPath(id),
+  fetchRemote: fetchPreview,
+});
+/** Makes small copies of every model's Civitai preview in the background, so pickers open with pictures ready. */
+function warmModelThumbnails() {
+  if (store.settings().civitaiDisplayMetadata === false) return;
+  const urls = new Set(
+    models.assets.flatMap(model => {
+      const url = model.civitai?.previewUrl;
+      return url && isCivitaiImageUrl(url) ? [url] : [];
+    }),
+  );
+  void thumbnails.warm([...urls].map(url => ({ kind: 'civitai' as const, url })));
 }
 async function outputPath(id: string) {
   const record = store.record(id);
@@ -1268,6 +1299,21 @@ async function initialize() {
           request,
         );
       if (request.method !== 'GET') return new Response('Not found', { status: 404 });
+      if (url.hostname === 'thumb') {
+        const source = thumbnailSource(url.pathname);
+        if (!source) return new Response('Not found', { status: 404 });
+        if (source.kind === 'civitai' && store.settings().civitaiDisplayMetadata === false)
+          return new Response('Not found', { status: 404 });
+        const bytes = await thumbnails.get(source);
+        return new Response(new Uint8Array(bytes), {
+          headers: {
+            'Content-Type': 'image/webp',
+            'Cache-Control': 'max-age=31536000, immutable',
+            'Access-Control-Allow-Origin': '*',
+            'Cross-Origin-Resource-Policy': 'cross-origin',
+          },
+        });
+      }
       const assetId = url.pathname.slice(1);
       if (url.hostname === 'output' && /^\/[a-f0-9]{32}$/.test(url.pathname))
         return imageResponse(await outputPath(assetId));
@@ -1319,6 +1365,35 @@ async function initialize() {
   if (process.platform === 'win32')
     window.setAppDetails({ appId: 'studio.latent.v2', appIconPath: windowIcon, appIconIndex: 0 });
   window.removeMenu();
+  // Text boxes get the usual right-click: spelling fixes, then cut, copy and paste.
+  window.webContents.on('context-menu', (_event, params) => {
+    if (!params.isEditable || !window) return;
+    const contents = window.webContents;
+    const spelling: Electron.MenuItemConstructorOptions[] = params.misspelledWord
+      ? [
+          ...params.dictionarySuggestions.slice(0, 5).map(word => ({
+            label: word,
+            click: () => contents.replaceMisspelling(word),
+          })),
+          {
+            label: 'Add to dictionary',
+            click: () => contents.session.addWordToSpellCheckerDictionary(params.misspelledWord),
+          },
+          { type: 'separator' },
+        ]
+      : [];
+    Menu.buildFromTemplate([
+      ...spelling,
+      { role: 'undo', enabled: params.editFlags.canUndo },
+      { role: 'redo', enabled: params.editFlags.canRedo },
+      { type: 'separator' },
+      { role: 'cut', enabled: params.editFlags.canCut },
+      { role: 'copy', enabled: params.editFlags.canCopy },
+      { role: 'paste', enabled: params.editFlags.canPaste },
+      { type: 'separator' },
+      { role: 'selectAll', enabled: params.editFlags.canSelectAll },
+    ]).popup({ window });
+  });
   window.webContents.setWindowOpenHandler(({ url }) => {
     const known = [
       ...[...MODEL_CATALOG, ...models.assets].flatMap(model => [model.sourceUrl, model.licenseUrl]),
@@ -1365,7 +1440,7 @@ async function initialize() {
   telegram.start();
   phone.start();
   runtimeCoordinator.finishStartup();
-  void civitai.autoMetadata();
+  void civitai.autoMetadata().finally(warmModelThumbnails);
   runtimeUpdateTimer = setInterval(() => {
     void automaticRuntimeCheck().catch(() => undefined);
   }, 30_000);

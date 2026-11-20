@@ -17,7 +17,7 @@ import {
 import { reconcileVisibleTriggers } from '../shared/visible-triggers';
 import { LoraTriggerChoices } from './LoraTriggerChoices';
 import { SizePresets } from './SizePresets';
-import { PreviewMenu } from './PreviewMenu';
+import { ImageMenu } from './ImageMenu';
 import { draftFieldLabel } from './draft-field-label';
 import { hiddenAdvancedSettings } from '../shared/create-mode';
 import { applySnapshotChanges, type SnapshotChanges } from '../shared/snapshot-changes';
@@ -28,6 +28,8 @@ import { queueClearKey } from './queue-view';
 import { CanvasViewport } from './CanvasViewport';
 import { formatSeconds, useCountdown } from './generation-eta';
 import { SizePeek } from './SizePeek';
+import { cfgInputProps } from './cfg-input';
+import { SizePicker } from './SizePicker';
 import { SavedPrompts } from './SavedPrompts';
 import { PromptPieces } from './PromptPieces';
 import { GridSweepSetup, SweepGrid } from './GridSweep';
@@ -45,6 +47,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -244,6 +247,17 @@ export default function App() {
   const [lorasOpen, setLorasOpen] = useState(false);
   const [loraPopover, setLoraPopover] = useState<number>();
   const [loraDrag, setLoraDrag] = useState<number>();
+  /** The size chip's panel in the prompt dock. */
+  const [sizeOpen, setSizeOpen] = useState(false);
+  const closeSizePicker = useCallback(() => {
+    setSizeOpen(false);
+    document.querySelector<HTMLButtonElement>('.dock-chip-size')?.focus();
+  }, []);
+  useDismissiblePanel(
+    sizeOpen,
+    useCallback(() => setSizeOpen(false), []),
+    '.size-popover, .dock-chip-size',
+  );
   useTuneFlyouts();
   useDismissiblePanel(
     lorasOpen,
@@ -302,7 +316,8 @@ export default function App() {
     // Keep ids that left the list (deleted files), so restoring one is not mistaken for a new image.
     previousImageIds.current = new Set([...(known ?? []), ...history.map(record => record.id)]);
     if (known) {
-      const newest = history.find(record => !known.has(record.id));
+      // Edit results stay on the Edit page; only Create's own pictures take over the canvas.
+      const newest = history.find(record => !known.has(record.id) && !record.qwenEdit);
       if (newest) {
         setSelectedId(newest.id);
         setViewLivePreview(false);
@@ -826,6 +841,9 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [draft.width, draft.height]);
   const sizePeek = hoveredSize ?? (sizeFlash ? { width: draft.width, height: draft.height } : undefined);
+  /** Create's recent strip shows Create's own pictures; edits live on the Edit page and in the Library. */
+  const allHistory = snapshot?.history;
+  const createHistory = useMemo(() => (allHistory ?? []).filter(record => !record.qwenEdit), [allHistory]);
 
   if (!snapshot)
     return (
@@ -1111,6 +1129,10 @@ export default function App() {
   const onCollectionChange = (collections: CollectionSnapshot) =>
     setSnapshot(current => (current ? { ...current, collections } : current));
   const collectionProps = { collections: snapshot.collections, collectionActions, onCollectionChange };
+  const openInVideo = (record: GenerationRecord) => {
+    selectPreview(record.id);
+    setPage('video');
+  };
   const variation = (record: GenerationRecord) => {
     if (closing.current) return;
     if (record.faceDetailer || record.qwenEdit) {
@@ -1471,19 +1493,12 @@ export default function App() {
                             label="Guidance (CFG)"
                             className={`slider-field${offBest?.cfg ? ' off-recommended' : ''}`}
                           >
-                            <input
-                              type="number"
-                              min={0}
-                              max={30}
-                              step={0.5}
-                              value={draft.cfg}
-                              onChange={event => changeDraft({ cfg: Number(event.target.value) })}
-                            />
+                            <input {...cfgInputProps(draft.cfg, cfg => changeDraft({ cfg }))} />
                             <input
                               type="range"
                               min={1}
                               max={15}
-                              step={0.5}
+                              step={0.05}
                               aria-label="Guidance slider"
                               value={Math.min(15, draft.cfg)}
                               onChange={event => changeDraft({ cfg: Number(event.target.value) })}
@@ -2159,18 +2174,46 @@ export default function App() {
                           )}
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className="dock-chip"
-                        title="Image size"
-                        onClick={() =>
-                          document
-                            .querySelector('.composer-fields .image-size-section')
-                            ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-                        }
-                      >
-                        {draft.width}×{draft.height}
-                      </button>
+                      <span className="dock-chip-anchor">
+                        <button
+                          type="button"
+                          className="dock-chip dock-chip-size"
+                          title="Image size"
+                          aria-haspopup="true"
+                          aria-expanded={sizeOpen}
+                          onClick={() => {
+                            setSizeOpen(!sizeOpen);
+                            setLorasOpen(false);
+                          }}
+                        >
+                          <span
+                            className="size-shape"
+                            aria-hidden="true"
+                            style={{
+                              width:
+                                draft.width >= draft.height
+                                  ? 14
+                                  : Math.max(6, Math.round((14 * draft.width) / draft.height)),
+                              height:
+                                draft.height >= draft.width
+                                  ? 14
+                                  : Math.max(6, Math.round((14 * draft.height) / draft.width)),
+                            }}
+                          />
+                          {draft.width}×{draft.height}
+                        </button>
+                        {sizeOpen && (
+                          <SizePicker
+                            width={draft.width}
+                            height={draft.height}
+                            presets={snapshot.settings.sizePresets}
+                            imageModel={newerModel}
+                            onChoose={size => changeDraft({ width: size.width, height: size.height })}
+                            onPreview={setHoveredSize}
+                            onClose={closeSizePicker}
+                          />
+                        )}
+                      </span>
                       <Field label="Images per batch" className="dock-chip-field">
                         <select
                           value={draft.batchSize}
@@ -2537,7 +2580,11 @@ export default function App() {
                     scrollable
                     {...collectionProps}
                     onVariation={variation}
-                    records={snapshot.history}
+                    onEnhance={enhanceImage}
+                    enhanceMax={enhanceMax}
+                    onEdit={record => setQwenEditor({ record })}
+                    onVideo={openInVideo}
+                    records={createHistory}
                     selectedId={selected?.id}
                     onSelect={selectImage}
                     onReuse={restore}
@@ -2555,6 +2602,10 @@ export default function App() {
                 <History
                   {...collectionProps}
                   onVariation={variation}
+                  onEnhance={enhanceImage}
+                  enhanceMax={enhanceMax}
+                  onEdit={record => setQwenEditor({ record })}
+                  onVideo={openInVideo}
                   library
                   records={snapshot.history}
                   selectedId={selected?.id}
@@ -2575,10 +2626,7 @@ export default function App() {
                     }}
                     onOpen={selectImage}
                     onEdit={record => setQwenEditor({ record })}
-                    onVideo={record => {
-                      selectPreview(record.id);
-                      setPage('video');
-                    }}
+                    onVideo={openInVideo}
                   />
                 )}
               </div>
@@ -2740,14 +2788,19 @@ export default function App() {
         />
       )}
       {previewMenu && (
-        <PreviewMenu
+        <ImageMenu
           {...previewMenu}
           onClose={closePreviewMenu}
-          onReuse={() => restore(previewMenu.record)}
-          onEnhance={() => enhanceImage(previewMenu.record)}
-          enhanceMax={enhanceMax}
-          onTrash={() => setConfirmDelete({ kind: 'image', record: previewMenu.record })}
-          run={run}
+          actions={{
+            run,
+            onReuse: restore,
+            onVariation: variation,
+            onEnhance: enhanceImage,
+            enhanceMax,
+            onEdit: record => setQwenEditor({ record }),
+            onVideo: openInVideo,
+            onTrash: record => setConfirmDelete({ kind: 'image', record }),
+          }}
         />
       )}
       {queueOpen && (

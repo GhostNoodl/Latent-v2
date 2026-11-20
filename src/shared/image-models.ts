@@ -57,7 +57,7 @@ export interface ImageModelDefinition {
 export interface ImageModelGuide {
   maker: string;
   sourceUrl: string;
-  /** Sizes this model handles well, in megapixels; sides are kept to multiples of 16. */
+  /** Sizes this model handles well, in megapixels; sides are kept to multiples of 64. */
   megapixels: { ideal: number; max: number };
   steps: [number, number];
   cfg: [number, number];
@@ -594,7 +594,8 @@ export function bindImageModelWorkflow(
   return result;
 }
 
-const round16 = (value: number) => Math.max(256, Math.round(value / 16) * 16);
+/** Create's draft takes sides in steps of 64, so suggested sizes snap to that too. */
+const round64 = (value: number) => Math.max(256, Math.round(value / 64) * 64);
 const ASPECTS: Array<[string, number, number]> = [
   ['Square', 1, 1],
   ['Portrait', 3, 4],
@@ -604,12 +605,12 @@ const ASPECTS: Array<[string, number, number]> = [
 ];
 const MAX_SIDE = 2048;
 
-/** Sizes near the model's sweet spot, one per common aspect ratio, sides multiples of 16. */
+/** Sizes near the model's sweet spot, one per common aspect ratio, sides multiples of 64. */
 export function imageModelSizes(id: ImageModelId) {
   const pixels = IMAGE_MODELS[id].guide.megapixels.ideal * 1024 * 1024;
   return ASPECTS.map(([name, w, h]) => {
     const scale = Math.sqrt(pixels / (w * h));
-    return { name, width: Math.min(MAX_SIDE, round16(w * scale)), height: Math.min(MAX_SIDE, round16(h * scale)) };
+    return { name, width: Math.min(MAX_SIDE, round64(w * scale)), height: Math.min(MAX_SIDE, round64(h * scale)) };
   });
 }
 
@@ -621,8 +622,8 @@ export function fitImageModelSize(id: ImageModelId, width: number, height: numbe
   const { max } = IMAGE_MODELS[id].guide.megapixels;
   const megapixels = (width * height) / (1024 * 1024);
   if (
-    width % 16 === 0 &&
-    height % 16 === 0 &&
+    width % 64 === 0 &&
+    height % 64 === 0 &&
     Math.max(width, height) <= MAX_SIDE &&
     megapixels >= 0.5 &&
     megapixels <= max

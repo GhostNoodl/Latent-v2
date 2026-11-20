@@ -1,12 +1,14 @@
 import { isLoraFamilyCompatible } from '../shared/types';
 import { cleanModelStem } from '../shared/model-names';
+import { thumbnailUrl } from './thumbnail-url';
 import { useEffect, useState } from 'react';
 import { Boxes, Image, Layers, Folder, Sparkles } from 'lucide-react';
 import { IMAGE_MODEL_IDS, type ImageModelId } from '../shared/image-models';
 import { ImageModelCards } from './ImageModelCards';
 import type { AppSnapshot, ModelAsset } from '../shared/types';
 import { LocalModelMetadata } from './LocalModelMetadata';
-import { Modal } from './ui';
+import { Modal, type RunAction } from './ui';
+import { ModelMenu } from './ModelMenu';
 
 const NEWER = '__newer-image-models';
 
@@ -35,26 +37,37 @@ export function ModelArtwork({
     /^https:\/\/(image|imagecache)\.civitai\.com\//.test(model.civitai.previewUrl)
       ? model.civitai.previewUrl
       : undefined;
-  if (remote && !failed.includes(remote))
+  // Small cached copies first; the full picture only if the copy can't be made.
+  const candidates = [
+    ...(remote
+      ? [
+          { src: thumbnailUrl(remote), remote: true },
+          { src: remote, remote: true },
+        ]
+      : []),
+    ...(example
+      ? [
+          { src: thumbnailUrl(example.imageUrl), remote: false },
+          { src: example.imageUrl, remote: false },
+        ]
+      : []),
+  ].filter((candidate, index, all) => all.findIndex(other => other.src === candidate.src) === index);
+  const shown = candidates.find(candidate => !failed.includes(candidate.src));
+  if (shown)
     return (
       <img
+        key={shown.src}
         className="model-artwork"
-        src={remote}
+        src={shown.src}
         referrerPolicy="no-referrer"
-        alt={`${model.name} creator preview`}
+        alt={shown.remote ? `${model.name} creator preview` : `Generated example using ${model.name}`}
         loading="lazy"
-        onError={() => setFailed(previous => [...previous, remote])}
+        decoding="async"
+        draggable={false}
+        onError={() => setFailed(previous => [...previous, shown.src])}
       />
     );
-  return example && !failed.includes(example.imageUrl) ? (
-    <img
-      className="model-artwork"
-      src={example.imageUrl}
-      alt={`Generated example using ${model.name}`}
-      loading="lazy"
-      onError={() => setFailed(previous => [...previous, example.imageUrl])}
-    />
-  ) : (
+  return (
     <span className="model-artwork placeholder" aria-label="No preview yet">
       {model.kind === 'lora' ? <Layers /> : <Image />}
     </span>
@@ -86,6 +99,18 @@ export function ModelPicker({
   onClose: () => void;
 }) {
   const [contextModel, setContextModel] = useState<ModelAsset>();
+  const [menu, setMenu] = useState<{ model: ModelAsset; x: number; y: number }>();
+  const [menuError, setMenuError] = useState('');
+  const runMenuAction: RunAction = async (_key, task) => {
+    setMenuError('');
+    try {
+      await task();
+      return true;
+    } catch (error) {
+      setMenuError(error instanceof Error ? error.message : 'That did not work. Try again.');
+      return false;
+    }
+  };
   const [query, setQuery] = useState('');
   const newer = kind === 'checkpoint' && Boolean(onChooseImageModel);
   const [collection, setCollection] = useState(newer && imageModel ? NEWER : '');
@@ -180,12 +205,13 @@ export function ModelPicker({
                     key={model.id}
                     onContextMenu={event => {
                       event.preventDefault();
-                      setContextModel(model);
+                      setMenu({ model, x: event.clientX, y: event.clientY });
                     }}
                     onKeyDown={event => {
                       if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
                         event.preventDefault();
-                        setContextModel(model);
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        setMenu({ model, x: rect.left + 12, y: rect.top + 12 });
                       }
                     }}
                     aria-pressed={!imageModel && selectedIds.includes(model.id)}
@@ -220,6 +246,32 @@ export function ModelPicker({
           )}
         </div>
       </div>
+      {menuError && (
+        <p role="alert" className="inline-error">
+          {menuError}
+        </p>
+      )}
+      {menu && (
+        <ModelMenu
+          model={menu.model}
+          name={modelDisplayName(menu.model, snapshot.settings.civitaiDisplayMetadata !== false)}
+          x={menu.x}
+          y={menu.y}
+          showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
+          onClose={() => setMenu(undefined)}
+          onUse={
+            menu.model.status === 'ready' &&
+            !(
+              kind === 'lora' &&
+              (!isLoraFamilyCompatible(menu.model.family, family) || selectedIds.includes(menu.model.id))
+            )
+              ? () => onChoose(menu.model)
+              : undefined
+          }
+          onDetails={() => setContextModel(menu.model)}
+          run={runMenuAction}
+        />
+      )}
       {contextModel && (
         <LocalModelMetadata onUpdated={onUpdated} model={contextModel} onClose={() => setContextModel(undefined)} />
       )}

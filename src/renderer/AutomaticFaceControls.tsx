@@ -4,6 +4,7 @@ import { SAMPLERS, SCHEDULERS } from '../shared/defaults';
 import { useEffect, useRef, useState } from 'react';
 import { recallExtra, rememberExtra } from './remembered-extras';
 import { Field, type RunAction } from './ui';
+import { cfgInputProps } from './cfg-input';
 export function AutomaticFaceControls({
   draft,
   status,
@@ -131,12 +132,9 @@ export function AutomaticFaceControls({
             </Field>
             <Field label="Face CFG">
               <input
-                type="number"
-                min={0}
-                max={30}
-                step={0.5}
-                value={value.cfg ?? draft.cfg}
-                onChange={e => onChange({ autoFace: { ...value, classic: true, cfg: Number(e.target.value) } })}
+                {...cfgInputProps(value.cfg ?? draft.cfg, cfg =>
+                  onChange({ autoFace: { ...value, classic: true, cfg } }),
+                )}
               />
             </Field>
             <Field label="Face sampler">

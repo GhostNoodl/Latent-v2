@@ -10,6 +10,7 @@ import {
 } from '../shared/advanced-image-workflow';
 import { SAMPLERS, SCHEDULERS } from '../shared/defaults';
 import { Field, Notice, Toggle, type RunAction } from './ui';
+import { cfgInputProps } from './cfg-input';
 import { recallExtra, rememberExtra } from './remembered-extras';
 import { useEffect } from 'react';
 
@@ -309,13 +310,8 @@ export function AdvancedImageControls({
                   </Field>
                   <Field label="Refinement CFG">
                     <input
-                      type="number"
-                      min={0}
-                      max={30}
-                      step={0.5}
+                      {...cfgInputProps(hires.classic ? draft.cfg : hires.cfg, cfg => updateHires({ cfg }))}
                       disabled={!!hires.classic}
-                      value={hires.classic ? draft.cfg : hires.cfg}
-                      onChange={event => updateHires({ cfg: Number(event.target.value) })}
                     />
                   </Field>
                 </div>

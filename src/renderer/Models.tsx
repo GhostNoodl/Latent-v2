@@ -1,5 +1,6 @@
 import { ModelFolders, MODEL_DRAG_TYPE } from './ModelFolders';
 import { LocalModelMetadata } from './LocalModelMetadata';
+import { ModelMenu } from './ModelMenu';
 import { ModelArtwork, modelDisplayName } from './ModelPicker';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Boxes, ExternalLink, FileInput, Pencil, RefreshCw, Save, Search } from 'lucide-react';
@@ -31,6 +32,7 @@ export function Models({
   onCollectionChange?: (snapshot: CollectionSnapshot) => void;
 }) {
   const [contextModel, setContextModel] = useState<ModelAsset>();
+  const [menu, setMenu] = useState<{ model: ModelAsset; x: number; y: number }>();
   const [folderPending, setFolderPending] = useState(false);
   const [folderError, setFolderError] = useState('');
   const folderActive = useRef(false);
@@ -270,13 +272,15 @@ export function Models({
                   }}
                   tabIndex={0}
                   onContextMenu={event => {
+                    if ((event.target as HTMLElement).closest('input,select,textarea')) return;
                     event.preventDefault();
-                    setContextModel(model);
+                    setMenu({ model, x: event.clientX, y: event.clientY });
                   }}
                   onKeyDown={event => {
                     if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
                       event.preventDefault();
-                      setContextModel(model);
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      setMenu({ model, x: rect.left + 12, y: rect.top + 12 });
                     }
                   }}
                 >
@@ -407,6 +411,18 @@ export function Models({
           )}
         </div>
       </div>
+      {menu && (
+        <ModelMenu
+          model={menu.model}
+          name={modelDisplayName(menu.model, snapshot.settings.civitaiDisplayMetadata !== false)}
+          x={menu.x}
+          y={menu.y}
+          showCivitai={snapshot.settings.civitaiDisplayMetadata !== false}
+          onClose={() => setMenu(undefined)}
+          onDetails={() => setContextModel(menu.model)}
+          run={run}
+        />
+      )}
       {contextModel && (
         <LocalModelMetadata model={contextModel} onClose={() => setContextModel(undefined)} onUpdated={receive} />
       )}
