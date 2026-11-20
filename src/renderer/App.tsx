@@ -150,6 +150,15 @@ import { Busy, ConfirmDialog, Field, Modal, Notice, Toggle, shortDate, type RunA
 
 const CivitaiBrowser = lazy(() => import('./CivitaiBrowser').then(module => ({ default: module.CivitaiBrowser })));
 const QwenEditor = lazy(() => import('./QwenEditor').then(module => ({ default: module.QwenEditor })));
+const InpaintStudio = lazy(() => import('./InpaintStudio').then(module => ({ default: module.InpaintStudio })));
+const EDIT_TOOL_KEY = 'latent.edit-tool';
+function savedEditTool(): 'qwen' | 'inpaint' {
+  try {
+    return window.localStorage.getItem(EDIT_TOOL_KEY) === 'inpaint' ? 'inpaint' : 'qwen';
+  } catch {
+    return 'qwen';
+  }
+}
 // The video page stays mounted once opened; while hidden it skips the re-renders every snapshot update would cause.
 const VideoStudio = lazy(() =>
   import('./VideoStudio').then(module => ({
@@ -221,6 +230,16 @@ export default function App() {
   const [checkpointOpen, setCheckpointOpen] = useState(false);
   const [page, setPage] = useState<Page>('create');
   const [editDrop, setEditDrop] = useState<DroppedImage>();
+  /** Edit has two tools: Qwen Edit (describe a change) and Inpaint (your own SDXL model redraws a painted spot). */
+  const [editTool, setEditToolState] = useState<'qwen' | 'inpaint'>(savedEditTool);
+  const setEditTool = (tool: 'qwen' | 'inpaint') => {
+    setEditToolState(tool);
+    try {
+      window.localStorage.setItem(EDIT_TOOL_KEY, tool);
+    } catch {
+      /* Remembering the tool is a convenience only. */
+    }
+  };
   const springTimer = useRef<number | undefined>(undefined);
   const [setupOpen, setSetupOpen] = useState(false);
   const previousImageIds = useRef<Set<string>>(undefined);
@@ -317,7 +336,9 @@ export default function App() {
     previousImageIds.current = new Set([...(known ?? []), ...history.map(record => record.id)]);
     if (known) {
       // Edit results stay on the Edit page; only Create's own pictures take over the canvas.
-      const newest = history.find(record => !known.has(record.id) && !record.qwenEdit);
+      const newest = history.find(
+        record => !known.has(record.id) && !record.qwenEdit && !record.draft?.imageInput?.studio,
+      );
       if (newest) {
         setSelectedId(newest.id);
         setViewLivePreview(false);
@@ -711,6 +732,12 @@ export default function App() {
     }
     if (record.qwenEdit) {
       setQwenEditor({ record, mode: 'reuse' });
+      return;
+    }
+    if (record.draft.imageInput?.studio) {
+      setEditTool('inpaint');
+      setEditDrop({ kind: 'record', record });
+      setPage('qwen');
       return;
     }
     let recipe: GenerationDraft;
@@ -1319,7 +1346,17 @@ export default function App() {
               <h1>{pages[page][0]}</h1>
               {page !== 'create' && page !== 'video' && page !== 'qwen' && <p>{pages[page][1]}</p>}
             </div>
-            {page === 'qwen' && <div className="page-top-slot" id="edit-top-slot" />}
+            {page === 'qwen' && (
+              <span className="ed-seg ed-tool-switch" role="group" aria-label="Edit tool">
+                <button type="button" aria-pressed={editTool === 'qwen'} onClick={() => setEditTool('qwen')}>
+                  Qwen Edit
+                </button>
+                <button type="button" aria-pressed={editTool === 'inpaint'} onClick={() => setEditTool('inpaint')}>
+                  Inpaint
+                </button>
+              </span>
+            )}
+            {page === 'qwen' && editTool === 'qwen' && <div className="page-top-slot" id="edit-top-slot" />}
             {(page === 'models' || page === 'discover') && (
               <div className="page-tabs" role="group" aria-label="Models">
                 <button aria-pressed={page === 'models'} onClick={() => setPage('models')}>
@@ -2647,7 +2684,20 @@ export default function App() {
               </div>
             </ErrorBoundary>
           )}
-          {page === 'qwen' && (
+          {page === 'qwen' && editTool === 'inpaint' && (
+            <ErrorBoundary label="Inpaint" resetKey={page}>
+              <Suspense fallback={<Busy active />}>
+                <InpaintStudio
+                  snapshot={snapshot}
+                  onSnapshot={receive}
+                  createDraft={draft}
+                  dropped={editDrop}
+                  onDroppedUsed={() => setEditDrop(undefined)}
+                />
+              </Suspense>
+            </ErrorBoundary>
+          )}
+          {page === 'qwen' && editTool === 'qwen' && (
             <ErrorBoundary label="Qwen editing" resetKey={page}>
               <Suspense fallback={<Busy active />}>
                 <QwenEditor

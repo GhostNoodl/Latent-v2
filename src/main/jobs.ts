@@ -58,6 +58,12 @@ import { runtimeIdentitySchema, type RuntimeIdentitySnapshot } from '../shared/r
 import { cropInpaintPlanSchema, type CropInpaintPlan } from '../shared/crop-inpaint-types';
 import { createCropInpaintPlan, redMaskFromRgba } from '../shared/crop-inpaint-geometry';
 import { augmentCropInpaintWorkflow, validateFrozenCropInpaintWorkflow } from '../shared/crop-inpaint-workflow';
+import {
+  augmentInpaintStudioWorkflow,
+  maskBoundsFromRgba,
+  planInpaintStudio,
+  type InpaintStudioPlan,
+} from '../shared/inpaint-studio';
 import { DEFAULT_DRAFT } from '../shared/defaults';
 import { unofferedInputMessage } from '../shared/engine-input-check';
 import { qwenEditJobRequestSchema, type QwenEditJobRequest, type QwenEditRecord } from '../shared/qwen-edit-types';
@@ -105,6 +111,7 @@ interface ExecutionContext {
   qwenEdit?: QwenEditRecord;
   imageModel?: ImageModelBundle;
   cropInpaint?: CropInpaintPlan;
+  inpaintStudio?: InpaintStudioPlan;
   runtimeIdentity?: RuntimeIdentitySnapshot;
   controlNet?: GenerationRecord['controlNet'];
   dynamicPromptRecipe?: GenerationRecord['dynamicPromptRecipe'];
@@ -556,6 +563,46 @@ export class JobService {
       );
     if (draft.controlNet && (draft.upscale || draft.hiresFix || draft.imageInput?.mode === 'inpaint'))
       throw new Error('Initial Canny control cannot yet be combined with hires, inpainting or standalone upscale.');
+    let studioPlan: InpaintStudioPlan | undefined;
+    if (draft.imageInput?.studio) {
+      const input = draft.imageInput;
+      if (
+        input.mode !== 'inpaint' ||
+        input.crop ||
+        input.cropPlan ||
+        draft.batchSize !== 1 ||
+        draft.hiresFix ||
+        draft.upscale ||
+        draft.enhance ||
+        draft.controlNet ||
+        draft.ipAdapter ||
+        draft.faceDetailer ||
+        draft.autoFace ||
+        draft.split ||
+        draft.regionalPrompts?.settings.enabled
+      )
+        throw new Error(
+          'Inpaint makes one picture at a time from a picture and its painted area, with no other extras.',
+        );
+      if (input.denoise <= 0) throw new Error('Set the strength above 0%.');
+      const source = await this.sources.resolve(input.sourceId);
+      if (source.source.normalized.sha256 !== input.sourceSha256)
+        throw new Error('The picture changed after it was picked. Pick it again.');
+      const mask = input.maskId ? await this.sources.resolveMask(input.maskId) : undefined;
+      if (!mask || mask.mask.sha256 !== input.maskSha256 || mask.mask.sourceId !== input.sourceId)
+        throw new Error('Paint the part you want to change first.');
+      const decoded = await this.decodeVerifiedMask(mask);
+      const bounds = maskBoundsFromRgba(decoded.data, decoded.width, decoded.height);
+      if (!bounds) throw new Error('The painted area is empty. Paint the part you want to change.');
+      studioPlan = planInpaintStudio(
+        { width: source.source.normalized.width, height: source.source.normalized.height },
+        bounds,
+        input.studio!,
+      );
+      // The model works on the crop at SDXL's own size; the saved picture keeps the original size.
+      draft.width = studioPlan.working.width;
+      draft.height = studioPlan.working.height;
+    }
     const id = randomUUID();
     const actualSeed =
       draft.seed === 'random' ? String(randomBytes(6).readUIntBE(0, 6)) : BigInt(draft.seed).toString();
@@ -723,6 +770,16 @@ export class JobService {
         );
         context.workflow = buildEnhancementWorkflow(context.workflow, draft, sourceFilename);
         context.workflowVersion = 'sdxl-saved-latent-enhance@1';
+      } else if (input.studio && studioPlan) {
+        context.workflow = augmentInpaintStudioWorkflow(context.workflow, draft, {
+          sourceFilename,
+          maskFilename: path.relative(this.paths.inputs, mask!.path).replaceAll('\\', '/'),
+          plan: studioPlan,
+          settings: input.studio,
+          denoise: input.denoise,
+        });
+        context.inpaintStudio = studioPlan;
+        context.workflowVersion = studioPlan.version;
       } else if (input.mode === 'inpaint' && input.crop) {
         const computed = await createCropInpaintPlan({
           source: source.source,
@@ -2246,6 +2303,31 @@ export class JobService {
       const plan = this.frozenQwenPlan(job, context);
       return [{ ...plan.output, role: 'final' }];
     }
+    if (context.inpaintStudio || job.draft.imageInput?.studio) {
+      const plan = context.inpaintStudio;
+      if (
+        !plan ||
+        !job.draft.imageInput?.studio ||
+        context.workflowVersion !== plan.version ||
+        job.draft.width !== plan.working.width ||
+        job.draft.height !== plan.working.height ||
+        context.imageInput?.source.normalized.width !== plan.source.width ||
+        context.imageInput?.source.normalized.height !== plan.source.height ||
+        context.workflow['7']?.class_type !== 'SaveImage' ||
+        context.workflow['7'].inputs.filename_prefix !== `Latent_${job.id}`
+      )
+        throw new Error("This inpaint job's saved setup doesn't add up. Start it again from the Edit page.");
+      return [
+        {
+          nodeId: '7',
+          role: 'final',
+          width: plan.source.width,
+          height: plan.source.height,
+          batchSize: 1,
+          filenamePrefix: `Latent_${job.id}`,
+        },
+      ];
+    }
     if (context.cropInpaint || job.draft.imageInput?.crop || job.draft.imageInput?.cropPlan) {
       const parsed = cropInpaintPlanSchema.safeParse(context.cropInpaint);
       const frozenDraft = cropInpaintPlanSchema.safeParse(job.draft.imageInput?.cropPlan);
@@ -2602,6 +2684,7 @@ export class JobService {
       regionalPrompts: context.regionalPrompts,
       qwenEdit: context.qwenEdit,
       cropInpaint: context.cropInpaint,
+      inpaintStudio: context.inpaintStudio,
       runtimeIdentity: context.runtimeIdentity,
       controlNet: context.controlNet,
       advancedImage: context.advancedImage,

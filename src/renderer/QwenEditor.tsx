@@ -1,5 +1,4 @@
 import { droppedImage, imageDropProps, sourceFromDrop, startRecordDrag, type DroppedImage } from './image-drag';
-import type { ReactNode } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -48,6 +47,7 @@ import { bytes, Notice, type RunAction } from './ui';
 import { actionErrorMessage as errorMessage } from '../shared/action-error';
 import { qwenConversationJobs } from './queue-view';
 import { EditPaint, type EditPaintHandle, type PaintTool } from './EditPaint';
+import { Popover } from './EditPopover';
 import './qwen-editor.css';
 import './edit-page.css';
 
@@ -200,42 +200,6 @@ export function buildSteps(records: GenerationRecord[]): Step[] {
     });
   }
   return steps;
-}
-
-function Popover({
-  open,
-  onClose,
-  children,
-  className = '',
-}: {
-  open: boolean;
-  onClose: () => void;
-  children: ReactNode;
-  className?: string;
-}) {
-  const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const away = (event: PointerEvent) => {
-      const anchor = box.current?.parentElement;
-      if (anchor && !anchor.contains(event.target as Node)) onClose();
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('pointerdown', away);
-    window.addEventListener('keydown', escape);
-    return () => {
-      window.removeEventListener('pointerdown', away);
-      window.removeEventListener('keydown', escape);
-    };
-  }, [open, onClose]);
-  if (!open) return null;
-  return (
-    <div ref={box} className={`ed-pop ${className}`} role="dialog">
-      {children}
-    </div>
-  );
 }
 
 export function QwenEditor({

@@ -7,6 +7,8 @@ export interface EditPaintHandle {
   exportMask: () => Promise<Uint8Array | undefined>;
   /** Adds the white part of a saved mask picture to the paint. */
   addMask: (url: string) => Promise<void>;
+  /** Swaps painted and unpainted parts. */
+  invert: () => void;
 }
 interface Props {
   width: number;
@@ -112,6 +114,30 @@ export const EditPaint = forwardRef<EditPaintHandle, Props>(function EditPaint(
         const blob = await new Promise<Blob | null>(resolve => mask.toBlob(resolve, 'image/png'));
         if (!blob) throw new Error('The painted area could not be saved.');
         return new Uint8Array(await blob.arrayBuffer());
+      },
+      invert() {
+        const paint = canvas.current;
+        const context = paint?.getContext('2d');
+        if (!paint || !context) return;
+        const flipped = document.createElement('canvas');
+        flipped.width = width;
+        flipped.height = height;
+        const flippedContext = flipped.getContext('2d')!;
+        flippedContext.fillStyle = accentOf(paint);
+        flippedContext.fillRect(0, 0, width, height);
+        flippedContext.globalCompositeOperation = 'destination-out';
+        flippedContext.drawImage(paint, 0, 0);
+        context.clearRect(0, 0, width, height);
+        context.drawImage(flipped, 0, 0);
+        const pixels = context.getImageData(0, 0, width, height).data;
+        let any = false;
+        for (let index = 3; index < pixels.length; index += 4)
+          if (pixels[index] > 0) {
+            any = true;
+            break;
+          }
+        painted.current = !any;
+        setPainted(any);
       },
       async addMask(url: string) {
         const image = new Image();

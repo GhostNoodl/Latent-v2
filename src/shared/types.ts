@@ -159,6 +159,8 @@ export interface GenerationDraft {
     resize: 'stretch' | 'center-crop';
     crop?: CropInpaintSettings;
     cropPlan?: CropInpaintPlan;
+    /** Made in the Inpaint studio on the Edit page. */
+    studio?: import('./inpaint-studio').InpaintStudioSettings;
   };
   family: ModelFamily;
   checkpointId: string;
@@ -300,6 +302,8 @@ export interface GenerationRecord {
   qwenEdit?: QwenEditRecord;
   imageModel?: import('./image-models').ImageModelBundle;
   cropInpaint?: CropInpaintPlan;
+  /** Inpaint studio crop and working size. */
+  inpaintStudio?: import('./inpaint-studio').InpaintStudioPlan;
   runtimeIdentity?: RuntimeIdentitySnapshot;
   controlNet?: { plan: ControlNetPlan; map?: RetainedControlMap };
   dynamicPromptRecipe?: DynamicPromptRecipe;

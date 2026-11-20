@@ -1822,6 +1822,26 @@
     {
       "from": "tests/engine-input-check.test.ts",
       "to": "tests/engine-input-check.test.ts"
+    },
+    {
+      "from": "src/shared/inpaint-studio.ts",
+      "to": "src/shared/inpaint-studio.ts"
+    },
+    {
+      "from": "src/renderer/InpaintStudio.tsx",
+      "to": "src/renderer/InpaintStudio.tsx"
+    },
+    {
+      "from": "src/renderer/inpaint-studio.css",
+      "to": "src/renderer/inpaint-studio.css"
+    },
+    {
+      "from": "src/renderer/EditPopover.tsx",
+      "to": "src/renderer/EditPopover.tsx"
+    },
+    {
+      "from": "tests/inpaint-studio.test.ts",
+      "to": "tests/inpaint-studio.test.ts"
     }
   ]
 }

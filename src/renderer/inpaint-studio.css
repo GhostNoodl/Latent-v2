@@ -1,0 +1,111 @@
+/* Inpaint studio: same Darkroom look as Edit, a few extras of its own. */
+.studio .ed-tool-switch {
+  flex: none;
+}
+.studio .ip-paint-hidden {
+  display: none;
+}
+.studio .ip-write {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 10px;
+}
+.studio .ip-write textarea {
+  min-height: 64px;
+  max-height: 120px;
+  padding: 11px 13px;
+  border-radius: 11px;
+  background: var(--inset);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  resize: none;
+}
+.studio .ip-write textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.studio .ip-write textarea + textarea {
+  font-size: 13px;
+}
+.studio .ip-run {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.studio .ip-model-chip span {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.studio .ip-muted {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.studio .ed-tune select,
+.studio .ed-tune input[type='number'] {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--inset);
+  color: var(--text);
+  font: inherit;
+}
+.studio .ip-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.studio .ip-wide {
+  display: flex;
+}
+.studio .ip-wide button {
+  flex: 1;
+  justify-content: center;
+}
+.studio .ip-model {
+  width: 360px;
+}
+.studio .ip-label {
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .ip-loras {
+  display: grid;
+  gap: 6px;
+}
+.studio .ip-lora {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 88px 34px auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.studio .ip-lora > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio .ip-lora.off > span,
+.studio .ip-lora.off > b {
+  opacity: 0.5;
+}
+.studio .ip-lora input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.studio .ip-lora input[type='checkbox'] {
+  accent-color: var(--accent);
+}
+.studio .ip-lora b {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.studio .ip-empty-side {
+  padding: 8px 6px;
+}
