@@ -30,7 +30,7 @@ export const EditPaint = forwardRef<EditPaintHandle, Props>(function EditPaint(
   const canvas = useRef<HTMLCanvasElement>(null);
   const last = useRef<{ x: number; y: number }>(undefined);
   const painted = useRef(false);
-  const [cursor, setCursor] = useState<{ x: number; y: number }>();
+  const [cursor, setCursor] = useState<{ x: number; y: number; ratio: number }>();
 
   const setPainted = useCallback(
     (value: boolean) => {
@@ -190,7 +190,9 @@ export const EditPaint = forwardRef<EditPaintHandle, Props>(function EditPaint(
         }}
         onPointerMove={event => {
           const rect = event.currentTarget.getBoundingClientRect();
-          setCursor({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+          // In frame units, so the ring stays under the pointer when the picture is zoomed.
+          const ratio = event.currentTarget.offsetWidth / Math.max(1, rect.width);
+          setCursor({ x: (event.clientX - rect.left) * ratio, y: (event.clientY - rect.top) * ratio, ratio });
           if (!last.current || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
           const at = point(event);
           stroke(last.current, at, at.scale);
@@ -204,7 +206,7 @@ export const EditPaint = forwardRef<EditPaintHandle, Props>(function EditPaint(
       {cursor && tool !== 'pick' && (
         <span
           className="ed-brush"
-          style={{ left: cursor.x, top: cursor.y, width: brush, height: brush }}
+          style={{ left: cursor.x, top: cursor.y, width: brush * cursor.ratio, height: brush * cursor.ratio }}
           aria-hidden="true"
         />
       )}
