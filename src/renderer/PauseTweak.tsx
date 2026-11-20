@@ -2,6 +2,7 @@ import { Pause, Play, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { defaultPauseStep, pausedDraft } from '../shared/split-sampling';
 import type { GenerationDraft, GenerationRecord } from '../shared/types';
+import { cfgInputProps } from './cfg-input';
 
 /** Dock button: generate, but stop partway so the prompt can change before it finishes. */
 export function PauseSetup({
@@ -101,14 +102,7 @@ export function PausedCard({
         />
         <label className="paused-cfg">
           <span>CFG</span>
-          <input
-            type="number"
-            min={0}
-            max={30}
-            step={0.5}
-            value={cfg}
-            onChange={event => setCfg(Number(event.target.value))}
-          />
+          <input {...cfgInputProps(cfg, setCfg)} />
         </label>
       </div>
       <div className="paused-actions">

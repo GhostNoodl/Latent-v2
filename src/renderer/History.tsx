@@ -1,16 +1,15 @@
+import { thumbnailUrl } from './thumbnail-url';
 import { variationDescription } from './variation-description';
 import { recordImageModelName } from '../shared/image-models';
 import { ImagePreview } from './ImagePreview';
 import { subscribePreviewRecovery } from './image-preview-recovery';
-import { Fragment as ReactFragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment as ReactFragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeftRight,
-  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
   Copy,
   FolderHeart,
-  FolderOpen,
   Image,
   Layers,
   MoreHorizontal,
@@ -18,10 +17,10 @@ import {
   Search,
   Shuffle,
   Star,
-  Trash2,
   X,
 } from 'lucide-react';
 import { ReviewMode } from './ReviewMode';
+import { ImageMenu } from './ImageMenu';
 import { KEEPERS, libraryFacets, matchesFilters, type LibraryFilters } from './library-filters';
 import type { GenerationRecord } from '../shared/types';
 import type { CollectionActions, CollectionSnapshot } from '../shared/collections-types';
@@ -42,6 +41,8 @@ import {
 function HistoryThumbnail({ src, alt }: { src: string; alt: string }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading');
   const [attempt, setAttempt] = useState(0);
+  /** The small cached copy loads first; the full file is the fallback. */
+  const [small, setSmall] = useState(true);
   useEffect(
     () =>
       subscribePreviewRecovery(recoveredSrc => {
@@ -57,11 +58,15 @@ function HistoryThumbnail({ src, alt }: { src: string; alt: string }) {
       <img
         key={attempt}
         loading="lazy"
-        src={src}
+        decoding="async"
+        src={small ? thumbnailUrl(src) : src}
         alt={status === 'unavailable' ? '' : alt}
         aria-hidden={status === 'unavailable' || undefined}
         style={status === 'unavailable' ? { visibility: 'hidden' } : undefined}
-        onError={() => setStatus('unavailable')}
+        onError={() => {
+          if (small && thumbnailUrl(src) !== src) setSmall(false);
+          else setStatus('unavailable');
+        }}
         onLoad={() => setStatus('ready')}
       />
       {status !== 'ready' && (
@@ -83,6 +88,10 @@ interface HistoryProps {
   /** `against` compares with another version of the same image instead of the record's own source. */
   onCompare?: (record: GenerationRecord, against?: GenerationRecord) => void;
   onVariation?: (record: GenerationRecord) => void;
+  onEnhance?: (record: GenerationRecord) => void;
+  enhanceMax?: number;
+  onEdit?: (record: GenerationRecord) => void;
+  onVideo?: (record: GenerationRecord) => void;
   collections?: CollectionSnapshot;
   collectionActions?: CollectionActions;
   onCollectionChange?: (snapshot: CollectionSnapshot) => void;
@@ -98,6 +107,10 @@ export function History({
   onReuse,
   onCompare,
   onVariation,
+  onEnhance,
+  enhanceMax,
+  onEdit,
+  onVideo,
   collections,
   collectionActions,
   onCollectionChange,
@@ -145,8 +158,6 @@ export function History({
   const [trashing, setTrashing] = useState<GenerationRecord[]>();
   /** How many pictures Review binned; their hidden versions ride along in `trashing`. */
   const [binnedCount, setBinnedCount] = useState<number>();
-  const menuRef = useRef<HTMLDivElement>(null);
-  const opener = useRef<HTMLElement | null>(null);
   const pageSize = library ? 24 : 4;
   const collection = library
     ? collections?.collections.find(item => item.kind === 'image' && item.id === collectionId)
@@ -211,34 +222,9 @@ export function History({
     ? records.find(record => record.id === details.facePass?.parentRecordId)
     : undefined;
   const baseGeneration = details?.baseRecordId ? records.find(record => record.id === details.baseRecordId) : undefined;
-  useEffect(() => {
-    if (!menu) return;
-    menuRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
-    const close = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) setMenu(undefined);
-    };
-    window.addEventListener('pointerdown', close);
-    return () => window.removeEventListener('pointerdown', close);
-  }, [menu]);
-  const closeMenu = () => {
-    setMenu(undefined);
-    opener.current?.focus();
-  };
-  function openMenu(record: GenerationRecord, target: HTMLElement, x: number, y: number) {
-    opener.current = target;
-    const rows =
-      6 +
-      Number(canCompare(record)) +
-      Number(Boolean(originalToCompare(record))) +
-      Math.max(0, (versionsOf(record)?.versions.length ?? 0) - 1) +
-      Number(Boolean(onVariation && !record.draft.upscale)) +
-      Number(Boolean(collections && collectionActions && onCollectionChange));
-    const menuHeight = 72 + rows * (window.matchMedia('(pointer: coarse)').matches ? 44 : 36);
-    setMenu({
-      record,
-      x: Math.max(8, Math.min(x, window.innerWidth - 260)),
-      y: Math.max(8, Math.min(y, window.innerHeight - menuHeight)),
-    });
+  const closeMenu = useCallback(() => setMenu(undefined), []);
+  function openMenu(record: GenerationRecord, _target: HTMLElement, x: number, y: number) {
+    setMenu({ record, x, y });
   }
   return (
     <section
@@ -510,185 +496,44 @@ export function History({
       )}
       {!library && <p className="history-hint">Click to preview · Right-click or use ⋯ to reuse settings</p>}
       {menu && (
-        <div
-          ref={menuRef}
-          className="context-menu"
-          role="menu"
-          aria-label="Image actions"
-          style={{ left: menu.x, top: menu.y, maxHeight: 'calc(100dvh - 16px)', overflowY: 'auto' }}
-          onKeyDown={event => {
-            if (event.key === 'Escape') {
-              event.preventDefault();
-              closeMenu();
-            }
-            if (event.key === 'Tab') closeMenu();
-            if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
-              event.preventDefault();
-              const buttons = Array.from(menuRef.current!.querySelectorAll<HTMLButtonElement>('button'));
-              const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
-              const next =
-                event.key === 'Home'
-                  ? 0
-                  : event.key === 'End'
-                    ? buttons.length - 1
-                    : (index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
-              buttons[next].focus();
-            }
+        <ImageMenu
+          record={menu.record}
+          x={menu.x}
+          y={menu.y}
+          onClose={closeMenu}
+          actions={{
+            run,
+            onReuse,
+            onVariation,
+            onEnhance,
+            enhanceMax,
+            onEdit,
+            onVideo,
+            onView: onSelect,
+            onDetails: setDetails,
+            onCollections: collections && collectionActions && onCollectionChange ? setCollectionRecord : undefined,
+            compares: [
+              ...(onCompare && canCompare(menu.record)
+                ? [{ label: 'Compare source / result', run: () => onCompare(menu.record) }]
+                : []),
+              ...(onCompare && originalToCompare(menu.record)
+                ? [
+                    {
+                      label: 'Compare with original',
+                      run: () => onCompare(menu.record, originalToCompare(menu.record)),
+                    },
+                  ]
+                : []),
+            ],
+            versions: versionsOf(menu.record)
+              ?.versions.filter(version => version.id !== menu.record.id)
+              .map(version => ({
+                label: `View ${imageVersionLabel(version).toLowerCase()} version`,
+                run: () => onSelect(version),
+              })),
+            onTrash: record => setTrashing(tileRecords(record)),
           }}
-        >
-          <div className="context-heading">
-            <strong>{(menu.record.resolvedPrompt ?? menu.record.draft.prompt) || 'Untitled image'}</strong>
-            <small>
-              {menu.record.width} × {menu.record.height} ·{' '}
-              {menu.record.draft.upscale ? 'No sampling' : `Seed ${menu.record.actualSeed}`}
-            </small>
-          </div>
-          <button
-            type="button"
-            role="menuitem"
-            className="accent-text"
-            onClick={() => {
-              onReuse(menu.record);
-              closeMenu();
-            }}
-          >
-            <RotateCcw size={16} />
-            Reuse settings
-          </button>
-          {onVariation && !menu.record.draft.upscale && !menu.record.qwenEdit && !menu.record.faceDetailer && (
-            <button
-              type="button"
-              role="menuitem"
-              title={
-                variationDescription(menu.record.draft) + ' Generate when ready; Undo returns to your previous draft.'
-              }
-              onClick={() => {
-                const record = menu.record;
-                closeMenu();
-                onVariation(record);
-              }}
-            >
-              <Shuffle size={16} />
-              Make a variation
-            </button>
-          )}
-          {collections && collectionActions && onCollectionChange && (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setCollectionRecord(menu.record);
-                closeMenu();
-              }}
-            >
-              <FolderHeart size={16} />
-              Organize in collections
-            </button>
-          )}
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              onSelect(menu.record);
-              closeMenu();
-            }}
-          >
-            <Image size={16} />
-            View on canvas
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setDetails(menu.record);
-              closeMenu();
-            }}
-          >
-            <Search size={16} />
-            Show settings
-          </button>
-          {onCompare && canCompare(menu.record) && (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                const record = menu.record;
-                closeMenu();
-                onCompare(record);
-              }}
-            >
-              <ArrowLeftRight size={16} />
-              Compare source / result
-            </button>
-          )}
-          {onCompare && originalToCompare(menu.record) && (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                const record = menu.record;
-                closeMenu();
-                onCompare(record, originalToCompare(record));
-              }}
-            >
-              <ArrowLeftRight size={16} />
-              Compare with original
-            </button>
-          )}
-          {versionsOf(menu.record)
-            ?.versions.filter(version => version.id !== menu.record.id)
-            .map(version => (
-              <button
-                key={version.id}
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  closeMenu();
-                  onSelect(version);
-                }}
-              >
-                <Layers size={16} />
-                View {imageVersionLabel(version).toLowerCase()} version
-              </button>
-            ))}
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              const record = menu.record;
-              closeMenu();
-              void run('open-output', () => window.latent.openOutput(record.id));
-            }}
-          >
-            <ArrowUpRight size={16} />
-            Open image
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              const record = menu.record;
-              closeMenu();
-              void run('reveal-output', () => window.latent.revealOutput(record.id));
-            }}
-          >
-            <FolderOpen size={16} />
-            Show in folder
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="danger-menuitem"
-            onClick={() => {
-              const record = menu.record;
-              closeMenu();
-              setTrashing(tileRecords(record));
-            }}
-          >
-            <Trash2 size={16} />
-            Move to Recycle Bin
-          </button>
-        </div>
+        />
       )}
       {trashing && (
         <ConfirmDialog

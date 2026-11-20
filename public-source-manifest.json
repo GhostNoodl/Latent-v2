@@ -1116,10 +1116,6 @@
       "to": "src/renderer/SizePresets.tsx"
     },
     {
-      "from": "src/renderer/PreviewMenu.tsx",
-      "to": "src/renderer/PreviewMenu.tsx"
-    },
-    {
       "from": "src/renderer/useDismissiblePanel.ts",
       "to": "src/renderer/useDismissiblePanel.ts"
     },
@@ -1782,6 +1778,42 @@
     {
       "from": "tests/assistant.test.ts",
       "to": "tests/assistant.test.ts"
+    },
+    {
+      "from": "src/main/thumbnails.ts",
+      "to": "src/main/thumbnails.ts"
+    },
+    {
+      "from": "src/renderer/ContextMenu.tsx",
+      "to": "src/renderer/ContextMenu.tsx"
+    },
+    {
+      "from": "src/renderer/ImageMenu.tsx",
+      "to": "src/renderer/ImageMenu.tsx"
+    },
+    {
+      "from": "src/renderer/ModelMenu.tsx",
+      "to": "src/renderer/ModelMenu.tsx"
+    },
+    {
+      "from": "src/renderer/SizePicker.tsx",
+      "to": "src/renderer/SizePicker.tsx"
+    },
+    {
+      "from": "src/renderer/cfg-input.ts",
+      "to": "src/renderer/cfg-input.ts"
+    },
+    {
+      "from": "src/renderer/thumbnail-url.ts",
+      "to": "src/renderer/thumbnail-url.ts"
+    },
+    {
+      "from": "tests/create-polish.test.tsx",
+      "to": "tests/create-polish.test.tsx"
+    },
+    {
+      "from": "tests/thumbnails.test.ts",
+      "to": "tests/thumbnails.test.ts"
     }
   ]
 }

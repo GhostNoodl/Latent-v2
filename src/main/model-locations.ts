@@ -345,6 +345,13 @@ export class ModelLocationService implements ModelLocationLookup {
       }
     });
   }
+  /** Where a model file lives on disk, for Show in folder. External files are only located, never touched. */
+  async modelFile(modelId: string): Promise<string> {
+    const model = this.models.assets.find(asset => asset.id === modelId);
+    if (!model) throw new Error('That model is no longer in your library.');
+    if (model.id.startsWith('external:')) return this.external.locate(model.id);
+    return this.filePath(model.kind, modelPathSchema.parse(model.filename));
+  }
   /** Only the main process supplies the OS recycle operation. External roots remain read-only. */
   async deleteModel(
     input: { modelId: string; expectedSha256: string },

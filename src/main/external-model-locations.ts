@@ -166,6 +166,15 @@ export class ExternalModelRegistry {
     this.errors.delete(root.id);
     this.scanError = undefined;
   }
+  /** The absolute path of a registered external file, for Show in folder. */
+  locate(modelId: string): string {
+    const id = fileIdSchema.parse(modelId);
+    for (const root of this.read().roots) {
+      const file = root.files.find(item => item.id === id);
+      if (file) return path.join(root.path, ...file.filename.split('/'));
+    }
+    throw new Error('That model file is no longer in a connected folder.');
+  }
   async scan(): Promise<ExternalModelFile[]> {
     const index = this.read();
     try {

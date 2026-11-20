@@ -108,6 +108,7 @@ const api: LatentAPI = {
   newPhoneCode: () => invoke('newPhoneCode'),
   forgetPhones: () => invoke('forgetPhones'),
   openCivitaiModel: (id, version) => invoke('openCivitaiModel', id, version),
+  revealModel: id => invoke('revealModel', id),
   setupSegmentation: repair => invoke('setupSegmentation', repair),
   startSegmentation: () => invoke('startSegmentation'),
   stopSegmentation: () => invoke('stopSegmentation'),

@@ -16,8 +16,8 @@ it('suggests sizes near each model sweet spot, in multiples of 16', () => {
   for (const id of IMAGE_MODEL_IDS) {
     const ideal = IMAGE_MODELS[id].guide.megapixels.ideal;
     for (const size of imageModelSizes(id)) {
-      expect(size.width % 16).toBe(0);
-      expect(size.height % 16).toBe(0);
+      expect(size.width % 64).toBe(0);
+      expect(size.height % 64).toBe(0);
       expect(Math.max(size.width, size.height)).toBeLessThanOrEqual(2048);
       expect((size.width * size.height) / 1048576).toBeGreaterThan(ideal * 0.85);
       expect((size.width * size.height) / 1048576).toBeLessThan(ideal * 1.15);
@@ -27,10 +27,10 @@ it('suggests sizes near each model sweet spot, in multiples of 16', () => {
 
 it('keeps a size the model handles and fixes one it does not', () => {
   expect(fitImageModelSize('z-image-turbo', 1216, 832)).toEqual({ width: 1216, height: 832 });
-  // Not a multiple of 16 and too big for Anima: closest landscape suggestion instead.
+  // Not a multiple of 64 and too big for Anima: closest landscape suggestion instead.
   const fixed = fitImageModelSize('anima-turbo', 2000, 1500);
   expect(fixed.width / fixed.height).toBeCloseTo(4 / 3, 1);
-  expect(fixed.width % 16).toBe(0);
+  expect(fixed.width % 64).toBe(0);
 });
 
 it('starts from the best settings, then remembers your tweaks per model', () => {

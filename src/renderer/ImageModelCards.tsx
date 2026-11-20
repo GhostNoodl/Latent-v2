@@ -1,5 +1,7 @@
+import { thumbnailUrl } from './thumbnail-url';
+import { ContextMenu } from './ContextMenu';
 import { useState } from 'react';
-import { Download, ExternalLink, Info, Sparkles, Square } from 'lucide-react';
+import { ArrowUpRight, Check, Download, ExternalLink, Info, Sparkles, Square } from 'lucide-react';
 import {
   IMAGE_MODEL_IDS,
   IMAGE_MODELS,
@@ -81,6 +83,7 @@ export function ImageModelCards({
   onCancel(): void;
 }) {
   const [details, setDetails] = useState<ImageModelId>();
+  const [menu, setMenu] = useState<{ id: ImageModelId; x: number; y: number; usable: boolean }>();
   const status = snapshot.imageModels;
   const ids = IMAGE_MODEL_IDS.filter(id =>
     `${IMAGE_MODELS[id].name} ${IMAGE_MODELS[id].group} ${IMAGE_MODELS[id].blurb}`
@@ -118,18 +121,24 @@ export function ImageModelCards({
                 disabled={!usable && Boolean(status.installing) && status.installing !== id}
                 onContextMenu={event => {
                   event.preventDefault();
-                  setDetails(id);
+                  setMenu({ id, x: event.clientX, y: event.clientY, usable });
                 }}
                 onKeyDown={event => {
                   if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
                     event.preventDefault();
-                    setDetails(id);
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    setMenu({ id, x: rect.left + 12, y: rect.top + 12, usable });
                   }
                 }}
                 onClick={() => (usable ? onChoose(id) : status.installing !== id && onDownload(id))}
               >
                 {example ? (
-                  <img className="model-artwork" src={example} alt={`Made with ${model.name}`} loading="lazy" />
+                  <img
+                    className="model-artwork"
+                    src={thumbnailUrl(example)}
+                    alt={`Made with ${model.name}`}
+                    loading="lazy"
+                  />
                 ) : (
                   <span className="model-artwork placeholder" aria-hidden="true">
                     {usable ? <Sparkles /> : <Download />}
@@ -147,6 +156,51 @@ export function ImageModelCards({
         })}
       </div>
       {!ids.length && <p>No newer models match your search.</p>}
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          label={`${IMAGE_MODELS[menu.id].name} actions`}
+          onClose={() => setMenu(undefined)}
+          heading={{ title: IMAGE_MODELS[menu.id].name, detail: cardStatus(snapshot, menu.id) }}
+          groups={[
+            menu.usable
+              ? [
+                  {
+                    label: 'Use this model',
+                    icon: <Check size={15} />,
+                    primary: true,
+                    onSelect: () => onChoose(menu.id),
+                  },
+                  {
+                    label: 'Use with best settings',
+                    icon: <Sparkles size={15} />,
+                    onSelect: () => onChoose(menu.id, { recommended: true }),
+                  },
+                ]
+              : [
+                  status.installing !== menu.id && {
+                    label: 'Download it',
+                    icon: <Download size={15} />,
+                    primary: true,
+                    onSelect: () => onDownload(menu.id),
+                  },
+                ],
+            [
+              {
+                label: 'Details and best settings',
+                icon: <Info size={15} />,
+                onSelect: () => setDetails(menu.id),
+              },
+              {
+                label: "Maker's page",
+                icon: <ArrowUpRight size={15} />,
+                onSelect: () => void window.latent.openImageModelPage(menu.id, 'source'),
+              },
+            ],
+          ]}
+        />
+      )}
       {details && (
         <ImageModelDetails
           snapshot={snapshot}
