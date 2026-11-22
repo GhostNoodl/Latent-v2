@@ -98,7 +98,7 @@ import { draftSchema, parseSettingsPatch } from '../shared/validation';
 import { TelegramBotService } from './telegram-bot';
 import { PhoneRemoteService } from './phone-remote';
 import { SIZE_PRESETS } from '../shared/defaults';
-import { usesExtraVram } from '../shared/vram';
+import { enhanceMaxSide, usesExtraVram } from '../shared/vram';
 import type { AppSnapshot, GenerationDraft, HardwareInfo, LatentAPI } from '../shared/types';
 import { SnapshotSender, type LightSnapshot } from './snapshot-sender';
 
@@ -836,6 +836,44 @@ async function initialize() {
     sizes: () => store.settings().sizePresets ?? SIZE_PRESETS,
     imageModels: () => imageModels.status().ready,
     savedPrompts: () => store.settings().savedPrompts ?? [],
+    record: recordId => store.record(recordId),
+    importImage: async (bytes, name) => {
+      const source = await sources.importBytes(bytes, name);
+      broadcast();
+      return source;
+    },
+    useOutputAsSource: async recordId => {
+      const source = await sources.importFile(await outputPath(recordId), recordId);
+      broadcast();
+      return source;
+    },
+    enhanceMaxSide: () => enhanceMaxSide(usesExtraVram(store.settings(), hardware)),
+    editProfile: () => {
+      const status = qwenEdit.status();
+      if (status.lightning8Ready) return 'lightning8';
+      if (status.fastReady) return 'fast';
+      if (status.compactReady) return 'compact';
+      if (status.baseReady) return 'base';
+      return undefined;
+    },
+    queueEdit: request =>
+      models.library.withShared('queuing an image edit from Telegram', async () => {
+        assertModelLocationsReady();
+        return jobs.enqueueQwenEdit(request);
+      }),
+    videoDraft: () => {
+      const saved = videoConversations.get();
+      return saved?.sessions.find(session => session.id === saved.activeSessionId)?.draft ?? saved?.sessions[0]?.draft;
+    },
+    videoStatus: () => videoStatus(),
+    queueVideo: draft =>
+      models.library.withShared('queueing a video from Telegram', async () => {
+        const status = videoStatus();
+        if (!status.canGenerate) throw new Error(status.message);
+        assertModelLocationsReady();
+        return jobs.enqueueVideo(draft);
+      }),
+    readVideo: async recordId => fs.readFile((await videoHistory.file(recordId)).filename),
     queue: value =>
       models.library.withShared('queueing an image from Telegram', async () => {
         assertModelLocationsReady();

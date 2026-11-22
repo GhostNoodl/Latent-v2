@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type {
   BackendStatus,
@@ -7,8 +8,29 @@ import type {
   ModelAsset,
   Preset,
   StudioJob,
+  VideoJob,
 } from '../shared/types';
-import { isImageJob } from '../shared/types';
+import { isImageJob, isVideoJob } from '../shared/types';
+import type { VideoDraft } from '../shared/video-types';
+import type { VideoAssetsStatus } from '../shared/video-assets';
+import type { SourceImageAsset } from '../shared/source-types';
+import type { QwenEditJobRequest, QwenEditProfile } from '../shared/qwen-edit-types';
+import { qwenSameSize, qwenWorkingSize } from '../shared/qwen-area';
+import { enhancementActionLabel, prepareOneClickEnhancement } from '../shared/enhancement';
+import { ENHANCE_MAX_SIDE } from '../shared/vram';
+import {
+  applyVideoSetting,
+  describeVideo,
+  isVideoKey,
+  qualityMissing,
+  qualityName,
+  splitVideoFlags,
+  videoDraftFor,
+  VIDEO_LENGTHS,
+  VIDEO_QUALITY,
+  VIDEO_SIZES,
+  type TelegramVideoOverrides,
+} from './telegram-video';
 import { SAMPLERS, SCHEDULERS } from '../shared/defaults';
 import { IMAGE_MODEL_IDS, IMAGE_MODELS, type ImageModelId } from '../shared/image-models';
 import { telegramSettingsSchema, type TelegramSettings, type TelegramStatus } from '../shared/telegram-types';
@@ -50,6 +72,22 @@ export interface TelegramBotPorts {
   imageModels?(): ImageModelId[];
   /** Prompts saved beside the prompt box in Create. */
   savedPrompts?(): { id: string; text: string }[];
+  /** A saved image, to enhance or edit it. */
+  record?(id: string): GenerationRecord | undefined;
+  /** Imports a picture from the chat so the engine can use it. */
+  importImage?(bytes: Uint8Array, name: string): Promise<SourceImageAsset>;
+  /** Uses a studio image as a source, keeping the link to it. */
+  useOutputAsSource?(recordId: string): Promise<SourceImageAsset>;
+  /** Largest side Enhance may make on this PC. */
+  enhanceMaxSide?(): number;
+  /** The Qwen Edit setup to use, or undefined when none is downloaded. */
+  editProfile?(): QwenEditProfile | undefined;
+  queueEdit?(request: QwenEditJobRequest): Promise<GenerationJob>;
+  /** The Video page's open setup. */
+  videoDraft?(): unknown;
+  videoStatus?(): { canGenerate: boolean; message: string; assets?: VideoAssetsStatus };
+  queueVideo?(draft: VideoDraft): Promise<VideoJob>;
+  readVideo?(recordId: string): Promise<Buffer>;
   queue(draft: GenerationDraft): Promise<GenerationJob>;
   jobs(): StudioJob[];
   cancel(id: string): Promise<void>;
@@ -68,11 +106,21 @@ interface TelegramChat {
   id: number;
   type: string;
 }
+interface TelegramPhotoSize {
+  file_id: string;
+  width: number;
+  height: number;
+  file_size?: number;
+}
 interface TelegramMessage {
   message_id: number;
   from?: TelegramUser;
   chat: TelegramChat;
   text?: string;
+  caption?: string;
+  photo?: TelegramPhotoSize[];
+  document?: { file_id: string; mime_type?: string; file_size?: number };
+  reply_to_message?: TelegramMessage;
 }
 interface TelegramCallback {
   id: string;
@@ -98,6 +146,7 @@ const DELIVERY_ATTEMPTS = 4;
 const RETRY_DELAY_MS = 30_000;
 interface ChatState {
   overrides: TelegramOverrides;
+  video?: TelegramVideoOverrides;
   lastPrompt?: string;
   /** SDXL tweaks put aside while this chat uses a newer model. */
   classic?: TelegramOverrides;
@@ -109,6 +158,12 @@ const TOKEN_STATE = 'telegram.encrypted-token.v1';
 const OFFSET_STATE = 'telegram.offset.v1';
 const JOBS_STATE = 'telegram.jobs.v1';
 const CHATS_STATE = 'telegram.chats.v1';
+/** Which studio image each sent photo is, so replies and Enhance taps find it again. */
+const SENT_STATE = 'telegram.sent.v1';
+const SENT_KEPT = 300;
+/** Telegram bots can download files up to 20 MB and upload up to 50 MB. */
+const DOWNLOAD_LIMIT = 20 * 1024 * 1024;
+const UPLOAD_LIMIT = 50 * 1024 * 1024;
 const API = 'https://api.telegram.org';
 const POLL_SECONDS = 25;
 const tokenPattern = /^\d{3,20}:[A-Za-z0-9_-]{20,100}$/;
@@ -147,6 +202,18 @@ const HELP = [
   '/preset - load one of the studio’s saved presets',
   '/reset - go back to the studio’s Create settings',
   '',
+  'Editing',
+  'Reply to any picture with what to change, like: make it night time',
+  'Or send a photo with the change as its caption',
+  'Tap ✨ Enhance under a picture to upscale and refine it',
+  '',
+  'Video',
+  '/video <what happens> - make a clip',
+  '/video by itself - pick quality, length and shape',
+  'Animate a picture: send it, or reply to one, with /video <what happens>',
+  'One-off changes: a wave rolling in --length 8 --quality better --size tall',
+  '/videoreset - go back to the Video page settings',
+  '',
   'Newer models (Anima, Z-Image and friends) pick their best settings for you and make images from text only, so LoRAs, hires fix and face fix sit out.',
   '',
   'One-off changes work inside a prompt too:',
@@ -156,6 +223,9 @@ const HELP = [
   '/status - is the engine running? · /id - your Telegram user ID',
 ].join('\n');
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+const hasPicture = (value: TelegramMessage | undefined): boolean =>
+  Boolean(value?.photo?.length || value?.document?.mime_type?.startsWith('image/'));
 
 class TelegramApiError extends Error {
   constructor(
@@ -447,8 +517,14 @@ export class TelegramBotService {
   }
   private async handle(token: string, incoming: TelegramMessage, signal: AbortSignal) {
     const from = incoming.from?.id;
-    if (!from || incoming.chat.type !== 'private' || typeof incoming.text !== 'string') return;
-    const text = incoming.text.trim();
+    const raw = incoming.text ?? incoming.caption ?? '';
+    const picture = hasPicture(incoming)
+      ? incoming
+      : hasPicture(incoming.reply_to_message)
+        ? incoming.reply_to_message!
+        : undefined;
+    if (!from || incoming.chat.type !== 'private' || typeof raw !== 'string' || (!raw.trim() && !picture)) return;
+    const text = raw.trim();
     const first = text.split(/\s+/, 1)[0] ?? '';
     const command = first.startsWith('/') ? first.slice(1).split('@')[0].toLowerCase() : undefined;
     const args = command ? text.slice(first.length).trim() : text;
@@ -465,6 +541,22 @@ export class TelegramBotService {
       return;
     }
     const reply = (value: string, buttons?: Button[][]) => this.send(token, chatId, value, signal, buttons);
+    const source = picture ? () => this.pictureSource(token, chatId, picture, signal) : undefined;
+    if (command === 'video' || command === 'vid') return this.video(chatId, args, reply, source);
+    if (command === 'videoreset') {
+      const { video: _video, ...rest } = this.chat(chatId);
+      this.saveChat(chatId, rest);
+      return reply('Back to the Video page settings.');
+    }
+    if (source && (command === undefined || command === 'edit')) {
+      if (!args)
+        return reply(
+          'Nice picture! Reply to it with what to change (like: make it night time), or with /video <what happens> to animate it.',
+        );
+      return this.edit(chatId, args, source, reply);
+    }
+    if (command === 'edit')
+      return reply('Reply to a picture with what to change, or send a photo with the change as its caption.');
     switch (command) {
       case 'start':
       case 'help':
@@ -506,6 +598,22 @@ export class TelegramBotService {
   private async handleButton(token: string, query: TelegramCallback, signal: AbortSignal) {
     const chat = query.message?.chat;
     if (!chat || !this.allowed(query.from, chat)) return;
+    const enhance = /^enh:([a-f0-9]{32})$/.exec(query.data ?? '');
+    if (enhance) {
+      await this.call(token, 'answerCallbackQuery', { callback_query_id: query.id }, signal);
+      return this.enhance(chat.id, enhance[1], value => this.send(token, chat.id, value, signal));
+    }
+    const video = /^vid:([a-z]+):(.{1,20})$/.exec(query.data ?? '');
+    if (video && isVideoKey(video[1])) {
+      let text: string;
+      try {
+        text = this.changeVideo(chat.id, video[1], video[2]);
+      } catch (error) {
+        text = message(error);
+      }
+      await this.call(token, 'answerCallbackQuery', { callback_query_id: query.id, text: text.slice(0, 190) }, signal);
+      return this.send(token, chat.id, text, signal);
+    }
     const saved = /^prompt:(\d{1,3})$/.exec(query.data ?? '');
     if (saved) {
       await this.call(token, 'answerCallbackQuery', { callback_query_id: query.id }, signal);
@@ -676,6 +784,189 @@ export class TelegramBotService {
         ]);
     }
   }
+  private changeVideo(chatId: number, key: Parameters<typeof applyVideoSetting>[1], args: string) {
+    const chat = this.chat(chatId);
+    const result = applyVideoSetting(chat.video ?? {}, key, args);
+    this.saveChat(chatId, { ...chat, video: result.overrides });
+    return result.message;
+  }
+  /** Gets the picture a message carries or replies to into the studio as a source image. */
+  private async pictureSource(token: string, chatId: number, picture: TelegramMessage, signal: AbortSignal) {
+    const recordId = this.sentRecord(chatId, picture.message_id);
+    if (recordId && this.ports.useOutputAsSource && this.ports.record?.(recordId))
+      return this.ports.useOutputAsSource(recordId);
+    if (!this.ports.importImage) throw new Error("This version of the studio can't take pictures from Telegram.");
+    const file = picture.photo?.length
+      ? picture.photo.reduce((a, b) => (a.width * a.height >= b.width * b.height ? a : b))
+      : picture.document;
+    if (!file) throw new Error("That message doesn't have a picture in it.");
+    if ((file.file_size ?? 0) > DOWNLOAD_LIMIT)
+      throw new Error('That picture is over 20 MB, too big for a bot to fetch.');
+    const info = await this.call<{ file_path?: string; file_size?: number }>(
+      token,
+      'getFile',
+      { file_id: file.file_id },
+      signal,
+    );
+    if (!info.file_path || (info.file_size ?? 0) > DOWNLOAD_LIMIT)
+      throw new Error("Telegram wouldn't hand over that picture.");
+    const response = await this.ports.fetch(`${API}/file/bot${token}/${info.file_path}`, {
+      signal: AbortSignal.any([signal, AbortSignal.timeout(60_000)]),
+    });
+    if (!response.ok) throw new Error(`Telegram wouldn't hand over that picture (${response.status}).`);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength > DOWNLOAD_LIMIT) throw new Error('That picture is over 20 MB.');
+    return this.ports.importImage(bytes, 'Picture from Telegram');
+  }
+  private async edit(
+    chatId: number,
+    instruction: string,
+    source: () => Promise<SourceImageAsset>,
+    reply: (text: string) => Promise<void>,
+  ) {
+    if (instruction.length > 4000) return reply('Keep the change under 4000 characters.');
+    const profile = this.ports.editProfile?.();
+    if (!profile || !this.ports.queueEdit)
+      return reply("Editing needs the Qwen Edit files. Set them up on the studio's Edit page first.");
+    const blocked = this.ports.blockedReason();
+    if (blocked) return reply(`The studio can't take new edits right now: ${blocked}`);
+    let job: GenerationJob;
+    try {
+      const picture = await source();
+      const { width, height } = picture.normalized;
+      const parent = picture.originGenerationId ? this.ports.record?.(picture.originGenerationId) : undefined;
+      job = await this.ports.queueEdit({
+        mode: 'qwen-edit',
+        sourceId: picture.id,
+        sourceSha256: picture.normalized.sha256,
+        operation: 'edit',
+        instruction,
+        negativePrompt: '',
+        settings: { profile, ...qwenWorkingSize(width, height), seed: 'random', resize: 'stretch' },
+        output: qwenSameSize(width, height),
+        lineage: {
+          // Editing an edit carries on its chain, like the Edit page.
+          conversationId: parent?.qwenEdit?.lineage.conversationId ?? randomUUID(),
+          branchId: parent?.qwenEdit?.lineage.branchId ?? randomUUID(),
+          ...(picture.originGenerationId ? { parentRecordId: picture.originGenerationId } : {}),
+        },
+      });
+    } catch (error) {
+      return reply(`Couldn't start that edit: ${message(error)}`);
+    }
+    this.remember(job.id, { chatId, prompt: `Edit: ${instruction.slice(0, 290)}` });
+    return reply(`Editing it! ${this.ahead(job.id)}${this.engineNote()}`);
+  }
+  private async enhance(chatId: number, recordId: string, reply: (text: string) => Promise<void>) {
+    const record = this.ports.record?.(recordId);
+    if (!record || !this.ports.useOutputAsSource) return reply("That picture isn't in the studio anymore.");
+    const current = effectiveDraft(this.ports.draft(), this.chat(chatId).overrides, '');
+    if (!record.checkpoint && (current.imageModel || !current.checkpointId))
+      return reply('Enhance runs on an SDXL model. Pick one with /model first.');
+    const blocked = this.ports.blockedReason();
+    if (blocked) return reply(`The studio can't take new images right now: ${blocked}`);
+    const maxSide = this.ports.enhanceMaxSide?.() ?? ENHANCE_MAX_SIDE;
+    let job: GenerationJob;
+    try {
+      const source = await this.ports.useOutputAsSource(record.id);
+      job = await this.ports.queue(prepareOneClickEnhancement(record, source, current, 2, maxSide));
+    } catch (error) {
+      return reply(`Couldn't enhance that one: ${message(error)}`);
+    }
+    const prompt = (record.resolvedPrompt ?? record.draft.prompt ?? '').slice(0, 280);
+    this.remember(job.id, { chatId, prompt: `Enhanced: ${prompt}` });
+    return reply(
+      `${enhancementActionLabel(record, maxSide) === 'Refine image' ? 'Refining' : 'Upscaling and refining'} it to ${job.draft.width}×${job.draft.height}. ${this.ahead(job.id)}${this.engineNote()}`,
+    );
+  }
+  private async video(
+    chatId: number,
+    text: string,
+    reply: (text: string, buttons?: Button[][]) => Promise<void>,
+    source?: () => Promise<SourceImageAsset>,
+  ) {
+    const status = this.ports.videoStatus?.();
+    if (!this.ports.queueVideo || !status) return reply("This version of the studio can't make clips from Telegram.");
+    const chat = this.chat(chatId);
+    if (!text) {
+      if (source) return reply('Tell me what should happen, like: /video she turns and smiles');
+      const draft = videoDraftFor(this.ports.videoDraft?.(), chat.video ?? {}, '');
+      const button = (label: string, key: string, value: string | number): Button => ({
+        text: label,
+        callback_data: `vid:${key}:${value}`,
+      });
+      return reply(
+        `${describeVideo(this.ports.videoDraft?.(), chat.video ?? {}, status.assets)}\n\nSend /video <what happens> to make a clip. Tap to change the settings for this chat.`,
+        [
+          VIDEO_QUALITY.map(item =>
+            button(`${item.profile === draft.profile ? '• ' : ''}${item.name}`, 'quality', item.profile),
+          ),
+          VIDEO_LENGTHS.map(seconds =>
+            button(`${seconds === draft.requestedDurationSeconds ? '• ' : ''}${seconds}s`, 'length', seconds),
+          ),
+          [0, 3, 6].map(index => {
+            const size = VIDEO_SIZES[index];
+            const current = size.width === draft.width && size.height === draft.height;
+            return button(`${current ? '• ' : ''}${size.name} ${size.width}×${size.height}`, 'size', index + 1);
+          }),
+        ],
+      );
+    }
+    if (text.length > 4000) return reply('That prompt is too long. Keep it under 4000 characters.');
+    const { prompt, flags } = splitVideoFlags(text);
+    if (!prompt) return reply('Put what happens before any --settings, like: /video waves rolling in --length 8');
+    let overrides = chat.video ?? {};
+    try {
+      for (const flag of flags) overrides = applyVideoSetting(overrides, flag.key, flag.args).overrides;
+    } catch (error) {
+      return reply(message(error));
+    }
+    if (!status.canGenerate) return reply(`Can't make clips right now: ${status.message}`);
+    const blocked = this.ports.blockedReason();
+    if (blocked) return reply(`The studio can't take new clips right now: ${blocked}`);
+    let job: VideoJob;
+    try {
+      const picture = source ? await source() : undefined;
+      const draft = videoDraftFor(
+        this.ports.videoDraft?.(),
+        overrides,
+        prompt,
+        picture && {
+          sourceId: picture.id,
+          sha256: picture.normalized.sha256,
+          width: picture.normalized.width,
+          height: picture.normalized.height,
+        },
+      );
+      const missing = qualityMissing(status.assets, draft.profile);
+      if (missing) return reply(missing);
+      job = await this.ports.queueVideo(draft);
+    } catch (error) {
+      return reply(`Couldn't queue that clip: ${message(error)}`);
+    }
+    this.remember(job.id, { chatId, prompt: prompt.slice(0, 300) });
+    const draft = job.video;
+    return reply(
+      `${source ? 'Animating it!' : 'Queued a clip!'} ${this.ahead(job.id)}\n${qualityName(draft.profile)} · ${job.durationSeconds.toFixed(1)}s · ${draft.width}×${draft.height}. Clips take a few minutes.`,
+    );
+  }
+  private ahead(jobId: string) {
+    const ahead = this.ports.jobs().filter(item => item.status === 'queued' && item.id !== jobId).length;
+    return ahead ? `${ahead} ahead of it.` : "It's next up.";
+  }
+  private engineNote() {
+    return this.ports.backend().state === 'ready' ? '' : " The engine isn't running yet, so it'll wait for it.";
+  }
+  private sentRecord(chatId: number, messageId: number): string | undefined {
+    const sent = this.ports.store.getState<Record<string, string>>(SENT_STATE, {});
+    const value = sent && typeof sent === 'object' ? sent[`${chatId}:${messageId}`] : undefined;
+    return typeof value === 'string' && /^[a-f0-9]{32}$/.test(value) ? value : undefined;
+  }
+  private rememberSent(chatId: number, messageId: number, recordId: string) {
+    const sent = this.ports.store.getState<Record<string, string>>(SENT_STATE, {});
+    const kept = Object.entries(sent && typeof sent === 'object' ? sent : {}).slice(-(SENT_KEPT - 1));
+    this.ports.store.setState(SENT_STATE, Object.fromEntries([...kept, [`${chatId}:${messageId}`, recordId]]));
+  }
   private loraText(chatId: number) {
     const ctx = this.context();
     const loras = loraList(ctx.models);
@@ -754,11 +1045,9 @@ export class TelegramBotService {
       return reply(`Couldn't queue that: ${message(error)}`);
     }
     this.remember(job.id, { chatId, prompt: prompt.slice(0, 300) });
-    const ahead = this.ports.jobs().filter(item => item.status === 'queued' && item.id !== job.id).length;
     const model = modelName(draft, ctx.models);
-    const engine = this.ports.backend().state === 'ready' ? '' : " The engine isn't running yet, so it'll wait for it.";
     await reply(
-      `Queued! ${ahead ? `${ahead} ahead of it.` : "It's next up."}${engine}\n${model} · ${draft.width}×${draft.height} · ${draft.steps} steps${draft.hiresFix ? ' · hires' : ''}${draft.autoFace ? ' · face fix' : ''}`,
+      `Queued! ${this.ahead(job.id)}${this.engineNote()}\n${model} · ${draft.width}×${draft.height} · ${draft.steps} steps${draft.hiresFix ? ' · hires' : ''}${draft.autoFace ? ' · face fix' : ''}`,
     );
   }
   /** The pictures a finished job leaves behind, without the in-between hires and face stages. */
@@ -803,6 +1092,7 @@ export class TelegramBotService {
         `That one failed: ${job.error || 'open the studio queue for details.'}`,
         signal,
       );
+    if (isVideoJob(job)) return this.deliverVideo(token, job, remote, signal);
     if (!isImageJob(job)) return;
     const jobs = this.ports.jobs();
     // A face-fixed copy replaces its original; anything without one keeps the original.
@@ -822,8 +1112,39 @@ export class TelegramBotService {
         index === 0
           ? `${remote.prompt.slice(0, 900)}\nSeed ${record.actualSeed} · ${record.width}×${record.height}`
           : '';
-      await this.upload(token, remote.chatId, bytes, `latent-${record.id}.png`, caption, signal);
+      const sent = await this.upload(token, remote.chatId, bytes, `latent-${record.id}.png`, caption, signal, [
+        [{ text: '✨ Enhance', callback_data: `enh:${record.id}` }],
+      ]);
+      if (sent?.message_id) this.rememberSent(remote.chatId, sent.message_id, record.id);
       onSent();
+    }
+  }
+  private async deliverVideo(token: string, job: VideoJob, remote: RemoteJob, signal: AbortSignal) {
+    const recordId = job.outputIds[0];
+    if (!recordId || !this.ports.readVideo)
+      return this.send(token, remote.chatId, "The clip is done, but I couldn't find the saved file.", signal);
+    const bytes = await this.ports.readVideo(recordId);
+    if (bytes.byteLength > UPLOAD_LIMIT)
+      return this.send(
+        token,
+        remote.chatId,
+        `The clip is done, but at ${Math.round(bytes.byteLength / 1024 / 1024)} MB it's too big for Telegram. It's on the studio's Video page.`,
+        signal,
+      );
+    const caption = `${remote.prompt.slice(0, 900)}\nSeed ${job.actualSeed} · ${job.durationSeconds.toFixed(1)}s`;
+    const form = (field: string) => {
+      const data = new FormData();
+      data.set('chat_id', String(remote.chatId));
+      data.set('caption', caption);
+      if (field === 'video') data.set('supports_streaming', 'true');
+      data.set(field, new Blob([new Uint8Array(bytes)], { type: 'video/mp4' }), `latent-${recordId}.mp4`);
+      return data;
+    };
+    try {
+      await this.call(token, 'sendVideo', form('video'), signal, 300_000);
+    } catch (error) {
+      if (signal.aborted || !(error instanceof TelegramApiError)) throw error;
+      await this.call(token, 'sendDocument', form('document'), signal, 300_000);
     }
   }
   private async upload(
@@ -833,20 +1154,22 @@ export class TelegramBotService {
     filename: string,
     caption: string,
     signal: AbortSignal,
-  ) {
+    buttons?: Button[][],
+  ): Promise<{ message_id?: number } | undefined> {
     const form = (field: string) => {
       const data = new FormData();
       data.set('chat_id', String(chatId));
       if (caption) data.set('caption', caption);
+      if (buttons) data.set('reply_markup', JSON.stringify({ inline_keyboard: buttons }));
       data.set(field, new Blob([new Uint8Array(bytes)], { type: 'image/png' }), filename);
       return data;
     };
     try {
-      await this.call(token, 'sendPhoto', form('photo'), signal, 120_000);
+      return await this.call(token, 'sendPhoto', form('photo'), signal, 120_000);
     } catch (error) {
       // Photos are capped at 10 MB and limited dimensions; a document keeps the full PNG instead.
       if (signal.aborted || !(error instanceof TelegramApiError)) throw error;
-      await this.call(token, 'sendDocument', form('document'), signal, 120_000);
+      return await this.call(token, 'sendDocument', form('document'), signal, 120_000);
     }
   }
   private chat(chatId: number): ChatState {

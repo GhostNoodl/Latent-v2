@@ -1846,6 +1846,14 @@
     {
       "from": "tests/settings-tabs-dom.test.tsx",
       "to": "tests/settings-tabs-dom.test.tsx"
+    },
+    {
+      "from": "src/main/telegram-video.ts",
+      "to": "src/main/telegram-video.ts"
+    },
+    {
+      "from": "tests/telegram-video.test.ts",
+      "to": "tests/telegram-video.test.ts"
     }
   ]
 }
