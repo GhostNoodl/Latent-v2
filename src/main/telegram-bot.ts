@@ -10,16 +10,20 @@ import type {
 } from '../shared/types';
 import { isImageJob } from '../shared/types';
 import { SAMPLERS, SCHEDULERS } from '../shared/defaults';
+import { IMAGE_MODEL_IDS, IMAGE_MODELS, type ImageModelId } from '../shared/image-models';
 import { telegramSettingsSchema, type TelegramSettings, type TelegramStatus } from '../shared/telegram-types';
 import type { StudioStore } from './store';
 import {
   applySetting,
-  checkpointList,
+  bestFor,
   describeSettings,
   effectiveDraft,
   isSettingKey,
   loraList,
+  modelChoices,
+  modelName,
   POPULAR_SAMPLERS,
+  sizeChoices,
   splitPromptFlags,
   type ControlContext,
   type SettingKey,
@@ -42,6 +46,10 @@ export interface TelegramBotPorts {
   models(): ModelAsset[];
   presets(): Preset[];
   sizes(): { name: string; width: number; height: number }[];
+  /** Newer models whose files are downloaded and checked. */
+  imageModels?(): ImageModelId[];
+  /** Prompts saved beside the prompt box in Create. */
+  savedPrompts?(): { id: string; text: string }[];
   queue(draft: GenerationDraft): Promise<GenerationJob>;
   jobs(): StudioJob[];
   cancel(id: string): Promise<void>;
@@ -91,6 +99,8 @@ const RETRY_DELAY_MS = 30_000;
 interface ChatState {
   overrides: TelegramOverrides;
   lastPrompt?: string;
+  /** SDXL tweaks put aside while this chat uses a newer model. */
+  classic?: TelegramOverrides;
 }
 type Button = { text: string; callback_data: string };
 
@@ -114,18 +124,19 @@ const storedTokenSchema = z
   .strict();
 const DEFAULT_SETTINGS: TelegramSettings = { enabled: false, allowedUserIds: [] };
 const HELP = [
-  'Send me a prompt and I will make it on the studio PC. You start with the studio’s Create settings and can change anything below just for this chat.',
+  'Send me a prompt and I’ll make it on your PC. You start with the studio’s Create settings and can change anything below just for this chat.',
   '',
   'Making images',
   '/gen <prompt> - same as just sending a prompt',
   '/again - run your last prompt again with a new seed',
+  '/prompts - your saved prompts, tap one to make it',
   '/queue - what is waiting or running',
   '/cancel - cancel your latest image',
   '',
   'Settings (send without a value to see choices)',
   '/settings - show everything',
-  '/model - pick the checkpoint',
-  '/loras - list LoRAs; /lora <name> [weight], /lora remove <name>, /lora clear',
+  '/model - pick a model, SDXL or one of the newer ones',
+  '/loras - list LoRAs; /lora <name> [weight], /lora off <name>, /lora on <name>, /lora remove <name>, /lora clear',
   '/size 832x1216 or /size portrait',
   '/steps 30 · /cfg 6.5 · /seed 1234 or random · /batch 1-4',
   '/sampler · /scheduler',
@@ -136,10 +147,13 @@ const HELP = [
   '/preset - load one of the studio’s saved presets',
   '/reset - go back to the studio’s Create settings',
   '',
+  'Newer models (Anima, Z-Image and friends) pick their best settings for you and make images from text only, so LoRAs, hires fix and face fix sit out.',
+  '',
   'One-off changes work inside a prompt too:',
   'a fox in the snow --size landscape --steps 35 --seed 7',
+  'Wildcards work as well: a __animal__ in {spring|winter}',
   '',
-  '/status - is the image engine running? · /id - your Telegram user ID',
+  '/status - is the engine running? · /id - your Telegram user ID',
 ].join('\n');
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -445,7 +459,7 @@ export class TelegramBotService {
         await this.send(
           token,
           chatId,
-          `This bot is private. Your Telegram user ID is ${from}. The owner can add it in Latent under Settings > Telegram remote.`,
+          `This bot is private. Your Telegram user ID is ${from}. The owner can add it in Latent under Settings > Remote.`,
           signal,
         );
       return;
@@ -466,7 +480,7 @@ export class TelegramBotService {
       case 'settings':
         return reply(describeSettings(this.context(), this.chat(chatId).overrides));
       case 'reset':
-        this.saveChat(chatId, { ...this.chat(chatId), overrides: {} });
+        this.saveChat(chatId, { ...this.chat(chatId), overrides: {}, classic: undefined });
         return reply("Back to the studio's Create settings.");
       case 'again': {
         const last = this.chat(chatId).lastPrompt;
@@ -479,6 +493,9 @@ export class TelegramBotService {
         return reply(this.loraText(chatId));
       case 'models':
         return this.choices(chatId, 'model', reply);
+      case 'prompts':
+      case 'prompt':
+        return args ? this.savedPrompt(chatId, args, reply) : this.promptList(reply);
     }
     if (isSettingKey(command)) {
       if (!args) return this.choices(chatId, command, reply);
@@ -489,6 +506,11 @@ export class TelegramBotService {
   private async handleButton(token: string, query: TelegramCallback, signal: AbortSignal) {
     const chat = query.message?.chat;
     if (!chat || !this.allowed(query.from, chat)) return;
+    const saved = /^prompt:(\d{1,3})$/.exec(query.data ?? '');
+    if (saved) {
+      await this.call(token, 'answerCallbackQuery', { callback_query_id: query.id }, signal);
+      return this.savedPrompt(chat.id, saved[1], value => this.send(token, chat.id, value, signal));
+    }
     const match = /^set:([a-z]+):(.{1,40})$/.exec(query.data ?? '');
     let text: string;
     if (!match || !isSettingKey(match[1])) text = 'That button has expired.';
@@ -501,39 +523,79 @@ export class TelegramBotService {
     await this.call(token, 'answerCallbackQuery', { callback_query_id: query.id, text: text.slice(0, 190) }, signal);
     await this.send(token, chat.id, text, signal);
   }
-  private context(): ControlContext {
+  private context(chatId?: number): ControlContext {
+    const ready = new Set(this.ports.imageModels?.() ?? []);
     return {
       studio: this.ports.draft(),
       models: this.ports.models(),
       // Sorted once here so list numbers, buttons and typed numbers all agree.
       presets: [...this.ports.presets()].sort((a, b) => a.name.localeCompare(b.name)),
       sizes: this.ports.sizes(),
+      imageModels: IMAGE_MODEL_IDS.filter(id => ready.has(id)),
+      classic: chatId === undefined ? undefined : this.chat(chatId).classic,
     };
   }
   private async change(chatId: number, key: SettingKey, args: string) {
     const chat = this.chat(chatId);
-    const result = applySetting(this.context(), chat.overrides, key, args);
-    this.saveChat(chatId, { ...chat, overrides: result.overrides });
+    const result = applySetting(this.context(chatId), chat.overrides, key, args);
+    const next: ChatState = { ...chat, overrides: result.overrides };
+    if (result.classic === null) delete next.classic;
+    else if (result.classic) next.classic = result.classic;
+    this.saveChat(chatId, next);
     return result.message;
+  }
+  private savedPrompts() {
+    return (this.ports.savedPrompts?.() ?? []).filter(item => item.text.trim());
+  }
+  private promptList(reply: (text: string, buttons?: Button[][]) => Promise<void>) {
+    const prompts = this.savedPrompts();
+    if (!prompts.length) return reply('No saved prompts yet. Save some beside the prompt box in Create.');
+    const short = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
+    return reply(
+      `${prompts.map((item, index) => `${index + 1}. ${short(item.text, 160)}`).join('\n')}\n\nTap one to make it, or send /prompts <number>.`,
+      prompts.slice(0, 30).map((item, index) => [{ text: short(item.text, 40), callback_data: `prompt:${index + 1}` }]),
+    );
+  }
+  private savedPrompt(chatId: number, choice: string, reply: (text: string) => Promise<void>) {
+    const prompts = this.savedPrompts();
+    const index = /^\d+$/.test(choice.trim()) ? Number(choice.trim()) - 1 : -1;
+    const item = prompts[index];
+    if (!item) return reply(prompts.length ? `Pick a number from 1 to ${prompts.length}.` : 'No saved prompts yet.');
+    return this.generate(chatId, item.text, reply);
   }
   /** Lists the options for a setting, as buttons where a tap is enough. */
   private async choices(chatId: number, key: SettingKey, reply: (text: string, buttons?: Button[][]) => Promise<void>) {
-    const ctx = this.context();
+    const ctx = this.context(chatId);
     const draft = effectiveDraft(ctx.studio, this.chat(chatId).overrides, '');
     const button = (text: string, arg: string | number): Button => ({ text, callback_data: `set:${key}:${arg}` });
     const rows = (buttons: Button[], width: number) =>
       Array.from({ length: Math.ceil(buttons.length / width) }, (_, index) =>
         buttons.slice(index * width, index * width + width),
       );
+    if (draft.imageModel && (key === 'hires' || key === 'faces' || key === 'lora'))
+      return reply(
+        `${IMAGE_MODELS[draft.imageModel].name} makes images from text only, so ${
+          key === 'hires' ? 'hires fix' : key === 'faces' ? 'face fix' : 'LoRAs'
+        } sit${key === 'lora' ? '' : 's'} out. Pick an SDXL model with /model to use ${key === 'lora' ? 'them' : 'it'}.`,
+      );
     switch (key) {
       case 'model': {
-        const models = checkpointList(ctx.models);
-        if (!models.length) return reply('No checkpoints are installed in the studio yet.');
-        const current = ctx.models.find(model => model.id === draft.checkpointId)?.name ?? 'none';
+        const choices = modelChoices(ctx);
+        if (!choices.length) return reply('No models are installed in the studio yet.');
+        const lines = choices.map(
+          (choice, index) =>
+            `${index + 1}. ${choice.name}${choice.kind === 'newer' ? ` (newer, best at ${bestFor(choice.id)})` : ''}`,
+        );
+        const firstNewer = choices.findIndex(choice => choice.kind === 'newer');
+        if (firstNewer > 0) lines.splice(firstNewer, 0, '', 'Newer models');
+        const missing = IMAGE_MODEL_IDS.length - (ctx.imageModels?.length ?? 0);
+        const more = missing
+          ? `\n\n${missing} more newer model${missing === 1 ? ' is' : 's are'} in the studio's model picker, ready to download.`
+          : '';
         return reply(
-          `Current model: ${current}\n\n${models.map((model, index) => `${index + 1}. ${model.name}`).join('\n')}\n\nTap one, or send /model <number or name>.`,
+          `Current model: ${modelName(draft, ctx.models)}\n\n${lines.join('\n')}\n\nTap one, or send /model <number or name>.${more}`,
           rows(
-            models.slice(0, 30).map((model, index) => button(model.name.slice(0, 40), index + 1)),
+            choices.slice(0, 40).map((choice, index) => button(choice.name.slice(0, 40), index + 1)),
             1,
           ),
         );
@@ -542,9 +604,11 @@ export class TelegramBotService {
         return reply(this.loraText(chatId));
       case 'size':
         return reply(
-          `Current size: ${draft.width}×${draft.height}. Tap one, or send /size <width>x<height> (multiples of 64, 256 to 2048).`,
+          `Current size: ${draft.width}×${draft.height}.${draft.imageModel ? ` These suit ${IMAGE_MODELS[draft.imageModel].name}.` : ''} Tap one, or send /size <width>x<height> (multiples of 64, 256 to 2048).`,
           rows(
-            ctx.sizes.map((size, index) => button(`${size.name} ${size.width}×${size.height}`, index + 1)),
+            sizeChoices(ctx, draft).map((size, index) =>
+              button(`${size.name} ${size.width}×${size.height}`, index + 1),
+            ),
             2,
           ),
         );
@@ -597,9 +661,13 @@ export class TelegramBotService {
           `Negative prompt: ${draft.negativePrompt || 'none'}\n\nSend /neg <text> to change it or /neg off to clear it.`,
         );
       case 'steps':
-        return reply(`Steps: ${draft.steps}. Send /steps <1-100>.`);
+        return reply(
+          `Steps: ${draft.steps}. Send /steps <1-100>.${draft.imageModel ? ` Best for ${IMAGE_MODELS[draft.imageModel].name}: ${bestFor(draft.imageModel)}.` : ''}`,
+        );
       case 'cfg':
-        return reply(`CFG: ${draft.cfg}. Send /cfg <0-30>.`);
+        return reply(
+          `CFG: ${draft.cfg}. Send /cfg <0-30>, decimals are fine.${draft.imageModel ? ` Best for ${IMAGE_MODELS[draft.imageModel].name}: ${bestFor(draft.imageModel)}.` : ''}`,
+        );
       case 'seed':
         return reply(`Seed: ${draft.seed}. Send /seed <number> to pin it or /seed random.`);
       case 'batch':
@@ -613,13 +681,16 @@ export class TelegramBotService {
     const loras = loraList(ctx.models);
     const draft = effectiveDraft(ctx.studio, this.chat(chatId).overrides, '');
     if (!loras.length) return 'No LoRAs are installed in the studio yet.';
-    const active = new Map(draft.loras.map(lora => [lora.modelId, lora.weight]));
+    if (draft.imageModel)
+      return `${IMAGE_MODELS[draft.imageModel].name} makes images from text only, so LoRAs sit out. Pick an SDXL model with /model to use them.`;
+    const active = new Map(draft.loras.map(lora => [lora.modelId, lora]));
     return [
-      ...loras.map(
-        (lora, index) => `${index + 1}. ${lora.name}${active.has(lora.id) ? ` ✅ ${active.get(lora.id)}` : ''}`,
-      ),
+      ...loras.map((lora, index) => {
+        const used = active.get(lora.id);
+        return `${index + 1}. ${lora.name}${used ? (used.off ? ' ⏸ off' : ` ✅ ${used.weight}`) : ''}`;
+      }),
       '',
-      'Add or change one with /lora <number or name> [weight], remove with /lora remove <number>, or /lora clear.',
+      'Add or change one with /lora <number or name> [weight]. /lora off <number> switches one off without losing it, /lora on <number> brings it back, /lora remove <number> takes it out, /lora clear empties the list.',
     ].join('\n');
   }
   private statusText() {
@@ -628,7 +699,7 @@ export class TelegramBotService {
     const running = jobs.filter(job => job.status === 'running').length;
     const queued = jobs.filter(job => job.status === 'queued').length;
     const engine =
-      backend.state === 'ready' ? 'Image engine is running.' : `Image engine: ${backend.message || backend.state}`;
+      backend.state === 'ready' ? 'The engine is running.' : `The engine: ${backend.message || backend.state}`;
     return `${engine}\n${running} running, ${queued} waiting in the queue.`;
   }
   private mine(chatId: number) {
@@ -665,7 +736,7 @@ export class TelegramBotService {
     const { prompt, flags } = splitPromptFlags(text);
     if (!prompt) return reply('Put the prompt before any --settings, like: a red fox --steps 30');
     const chat = this.chat(chatId);
-    const ctx = this.context();
+    const ctx = this.context(chatId);
     let overrides = chat.overrides;
     try {
       for (const flag of flags) overrides = applySetting(ctx, overrides, flag.key, flag.args).overrides;
@@ -684,9 +755,8 @@ export class TelegramBotService {
     }
     this.remember(job.id, { chatId, prompt: prompt.slice(0, 300) });
     const ahead = this.ports.jobs().filter(item => item.status === 'queued' && item.id !== job.id).length;
-    const model = ctx.models.find(item => item.id === draft.checkpointId)?.name ?? 'the selected model';
-    const engine =
-      this.ports.backend().state === 'ready' ? '' : ' The image engine is not running yet, so it will wait for it.';
+    const model = modelName(draft, ctx.models);
+    const engine = this.ports.backend().state === 'ready' ? '' : " The engine isn't running yet, so it'll wait for it.";
     await reply(
       `Queued! ${ahead ? `${ahead} ahead of it.` : "It's next up."}${engine}\n${model} · ${draft.width}×${draft.height} · ${draft.steps} steps${draft.hiresFix ? ' · hires' : ''}${draft.autoFace ? ' · face fix' : ''}`,
     );

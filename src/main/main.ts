@@ -834,6 +834,8 @@ async function initialize() {
     models: () => models.assets,
     presets: () => store.presets(),
     sizes: () => store.settings().sizePresets ?? SIZE_PRESETS,
+    imageModels: () => imageModels.status().ready,
+    savedPrompts: () => store.settings().savedPrompts ?? [],
     queue: value =>
       models.library.withShared('queueing an image from Telegram', async () => {
         assertModelLocationsReady();

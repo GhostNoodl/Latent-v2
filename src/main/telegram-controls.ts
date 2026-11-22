@@ -1,8 +1,14 @@
 import { followHiresScale } from '../shared/advanced-image-workflow';
-import { SAMPLERS, SCHEDULERS } from '../shared/defaults';
+import { DEFAULT_DRAFT, SAMPLERS, SCHEDULERS } from '../shared/defaults';
 import type { GenerationDraft, ModelAsset, Preset } from '../shared/types';
 import { draftSchema } from '../shared/validation';
-import { IMAGE_MODELS } from '../shared/image-models';
+import {
+  IMAGE_MODELS,
+  fitImageModelSize,
+  imageModelSizes,
+  imageModelStartingSettings,
+  type ImageModelId,
+} from '../shared/image-models';
 
 /**
  * Per-chat txt2img settings layered over the studio's Create settings. Anything a chat never
@@ -33,11 +39,34 @@ export interface ControlContext {
   models: ModelAsset[];
   presets: Preset[];
   sizes: { name: string; width: number; height: number }[];
+  /** Newer models (Anima, Z-Image…) whose files are downloaded and checked. */
+  imageModels?: ImageModelId[];
+  /** This chat's SDXL tweaks, put aside while it uses a newer model. */
+  classic?: TelegramOverrides;
 }
 export interface ControlResult {
   overrides: TelegramOverrides;
   message: string;
+  /** New value for the chat's put-aside SDXL tweaks; `null` clears them, undefined keeps them. */
+  classic?: TelegramOverrides | null;
 }
+/** The SDXL settings a newer model replaces; the same list Create puts aside. */
+const CLASSIC_KEYS = [
+  'family',
+  'loras',
+  'steps',
+  'cfg',
+  'sampler',
+  'scheduler',
+  'hiresFix',
+  'autoFace',
+  'modelSampling',
+  'width',
+  'height',
+  'negativePrompt',
+] as const satisfies readonly OverridableKey[];
+/** Things newer models can't use yet; the queue refuses them, so a remote job leaves them out. */
+const NEWER_MODEL_EXTRAS = ['hiresFix', 'autoFace', 'modelSampling', 'split'] as const;
 export const SETTING_KEYS = [
   'model',
   'lora',
@@ -89,8 +118,14 @@ export function telegramDraft(base: GenerationDraft, prompt: string): Generation
     promptTriggerSpans: _spans,
     // Hashes pin a restored recipe to exact files; a fresh remote job uses what is installed now.
     assetHashes: _hashes,
+    // Pause and tweak belongs to one image in the studio window.
+    split: _split,
     ...rest
   } = structuredClone(base);
+  if (rest.imageModel) {
+    for (const key of NEWER_MODEL_EXTRAS) delete (rest as Partial<GenerationDraft>)[key];
+    rest.loras = [];
+  }
   return {
     ...rest,
     prompt,
@@ -120,6 +155,37 @@ const loraModels = (models: ModelAsset[]) =>
 export function checkpointList(models: ModelAsset[]) {
   return checkpoints(models);
 }
+export type ModelChoice =
+  { kind: 'checkpoint'; name: string; asset: ModelAsset } | { kind: 'newer'; name: string; id: ImageModelId };
+/** Everything /model can pick, numbered in this order: checkpoints, then the newer models. */
+export function modelChoices(ctx: Pick<ControlContext, 'models' | 'imageModels'>): ModelChoice[] {
+  return [
+    ...checkpoints(ctx.models).map(asset => ({ kind: 'checkpoint' as const, name: asset.name, asset })),
+    ...(ctx.imageModels ?? [])
+      .filter(id => IMAGE_MODELS[id])
+      .map(id => ({ kind: 'newer' as const, name: IMAGE_MODELS[id].name, id })),
+  ];
+}
+/** Display name of the model a draft uses. */
+export function modelName(draft: GenerationDraft, models: ModelAsset[]) {
+  if (draft.imageModel) return IMAGE_MODELS[draft.imageModel]?.name ?? 'a newer model';
+  if (!draft.checkpointId) return 'none picked yet';
+  return models.find(model => model.id === draft.checkpointId)?.name ?? 'missing model';
+}
+/** Size buttons: the studio's sizes, or the sizes a newer model is made for. */
+export function sizeChoices(ctx: ControlContext, draft: GenerationDraft) {
+  return draft.imageModel ? imageModelSizes(draft.imageModel) : ctx.sizes;
+}
+const range = ([a, b]: [number, number]) => (a === b ? `${a}` : `${a}–${b}`);
+/** "8 steps · CFG 1" style summary of what a newer model's makers recommend. */
+export function bestFor(id: ImageModelId) {
+  const { steps, cfg } = IMAGE_MODELS[id].guide;
+  return `${range(steps)} steps · CFG ${range(cfg)}`;
+}
+const pickClassic = (overrides: TelegramOverrides) =>
+  Object.fromEntries(
+    CLASSIC_KEYS.filter(key => Object.hasOwn(overrides, key)).map(key => [key, overrides[key]]),
+  ) as TelegramOverrides;
 export function loraList(models: ModelAsset[]) {
   return loraModels(models);
 }
@@ -178,10 +244,61 @@ export function applySetting(
   const next: TelegramOverrides = structuredClone(overrides);
   const current = effectiveDraft(ctx.studio, overrides, '');
   let message: string;
+  let classic: TelegramOverrides | null | undefined;
+  const newer = current.imageModel ? IMAGE_MODELS[current.imageModel]?.name : undefined;
+  const firstWord = args.split(/\s+/, 1)[0]?.toLowerCase() ?? '';
+  const turningOff = onOff(firstWord) === false || ['remove', 'delete', 'clear'].includes(firstWord);
+  if (newer && !turningOff && (key === 'lora' || key === 'hires' || key === 'faces'))
+    throw new Error(
+      `${newer} makes images from text only, so ${
+        key === 'lora' ? 'LoRAs' : key === 'hires' ? 'hires fix' : 'face fix'
+      } can't be used with it. Pick an SDXL model with /model first.`,
+    );
   switch (key) {
     case 'model': {
       if (!args) throw new Error('Send /model to see the list, then /model <number or name>.');
-      const model = pick(checkpoints(ctx.models), args, 'model', item => item.filename);
+      const choice = pick(modelChoices(ctx), args, 'model', item =>
+        item.kind === 'checkpoint' ? item.asset.filename : item.id,
+      );
+      if (choice.kind === 'newer') {
+        // Like Create: the SDXL setup is put aside and the model's best settings come in.
+        if (!current.imageModel) classic = pickClassic(overrides);
+        const size = fitImageModelSize(choice.id, current.width, current.height);
+        Object.assign(next, {
+          imageModel: choice.id,
+          checkpointId: '',
+          loras: [],
+          hiresFix: null,
+          autoFace: null,
+          modelSampling: null,
+          ...imageModelStartingSettings(choice.id),
+          ...size,
+        } satisfies TelegramOverrides);
+        message = `Model set to ${choice.name}, with its best settings (${next.steps} steps, CFG ${next.cfg}, ${size.width}×${size.height}).`;
+        if (current.loras.length || current.hiresFix || current.autoFace)
+          message += ' It makes images from text only, so LoRAs, hires fix and face fix are off for it.';
+        break;
+      }
+      const model = choice.asset;
+      if (current.imageModel) {
+        // Back from a newer model: bring the SDXL setup back.
+        for (const key of CLASSIC_KEYS) delete next[key];
+        if (ctx.studio.imageModel)
+          Object.assign(next, {
+            loras: [],
+            steps: DEFAULT_DRAFT.steps,
+            cfg: DEFAULT_DRAFT.cfg,
+            sampler: DEFAULT_DRAFT.sampler,
+            scheduler: DEFAULT_DRAFT.scheduler,
+            width: DEFAULT_DRAFT.width,
+            height: DEFAULT_DRAFT.height,
+            negativePrompt: DEFAULT_DRAFT.negativePrompt,
+            hiresFix: null,
+            autoFace: null,
+          } satisfies TelegramOverrides);
+        Object.assign(next, structuredClone(ctx.classic ?? {}));
+        classic = null;
+      }
       next.checkpointId = model.id;
       next.imageModel = null;
       next.family = model.family as GenerationDraft['family'];
@@ -199,23 +316,34 @@ export function applySetting(
         message = 'LoRAs cleared.';
         break;
       }
-      const removing = first.toLowerCase() === 'remove' || first.toLowerCase() === 'off';
-      const words = removing ? restWords : [first, ...restWords];
+      const action = ['remove', 'delete'].includes(first.toLowerCase())
+        ? 'remove'
+        : ['off', 'on'].includes(first.toLowerCase())
+          ? (first.toLowerCase() as 'off' | 'on')
+          : 'set';
+      const words = action === 'set' ? [first, ...restWords] : restWords;
+      if (!words.length) throw new Error(`Say which LoRA, like /lora ${action} 2.`);
       // A trailing number is the weight, unless it is the only word (a list number).
       const last = words.at(-1) ?? '';
-      const hasWeight = !removing && words.length > 1 && /^-?\d+(\.\d+)?$/.test(last);
+      const hasWeight = action === 'set' && words.length > 1 && /^-?\d+(\.\d+)?$/.test(last);
       const query = (hasWeight ? words.slice(0, -1) : words).join(' ');
       const lora = pick(loraModels(ctx.models), query, 'LoRA', item => item.filename);
       const index = loras.findIndex(item => item.modelId === lora.id);
-      if (removing) {
+      if (action === 'remove') {
         if (index < 0) throw new Error(`${lora.name} isn't in use.`);
         loras.splice(index, 1);
         message = `Removed ${lora.name}.`;
+      } else if (action === 'off') {
+        if (index < 0) throw new Error(`${lora.name} isn't in use.`);
+        loras[index] = { ...loras[index], off: true };
+        message = `${lora.name} is off. It stays in the list; /lora on ${lora.name} brings it back.`;
       } else {
+        // Setting a weight, or adding a LoRA again, switches it back on.
         const weight = hasWeight ? number(last, 'LoRA weight', -10, 10) : (loras[index]?.weight ?? 1);
-        if (index >= 0) loras[index] = { ...loras[index], weight, clipWeight: weight };
+        const { off: _off, ...kept } = loras[index] ?? { modelId: lora.id };
+        if (index >= 0) loras[index] = { ...kept, weight, clipWeight: hasWeight ? weight : loras[index].clipWeight };
         else loras.push({ modelId: lora.id, weight, clipWeight: weight });
-        message = `${lora.name} at weight ${weight}.`;
+        message = `${lora.name} on, at weight ${weight}.`;
       }
       next.loras = loras;
       break;
@@ -224,16 +352,26 @@ export function applySetting(
       const off = onOff(args) === false || args.toLowerCase() === 'clear';
       next.negativePrompt = off ? '' : args;
       message = off || !args ? 'Negative prompt cleared.' : 'Negative prompt set.';
+      if (
+        !off &&
+        args &&
+        current.imageModel &&
+        (IMAGE_MODELS[current.imageModel].negative === 'zero' || current.cfg <= 1)
+      )
+        message += ` ${newer} ignores it at CFG ${current.cfg}, though.`;
       break;
     }
     case 'size': {
-      const dims = /^(\d{3,4})\s*[x×*:]\s*(\d{3,4})$/i.exec(args);
+      const dims = /^(\d{2,5})\s*[x×*:]\s*(\d{2,5})$/i.exec(args);
       if (dims) {
-        next.width = Number(dims[1]);
-        next.height = Number(dims[2]);
+        const [width, height] = [Number(dims[1]), Number(dims[2])];
+        if (width % 64 || height % 64 || Math.min(width, height) < 256 || Math.max(width, height) > 2048)
+          throw new Error('Width and height need to be multiples of 64, from 256 to 2048. Like /size 832x1216.');
+        next.width = width;
+        next.height = height;
       } else {
         if (!args) throw new Error('Use /size 832x1216, or a size name like portrait.');
-        const preset = pick(ctx.sizes, args, 'size');
+        const preset = pick(sizeChoices(ctx, current), args, 'size');
         next.width = preset.width;
         next.height = preset.height;
       }
@@ -343,6 +481,7 @@ export function applySetting(
       const draft = preset.draft;
       Object.assign(next, {
         checkpointId: draft.checkpointId,
+        imageModel: draft.imageModel ?? null,
         family: draft.family,
         modelSampling: draft.modelSampling ?? null,
         loras: draft.loras,
@@ -361,6 +500,7 @@ export function applySetting(
         autoFace: draft.autoFace ?? null,
       } satisfies TelegramOverrides);
       message = `Loaded the "${preset.name}" preset.`;
+      classic = null;
       break;
     }
   }
@@ -369,7 +509,7 @@ export function applySetting(
     const issue = checked.error.issues[0];
     throw new Error(`That doesn't work: ${issue.path.join('.') || 'settings'} ${issue.message}`.trim());
   }
-  return { overrides: next, message };
+  return { overrides: next, message, ...(classic !== undefined ? { classic } : {}) };
 }
 
 /** Splits `a castle --steps 30 --size portrait` into the prompt and one-off settings. */
@@ -387,19 +527,32 @@ export function splitPromptFlags(text: string): { prompt: string; flags: { key: 
 export function describeSettings(ctx: ControlContext, overrides: TelegramOverrides): string {
   const draft = effectiveDraft(ctx.studio, overrides, '');
   const name = (id: string) => ctx.models.find(model => model.id === id)?.name ?? 'missing model';
-  const lines = [
-    `Model: ${draft.imageModel ? IMAGE_MODELS[draft.imageModel].name : draft.checkpointId ? name(draft.checkpointId) : 'none picked yet'}`,
-    `LoRAs: ${draft.loras.length ? draft.loras.map(lora => `${name(lora.modelId)} (${lora.weight})`).join(', ') : 'none'}`,
+  const lines = [`Model: ${modelName(draft, ctx.models)}`];
+  if (draft.imageModel) lines.push(`Best for it: ${bestFor(draft.imageModel)}`);
+  else
+    lines.push(
+      `LoRAs: ${
+        draft.loras.length
+          ? draft.loras.map(lora => `${name(lora.modelId)} (${lora.off ? 'off' : lora.weight})`).join(', ')
+          : 'none'
+      }`,
+    );
+  lines.push(
     `Size: ${draft.width}×${draft.height}, ${draft.batchSize} per prompt`,
     `Steps ${draft.steps} · CFG ${draft.cfg} · ${draft.sampler} / ${draft.scheduler}`,
     `Seed: ${draft.seed}`,
     `Negative: ${draft.negativePrompt ? draft.negativePrompt.slice(0, 300) : 'none'}`,
-    `Hires fix: ${
-      draft.hiresFix ? `on, ${draft.hiresFix.width}×${draft.hiresFix.height}, denoise ${draft.hiresFix.denoise}` : 'off'
-    }`,
-    `Face fix: ${draft.autoFace ? `on, ${draft.autoFace.profile} ${Math.round(draft.autoFace.strength * 100)}%` : 'off'}`,
-    `Auto LoRA triggers: ${draft.autoTriggers ? 'on' : 'off'}`,
-  ];
+  );
+  if (!draft.imageModel)
+    lines.push(
+      `Hires fix: ${
+        draft.hiresFix
+          ? `on, ${draft.hiresFix.width}×${draft.hiresFix.height}, denoise ${draft.hiresFix.denoise}`
+          : 'off'
+      }`,
+      `Face fix: ${draft.autoFace ? `on, ${draft.autoFace.profile} ${Math.round(draft.autoFace.strength * 100)}%` : 'off'}`,
+      `Auto LoRA triggers: ${draft.autoTriggers ? 'on' : 'off'}`,
+    );
   const changed = Object.keys(overrides).length;
   lines.push(
     '',

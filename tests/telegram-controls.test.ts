@@ -59,7 +59,7 @@ it('validates and explains each setting', () => {
     checkpointId: 'model-b',
     modelSampling: null,
   });
-  expect(() => applySetting(ctx, {}, 'size', '1000x1000')).toThrow(/width/);
+  expect(() => applySetting(ctx, {}, 'size', '1000x1000')).toThrow(/multiples of 64/);
   expect(() => applySetting(ctx, {}, 'sampler', 'nope')).toThrow(/Unknown sampler/);
   expect(applySetting(ctx, {}, 'batch', '4').overrides.batchSize).toBe(4);
 
@@ -88,4 +88,61 @@ it('splits one-off flags off the end of a prompt', () => {
     ],
   });
   expect(splitPromptFlags('em--dash and --unknown stay put').flags).toEqual([]);
+});
+
+it('switches to a newer model with its best settings and back to the SDXL setup', () => {
+  const withModels: ControlContext = { ...ctx, imageModels: ['z-image-turbo'] };
+  const tuned = applySetting(withModels, applySetting(withModels, {}, 'lora', '1 0.7').overrides, 'steps', '33');
+  const newer = applySetting(withModels, tuned.overrides, 'model', 'z-image');
+  expect(newer.overrides).toMatchObject({ imageModel: 'z-image-turbo', checkpointId: '', loras: [], hiresFix: null });
+  expect(newer.message).toContain('Z-Image');
+  expect(newer.classic).toMatchObject({ steps: 33, loras: [{ modelId: 'l1', weight: 0.7 }] });
+  const draft = effectiveDraft(ctx.studio, newer.overrides, 'x');
+  expect(draft.loras).toEqual([]);
+  expect(draft.steps).not.toBe(33);
+  // Newer models leave out LoRAs, hires and face fix.
+  expect(() => applySetting(withModels, newer.overrides, 'lora', '1')).toThrow(/text only/);
+  expect(() => applySetting(withModels, newer.overrides, 'hires', 'on')).toThrow(/text only/);
+
+  const back = applySetting(
+    { ...withModels, classic: newer.classic ?? undefined },
+    newer.overrides,
+    'model',
+    'alpha xl',
+  );
+  expect(back.classic).toBeNull();
+  expect(effectiveDraft(ctx.studio, back.overrides, 'x')).toMatchObject({
+    checkpointId: 'model-a',
+    steps: 33,
+    loras: [{ modelId: 'l1', weight: 0.7 }],
+  });
+  expect(effectiveDraft(ctx.studio, back.overrides, 'x').imageModel).toBeUndefined();
+});
+
+it('leaves newer-model extras out even when the studio has them set', () => {
+  const studio = {
+    ...structuredClone(DEFAULT_DRAFT),
+    imageModel: 'anima-turbo',
+    checkpointId: '',
+    loras: [{ modelId: 'l1', weight: 1, clipWeight: 1 }],
+    split: { atStep: 4, stop: true },
+  } as GenerationDraft;
+  const draft = effectiveDraft(studio, {}, 'x');
+  expect(draft.loras).toEqual([]);
+  expect(draft.split).toBeUndefined();
+});
+
+it('switches single LoRAs off and on without losing them', () => {
+  const added = applySetting(ctx, {}, 'lora', 'detail 0.6').overrides;
+  const off = applySetting(ctx, added, 'lora', 'off detail').overrides;
+  expect(off.loras).toEqual([{ modelId: 'l1', weight: 0.6, clipWeight: 0.6, off: true }]);
+  const on = applySetting(ctx, off, 'lora', 'on 1').overrides;
+  expect(on.loras).toEqual([{ modelId: 'l1', weight: 0.6, clipWeight: 0.6 }]);
+  expect(applySetting(ctx, on, 'lora', 'remove 1').overrides.loras).toEqual([]);
+});
+
+it('takes decimal CFG and only sizes in multiples of 64', () => {
+  expect(applySetting(ctx, {}, 'cfg', '4.25').overrides.cfg).toBe(4.25);
+  expect(applySetting(ctx, {}, 'size', '896x1152').overrides).toMatchObject({ width: 896, height: 1152 });
+  expect(() => applySetting(ctx, {}, 'size', '2560x1024')).toThrow(/2048/);
 });
