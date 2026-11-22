@@ -24,11 +24,10 @@ export function TelegramRemote({ status, run, busy }: { status: TelegramStatus; 
     <section className="settings-card">
       <div className="section-heading">
         <div>
-          <h2>Telegram remote</h2>
+          <h2>Telegram</h2>
           <p>
-            Send prompts to your own Telegram bot and get the images back in the chat. Everything still runs on this PC.
-            Chats start from the current Create settings and can change the model, LoRAs, size, steps and more; send
-            /help to the bot to see how. Latent checks Telegram for messages, so no ports need opening.
+            Send prompts to your own Telegram bot and get images back. Everything runs on this PC and no ports need
+            opening. Send /help to the bot to see what it can do.
           </p>
         </div>
         <span className="badge">
@@ -38,11 +37,11 @@ export function TelegramRemote({ status, run, busy }: { status: TelegramStatus; 
           {stateLabel[status.state]}
         </span>
       </div>
-      <Notice error={status.state === 'error'}>{status.message}</Notice>
+      {status.state !== 'off' && <Notice error={status.state === 'error'}>{status.message}</Notice>}
       <div className="setting-line">
         <div>
-          <h3>Turn on the bot</h3>
-          <p>Latent only answers while it's open.</p>
+          <h3>Bot on</h3>
+          <p>Answers while Latent is open.</p>
         </div>
         <fieldset disabled={busy}>
           <Toggle label="Telegram remote" checked={status.enabled} onChange={enabled => save({ enabled })} />

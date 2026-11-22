@@ -13,11 +13,8 @@ export function PhoneRemote({ status, run, busy }: { status: PhoneStatus; run: R
     <section className="settings-card phone-remote" id="phone-remote">
       <div className="section-heading">
         <div>
-          <h2>Phone remote</h2>
-          <p>
-            Make images from your phone’s browser while you’re on the same Wi-Fi. Everything still runs on this PC. Use
-            it on your home network only.
-          </p>
+          <h2>Phone</h2>
+          <p>Make images from your phone’s browser on the same Wi-Fi. Use it on your home network only.</p>
         </div>
         <span className="badge">
           <span
@@ -29,7 +26,7 @@ export function PhoneRemote({ status, run, busy }: { status: PhoneStatus; run: R
       {status.state === 'error' && <Notice error>{status.message}</Notice>}
       <div className="setting-line">
         <div>
-          <h3>Turn on the phone page</h3>
+          <h3>Phone page on</h3>
           <p>Windows may ask to let Latent use private networks. Allow it.</p>
         </div>
         <fieldset disabled={busy}>

@@ -16,115 +16,101 @@ export interface HardwareRecommendationsProps {
 }
 const formatBytes = (value: number) =>
   value === 0 ? 'No extra model files' : `${(value / 1e9).toFixed(2)} GB model storage`;
-export function HardwareRecommendations({
+/** One line about this PC for the top of the Engine tab, with a refresh button. */
+export function HardwareSummary({
+  status,
+  busy = false,
+  onRefresh,
+}: {
+  status: HardwareProfilesStatus;
+  busy?: boolean;
+  onRefresh(): void;
+}) {
+  const working = busy || status.state === 'refreshing';
+  const inventory = status.inventory;
+  const gpu = inventory?.gpus[0];
+  return (
+    <p className="hardware-line">
+      <Cpu size={14} />
+      <span>
+        {inventory
+          ? [
+              gpu ? `${gpu.name} · ${(gpu.vramMiB / 1024).toFixed(0)} GB` : 'No NVIDIA card found',
+              `${(inventory.ramBytes / 1073741824).toFixed(0)} GB RAM`,
+            ].join(' · ')
+          : "Your PC hasn't been checked yet"}
+      </span>
+      <button
+        type="button"
+        className="icon-button"
+        disabled={working}
+        onClick={onRefresh}
+        title="Check this PC again, for example after changing your graphics card"
+        aria-label="Check this PC again"
+      >
+        <RefreshCw size={14} className={working ? 'spin' : ''} />
+      </button>
+    </p>
+  );
+}
+
+/** The full list of what Latent found, for the Logs tab. */
+export function HardwareDetails({ status }: { status: HardwareProfilesStatus }) {
+  const inventory = status.inventory;
+  if (!inventory) return <p className="muted">Not checked yet. Use the refresh button on the Engine tab.</p>;
+  return (
+    <>
+      <p className="muted small">Checked {new Date(inventory.observedAt).toLocaleString()}.</p>
+      {inventory.messages.map(message => (
+        <p className="muted small" key={message}>
+          {message}
+        </p>
+      ))}
+      <dl className="metadata">
+        <dt>Detection</dt>
+        <dd>{inventory.detection}</dd>
+        <dt>Device the engine uses</dt>
+        <dd>{inventory.activeDevice?.name ?? 'Start the engine to see this'}</dd>
+        <dt>NVIDIA cards</dt>
+        <dd>
+          {inventory.gpus.length
+            ? inventory.gpus
+                .map(gpu => `${gpu.name} · ${(gpu.vramMiB / 1024).toFixed(1)} GB · driver ${gpu.driver}`)
+                .join('; ')
+            : 'None found'}
+        </dd>
+        <dt>System</dt>
+        <dd>
+          {inventory.os} · {inventory.arch} · {(inventory.ramBytes / 1073741824).toFixed(1)} GB RAM
+        </dd>
+        <dt>Engine</dt>
+        <dd>
+          {inventory.runtimeIdentity
+            ? `${inventory.runtimeIdentity.data.comfy.observedVersion ?? 'Unknown Comfy version'} · ${inventory.runtimeIdentity.sha256.slice(0, 12)}`
+            : 'Start the engine to see its version'}
+        </dd>
+      </dl>
+    </>
+  );
+}
+
+/** Suggested starting settings for the prompt in Create, tested on this PC where possible. */
+export function StartingPresets({
   status,
   busy = false,
   draftChanged = false,
   oomAdvice,
   error,
   draftInvalid = false,
-  onRefresh,
   onRecommend,
   onApply,
-  onApplyBackend,
 }: HardwareRecommendationsProps) {
   const working = busy || status.state === 'refreshing';
-  const inventory = status.inventory;
   const report = status.report;
   return (
-    <section className="settings-card hardware-recommendations">
-      <div className="section-heading">
-        <div>
-          <h2>
-            <Cpu size={18} />
-            Your hardware & starting presets
-          </h2>
-          <p>See what your PC can handle and get suggested settings for it.</p>
-        </div>
-        <button type="button" disabled={working} onClick={onRefresh}>
-          <RefreshCw size={15} className={working ? 'spin' : ''} />
-          Refresh hardware
-        </button>
-      </div>
-      <Notice error={status.state === 'error'}>{status.message}</Notice>
+    <div className="hardware-recommendations">
+      {status.state === 'error' && <Notice error>{status.message}</Notice>}
       {error && <Notice error>{error}</Notice>}
-      {inventory && (
-        <p className="muted small">
-          Checked {new Date(inventory.observedAt).toLocaleString()}. Refresh after changing your graphics card or
-          engine.
-        </p>
-      )}
-      {inventory?.messages.map(message => (
-        <p className="muted small" key={message}>
-          {message}
-        </p>
-      ))}
-      {inventory && (
-        <div className="hardware-summary">
-          <div>
-            <Cpu size={26} />
-            <strong>{inventory.gpus[0]?.name ?? 'Graphics card unavailable'}</strong>
-            <span>
-              {inventory.gpus[0]
-                ? `${(inventory.gpus[0].vramMiB / 1024).toFixed(0)} GB graphics memory`
-                : 'Refresh to detect your GPU'}
-            </span>
-          </div>
-          <div>
-            <strong>{(inventory.ramBytes / 1073741824).toFixed(0)} GB</strong>
-            <span>System memory</span>
-          </div>
-          <div>
-            <strong>{inventory.activeDevice?.name ?? 'Engine stopped'}</strong>
-            <span>Generation device</span>
-          </div>
-        </div>
-      )}
-      {inventory && (
-        <details>
-          <summary>Technical device details</summary>
-          <dl className="metadata">
-            <dt>Detection</dt>
-            <dd>{inventory.detection}</dd>
-            <dt>Device the engine uses</dt>
-            <dd>{inventory.activeDevice?.name ?? 'Start the engine to see this'}</dd>
-            <dt>Detected NVIDIA devices</dt>
-            <dd>
-              {inventory.gpus.length
-                ? inventory.gpus
-                    .map(gpu => `${gpu.name} · ${(gpu.vramMiB / 1024).toFixed(1)} GB · driver ${gpu.driver}`)
-                    .join('; ')
-                : 'None found'}
-            </dd>
-            <dt>System</dt>
-            <dd>
-              {inventory.os} · {inventory.arch} · {(inventory.ramBytes / 1073741824).toFixed(1)} GB RAM
-            </dd>
-            <dt>Engine</dt>
-            <dd>
-              {inventory.runtimeIdentity
-                ? `${inventory.runtimeIdentity.data.comfy.observedVersion ?? 'Unknown Comfy version'} · ${inventory.runtimeIdentity.sha256.slice(0, 12)}`
-                : 'Start the engine to see its version'}
-            </dd>
-          </dl>
-        </details>
-      )}
-      {status.backend && (
-        <div className="setting-line">
-          <div>
-            <h3>Memory and device mode</h3>
-            <p>
-              Using: {status.backend.actual}. Suggested: {status.backend.suggested ?? 'refresh hardware first'}.
-            </p>
-            <p>{status.backend.explanation}</p>
-          </div>
-          {report && status.backend.suggested && status.backend.actual !== status.backend.suggested && (
-            <button type="button" disabled={working || draftChanged} onClick={() => onApplyBackend(report.id)}>
-              Use the suggested mode
-            </button>
-          )}
-        </div>
-      )}
       <button type="button" disabled={working || draftInvalid} className="primary" onClick={onRecommend}>
         <Sparkles size={15} />
         Suggest settings for my prompt
@@ -220,6 +206,6 @@ export function HardwareRecommendations({
           <p>Nothing was changed, and Latent won't retry on its own.</p>
         </Notice>
       )}
-    </section>
+    </div>
   );
 }

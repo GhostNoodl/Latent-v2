@@ -20,26 +20,26 @@ export function AppUpdates({
   const active = busy || status.state === 'checking' || status.state === 'downloading';
   return (
     <section className="settings-card">
-      <h2>App updates</h2>
-      <p>Installed version {status.currentVersion}. Updates keep your studio data and models.</p>
+      <h2>Latent</h2>
+      <p>Version {status.currentVersion}. Updates keep your images, models and settings.</p>
       <p role="status">{status.message}</p>
       {status.supported && (
         <fieldset className="app-update-options" disabled={active}>
           <Toggle
-            label="Check automatically for stable releases"
+            label="Check for new versions"
             checked={status.settings.checkAutomatically}
             onChange={checkAutomatically => onSettings({ checkAutomatically })}
           />
           {status.settings.checkAutomatically && (
             <Toggle
-              label="Download updates automatically"
+              label="Download them on their own"
               checked={status.settings.downloadAutomatically}
               onChange={downloadAutomatically => onSettings({ downloadAutomatically })}
             />
           )}
           {status.settings.downloadAutomatically && (
             <Toggle
-              label="Close and install when studio work finishes"
+              label="Install when nothing is running"
               checked={status.settings.installWhenIdle}
               onChange={installWhenIdle => onSettings({ installWhenIdle })}
             />

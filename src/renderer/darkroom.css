@@ -3773,3 +3773,245 @@ body:has(.studio) {
 .studio .context-menu button.danger-menuitem:hover {
   background: var(--danger-bg);
 }
+
+/* Settings, tidied (v0.2.44): seven tabs, one narrow column of rows, and extra options in a panel beside
+   the row that opened it. Updates and Remote show their two cards side by side. */
+.studio .settings-content {
+  max-width: 640px;
+}
+.studio .settings-content[data-tab='updates'],
+.studio .settings-content[data-tab='remote'] {
+  max-width: 1120px;
+}
+.studio .settings-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.studio .settings-pair > .settings-card {
+  border-radius: 14px;
+  padding: 20px 22px;
+  min-width: 0;
+}
+.studio .settings-content .settings-card > h2 + p,
+.studio .settings-content .section-heading p {
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .settings-content .setting-line > div > p {
+  font-size: 12px;
+}
+.studio .settings-content .setting-line {
+  padding-top: 12px;
+  margin-top: 12px;
+}
+.studio .settings-content .setting-line[hidden] {
+  display: none;
+}
+.studio .settings-content .settings-group-title {
+  margin: 16px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.studio .settings-content .settings-footnote {
+  margin-top: 10px;
+}
+.studio .settings-content .setting-line .text-button {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: inherit;
+}
+.studio .settings-content .backend-actions {
+  margin-top: 14px;
+}
+.studio .hardware-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .hardware-line .icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+.studio .hardware-line .icon-button:hover:not(:disabled) {
+  background: var(--inset);
+  color: var(--text);
+}
+
+/* A row that opens a panel beside it. */
+.studio .settings-content .panel-row {
+  position: relative;
+  display: block;
+}
+.studio .panel-row-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+  margin: -6px -10px;
+  padding: 6px 10px;
+  box-sizing: content-box;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.studio .panel-row-button:hover {
+  background: var(--inset);
+}
+.studio .panel-row[data-open] > .panel-row-button {
+  border-color: var(--accent);
+  background: var(--raised);
+}
+.studio .panel-row-button > span {
+  display: grid;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.studio .panel-row-button strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.studio .panel-row-button small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.studio .panel-row-button em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  white-space: nowrap;
+}
+.studio .panel-row-button > svg {
+  flex: none;
+  color: var(--muted);
+}
+.studio .panel-row[data-open] > .panel-row-button > svg {
+  color: var(--accent);
+}
+.studio .setting-panel {
+  position: absolute;
+  z-index: 30;
+  top: 0;
+  left: calc(100% + 36px);
+  width: 400px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 20px 60px var(--shadow);
+}
+.studio .setting-panel::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 14px;
+  width: 3px;
+  height: 22px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+.studio .setting-panel > * {
+  margin: 0;
+}
+.studio .setting-panel > h3 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.studio .setting-panel > p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.studio .setting-panel .toggle-group {
+  display: grid;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.studio .setting-panel .logs {
+  max-height: 46vh;
+  margin: 0;
+}
+.studio .setting-panel > .settings-card {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  display: grid;
+  gap: 10px;
+}
+.studio .setting-panel > .settings-card > strong {
+  display: none;
+}
+.studio .setting-panel > .settings-card > p {
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .setting-panel .hardware-recommendations {
+  display: grid;
+  gap: 12px;
+}
+.studio .setting-panel .hardware-profile-grid {
+  grid-template-columns: 1fr;
+  margin-top: 0;
+}
+.studio .settings-content .storage-line {
+  display: block;
+}
+.studio .settings-content .storage-line .storage-overview {
+  margin: 0;
+}
+@media (max-width: 1320px) {
+  .studio .setting-panel {
+    position: static;
+    width: auto;
+    max-height: none;
+    margin: 10px 0 0 !important;
+    box-shadow: none;
+  }
+}
+.studio .settings-content .settings-group-title > span {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.studio .settings-pair form {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.studio .settings-pair form .button-row {
+  margin-top: 0;
+}

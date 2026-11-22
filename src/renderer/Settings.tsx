@@ -4,8 +4,8 @@ import { AppUpdates } from './AppUpdates';
 import { TelegramRemote } from './TelegramRemote';
 import { AssistantSettings } from './assistant/AssistantSettings';
 import { PackageSetupStorage } from './PackageSetupStorage';
-import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
-import { ArrowUpRight, Check, Copy, Download, Play, RotateCcw, Square, Terminal } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { ArrowUpRight, Check, ChevronRight, Copy, Download, Play, RotateCcw, Square, Wrench } from 'lucide-react';
 import type { AppSettings, AppSnapshot } from '../shared/types';
 import { DEFAULT_SETTINGS } from '../shared/defaults';
 import { ENHANCE_MAX_SIDE_LARGE, hasLargeVram, usesExtraVram } from '../shared/vram';
@@ -13,7 +13,12 @@ import { DEFAULT_IMAGE_VERSIONS } from '../shared/image-versions';
 import { Busy, ConfirmDialog, Notice, Toggle, type RunAction } from './ui';
 import { RuntimeUpdates } from './RuntimeUpdates';
 import { StorageOverview } from './StorageOverview';
-import { HardwareRecommendations, type HardwareRecommendationsProps } from './HardwareRecommendations';
+import {
+  HardwareDetails,
+  HardwareSummary,
+  StartingPresets,
+  type HardwareRecommendationsProps,
+} from './HardwareRecommendations';
 
 function scrollBackendLogs(event: KeyboardEvent<HTMLPreElement>) {
   if (
@@ -39,101 +44,107 @@ function scrollBackendLogs(event: KeyboardEvent<HTMLPreElement>) {
   panel.scrollTop = Math.max(0, Math.min(panel.scrollHeight - panel.clientHeight, positions[event.key]));
 }
 
-// Short names for the section list. Sections not listed here use their own heading.
-const SECTION_NAMES: Record<string, string> = {
-  'Studio setup': 'Setup',
-  'Image engine': 'Engine',
-  'Download and setup activity': 'Downloads',
-  'Telegram remote': 'Telegram',
-  'Phone remote': 'Phone',
-  Appearance: 'Look',
-  'Where files are stored': 'Folders',
-  'Previews, drafts, and notifications': 'Previews and alerts',
-  'Your hardware & starting presets': 'Hardware',
-  'Studio storage': 'Storage',
-  'Reset settings': 'Reset',
+const TABS = [
+  { id: 'engine', name: 'Engine' },
+  { id: 'updates', name: 'Updates' },
+  { id: 'preferences', name: 'Preferences' },
+  { id: 'assistant', name: 'Assistant' },
+  { id: 'remote', name: 'Remote' },
+  { id: 'storage', name: 'Storage' },
+  { id: 'logs', name: 'Logs and reset' },
+] as const;
+type TabId = (typeof TABS)[number]['id'];
+const tabKey = 'latent.settings-tab';
+function savedTab(): TabId {
+  try {
+    // Saved as settings-<tab>, the same id other pages use to open a tab here (see openAssistantSettings).
+    const saved = localStorage.getItem(tabKey);
+    return TABS.find(tab => `settings-${tab.id}` === saved)?.id ?? 'engine';
+  } catch {
+    return 'engine';
+  }
+}
+
+const DEVICE_MODE_NAMES: Record<AppSettings['deviceMode'], string> = {
+  auto: 'Automatic',
+  lowvram: 'Low VRAM',
+  cpu: 'CPU only',
 };
 
-const tabKey = 'latent.settings-tab';
-/** Shows the chosen section; sections without a name (no heading) always show. */
-function showSection(root: HTMLElement, shown: string | undefined) {
-  if (!shown) return;
-  root.dataset.tabs = '';
-  for (const section of root.querySelectorAll<HTMLElement>(':scope > section'))
-    section.toggleAttribute('data-current', section.id === shown || !section.dataset.tabName);
-}
-/** The tabs on the left of Settings. Reads the sections from the page, so new ones show up on their own,
- * and shows one section at a time. */
-function SettingsSections({ content }: { content: RefObject<HTMLDivElement | null> }) {
-  const [sections, setSections] = useState<{ id: string; name: string }[]>([]);
-  const [current, setCurrent] = useState(() => {
-    try {
-      return localStorage.getItem(tabKey) ?? '';
-    } catch {
-      return '';
-    }
-  });
-  const shownRef = useRef<string | undefined>(undefined);
+/** A settings row that opens its extra options in a panel right beside it, so nothing below jumps around.
+ * One panel is open at a time per tab; Escape or a click elsewhere closes it. */
+function PanelRow({
+  id,
+  open,
+  onOpen,
+  title,
+  hint,
+  status,
+  children,
+}: {
+  id: string;
+  open: string | undefined;
+  onOpen(id: string | undefined): void;
+  title: string;
+  hint?: string;
+  status?: string;
+  children: ReactNode;
+}) {
+  const isOpen = open === id;
+  const row = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const [shift, setShift] = useState(0);
+  useLayoutEffect(() => {
+    if (!isOpen || !row.current || !panel.current) return;
+    // Keep the panel on screen: nudge it up when the row sits low.
+    const rowTop = row.current.getBoundingClientRect().top;
+    const height = panel.current.offsetHeight;
+    setShift(Math.min(0, window.innerHeight - 16 - rowTop - height));
+  }, [isOpen]);
   useEffect(() => {
-    const root = content.current;
-    if (!root) return;
-    const read = () => {
-      const next = [...root.querySelectorAll<HTMLElement>(':scope > section')].map((section, index) => {
-        const heading =
-          section.querySelector('h2')?.textContent?.trim() ||
-          section.getAttribute('aria-label') ||
-          section.querySelector('h3')?.textContent?.trim() ||
-          '';
-        section.id ||= `settings-section-${index}`;
-        const name = SECTION_NAMES[heading] ?? heading;
-        if (name) section.dataset.tabName = name;
-        return { id: section.id, name };
-      });
-      setSections(previous =>
-        previous.length === next.length &&
-        previous.every((item, index) => item.name === next[index].name && item.id === next[index].id)
-          ? previous
-          : next,
-      );
+    if (!isOpen) return;
+    const close = (event: Event) => {
+      if (event instanceof globalThis.KeyboardEvent) {
+        if (event.key === 'Escape') onOpen(undefined);
+        return;
+      }
+      if (!row.current?.contains(event.target as Node)) onOpen(undefined);
     };
-    read();
-    showSection(root, shownRef.current);
-    const changes = new MutationObserver(() => {
-      read();
-      showSection(root, shownRef.current);
-    });
-    changes.observe(root, { childList: true });
-    return () => changes.disconnect();
-  }, [content]);
-  const named = sections.filter(section => section.name);
-  const shown = named.some(section => section.id === current) ? current : named[0]?.id;
-  useEffect(() => {
-    shownRef.current = shown;
-    if (content.current) showSection(content.current, shown);
-    content.current?.scrollTo?.({ top: 0 });
-  }, [content, shown]);
+    document.addEventListener('keydown', close);
+    document.addEventListener('pointerdown', close);
+    return () => {
+      document.removeEventListener('keydown', close);
+      document.removeEventListener('pointerdown', close);
+    };
+  }, [isOpen, onOpen]);
   return (
-    <nav className="settings-sections" aria-label="Settings sections">
-      {named.map(section => (
-        <a
-          key={section.id}
-          href={`#${section.id}`}
-          aria-current={shown === section.id ? 'page' : undefined}
-          onClick={event => {
-            event.preventDefault();
-            setCurrent(section.id);
-            try {
-              localStorage.setItem(tabKey, section.id);
-            } catch {
-              /* Private browser storage can be unavailable. */
-            }
-          }}
-        >
-          {section.name}
-        </a>
-      ))}
-    </nav>
+    <div className="setting-line panel-row" ref={row} data-open={isOpen || undefined}>
+      <button
+        type="button"
+        className="panel-row-button"
+        aria-expanded={isOpen}
+        onClick={() => onOpen(isOpen ? undefined : id)}
+      >
+        <span>
+          <strong>{title}</strong>
+          {hint && <small>{hint}</small>}
+        </span>
+        {status && <em>{status}</em>}
+        <ChevronRight size={16} />
+      </button>
+      {isOpen && (
+        <div className="setting-panel" ref={panel} role="region" aria-label={title} style={{ marginTop: shift }}>
+          <h3>{title}</h3>
+          {children}
+        </div>
+      )}
+    </div>
   );
+}
+
+function onOff(...values: boolean[]) {
+  const on = values.filter(Boolean).length;
+  return on === 0 ? 'Off' : on === values.length ? 'All on' : `${on} on`;
 }
 
 export function StudioSettings({
@@ -161,7 +172,19 @@ export function StudioSettings({
   const imageVersions = settings.imageVersions ?? DEFAULT_IMAGE_VERSIONS;
   const settingsBusy = busy.settings || busy.hardware;
   const [confirmReset, setConfirmReset] = useState(false);
+  const [tab, setTab] = useState<TabId>(savedTab);
+  const [panel, setPanel] = useState<string>();
   const content = useRef<HTMLDivElement>(null);
+  const pickTab = (id: TabId) => {
+    setTab(id);
+    setPanel(undefined);
+    content.current?.scrollTo?.({ top: 0 });
+    try {
+      localStorage.setItem(tabKey, `settings-${id}`);
+    } catch {
+      /* Private browser storage can be unavailable. */
+    }
+  };
   const runtimeWorking =
     ['applying', 'rolling-back', 'recovering'].includes(snapshot.runtimeUpdates.state) ||
     snapshot.ipAdapter.state === 'activating';
@@ -185,534 +208,601 @@ export function StudioSettings({
     ready: 'Ready',
     error: 'Needs attention',
   };
+  const suggestedMode = snapshot.hardwareProfiles.backend?.suggested;
+  const rows = { open: panel, onOpen: setPanel };
   return (
-    <div className="page-content settings-content" ref={content}>
-      <SettingsSections content={content} />
-      {onSetup && (
-        <section className="settings-card">
-          <h2>Studio setup</h2>
-          <p>Check your PC and install the engine, image models, Qwen editing or video.</p>
-          <button type="button" className="primary" onClick={onSetup}>
-            Open setup
-          </button>
-        </section>
-      )}
-      <section className="settings-card backend-card">
-        <div className="section-heading">
-          <div>
-            <h2>Image engine</h2>
-            <p>The engine that makes your images. Latent gives it its own private copy of ComfyUI.</p>
-          </div>
-          <span className="badge">
-            <span className={`status-dot ${backend.state}`} />
-            {stateLabel[backend.state]}
-          </span>
-        </div>
-        {backend.state !== 'ready' && (
-          <Notice error={backend.state === 'error'}>{backend.message || 'Waiting to hear from the engine…'}</Notice>
-        )}
-        {backend.state === 'installing' && <progress value={backend.installProgress} max={100} />}
-        {['not-installed', 'error', 'installing'].includes(backend.state) && (
-          <PackageSetupStorage packageId="backend" />
-        )}
-        <div className="button-row backend-actions">
-          {['not-installed', 'error'].includes(backend.state) && (
-            <button
-              type="button"
-              className="primary"
-              disabled={busy.setup || backendStartBlocked}
-              onClick={() => void run('setup', () => window.latent.setupBackend(), 'The engine is installed.')}
-            >
-              <Busy active={busy.setup} />
-              {!busy.setup && <Download size={16} />}
-              {backend.state === 'error' ? 'Repair the engine' : 'Install the engine'}
-            </button>
-          )}
-          {['stopped', 'error'].includes(backend.state) && (
-            <button
-              type="button"
-              className={backend.state === 'stopped' ? 'primary' : ''}
-              disabled={busy.start || backendStartBlocked}
-              onClick={() => void run('start', () => window.latent.startBackend())}
-            >
-              <Busy active={busy.start} />
-              {!busy.start && <Play size={16} />}Start engine
-            </button>
-          )}
-          {['ready', 'starting'].includes(backend.state) && (
-            <button
-              type="button"
-              disabled={busy.stop || runtimeWorking}
-              onClick={() => void run('stop', () => window.latent.stopBackend())}
-            >
-              <Busy active={busy.stop} />
-              {!busy.stop && <Square size={15} />}Stop engine
-            </button>
-          )}
-          <button
-            type="button"
-            disabled={backend.state !== 'ready' || busy.comfy || backendStartBlocked}
-            onClick={() => void run('comfy', () => window.latent.openComfyUI())}
+    <div className="page-content settings-content" ref={content} data-tab={tab}>
+      <nav className="settings-sections" aria-label="Settings sections">
+        {TABS.map(item => (
+          <a
+            key={item.id}
+            href={`#settings-${item.id}`}
+            aria-current={tab === item.id ? 'page' : undefined}
+            onClick={event => {
+              event.preventDefault();
+              pickTab(item.id);
+            }}
           >
-            Open ComfyUI
-            <ArrowUpRight size={15} />
-          </button>
-        </div>
-        <div className="setting-line">
-          <div>
-            <h3>Start with the studio</h3>
-            <p>Start the engine automatically when Latent opens.</p>
-          </div>
-          <fieldset disabled={settingsBusy}>
-            <Toggle
-              label="Automatic startup"
-              checked={settings.backendAutoStart}
-              onChange={backendAutoStart => update({ backendAutoStart })}
-            />
-          </fieldset>
-        </div>
-        <div className="setting-line">
-          <div>
-            <h3>Memory and device</h3>
-            <p>Takes effect the next time the engine starts.</p>
-          </div>
-          <select
-            aria-label="Memory and device mode"
-            value={settings.deviceMode}
-            disabled={settingsBusy}
-            onChange={event => update({ deviceMode: event.target.value as AppSettings['deviceMode'] })}
-          >
-            <option value="auto">Automatic (GPU preferred)</option>
-            <option value="lowvram">Low VRAM</option>
-            <option value="cpu">CPU only</option>
-          </select>
-        </div>
-        <div className="setting-line">
-          <div>
-            <h3>Turbo math</h3>
-            <p>
-              Faster on NVIDIA RTX cards. The same seed can look a tiny bit different. Applies after the engine
-              restarts.
-            </p>
-          </div>
-          <fieldset disabled={settingsBusy || settings.deviceMode === 'cpu'}>
-            <Toggle
-              label="Turbo math"
-              checked={settings.fastMath ?? false}
-              onChange={fastMath => update({ fastMath })}
-            />
-          </fieldset>
-        </div>
-        <div className="setting-line">
-          <div>
-            <h3>SageAttention</h3>
-            <p>
-              Another speed boost on NVIDIA cards. Needs a small add-on (about 64 MB). Applies after the engine
-              restarts.
-            </p>
-            <p className="muted">
-              {sage.state === 'installed' ? (
-                <>
-                  <Check size={14} /> Installed
-                </>
-              ) : (
-                sage.message
-              )}
-            </p>
-            {['missing', 'error'].includes(sage.state) && (
-              <button
-                type="button"
-                className="secondary"
-                disabled={busy.sage || runtimeWorking}
-                title="The engine restarts while the add-on installs."
-                onClick={() =>
-                  void run('sage', () => window.latent.installSageAttention(), 'SageAttention is installed and on.')
-                }
-              >
-                <Busy active={busy.sage} />
-                {!busy.sage && <Download size={16} />}Install SageAttention
-              </button>
-            )}
-            {sage.state === 'installing' && <Busy active />}
-          </div>
-          <fieldset
-            disabled={
-              settingsBusy || settings.deviceMode === 'cpu' || (sage.state !== 'installed' && !settings.sageAttention)
-            }
-          >
-            <Toggle
-              label="SageAttention"
-              checked={settings.sageAttention ?? false}
-              onChange={sageAttention => update({ sageAttention })}
-            />
-          </fieldset>
-        </div>
-        <div className="setting-line">
-          <div>
-            <h3>Use extra graphics memory</h3>
-            <p>
-              For cards with 20 GB or more. Enhance can go up to {ENHANCE_MAX_SIDE_LARGE} pixels, and Qwen reads your
-              prompt on the graphics card, which is faster.
-            </p>
-            {!bigCard ? (
-              <p className="muted">
-                {vramGb ? `This card has ${vramGb} GB, so this stays off.` : 'Needs a card with 20 GB or more.'}
-              </p>
-            ) : (
-              settings.deviceMode !== 'auto' && <p className="muted">Works with Automatic memory mode only.</p>
-            )}
-          </div>
-          <fieldset disabled={settingsBusy || !bigCard || settings.deviceMode !== 'auto'}>
-            <Toggle
-              label="Use extra graphics memory"
-              checked={usesExtraVram(settings, snapshot.hardware)}
-              onChange={extraVram => update({ extraVram })}
-            />
-          </fieldset>
-        </div>
-        <details className="log-details">
-          <summary>
-            <Terminal size={15} />
-            Engine log {backend.version ? `· ComfyUI ${backend.version}` : ''}
-          </summary>
-          <pre className="logs" tabIndex={0} role="region" aria-label="Engine log output" onKeyDown={scrollBackendLogs}>
-            {backend.logTail.length ? backend.logTail.join('\n') : 'Nothing in the log yet.'}
-          </pre>
-          <button
-            type="button"
-            className="text-button"
-            onClick={() =>
-              void run('copy-logs', () => window.latent.copyText(backend.logTail.join('\n')), 'Engine log copied.')
-            }
-          >
-            <Copy size={14} />
-            Copy logs
-          </button>
-        </details>
-      </section>
-      <SetupActivityPanel
-        items={snapshot.setupActivity}
-        onCopy={() =>
-          void run(
-            'copy-setup-history',
-            () =>
-              window.latent.copyText(
-                JSON.stringify(
-                  {
-                    appVersion: snapshot.appUpdates?.currentVersion,
-                    exportedAt: new Date().toISOString(),
-                    activity: snapshot.setupActivity ?? [],
-                  },
-                  null,
-                  2,
-                ),
-              ),
-            'Download and setup history copied.',
-          )
-        }
-      />
-      {snapshot.appUpdates && (
-        <AppUpdates
-          status={snapshot.appUpdates}
-          busy={busy['app-update']}
-          onSettings={value => void run('app-update', () => window.latent.saveAppUpdateSettings(value))}
-          onCheck={() => void run('app-update', () => window.latent.checkAppUpdates())}
-          onDownload={() => void run('app-update', () => window.latent.downloadAppUpdate())}
-          onInstall={() => void run('app-update', () => window.latent.installAppUpdate())}
-          onCancel={() => void run('app-update-cancel', () => window.latent.cancelAppUpdate())}
-        />
-      )}
-      <AssistantSettings status={snapshot.assistant} run={run} busy={busy} />
-      {snapshot.telegram && <TelegramRemote status={snapshot.telegram} run={run} busy={Boolean(busy.telegram)} />}
-      {snapshot.phone && <PhoneRemote status={snapshot.phone} run={run} busy={Boolean(busy.phone)} />}
-      <RuntimeUpdates
-        onRepair={() => void run('runtime-update', () => window.latent.prepareRuntimeEnvironmentRepair())}
-        status={snapshot.runtimeUpdates}
-        appUpdateVersion={snapshot.appUpdates?.release?.version}
-        busy={busy['runtime-update'] || busy['runtime-update-settings'] || snapshot.ipAdapter.state === 'activating'}
-        onSettings={value => void run('runtime-update-settings', () => window.latent.saveRuntimeUpdateSettings(value))}
-        onCheck={() =>
-          void run('runtime-update', async () => {
-            // New engines arrive inside app updates, so look for one of those too.
-            if (snapshot.appUpdates?.supported) await window.latent.checkAppUpdates().catch(() => undefined);
-            await window.latent.checkRuntimeUpdates();
-          })
-        }
-        onStage={kind => void run('runtime-update', () => window.latent.stageRuntimeUpdate(kind))}
-        onActivate={() => void run('runtime-update', () => window.latent.activateRuntimeUpdate())}
-        onRollback={() => void run('runtime-update', () => window.latent.rollbackRuntimeUpdate())}
-        onRecover={() => void run('runtime-update', () => window.latent.recoverRuntimeUpdate())}
-        onCancel={() => void run('runtime-update-cancel', () => window.latent.cancelRuntimeUpdate())}
-      />
-      <section className="settings-card">
-        <h2>Appearance</h2>
-        <div className="setting-line">
-          <label htmlFor="theme">Theme</label>
-          <select
-            id="theme"
-            value={settings.theme}
-            disabled={settingsBusy}
-            onChange={event => update({ theme: event.target.value as AppSettings['theme'] })}
-          >
-            <option value="system">Use system</option>
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-          </select>
-        </div>
-        <div className="setting-line">
-          <label htmlFor="tune-side">Tune panel</label>
-          <select
-            id="tune-side"
-            value={settings.tuneSide ?? 'right'}
-            disabled={settingsBusy}
-            onChange={event => update({ tuneSide: event.target.value as 'left' | 'right' })}
-          >
-            <option value="right">On the right</option>
-            <option value="left">On the left</option>
-          </select>
-        </div>
-        <div className="setting-line">
-          <span>Accent color</span>
-          <div className="accent-picker">
-            {(['iris', 'sea-glass', 'rose', 'sky', 'amber', 'peach', 'mint', 'lilac'] as const).map(accent => (
-              <button
-                type="button"
-                key={accent}
-                className={`accent-swatch ${accent}`}
-                aria-label={accent === 'sea-glass' ? 'Sea glass accent' : `${accent} accent`}
-                aria-pressed={settings.accent === accent}
-                disabled={settingsBusy}
-                onClick={() => update({ accent })}
-              >
-                {settings.accent === accent && <Check size={16} />}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-      <section className="settings-card">
-        <h2>Where files are stored</h2>
-        <p>
-          Want models or images on another drive? Pick a new folder and Latent copies everything there, checks the copy,
-          and restarts. Your original files stay where they are until you delete them.
-        </p>
-        <p>Stop the engine and let downloads finish first. The new folder must be empty and big enough.</p>
-        {(['models', 'outputs'] as const).map(kind => (
-          <div className="setting-line" key={kind}>
-            <div>
-              <h3>{kind === 'models' ? 'Models' : 'Your images'}</h3>
-              <p className="inline-path">{snapshot.paths[kind]}</p>
-            </div>
-            <button
-              disabled={
-                !['stopped', 'not-installed'].includes(snapshot.backend.state) || Boolean(busy['storage-location'])
-              }
-              onClick={() => void run('storage-location', () => window.latent.changeStorageLocation(kind))}
-            >
-              Choose folder, copy & restart
-            </button>
-          </div>
+            {item.name}
+          </a>
         ))}
-      </section>
-      <section className="settings-card">
-        <h2>Previews, drafts, and notifications</h2>
-        <div className="setting-line">
-          <div>
-            <h3>Civitai metadata</h3>
-            <p>
-              Look up your model files on Civitai to show their creator and preview images. Your files never leave your
-              PC.
-            </p>
+      </nav>
+
+      {tab === 'engine' && (
+        <section className="settings-card backend-card" id="settings-engine">
+          <div className="section-heading">
+            <div>
+              <h2>Engine</h2>
+              <HardwareSummary
+                status={snapshot.hardwareProfiles}
+                busy={settingsBusy || runtimeWorking}
+                onRefresh={hardwareActions.onRefresh}
+              />
+            </div>
+            <span className="badge">
+              <span className={`status-dot ${backend.state}`} />
+              {stateLabel[backend.state]}
+            </span>
           </div>
-          <fieldset disabled={settingsBusy} className="toggle-group">
-            <Toggle
-              label="Automatically fetch Civitai metadata"
-              checked={settings.civitaiAutoMetadata === true}
-              onChange={civitaiAutoMetadata => update({ civitaiAutoMetadata })}
-            />
-            <Toggle
-              label="Display Civitai metadata and previews"
-              checked={settings.civitaiDisplayMetadata !== false}
-              onChange={civitaiDisplayMetadata => update({ civitaiDisplayMetadata })}
-            />
-          </fieldset>
-        </div>
-        <div className="setting-line">
-          <div>
-            <h3>Generation preview</h3>
-            <p>
-              Watch the image take shape while it generates. This only changes what you see while waiting; the final
-              image is the same either way.
-            </p>
+          {backend.state !== 'ready' && (
+            <Notice error={backend.state === 'error'}>{backend.message || 'Waiting to hear from the engine…'}</Notice>
+          )}
+          {backend.state === 'installing' && <progress value={backend.installProgress} max={100} />}
+          {['not-installed', 'error', 'installing'].includes(backend.state) && (
+            <PackageSetupStorage packageId="backend" />
+          )}
+          <div className="button-row backend-actions">
+            {['not-installed', 'error'].includes(backend.state) && (
+              <button
+                type="button"
+                className="primary"
+                disabled={busy.setup || backendStartBlocked}
+                onClick={() => void run('setup', () => window.latent.setupBackend(), 'The engine is installed.')}
+              >
+                <Busy active={busy.setup} />
+                {!busy.setup && <Download size={16} />}
+                {backend.state === 'error' ? 'Repair the engine' : 'Install the engine'}
+              </button>
+            )}
+            {['stopped', 'error'].includes(backend.state) && (
+              <button
+                type="button"
+                className={backend.state === 'stopped' ? 'primary' : ''}
+                disabled={busy.start || backendStartBlocked}
+                onClick={() => void run('start', () => window.latent.startBackend())}
+              >
+                <Busy active={busy.start} />
+                {!busy.start && <Play size={16} />}Start engine
+              </button>
+            )}
+            {['ready', 'starting'].includes(backend.state) && (
+              <button
+                type="button"
+                disabled={busy.stop || runtimeWorking}
+                onClick={() => void run('stop', () => window.latent.stopBackend())}
+              >
+                <Busy active={busy.stop} />
+                {!busy.stop && <Square size={15} />}Stop engine
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={backend.state !== 'ready' || busy.comfy || backendStartBlocked}
+              onClick={() => void run('comfy', () => window.latent.openComfyUI())}
+            >
+              Open ComfyUI
+              <ArrowUpRight size={15} />
+            </button>
+            {onSetup && (
+              <button type="button" onClick={onSetup} title="Install the engine, image models, Qwen editing or video">
+                <Wrench size={15} />
+                Setup
+              </button>
+            )}
           </div>
-          <fieldset disabled={settingsBusy}>
-            <Toggle
-              label="Show live generation previews"
-              checked={settings.showGenerationPreview}
-              onChange={showGenerationPreview => update({ showGenerationPreview })}
-            />
-          </fieldset>
-        </div>
-        <div className="setting-line">
-          <div>
-            <h3>Image versions</h3>
-            <p>
-              Show an image and its hires fix and face fix as one card in the gallery, with the newest version on top.
-              Every version stays saved and you can still view or compare them from the card's ⋯ menu.
-            </p>
-          </div>
-          <fieldset disabled={settingsBusy}>
-            <Toggle
-              label="Group versions together"
-              checked={imageVersions.group}
-              onChange={group => update({ imageVersions: { ...imageVersions, group } })}
-            />
-          </fieldset>
-        </div>
-        {imageVersions.group && (
           <div className="setting-line">
             <div>
-              <h3>Also keep as separate cards</h3>
-              <p>Pick the earlier versions that should still get their own card next to the grouped one.</p>
+              <h3>Start with Latent</h3>
+              <p>Starts the engine when you open Latent.</p>
             </div>
-            <fieldset disabled={settingsBusy} className="setting-toggles">
+            <fieldset disabled={settingsBusy}>
               <Toggle
-                label="Original"
-                checked={imageVersions.showOriginal}
-                onChange={showOriginal => update({ imageVersions: { ...imageVersions, showOriginal } })}
-              />
-              <Toggle
-                label="Hires fix"
-                checked={imageVersions.showRefined}
-                onChange={showRefined => update({ imageVersions: { ...imageVersions, showRefined } })}
-              />
-              <Toggle
-                label="Face fix steps"
-                checked={imageVersions.showFaceSteps}
-                onChange={showFaceSteps => update({ imageVersions: { ...imageVersions, showFaceSteps } })}
+                label="Start the engine with Latent"
+                checked={settings.backendAutoStart}
+                onChange={backendAutoStart => update({ backendAutoStart })}
               />
             </fieldset>
           </div>
-        )}
-        <div className="setting-line">
-          <div>
-            <h3>Remember prompts</h3>
-            <p>Bring these prompts back next time you open Latent. Saved images always keep their own prompts.</p>
+          <h3 className="settings-group-title">
+            Speed and memory <span>· applies when the engine restarts</span>
+          </h3>
+          <div className="setting-line">
+            <div>
+              <h3>Memory mode</h3>
+              {suggestedMode && suggestedMode !== settings.deviceMode ? (
+                <p>
+                  Best for this PC: {DEVICE_MODE_NAMES[suggestedMode] ?? suggestedMode}.{' '}
+                  <button
+                    type="button"
+                    className="text-button"
+                    disabled={settingsBusy}
+                    onClick={() => update({ deviceMode: suggestedMode })}
+                  >
+                    Use it
+                  </button>
+                </p>
+              ) : (
+                <p>Automatic picks what fits your card.</p>
+              )}
+            </div>
+            <select
+              aria-label="Memory mode"
+              value={settings.deviceMode}
+              disabled={settingsBusy}
+              onChange={event => update({ deviceMode: event.target.value as AppSettings['deviceMode'] })}
+            >
+              <option value="auto">Automatic</option>
+              <option value="lowvram">Low VRAM</option>
+              <option value="cpu">CPU only</option>
+            </select>
           </div>
-          <fieldset disabled={settingsBusy} className="toggle-group">
-            <Toggle
-              label="Positive prompt"
-              checked={settings.rememberPositivePrompt}
-              onChange={rememberPositivePrompt => update({ rememberPositivePrompt })}
-            />
-            <Toggle
-              label="Negative prompt"
-              checked={settings.rememberNegativePrompt}
-              onChange={rememberNegativePrompt => update({ rememberNegativePrompt })}
-            />
-          </fieldset>
-        </div>
-        <div className="setting-line">
-          <div>
-            <h3>Notification preferences</h3>
-            <p>Get a heads-up when something finishes while Latent is in the background.</p>
+          <div className="setting-line">
+            <div>
+              <h3>Turbo math</h3>
+              <p>Faster on RTX cards. The same seed can look a tiny bit different.</p>
+            </div>
+            <fieldset disabled={settingsBusy || settings.deviceMode === 'cpu'}>
+              <Toggle
+                label="Turbo math"
+                checked={settings.fastMath ?? false}
+                onChange={fastMath => update({ fastMath })}
+              />
+            </fieldset>
           </div>
-          <fieldset disabled={settingsBusy} className="toggle-group">
-            <Toggle
-              label="Also send desktop notifications"
-              checked={settings.desktopNotifications === true}
-              onChange={desktopNotifications => update({ desktopNotifications })}
+          <div className="setting-line">
+            <div>
+              <h3>SageAttention</h3>
+              <p>
+                {sage.state === 'installed' ? (
+                  'Another speed boost on NVIDIA cards.'
+                ) : (
+                  <>Another speed boost on NVIDIA cards. Needs a small add-on (about 64 MB). {sage.message}</>
+                )}
+              </p>
+              {['missing', 'error'].includes(sage.state) && (
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={busy.sage || runtimeWorking}
+                  title="The engine restarts while the add-on installs."
+                  onClick={() =>
+                    void run('sage', () => window.latent.installSageAttention(), 'SageAttention is installed and on.')
+                  }
+                >
+                  <Busy active={busy.sage} />
+                  {!busy.sage && <Download size={16} />}Install SageAttention
+                </button>
+              )}
+              {sage.state === 'installing' && <Busy active />}
+            </div>
+            <fieldset
+              disabled={
+                settingsBusy || settings.deviceMode === 'cpu' || (sage.state !== 'installed' && !settings.sageAttention)
+              }
+            >
+              <Toggle
+                label="SageAttention"
+                checked={settings.sageAttention ?? false}
+                onChange={sageAttention => update({ sageAttention })}
+              />
+            </fieldset>
+          </div>
+          <div className="setting-line">
+            <div>
+              <h3>Use extra graphics memory</h3>
+              <p>
+                {!bigCard
+                  ? vramGb
+                    ? `For cards with 20 GB or more. This one has ${vramGb} GB, so it stays off.`
+                    : 'For cards with 20 GB or more.'
+                  : settings.deviceMode !== 'auto'
+                    ? 'Works with Automatic memory mode only.'
+                    : `Enhance goes up to ${ENHANCE_MAX_SIDE_LARGE} pixels and Qwen reads prompts on the card.`}
+              </p>
+            </div>
+            <fieldset disabled={settingsBusy || !bigCard || settings.deviceMode !== 'auto'}>
+              <Toggle
+                label="Use extra graphics memory"
+                checked={usesExtraVram(settings, snapshot.hardware)}
+                onChange={extraVram => update({ extraVram })}
+              />
+            </fieldset>
+          </div>
+          <PanelRow
+            id="presets"
+            {...rows}
+            title="Starting settings for this PC"
+            hint="Suggested size and steps for your prompt."
+          >
+            <StartingPresets
+              status={snapshot.hardwareProfiles}
+              busy={settingsBusy || runtimeWorking}
+              {...hardwareActions}
             />
-            <Toggle
-              label="Generation finished"
-              checked={settings.notifyGeneration}
-              onChange={notifyGeneration => update({ notifyGeneration })}
+          </PanelRow>
+        </section>
+      )}
+
+      {tab === 'updates' && (
+        <section className="settings-pair" id="settings-updates">
+          {snapshot.appUpdates && (
+            <AppUpdates
+              status={snapshot.appUpdates}
+              busy={busy['app-update']}
+              onSettings={value => void run('app-update', () => window.latent.saveAppUpdateSettings(value))}
+              onCheck={() => void run('app-update', () => window.latent.checkAppUpdates())}
+              onDownload={() => void run('app-update', () => window.latent.downloadAppUpdate())}
+              onInstall={() => void run('app-update', () => window.latent.installAppUpdate())}
+              onCancel={() => void run('app-update-cancel', () => window.latent.cancelAppUpdate())}
             />
-            <Toggle
-              label="Download finished"
-              checked={settings.notifyDownload}
-              onChange={notifyDownload => update({ notifyDownload })}
-            />
-            <Toggle
-              label="Errors need attention"
-              checked={settings.notifyError}
-              onChange={notifyError => update({ notifyError })}
-            />
-          </fieldset>
-        </div>
-      </section>
-      <HardwareRecommendations
-        status={snapshot.hardwareProfiles}
-        busy={settingsBusy || runtimeWorking}
-        {...hardwareActions}
-      />
-      <section className="settings-card">
-        <StorageOverview
-          refresh={() => window.latent.getStorageOverview()}
-          reveal={id => window.latent.revealStorageDestination(id)}
-          run={run}
-        />
-        <details className="log-details">
-          <summary>All studio paths</summary>
-          <button
-            type="button"
-            className="text-button"
-            onClick={() =>
-              void run(
-                'copy-paths',
-                () =>
-                  window.latent.copyText(
-                    Object.entries(paths)
-                      .map(([name, path]) => `${name}: ${path}`)
-                      .join('\n'),
-                  ),
-                'Studio paths copied.',
-              )
+          )}
+          <RuntimeUpdates
+            onRepair={() => void run('runtime-update', () => window.latent.prepareRuntimeEnvironmentRepair())}
+            status={snapshot.runtimeUpdates}
+            appUpdateVersion={snapshot.appUpdates?.release?.version}
+            busy={
+              busy['runtime-update'] || busy['runtime-update-settings'] || snapshot.ipAdapter.state === 'activating'
             }
-          >
-            <Copy size={14} />
-            Copy paths
-          </button>
-          <dl className="path-list">
-            {Object.entries(paths).map(([name, path]) => (
-              <div key={name}>
-                <dt>{name === 'root' ? 'Studio home' : name}</dt>
-                <dd>{path}</dd>
-              </div>
-            ))}
-          </dl>
-        </details>
-      </section>
-      <section className="settings-card">
-        <h2>Reset settings</h2>
-        <div className="setting-line">
-          <div>
-            <h3>Start fresh</h3>
-            <p>
-              Puts every option on this page back the way it was when you installed Latent. Your images, recipes,
-              presets and models aren't touched.
-            </p>
+            onSettings={value =>
+              void run('runtime-update-settings', () => window.latent.saveRuntimeUpdateSettings(value))
+            }
+            onCheck={() =>
+              void run('runtime-update', async () => {
+                // New engines arrive inside app updates, so look for one of those too.
+                if (snapshot.appUpdates?.supported) await window.latent.checkAppUpdates().catch(() => undefined);
+                await window.latent.checkRuntimeUpdates();
+              })
+            }
+            onStage={kind => void run('runtime-update', () => window.latent.stageRuntimeUpdate(kind))}
+            onActivate={() => void run('runtime-update', () => window.latent.activateRuntimeUpdate())}
+            onRollback={() => void run('runtime-update', () => window.latent.rollbackRuntimeUpdate())}
+            onRecover={() => void run('runtime-update', () => window.latent.recoverRuntimeUpdate())}
+            onCancel={() => void run('runtime-update-cancel', () => window.latent.cancelRuntimeUpdate())}
+          />
+        </section>
+      )}
+
+      {tab === 'preferences' && (
+        <section className="settings-card" id="settings-preferences">
+          <h2>Preferences</h2>
+          <div className="setting-line">
+            <label htmlFor="theme">Theme</label>
+            <select
+              id="theme"
+              value={settings.theme}
+              disabled={settingsBusy}
+              onChange={event => update({ theme: event.target.value as AppSettings['theme'] })}
+            >
+              <option value="system">Use system</option>
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
           </div>
-          <button type="button" disabled={settingsBusy} onClick={() => setConfirmReset(true)}>
-            <Busy active={busy.settings} />
-            {!busy.settings && <RotateCcw size={15} />}Reset settings
-          </button>
-        </div>
-        {confirmReset && (
-          <ConfirmDialog
-            title="Reset all settings?"
-            confirmLabel="Reset settings"
-            onClose={() => setConfirmReset(false)}
-            onConfirm={reset}
+          <div className="setting-line">
+            <span>Accent color</span>
+            <div className="accent-picker">
+              {(['iris', 'sea-glass', 'rose', 'sky', 'amber', 'peach', 'mint', 'lilac'] as const).map(accent => (
+                <button
+                  type="button"
+                  key={accent}
+                  className={`accent-swatch ${accent}`}
+                  aria-label={accent === 'sea-glass' ? 'Sea glass accent' : `${accent} accent`}
+                  aria-pressed={settings.accent === accent}
+                  disabled={settingsBusy}
+                  onClick={() => update({ accent })}
+                >
+                  {settings.accent === accent && <Check size={16} />}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="setting-line">
+            <label htmlFor="tune-side">Tune panel</label>
+            <select
+              id="tune-side"
+              value={settings.tuneSide ?? 'right'}
+              disabled={settingsBusy}
+              onChange={event => update({ tuneSide: event.target.value as 'left' | 'right' })}
+            >
+              <option value="right">On the right</option>
+              <option value="left">On the left</option>
+            </select>
+          </div>
+          <div className="setting-line">
+            <div>
+              <h3>Live preview</h3>
+              <p>Watch the image take shape while it makes.</p>
+            </div>
+            <fieldset disabled={settingsBusy}>
+              <Toggle
+                label="Live preview"
+                checked={settings.showGenerationPreview}
+                onChange={showGenerationPreview => update({ showGenerationPreview })}
+              />
+            </fieldset>
+          </div>
+          <PanelRow
+            id="prompts"
+            {...rows}
+            title="Remember prompts"
+            hint="Bring your last prompts back when Latent opens."
+            status={onOff(settings.rememberPositivePrompt, settings.rememberNegativePrompt)}
           >
-            <p>
-              Theme, notifications, engine startup and prompt memory go back to their defaults. Negative-prompt memory
-              turns off, so the negative prompt it remembered is cleared. Your images, recipes, presets and models stay
-              put.
-            </p>
-          </ConfirmDialog>
-        )}
-      </section>
+            <p>Saved images always keep their own prompts.</p>
+            <fieldset disabled={settingsBusy} className="toggle-group">
+              <Toggle
+                label="Prompt"
+                checked={settings.rememberPositivePrompt}
+                onChange={rememberPositivePrompt => update({ rememberPositivePrompt })}
+              />
+              <Toggle
+                label="Negative prompt"
+                checked={settings.rememberNegativePrompt}
+                onChange={rememberNegativePrompt => update({ rememberNegativePrompt })}
+              />
+            </fieldset>
+          </PanelRow>
+          <PanelRow
+            id="versions"
+            {...rows}
+            title="Image versions"
+            hint="Hires fix and face fix stack on one card in the gallery."
+            status={imageVersions.group ? 'Grouped' : 'Off'}
+          >
+            <p>The newest version shows on top. Every version stays saved, open them from the card's ⋯ menu.</p>
+            <fieldset disabled={settingsBusy} className="toggle-group">
+              <Toggle
+                label="Group versions together"
+                checked={imageVersions.group}
+                onChange={group => update({ imageVersions: { ...imageVersions, group } })}
+              />
+            </fieldset>
+            {imageVersions.group && (
+              <>
+                <p>Also give these their own card:</p>
+                <fieldset disabled={settingsBusy} className="toggle-group">
+                  <Toggle
+                    label="Original"
+                    checked={imageVersions.showOriginal}
+                    onChange={showOriginal => update({ imageVersions: { ...imageVersions, showOriginal } })}
+                  />
+                  <Toggle
+                    label="Hires fix"
+                    checked={imageVersions.showRefined}
+                    onChange={showRefined => update({ imageVersions: { ...imageVersions, showRefined } })}
+                  />
+                  <Toggle
+                    label="Face fix steps"
+                    checked={imageVersions.showFaceSteps}
+                    onChange={showFaceSteps => update({ imageVersions: { ...imageVersions, showFaceSteps } })}
+                  />
+                </fieldset>
+              </>
+            )}
+          </PanelRow>
+          <PanelRow
+            id="civitai"
+            {...rows}
+            title="Civitai info"
+            hint="Creator and preview pictures for your models."
+            status={onOff(settings.civitaiAutoMetadata === true, settings.civitaiDisplayMetadata !== false)}
+          >
+            <p>Latent looks your files up by their fingerprint. The files never leave your PC.</p>
+            <fieldset disabled={settingsBusy} className="toggle-group">
+              <Toggle
+                label="Look up new models automatically"
+                checked={settings.civitaiAutoMetadata === true}
+                onChange={civitaiAutoMetadata => update({ civitaiAutoMetadata })}
+              />
+              <Toggle
+                label="Show Civitai info and previews"
+                checked={settings.civitaiDisplayMetadata !== false}
+                onChange={civitaiDisplayMetadata => update({ civitaiDisplayMetadata })}
+              />
+            </fieldset>
+          </PanelRow>
+          <PanelRow
+            id="notifications"
+            {...rows}
+            title="Notifications"
+            hint="A heads-up when something finishes in the background."
+            status={onOff(settings.notifyGeneration, settings.notifyDownload, settings.notifyError)}
+          >
+            <fieldset disabled={settingsBusy} className="toggle-group">
+              <Toggle
+                label="Image finished"
+                checked={settings.notifyGeneration}
+                onChange={notifyGeneration => update({ notifyGeneration })}
+              />
+              <Toggle
+                label="Download finished"
+                checked={settings.notifyDownload}
+                onChange={notifyDownload => update({ notifyDownload })}
+              />
+              <Toggle
+                label="Something went wrong"
+                checked={settings.notifyError}
+                onChange={notifyError => update({ notifyError })}
+              />
+              <Toggle
+                label="Also show them in Windows"
+                checked={settings.desktopNotifications === true}
+                onChange={desktopNotifications => update({ desktopNotifications })}
+              />
+            </fieldset>
+          </PanelRow>
+        </section>
+      )}
+
+      {tab === 'assistant' && <AssistantSettings status={snapshot.assistant} run={run} busy={busy} />}
+
+      {tab === 'remote' && (
+        <section className="settings-pair" id="settings-remote">
+          {snapshot.telegram && <TelegramRemote status={snapshot.telegram} run={run} busy={Boolean(busy.telegram)} />}
+          {snapshot.phone && <PhoneRemote status={snapshot.phone} run={run} busy={Boolean(busy.phone)} />}
+        </section>
+      )}
+
+      {tab === 'storage' && (
+        <section className="settings-card" id="settings-storage">
+          <h2>Storage</h2>
+          <p>
+            To move models or images to another drive, pick an empty folder. Latent copies everything, checks the copy
+            and restarts. The old files stay until you delete them. Stop the engine and let downloads finish first.
+          </p>
+          {(['models', 'outputs'] as const).map(kind => (
+            <div className="setting-line" key={kind}>
+              <div>
+                <h3>{kind === 'models' ? 'Models' : 'Your images'}</h3>
+                <p className="inline-path">{snapshot.paths[kind]}</p>
+              </div>
+              <button
+                disabled={
+                  !['stopped', 'not-installed'].includes(snapshot.backend.state) || Boolean(busy['storage-location'])
+                }
+                onClick={() => void run('storage-location', () => window.latent.changeStorageLocation(kind))}
+              >
+                Move…
+              </button>
+            </div>
+          ))}
+          <div className="setting-line storage-line">
+            <StorageOverview
+              refresh={() => window.latent.getStorageOverview()}
+              reveal={id => window.latent.revealStorageDestination(id)}
+              run={run}
+            />
+          </div>
+        </section>
+      )}
+
+      {tab === 'logs' && (
+        <section className="settings-card" id="settings-logs">
+          <h2>Logs and reset</h2>
+          <p>For when something goes wrong. Copy a log and send it along.</p>
+          <PanelRow
+            id="engine-log"
+            {...rows}
+            title="Engine log"
+            hint={backend.version ? `ComfyUI ${backend.version}` : undefined}
+          >
+            <pre
+              className="logs"
+              tabIndex={0}
+              role="region"
+              aria-label="Engine log output"
+              onKeyDown={scrollBackendLogs}
+            >
+              {backend.logTail.length ? backend.logTail.join('\n') : 'Nothing in the log yet.'}
+            </pre>
+            <button
+              type="button"
+              className="text-button"
+              onClick={() =>
+                void run('copy-logs', () => window.latent.copyText(backend.logTail.join('\n')), 'Engine log copied.')
+              }
+            >
+              <Copy size={14} />
+              Copy log
+            </button>
+          </PanelRow>
+          <PanelRow
+            id="downloads"
+            {...rows}
+            title="Download history"
+            hint="What Latent downloaded and installed."
+            status={snapshot.setupActivity?.length ? String(snapshot.setupActivity.length) : undefined}
+          >
+            <SetupActivityPanel
+              items={snapshot.setupActivity}
+              onCopy={() =>
+                void run(
+                  'copy-setup-history',
+                  () =>
+                    window.latent.copyText(
+                      JSON.stringify(
+                        {
+                          appVersion: snapshot.appUpdates?.currentVersion,
+                          exportedAt: new Date().toISOString(),
+                          activity: snapshot.setupActivity ?? [],
+                        },
+                        null,
+                        2,
+                      ),
+                    ),
+                  'Download history copied.',
+                )
+              }
+            />
+          </PanelRow>
+          <PanelRow id="pc" {...rows} title="PC details" hint="Graphics card, driver and engine version.">
+            <HardwareDetails status={snapshot.hardwareProfiles} />
+          </PanelRow>
+          <PanelRow id="paths" {...rows} title="Studio folders" hint="Where every part of Latent lives.">
+            <button
+              type="button"
+              className="text-button"
+              onClick={() =>
+                void run(
+                  'copy-paths',
+                  () =>
+                    window.latent.copyText(
+                      Object.entries(paths)
+                        .map(([name, path]) => `${name}: ${path}`)
+                        .join('\n'),
+                    ),
+                  'Folders copied.',
+                )
+              }
+            >
+              <Copy size={14} />
+              Copy folders
+            </button>
+            <dl className="path-list">
+              {Object.entries(paths).map(([name, path]) => (
+                <div key={name}>
+                  <dt>{name === 'root' ? 'Studio home' : name}</dt>
+                  <dd>{path}</dd>
+                </div>
+              ))}
+            </dl>
+          </PanelRow>
+          <div className="setting-line">
+            <div>
+              <h3>Reset settings</h3>
+              <p>Puts every setting back to how it was on install. Images, recipes, presets and models stay.</p>
+            </div>
+            <button type="button" disabled={settingsBusy} onClick={() => setConfirmReset(true)}>
+              <Busy active={busy.settings} />
+              {!busy.settings && <RotateCcw size={15} />}Reset settings
+            </button>
+          </div>
+          {confirmReset && (
+            <ConfirmDialog
+              title="Reset all settings?"
+              confirmLabel="Reset settings"
+              onClose={() => setConfirmReset(false)}
+              onConfirm={reset}
+            >
+              <p>
+                Theme, notifications, engine startup and prompt memory go back to their defaults. Negative-prompt memory
+                turns off, so the negative prompt it remembered is cleared. Your images, recipes, presets and models
+                stay put.
+              </p>
+            </ConfirmDialog>
+          )}
+        </section>
+      )}
     </div>
   );
 }

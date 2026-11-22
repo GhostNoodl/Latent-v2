@@ -231,7 +231,7 @@ export class PhoneRemoteService {
           this.ports.changed();
         }
       }
-      throw Object.assign(new Error('That code is not right. Check Settings > Phone remote on the PC.'), {
+      throw Object.assign(new Error('That code is not right. Check Settings > Remote on the PC.'), {
         status: 403,
       });
     }
