@@ -1842,6 +1842,10 @@
     {
       "from": "tests/inpaint-studio.test.ts",
       "to": "tests/inpaint-studio.test.ts"
+    },
+    {
+      "from": "tests/settings-tabs-dom.test.tsx",
+      "to": "tests/settings-tabs-dom.test.tsx"
     }
   ]
 }

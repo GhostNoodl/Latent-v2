@@ -3,7 +3,7 @@ import type { RuntimeUpdateSettings, RuntimeUpdateStatus } from '../shared/runti
 import { Notice, Toggle } from './ui';
 export interface RuntimeUpdatesProps {
   status: RuntimeUpdateStatus;
-  /** A newer Latent version found by App updates, since new engines arrive inside app updates. */
+  /** A newer Latent version found by the Latent updater, since new engines arrive inside app updates. */
   appUpdateVersion?: string;
   busy?: boolean;
   onSettings(settings: Partial<RuntimeUpdateSettings>): void;
@@ -36,17 +36,14 @@ export function RuntimeUpdates({
         <div>
           <h2>
             <ShieldCheck size={18} />
-            Engine updates
+            Engine
           </h2>
-          <p>
-            The engine is ComfyUI. Latent tests each new version with its workflows first, so an update never breaks
-            them.
-          </p>
+          <p>Latent tests each new ComfyUI with its workflows before you get it, so nothing breaks.</p>
         </div>
       </div>
       <Notice error={status.state === 'error'}>{status.message}</Notice>
       {appUpdateVersion && !status.available && (
-        <p>Latent {appUpdateVersion} is out. Get it in App updates, it may bring a newer engine.</p>
+        <p>Latent {appUpdateVersion} is out. Update Latent first, it may bring a newer engine.</p>
       )}
       {working && status.progress !== undefined && <progress value={status.progress} max={100} />}
       {status.automaticRetryPaused && (
@@ -58,12 +55,20 @@ export function RuntimeUpdates({
       <dl className="metadata">
         <dt>Installed</dt>
         <dd>{status.current?.label ?? 'Not recorded yet'}</dd>
-        <dt>Available</dt>
-        <dd>{status.available?.label ?? 'Nothing new yet'}</dd>
+        {status.available && (
+          <>
+            <dt>Available</dt>
+            <dd>{status.available.label}</dd>
+          </>
+        )}
         <dt>Newest ComfyUI</dt>
         <dd>{status.newestComfyUI ?? 'Not checked yet'}</dd>
-        <dt>Previous</dt>
-        <dd>{status.previous?.label ?? 'Kept after your first update, so you can go back'}</dd>
+        {status.previous && (
+          <>
+            <dt>Previous</dt>
+            <dd>{status.previous.label}</dd>
+          </>
+        )}
         <dt>Last checked</dt>
         <dd>{status.lastCheckedAt ? new Date(status.lastCheckedAt).toLocaleString() : 'Not checked yet'}</dd>
         {status.staged && (
@@ -83,8 +88,8 @@ export function RuntimeUpdates({
       )}
       <div className="setting-line">
         <div>
-          <h3>Automatic checks</h3>
-          <p>Looks for a newer engine, and for new ComfyUI releases on GitHub.</p>
+          <h3>Check on its own</h3>
+          <p>Also watches GitHub for new ComfyUI releases.</p>
         </div>
         <fieldset disabled={working}>
           <Toggle
@@ -94,8 +99,8 @@ export function RuntimeUpdates({
           />
         </fieldset>
       </div>
-      <div className="setting-line">
-        <label htmlFor="runtime-update-interval">How often to check while Latent is open</label>
+      <div className="setting-line" hidden={!status.settings.autoCheck}>
+        <label htmlFor="runtime-update-interval">How often</label>
         <select
           id="runtime-update-interval"
           value={status.settings.intervalHours}
@@ -114,8 +119,8 @@ export function RuntimeUpdates({
       </div>
       <div className="setting-line">
         <div>
-          <h3>Install updates when idle</h3>
-          <p>Waits until nothing is generating, and keeps the old version so you can go back.</p>
+          <h3>Install when idle</h3>
+          <p>Waits until nothing is running and keeps the old version, so you can go back.</p>
         </div>
         <fieldset disabled={working && !['checking', 'staging'].includes(status.state)}>
           <Toggle
@@ -178,7 +183,7 @@ export function RuntimeUpdates({
         )}
       </div>
       <details>
-        <summary>Reinstall and update history</summary>
+        <summary>Reinstall or see past updates</summary>
         <p>
           Something acting up? Reinstall downloads a clean copy of the version you have now. It doesn't upgrade
           anything, and your models, images and settings stay put.
