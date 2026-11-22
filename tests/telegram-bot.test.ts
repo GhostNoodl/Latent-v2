@@ -340,3 +340,42 @@ it('keeps a picture whose send failed and tries again later instead of dropping 
   expect(h.calls.filter(call => call.method === 'sendPhoto')).toHaveLength(1);
   expect((h.state.get('telegram.jobs.v1') as Record<string, unknown>)[job.id]).toBeUndefined();
 });
+
+it('makes saved prompts and lists newer models next to the checkpoints', async () => {
+  const h = harness();
+  h.ports.savedPrompts = () => [
+    { id: 's1', text: 'a lighthouse at dusk' },
+    { id: 's2', text: 'a tiny robot gardener' },
+  ];
+  h.ports.imageModels = () => ['krea2-turbo'];
+  bot = new TelegramBotService(h.ports);
+  await bot.setToken(TOKEN);
+  await bot.saveSettings({ enabled: true, allowedUserIds: [String(OWNER)] });
+  await h.until(() => bot!.status().state === 'online');
+  const sent = () => h.calls.filter(call => call.method === 'sendMessage');
+
+  h.push(h.message(OWNER, '/prompts'));
+  await h.until(() => sent().length === 1);
+  expect(sent()[0].body.text).toContain('2. a tiny robot gardener');
+  expect(sent()[0].body.reply_markup.inline_keyboard[1][0].callback_data).toBe('prompt:2');
+  h.push({
+    update_id: 900,
+    callback_query: {
+      id: 'cb',
+      from: { id: OWNER },
+      message: { chat: { id: OWNER, type: 'private' } },
+      data: 'prompt:2',
+    },
+  });
+  await h.until(() => h.queued.length === 1);
+  expect(h.queued[0].prompt).toBe('a tiny robot gardener');
+
+  h.push(h.message(OWNER, '/model'));
+  await h.until(() => sent().some(call => call.body.text.includes('Newer models')));
+  const list = sent().find(call => call.body.text.includes('Newer models'))!.body.text;
+  expect(list).toContain('3. Krea 2 Turbo');
+  h.push(h.message(OWNER, '/model 3'), h.message(OWNER, 'a neon street --steps 6'));
+  await h.until(() => h.queued.length === 2);
+  expect(h.queued[1]).toMatchObject({ imageModel: 'krea2-turbo', checkpointId: '', steps: 6, loras: [] });
+  await h.until(() => sent().some(call => call.body.text.includes('Krea 2 Turbo ·')));
+});
