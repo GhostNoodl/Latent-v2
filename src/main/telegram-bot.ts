@@ -39,6 +39,8 @@ import {
   applySetting,
   bestFor,
   describeSettings,
+  isCreateImage,
+  settingsFromRecord,
   effectiveDraft,
   isSettingKey,
   loraList,
@@ -72,6 +74,8 @@ export interface TelegramBotPorts {
   imageModels?(): ImageModelId[];
   /** Prompts saved beside the prompt box in Create. */
   savedPrompts?(): { id: string; text: string }[];
+  /** Studio images, newest first. */
+  records?(): readonly GenerationRecord[];
   /** A saved image, to enhance or edit it. */
   record?(id: string): GenerationRecord | undefined;
   /** Imports a picture from the chat so the engine can use it. */
@@ -161,6 +165,9 @@ const CHATS_STATE = 'telegram.chats.v1';
 /** Which studio image each sent photo is, so replies and Enhance taps find it again. */
 const SENT_STATE = 'telegram.sent.v1';
 const SENT_KEPT = 300;
+/** Jobs that came from Telegram, so /last skips them and finds the last image made on the PC. */
+const REMOTE_IDS_STATE = 'telegram.job-ids.v1';
+const REMOTE_IDS_KEPT = 500;
 /** Telegram bots can download files up to 20 MB and upload up to 50 MB. */
 const DOWNLOAD_LIMIT = 20 * 1024 * 1024;
 const UPLOAD_LIMIT = 50 * 1024 * 1024;
@@ -200,6 +207,7 @@ const HELP = [
   '/faces on [illustrated|anime|photographic] [strength] or off',
   '/triggers on|off - add LoRA trigger words automatically',
   '/preset - load one of the studio’s saved presets',
+  '/last - copy the settings from the last image you made on the PC',
   '/reset - go back to the studio’s Create settings',
   '',
   'Editing',
@@ -585,6 +593,9 @@ export class TelegramBotService {
         return reply(this.loraText(chatId));
       case 'models':
         return this.choices(chatId, 'model', reply);
+      case 'last':
+      case 'pc':
+        return this.useLast(chatId, reply);
       case 'prompts':
       case 'prompt':
         return args ? this.savedPrompt(chatId, args, reply) : this.promptList(reply);
@@ -613,6 +624,12 @@ export class TelegramBotService {
       }
       await this.call(token, 'answerCallbackQuery', { callback_query_id: query.id, text: text.slice(0, 190) }, signal);
       return this.send(token, chat.id, text, signal);
+    }
+    if (query.data === 'last:prompt') {
+      await this.call(token, 'answerCallbackQuery', { callback_query_id: query.id }, signal);
+      const prompt = this.lastPcImage()?.draft.prompt.trim();
+      const send = (value: string) => this.send(token, chat.id, value, signal);
+      return prompt ? this.generate(chat.id, prompt, send) : send('That image has no prompt to reuse.');
     }
     const saved = /^prompt:(\d{1,3})$/.exec(query.data ?? '');
     if (saved) {
@@ -950,6 +967,32 @@ export class TelegramBotService {
       `${source ? 'Animating it!' : 'Queued a clip!'} ${this.ahead(job.id)}\n${qualityName(draft.profile)} · ${job.durationSeconds.toFixed(1)}s · ${draft.width}×${draft.height}. Clips take a few minutes.`,
     );
   }
+  /** The newest plain Create image that wasn't asked for from Telegram. */
+  private lastPcImage() {
+    const remote = new Set(this.ports.store.getState<string[]>(REMOTE_IDS_STATE, []));
+    return this.ports.records?.().find(record => !remote.has(record.jobId) && isCreateImage(record));
+  }
+  private async useLast(chatId: number, reply: (text: string, buttons?: Button[][]) => Promise<void>) {
+    const record = this.lastPcImage();
+    if (!record) return reply("I couldn't find an image made on the PC yet. Make one in Create first.");
+    const chat = this.chat(chatId);
+    let result;
+    try {
+      result = settingsFromRecord(this.context(chatId), record);
+    } catch (error) {
+      return reply(`Couldn't copy the settings from your last PC image. ${message(error)}`);
+    }
+    const next: ChatState = { ...chat, overrides: result.overrides };
+    delete next.classic;
+    this.saveChat(chatId, next);
+    const prompt = record.draft.prompt.trim();
+    return reply(
+      prompt
+        ? `${result.message}\n\nIts prompt: ${prompt.slice(0, 600)}${prompt.length > 600 ? '…' : ''}`
+        : result.message,
+      prompt ? [[{ text: 'Make it again with that prompt', callback_data: 'last:prompt' }]] : undefined,
+    );
+  }
   private ahead(jobId: string) {
     const ahead = this.ports.jobs().filter(item => item.status === 'queued' && item.id !== jobId).length;
     return ahead ? `${ahead} ahead of it.` : "It's next up.";
@@ -1185,6 +1228,9 @@ export class TelegramBotService {
     return saved && typeof saved === 'object' ? saved : {};
   }
   private remember(id: string, remote: RemoteJob) {
+    const ids = this.ports.store.getState<string[]>(REMOTE_IDS_STATE, []);
+    const known = Array.isArray(ids) ? ids.filter(item => typeof item === 'string' && item !== id) : [];
+    this.ports.store.setState(REMOTE_IDS_STATE, [...known.slice(-(REMOTE_IDS_KEPT - 1)), id]);
     const live = new Set(this.ports.jobs().map(job => job.id));
     const kept = Object.entries(this.remoteJobs()).filter(([jobId]) => jobId !== id && live.has(jobId));
     this.ports.store.setState(JOBS_STATE, Object.fromEntries([...kept.slice(-200), [id, remote]]));
