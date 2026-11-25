@@ -111,6 +111,10 @@ export function PromptSnippets({
       element.setSelectionRange(next.caret, next.caret);
     });
   };
+  const submit = () => {
+    if (!form || !cleanSnippet(form.text)) return;
+    void save(saveSnippet(snippets, form)).then(ok => ok && setForm(undefined));
+  };
   const shown = filterSnippets(snippets, query);
   return (
     <div className="prompt-snippets" data-target={targetId}>
@@ -138,19 +142,22 @@ export function PromptSnippets({
       {open && (
         <div className="saved-prompts-panel snippets-panel" style={place} role="group" aria-label="Snippets">
           {form ? (
-            <form
-              className="snippet-form"
-              onSubmit={event => {
-                event.preventDefault();
-                void save(saveSnippet(snippets, form)).then(ok => ok && setForm(undefined));
-              }}
-            >
+            // Not a <form>: the prompt box sits inside the Create form, and a nested form
+            // submits on its own and reloads the window instead of saving.
+            <div className="snippet-form" role="group" aria-label={form.id ? 'Change snippet' : 'New snippet'}>
               <input
                 aria-label="Snippet name"
                 placeholder="Name (optional)"
                 maxLength={60}
                 value={form.name}
                 onChange={event => setForm({ ...form, name: event.target.value })}
+                onKeyDown={event => {
+                  if (event.key === 'Enter') {
+                    // Keeps Enter from starting an image through the Create form.
+                    event.preventDefault();
+                    submit();
+                  }
+                }}
               />
               <textarea
                 aria-label="Snippet tags"
@@ -163,7 +170,7 @@ export function PromptSnippets({
                 onKeyDown={event => {
                   if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
                     event.preventDefault();
-                    event.currentTarget.form?.requestSubmit();
+                    submit();
                   }
                 }}
               />
@@ -172,11 +179,11 @@ export function PromptSnippets({
                 <button type="button" className="text-button" onClick={() => setForm(undefined)}>
                   Cancel
                 </button>
-                <button type="submit" className="primary" disabled={!cleanSnippet(form.text)}>
+                <button type="button" className="primary" disabled={!cleanSnippet(form.text)} onClick={submit}>
                   {form.id ? 'Save changes' : 'Save snippet'}
                 </button>
               </div>
-            </form>
+            </div>
           ) : (
             <>
               <div className="snippet-top">

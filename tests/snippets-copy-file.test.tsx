@@ -104,3 +104,59 @@ describe('copy file', () => {
     );
   });
 });
+
+it('saves a new snippet from inside the Create form without submitting it', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  const onSave = vi.fn(async (_list: PromptSnippet[]) => {});
+  const outer = vi.fn((event: { preventDefault(): void }) => event.preventDefault());
+  await act(async () =>
+    root.render(
+      <form onSubmit={outer}>
+        <PromptSnippets targetId="p" value="a cat" snippets={[]} onChange={() => {}} onSave={onSave} />
+      </form>,
+    ),
+  );
+  const buttons = () => [...host.querySelectorAll('button')];
+  await act(async () => (host.querySelector('.prompt-snippets > button') as HTMLButtonElement).click());
+  await act(async () =>
+    buttons()
+      .find(b => b.textContent?.includes('New snippet'))!
+      .click(),
+  );
+  // A nested form would submit by itself in Chromium and reload the window.
+  expect(host.querySelectorAll('form form')).toHaveLength(0);
+  const type = async (element: HTMLInputElement | HTMLTextAreaElement, text: string) => {
+    const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), 'value')!.set!;
+    await act(async () => {
+      setter.call(element, text);
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  };
+  await type(host.querySelector('.snippet-form textarea')!, 'moonlight, stars');
+  await type(host.querySelector('.snippet-form input')!, 'Night');
+  await act(async () =>
+    host
+      .querySelector('.snippet-form input')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
+  );
+  expect(onSave).toHaveBeenCalledTimes(1);
+  expect(onSave.mock.calls[0][0][0]).toMatchObject({ name: 'Night', text: 'moonlight, stars' });
+  await act(async () =>
+    buttons()
+      .find(b => b.textContent?.includes('New snippet'))!
+      .click(),
+  );
+  await type(host.querySelector('.snippet-form textarea')!, 'film grain');
+  await act(async () =>
+    buttons()
+      .find(b => b.textContent?.includes('Save'))!
+      .click(),
+  );
+  expect(onSave).toHaveBeenCalledTimes(2);
+  expect(outer).not.toHaveBeenCalled();
+  await act(async () => root.unmount());
+  host.remove();
+});
