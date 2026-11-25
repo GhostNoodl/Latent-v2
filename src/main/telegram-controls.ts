@@ -1,6 +1,6 @@
 import { followHiresScale } from '../shared/advanced-image-workflow';
 import { DEFAULT_DRAFT, SAMPLERS, SCHEDULERS } from '../shared/defaults';
-import type { GenerationDraft, ModelAsset, Preset } from '../shared/types';
+import type { GenerationDraft, GenerationRecord, ModelAsset, Preset } from '../shared/types';
 import { draftSchema } from '../shared/validation';
 import {
   IMAGE_MODELS,
@@ -478,27 +478,7 @@ export function applySetting(
     case 'preset': {
       if (!args) throw new Error('Send /preset to see the list, then /preset <number or name>.');
       const preset = pick(ctx.presets, args, 'preset');
-      const draft = preset.draft;
-      Object.assign(next, {
-        checkpointId: draft.checkpointId,
-        imageModel: draft.imageModel ?? null,
-        family: draft.family,
-        modelSampling: draft.modelSampling ?? null,
-        loras: draft.loras,
-        negativePrompt: draft.negativePrompt,
-        width: draft.width,
-        height: draft.height,
-        steps: draft.steps,
-        cfg: draft.cfg,
-        sampler: draft.sampler,
-        scheduler: draft.scheduler,
-        seed: 'random',
-        batchSize: draft.batchSize,
-        autoTriggers: draft.autoTriggers,
-        triggerWords: draft.triggerWords ?? null,
-        hiresFix: draft.hiresFix ?? null,
-        autoFace: draft.autoFace ?? null,
-      } satisfies TelegramOverrides);
+      Object.assign(next, draftSettings(preset.draft));
       message = `Loaded the "${preset.name}" preset.`;
       classic = null;
       break;
@@ -510,6 +490,82 @@ export function applySetting(
     throw new Error(`That doesn't work: ${issue.path.join('.') || 'settings'} ${issue.message}`.trim());
   }
   return { overrides: next, message, ...(classic !== undefined ? { classic } : {}) };
+}
+
+/** Every setting a chat can change, taken from a saved draft (a preset, or an image's recipe). */
+function draftSettings(draft: GenerationDraft): TelegramOverrides {
+  return {
+    checkpointId: draft.checkpointId,
+    imageModel: draft.imageModel ?? null,
+    family: draft.family,
+    modelSampling: draft.modelSampling ?? null,
+    loras: structuredClone(draft.loras),
+    negativePrompt: draft.negativePrompt,
+    width: draft.width,
+    height: draft.height,
+    steps: draft.steps,
+    cfg: draft.cfg,
+    sampler: draft.sampler,
+    scheduler: draft.scheduler,
+    seed: 'random',
+    batchSize: draft.batchSize,
+    autoTriggers: draft.autoTriggers,
+    triggerWords: draft.triggerWords ? structuredClone(draft.triggerWords) : null,
+    hiresFix: draft.hiresFix ? structuredClone(draft.hiresFix) : null,
+    autoFace: draft.autoFace ? structuredClone(draft.autoFace) : null,
+  };
+}
+
+/** A plain Create image: not an edit, Enhance, face fix pass or picture-to-picture job. */
+export function isCreateImage(record: GenerationRecord) {
+  const draft = record.draft;
+  return (
+    !!draft &&
+    !record.qwenEdit &&
+    !draft.qwenEdit &&
+    !draft.enhance &&
+    !draft.imageInput &&
+    !draft.upscale &&
+    !draft.faceDetailer &&
+    !draft.autoFaceParentRecordId &&
+    record.outputRole !== 'base' &&
+    record.outputRole !== 'face-pass'
+  );
+}
+
+/** Copies the settings an image was made with into a chat (everything but the prompt and seed). */
+export function settingsFromRecord(ctx: ControlContext, record: GenerationRecord): ControlResult {
+  const draft = record.draft;
+  if (draft.imageModel) {
+    if (!(ctx.imageModels ?? []).includes(draft.imageModel))
+      throw new Error(
+        `It was made with ${IMAGE_MODELS[draft.imageModel]?.name ?? 'a newer model'}, which isn't downloaded anymore.`,
+      );
+  } else if (!checkpoints(ctx.models).some(model => model.id === draft.checkpointId))
+    throw new Error(`Its model (${record.checkpoint?.name ?? 'unknown'}) isn't installed anymore.`);
+  const installed = new Set(loraModels(ctx.models).map(model => model.id));
+  const missing = draft.loras.filter(lora => !installed.has(lora.modelId));
+  const overrides = draftSettings({ ...draft, loras: draft.loras.filter(lora => installed.has(lora.modelId)) });
+  const checked = draftSchema.safeParse(effectiveDraft(ctx.studio, overrides, ''));
+  if (!checked.success) {
+    const issue = checked.error.issues[0];
+    throw new Error(`Those settings don't fit anymore: ${issue.path.join('.') || 'settings'} ${issue.message}`.trim());
+  }
+  const name = modelName(effectiveDraft(ctx.studio, overrides, ''), ctx.models);
+  const used = draft.loras.filter(lora => installed.has(lora.modelId) && !lora.off).length;
+  return {
+    overrides,
+    classic: null,
+    message: [
+      `Using the settings from your last image on the PC: ${name}${used ? ` + ${used} LoRA${used === 1 ? '' : 's'}` : ''}, ${draft.width}×${draft.height}, ${draft.steps} steps, CFG ${draft.cfg}${draft.hiresFix ? ', hires fix' : ''}${draft.autoFace ? ', face fix' : ''}.`,
+      missing.length
+        ? `${missing.length} of its LoRAs ${missing.length === 1 ? "isn't" : "aren't"} installed anymore, so I left ${missing.length === 1 ? 'it' : 'them'} out.`
+        : '',
+      'Seeds stay random. Send a prompt to use them.',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  };
 }
 
 /** Splits `a castle --steps 30 --size portrait` into the prompt and one-off settings. */

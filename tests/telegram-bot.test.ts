@@ -565,3 +565,49 @@ it('edits pictures sent with a caption and enhances results from the button', as
     imageInput: { mode: 'img2img', sourceId: 'src_22222222-2222-2222-2222-222222222222' },
   });
 });
+
+it('copies the settings from the last image made on the PC, skipping its own', async () => {
+  const h = harness();
+  const pcRecord = {
+    id: 'd'.repeat(32),
+    jobId: 'pc-job',
+    draft: { ...structuredClone(DEFAULT_DRAFT), checkpointId: 'model-b', prompt: 'a misty forest', steps: 33 },
+    loras: [],
+  } as unknown as GenerationRecord;
+  h.ports.records = () => [
+    ...h.jobs.map(
+      job =>
+        ({
+          id: 'e'.repeat(32),
+          jobId: job.id,
+          draft: { ...(job as GenerationJob).draft },
+          loras: [],
+        }) as unknown as GenerationRecord,
+    ),
+    pcRecord,
+  ];
+  bot = new TelegramBotService(h.ports);
+  await bot.setToken(TOKEN);
+  await bot.saveSettings({ enabled: true, allowedUserIds: [String(OWNER)] });
+  await h.until(() => bot!.status().state === 'online');
+  const sent = () => h.calls.filter(call => call.method === 'sendMessage');
+
+  h.push(h.message(OWNER, 'from telegram --steps 12'));
+  await h.until(() => h.queued.length === 1);
+  h.push(h.message(OWNER, '/last'));
+  await h.until(() => sent().some(call => call.body.text.includes('last image on the PC')));
+  const answer = sent().find(call => call.body.text.includes('last image on the PC'))!.body;
+  expect(answer.text).toContain('Beta Pony');
+  expect(answer.text).toContain('a misty forest');
+  h.push({
+    update_id: 990,
+    callback_query: {
+      id: 'cb',
+      from: { id: OWNER },
+      message: { chat: { id: OWNER, type: 'private' } },
+      data: answer.reply_markup.inline_keyboard[0][0].callback_data,
+    },
+  });
+  await h.until(() => h.queued.length === 2);
+  expect(h.queued[1]).toMatchObject({ prompt: 'a misty forest', checkpointId: 'model-b', steps: 33, seed: 'random' });
+});

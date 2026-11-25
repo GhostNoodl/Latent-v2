@@ -836,6 +836,7 @@ async function initialize() {
     sizes: () => store.settings().sizePresets ?? SIZE_PRESETS,
     imageModels: () => imageModels.status().ready,
     savedPrompts: () => store.settings().savedPrompts ?? [],
+    records: () => missingOutputs.visible(store.records()),
     record: recordId => store.record(recordId),
     importImage: async (bytes, name) => {
       const source = await sources.importBytes(bytes, name);

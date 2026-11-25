@@ -2,12 +2,14 @@ import { expect, it } from 'vitest';
 import {
   applySetting,
   effectiveDraft,
+  isCreateImage,
+  settingsFromRecord,
   splitPromptFlags,
   telegramDraft,
   type ControlContext,
 } from '../src/main/telegram-controls';
 import { DEFAULT_DRAFT, SIZE_PRESETS } from '../src/shared/defaults';
-import type { GenerationDraft, ModelAsset } from '../src/shared/types';
+import type { GenerationDraft, GenerationRecord, ModelAsset } from '../src/shared/types';
 
 const asset = (id: string, name: string, kind: 'checkpoint' | 'lora') =>
   ({
@@ -146,3 +148,42 @@ it('takes decimal CFG and only sizes in multiples of 64', () => {
   expect(applySetting(ctx, {}, 'size', '896x1152').overrides).toMatchObject({ width: 896, height: 1152 });
   expect(() => applySetting(ctx, {}, 'size', '2560x1024')).toThrow(/2048/);
 });
+
+it('copies the settings an image was made with, leaving out LoRAs that are gone', () => {
+  const record = {
+    id: 'r1',
+    jobId: 'j1',
+    draft: {
+      ...structuredClone(DEFAULT_DRAFT),
+      checkpointId: 'model-b',
+      prompt: 'a lighthouse',
+      steps: 31,
+      cfg: 4.5,
+      width: 832,
+      height: 1216,
+      loras: [
+        { modelId: 'l1', weight: 0.8, clipWeight: 0.8 },
+        { modelId: 'gone', weight: 1, clipWeight: 1 },
+      ],
+    },
+    loras: [],
+  } as unknown as GenerationRecord;
+  const result = applyRecord(record);
+  expect(effectiveDraft(ctx.studio, result.overrides, 'x')).toMatchObject({
+    checkpointId: 'model-b',
+    steps: 31,
+    cfg: 4.5,
+    width: 832,
+    height: 1216,
+    seed: 'random',
+    loras: [{ modelId: 'l1', weight: 0.8 }],
+  });
+  expect(result.message).toContain('Alpha Turbo + 1 LoRA');
+  expect(result.message).toContain("1 of its LoRAs isn't installed");
+  expect(() => applyRecord({ ...record, draft: { ...record.draft, checkpointId: 'nope' } })).toThrow(/installed/);
+  expect(isCreateImage(record)).toBe(true);
+  expect(
+    isCreateImage({ ...record, draft: { ...record.draft, enhance: { parentRecordId: 'x' } } } as GenerationRecord),
+  ).toBe(false);
+});
+const applyRecord = (record: GenerationRecord) => settingsFromRecord(ctx, record);
