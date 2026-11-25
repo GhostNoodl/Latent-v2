@@ -255,6 +255,18 @@ export const settingsSchema = z
       )
       .max(100)
       .optional(),
+    promptSnippets: z
+      .array(
+        z
+          .object({
+            id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+            name: z.string().trim().min(1).max(60),
+            text: z.string().trim().min(1).max(4000),
+          })
+          .strict(),
+      )
+      .max(200)
+      .optional(),
     promptPieces: z.boolean().optional(),
     tuneSide: z.enum(['left', 'right']).optional(),
   })

@@ -157,6 +157,7 @@ const api: LatentAPI = {
   savePreset: preset => invoke('savePreset', preset),
   deletePreset: id => invoke('deletePreset', id),
   copyOutput: id => invoke('copyOutput', id),
+  copyOutputFile: id => invoke('copyOutputFile', id),
   revealOutput: id => invoke('revealOutput', id),
   trashOutputs: ids => invoke('trashOutputs', ids),
   openOutput: id => invoke('openOutput', id),
