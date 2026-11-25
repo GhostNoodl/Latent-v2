@@ -3,6 +3,7 @@ import {
   ArrowUpRight,
   Clapperboard,
   Copy,
+  FileImage,
   FolderHeart,
   FolderOpen,
   Hash,
@@ -110,6 +111,12 @@ export function ImageMenu({
             label: 'Copy image',
             icon: <Copy size={15} />,
             onSelect: () => void run('copy-output', () => window.latent.copyOutput(record.id)),
+          },
+          {
+            label: 'Copy file',
+            icon: <FileImage size={15} />,
+            title: 'Paste it as a file in Explorer, Discord or a chat',
+            onSelect: () => void run('copy-output-file', () => window.latent.copyOutputFile(record.id)),
           },
           Boolean(prompt) && {
             label: 'Copy prompt',

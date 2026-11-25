@@ -216,6 +216,8 @@ export interface AppSettings {
   createMode?: 'simple' | 'advanced';
   /** Prompts kept beside the prompt box in Create. */
   savedPrompts?: { id: string; text: string }[];
+  /** Reusable sets of tags that drop into the prompt at the cursor. */
+  promptSnippets?: { id: string; name: string; text: string }[];
   /** Show the Create prompt as draggable pieces instead of plain text. */
   promptPieces?: boolean;
   /** Which side of Create the Tune panel sits on. */
@@ -547,6 +549,8 @@ export interface LatentAPI {
   savePreset(preset: Preset): Promise<AppSnapshot>;
   deletePreset(id: string): Promise<AppSnapshot>;
   copyOutput(id: string): Promise<void>;
+  /** Puts the image file itself on the clipboard, so it pastes as a file (Windows). */
+  copyOutputFile(id: string): Promise<void>;
   revealOutput(id: string): Promise<void>;
   openOutput(id: string): Promise<void>;
   /** Moves saved images to the Recycle Bin; restoring them there brings them back. */

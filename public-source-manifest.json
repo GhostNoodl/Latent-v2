@@ -1652,6 +1652,14 @@
       "to": "src/renderer/SavedPrompts.tsx"
     },
     {
+      "from": "src/renderer/PromptSnippets.tsx",
+      "to": "src/renderer/PromptSnippets.tsx"
+    },
+    {
+      "from": "tests/snippets-copy-file.test.tsx",
+      "to": "tests/snippets-copy-file.test.tsx"
+    },
+    {
       "from": "src/renderer/ShotBoard.tsx",
       "to": "src/renderer/ShotBoard.tsx"
     },

@@ -2543,6 +2543,57 @@ body:has(.studio) {
   background: var(--inset);
 }
 
+/* Snippets: reusable sets of tags */
+.studio .prompt-snippets {
+  position: relative;
+  display: inline-flex;
+}
+.studio .snippet-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.studio .snippet-top input {
+  flex: 1;
+  min-width: 0;
+}
+.studio .snippet-top .text-button {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.studio .snippet-use {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+.studio .snippet-use strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.studio .snippet-use span {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio .snippet-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.studio .snippet-form textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+.studio .snippet-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 /* Prompt as draggable pieces */
 .studio .prompt-pieces {
   display: flex;

@@ -31,6 +31,7 @@ import { SizePeek } from './SizePeek';
 import { cfgInputProps } from './cfg-input';
 import { SizePicker } from './SizePicker';
 import { SavedPrompts } from './SavedPrompts';
+import { PromptSnippets } from './PromptSnippets';
 import { PromptPieces } from './PromptPieces';
 import { GridSweepSetup, SweepGrid } from './GridSweep';
 import { MissingParts } from './MissingParts';
@@ -1993,6 +1994,15 @@ export default function App() {
                               receive(await window.latent.updateSettings({ savedPrompts }));
                             }}
                           />
+                          <PromptSnippets
+                            targetId="prompt"
+                            value={draft.prompt}
+                            snippets={snapshot.settings.promptSnippets ?? []}
+                            onChange={prompt => changeDraft({ prompt })}
+                            onSave={async promptSnippets => {
+                              receive(await window.latent.updateSettings({ promptSnippets }));
+                            }}
+                          />
                           <button
                             type="button"
                             className="text-button"
@@ -2060,6 +2070,15 @@ export default function App() {
                                 : 'Skipped at CFG 1'}
                             </span>
                           )}
+                          <PromptSnippets
+                            targetId="negative-prompt"
+                            value={draft.negativePrompt}
+                            snippets={snapshot.settings.promptSnippets ?? []}
+                            onChange={negativePrompt => changeDraft({ negativePrompt })}
+                            onSave={async promptSnippets => {
+                              receive(await window.latent.updateSettings({ promptSnippets }));
+                            }}
+                          />
                           <button
                             type="button"
                             className="text-button"

@@ -36,7 +36,7 @@ import {
   session,
   shell,
 } from 'electron';
-import { copyStudioText } from './clipboard';
+import { copyFileToClipboard, copyStudioText } from './clipboard';
 import { ThumbnailCache, isCivitaiImageUrl, thumbnailSource } from './thumbnails';
 import { isNonPublicHost } from './network-hosts';
 import path from 'node:path';
@@ -1263,6 +1263,26 @@ async function initialize() {
       await clipboard.write([
         new ClipboardItem({ 'image/png': new Blob([new Uint8Array(image.toPNG())], { type: 'image/png' }) }),
       ]);
+    },
+    copyOutputFile: async recordId => {
+      const filename = await privateShellPath(paths.outputs, await outputPath(id.parse(recordId)));
+      await copyFileToClipboard(filename, {
+        platform: process.platform,
+        runPowerShell: async (script, env) => {
+          const powershell = path.join(
+            process.env.SystemRoot ?? 'C:\\Windows',
+            'System32',
+            'WindowsPowerShell',
+            'v1.0',
+            'powershell.exe',
+          );
+          await promisify(execFile)(
+            powershell,
+            ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-STA', '-Command', script],
+            { windowsHide: true, timeout: 10000, env: { ...process.env, ...env } },
+          );
+        },
+      });
     },
     revealOutput: async recordId => {
       shell.showItemInFolder(await privateShellPath(paths.outputs, await outputPath(id.parse(recordId))));
