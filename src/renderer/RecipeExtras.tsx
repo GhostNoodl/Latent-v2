@@ -152,17 +152,27 @@ export function RecipeExtras({ record }: { record: GenerationRecord }) {
       )}
       {record.regionalPrompts && (
         <section>
-          <h3>Regional prompts</h3>
-          <p className="muted small">
-            Global prompts remain separate. Regional text is literal; overlaps combine guidance.
-          </p>
+          <h3>Characters</h3>
+          {record.regionalPrompts.settings.separation !== undefined && (
+            <p className="muted small">
+              Keep apart {Math.round(record.regionalPrompts.settings.separation * 100)}%
+              {record.regionalPrompts.settings.touchUp &&
+                ` · touch-up ${Math.round(record.regionalPrompts.settings.touchUp.strength * 100)}%`}
+            </p>
+          )}
           {record.regionalPrompts.settings.regions.map(region => (
             <div key={region.id}>
               <strong>{region.name}</strong>
-              <p>{region.positivePrompt || 'No positive text'}</p>
-              {region.negativePrompt && <p>Negative: {region.negativePrompt}</p>}
+              <p>{region.positivePrompt || 'No words'}</p>
+              {region.negativePrompt && <p>Avoid: {region.negativePrompt}</p>}
+              {region.loras?.map(lora => (
+                <p key={lora.modelId} className="muted small">
+                  LoRA {lora.modelId.replace(/^lora:/, '')} · {lora.weight}
+                  {lora.off ? ' (off)' : ''}
+                </p>
+              ))}
               <p className="muted small">
-                Strength {region.strength} · feather {region.feather}px · position {Math.round(region.x * 100)}%,{' '}
+                Strength {region.strength} · blend {region.feather}px · at {Math.round(region.x * 100)}%,{' '}
                 {Math.round(region.y * 100)}% · size {Math.round(region.width * 100)}% ×{' '}
                 {Math.round(region.height * 100)}%
               </p>

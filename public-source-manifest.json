@@ -1862,6 +1862,18 @@
     {
       "from": "tests/telegram-video.test.ts",
       "to": "tests/telegram-video.test.ts"
+    },
+    {
+      "from": "src/renderer/Characters.tsx",
+      "to": "src/renderer/Characters.tsx"
+    },
+    {
+      "from": "tests/characters-panel.test.tsx",
+      "to": "tests/characters-panel.test.tsx"
+    },
+    {
+      "from": "tests/regional-characters.test.ts",
+      "to": "tests/regional-characters.test.ts"
     }
   ]
 }

@@ -223,3 +223,179 @@
 .regional-paint-note .text-button {
   margin-left: 4px;
 }
+
+/* Characters panel (Tune > Characters). Component CSS loads before the app's base styles, so rules carry .studio. */
+.studio .characters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.studio .characters :is(.characters-heading, .characters-old, .characters-actions, .character-adds) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.studio .characters .characters-presets {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.studio .characters .characters-presets button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 0;
+  padding: 7px 4px;
+  font-size: 11px;
+  line-height: 1.2;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--inset);
+  color: var(--text);
+}
+.studio .characters .characters-presets button.active {
+  border-color: var(--accent);
+  background: var(--soft);
+}
+.studio .characters .characters-map {
+  width: 100%;
+  height: 84px;
+  border-radius: 8px;
+  background: var(--inset);
+  touch-action: none;
+}
+.studio .characters .characters-split {
+  fill: #ffffff;
+  fill-opacity: 0.14;
+  cursor: ew-resize;
+}
+.studio .characters .characters-split.stack {
+  cursor: ns-resize;
+}
+.studio .characters .characters-split:hover {
+  fill-opacity: 0.3;
+}
+.studio .characters .character-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 8px 8px 10px;
+  border-radius: 10px;
+  border-left: 3px solid var(--accent);
+  background: var(--inset);
+}
+.studio .characters .character-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.studio .characters input.character-name {
+  width: 10em;
+  min-height: 0;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-weight: 600;
+  font-size: 12px;
+}
+.studio .characters input.character-name:is(:hover, :focus) {
+  border-color: var(--border);
+}
+.studio .characters .character-card textarea {
+  resize: vertical;
+  min-height: 40px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.studio .characters input.character-avoid {
+  min-height: 0;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.studio .characters .character-loras {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.studio .characters .character-lora-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.studio .characters .character-lora-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio .characters .character-lora-row input[type='number'] {
+  flex: 0 0 60px;
+  width: 60px;
+  min-height: 0;
+  padding: 3px 6px;
+  font-size: 12px;
+}
+.studio .characters .character-triggers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.studio .characters .character-triggers button {
+  min-height: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--muted);
+}
+.studio .characters .character-adds select {
+  flex: 1;
+  min-height: 0;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.studio .characters .character-adds .text-button {
+  font-size: 12px;
+}
+.studio .characters .icon-button {
+  min-height: 0;
+  padding: 2px;
+}
+.studio .characters .characters-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.studio .characters .characters-sliders {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 12px;
+}
+.studio .characters .characters-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+.studio .characters .characters-slider > span {
+  display: flex;
+  justify-content: space-between;
+}
+.studio .characters .characters-touch {
+  font-size: 12px;
+}
+.studio .characters p.small {
+  margin: 0;
+}

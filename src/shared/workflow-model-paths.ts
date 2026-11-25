@@ -1,6 +1,10 @@
 import type { ComfyWorkflow } from './types';
 
-const modelInputs: Record<string, string> = { CheckpointLoaderSimple: 'ckpt_name', LoraLoader: 'lora_name' };
+const modelInputs: Record<string, string> = {
+  CheckpointLoaderSimple: 'ckpt_name',
+  LoraLoader: 'lora_name',
+  CreateHookLora: 'lora_name',
+};
 type Objects = Record<string, { input?: { required?: Record<string, unknown[]> } }>;
 
 /** Recipes use portable separators; Comfy's dropdown values use host separators. */

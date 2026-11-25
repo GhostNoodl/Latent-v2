@@ -44,6 +44,8 @@ export function buildFaceRefinementWorkflow(
     throw new Error(
       'Face refinement requires baseline SDXL/Illustrious, batch 1, 512 square working size, and no other advanced image transform.',
     );
+  if (draft.faceCharacters && draft.faceCharacters.length !== plan.passes.length)
+    throw new Error('Each face needs its own character entry.');
   if (baseline['4']?.inputs.width !== draft.width || baseline['4']?.inputs.height !== draft.height)
     throw new Error('The baseline dimensions do not match the face draft.');
   // Reuse the existing strict baseline and private filename validation for every mask.
@@ -108,8 +110,31 @@ export function buildFaceRefinementWorkflow(
       const workingMask = add('ImageToMask', { image: [maskScaled, 0], channel: 'red' });
       const encoded = add('VAEEncode', { pixels: [image, 0], vae: ['1', 2] });
       const latent = add('SetLatentNoiseMask', { samples: [encoded, 0], mask: [workingMask, 0] });
+      const character = draft.faceCharacters?.[passIndex];
+      let conditioning = {};
+      if (character) {
+        let model = sampling.model as Link;
+        let clip = graph['2'].inputs.clip as Link;
+        for (const lora of character.loras) {
+          const loader = add('LoraLoader', {
+            model,
+            clip,
+            lora_name: lora.filename,
+            strength_model: lora.weight,
+            strength_clip: lora.clipWeight,
+          });
+          model = [loader, 0];
+          clip = [loader, 1];
+        }
+        conditioning = {
+          model,
+          positive: [add('CLIPTextEncode', { text: character.prompt, clip }), 0],
+          negative: [add('CLIPTextEncode', { text: character.negativePrompt, clip }), 0],
+        };
+      }
       const sampler = add('KSampler', {
         ...sampling,
+        ...conditioning,
         latent_image: [latent, 0],
         seed: Number(pass.seed),
         denoise: c.settings.denoise,

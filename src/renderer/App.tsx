@@ -122,7 +122,7 @@ import {
 } from '../shared/advanced-image-workflow';
 import { AdvancedImageControls } from './AdvancedImageControls';
 import { ControlNetControls } from './ControlNetControls';
-import { RegionalPrompts } from './RegionalPrompts';
+import { Characters } from './Characters';
 import { activeRegionalPromptRegions } from '../shared/regional-prompt-types';
 import { IPAdapterControls } from './IPAdapterControls';
 import { FaceDetailerEditor } from './FaceDetailerEditor';
@@ -1100,13 +1100,16 @@ export default function App() {
         })()
     : '';
   const regionalDisabledReason =
-    input || hires || draft.upscale || draft.controlNet || draft.ipAdapter || draft.batchSize !== 1
-      ? 'Regional prompts currently use one text-to-image pass, without other image workflows.'
+    input || draft.upscale || draft.controlNet || draft.ipAdapter || draft.split
+      ? 'Characters work on pictures made from text. Turn off image inputs, ControlNet and image reference first.'
       : undefined;
+  const characterLoras = models.filter(
+    model => model.kind === 'lora' && model.status === 'ready' && isLoraFamilyCompatible(model.family, draft.family),
+  );
   const regionalError = draft.regionalPrompts?.settings.enabled
     ? regionalDisabledReason ||
       (!activeRegionalPromptRegions(draft.regionalPrompts.settings).length
-        ? 'Write a prompt in at least one region, or turn regional prompts off.'
+        ? 'Give at least one character some words, or turn Characters off.'
         : '')
     : '';
   const ipAdapterDisabledReason =
@@ -1702,23 +1705,30 @@ export default function App() {
                       disabledReason={cannotGenerate || undefined}
                       onQueue={queueSweep}
                     />
-                    <details className="extra-row tune-flyout">
-                      <summary>
-                        {createMode === 'advanced' && !newerModel ? 'Regions and wildcards' : 'Wildcards'}
-                        {(draft.dynamicPrompts?.enabled || draft.regionalPrompts?.settings.enabled) && (
-                          <span className="extra-status">On</span>
-                        )}
-                      </summary>
-                      {createMode === 'advanced' && !newerModel && (
-                        <RegionalPrompts
+                    {!newerModel && (
+                      <details className="extra-row tune-flyout">
+                        <summary>
+                          Characters
+                          {draft.regionalPrompts?.settings.enabled && (
+                            <span className="extra-status">{draft.regionalPrompts.settings.regions.length}</span>
+                          )}
+                        </summary>
+                        <Characters
                           value={draft.regionalPrompts?.settings}
                           width={draft.width}
                           height={draft.height}
                           disabledReason={regionalDisabledReason}
                           backdropUrl={selected?.imageUrl}
+                          loras={characterLoras}
                           onChange={settings => changeDraft({ regionalPrompts: settings ? { settings } : undefined })}
                         />
-                      )}
+                      </details>
+                    )}
+                    <details className="extra-row tune-flyout">
+                      <summary>
+                        Wildcards
+                        {draft.dynamicPrompts?.enabled && <span className="extra-status">On</span>}
+                      </summary>
                       <DynamicPrompts
                         draft={draft}
                         wildcards={snapshot.wildcards}

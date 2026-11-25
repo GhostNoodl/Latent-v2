@@ -341,6 +341,28 @@ it('reopens illustrated receipts and creates refinement crops, rejecting altered
   expect(Number(resize.inputs.width) / Number(resize.inputs.height)).toBeCloseTo(crop.width / crop.height, 2);
   expect(nodes.some(n => n.class_type === 'EmptyImage')).toBe(true);
   expect(Object.values(make(plan).workflow).some(n => n.class_type === 'EmptyImage')).toBe(false);
+  // A picture with characters: the face pass uses that character's words and LoRA.
+  const withCharacter = buildFaceRefinementWorkflow(
+    baseline,
+    {
+      ...draft,
+      faceCharacters: [
+        {
+          prompt: 'mika face',
+          negativePrompt: 'blurry',
+          loras: [{ filename: 'mika.safetensors', weight: 1, clipWeight: 1 }],
+        },
+      ],
+    },
+    {
+      plan,
+      sourceFilename: 'source.png',
+      maskFilenames: Object.fromEntries(plan.passes.map(v => [v.crop.mask.id, 'mask.png'])),
+    },
+  ).workflow;
+  const faceSampler = Object.values(withCharacter).find(n => n.class_type === 'KSampler')!;
+  expect(withCharacter[(faceSampler.inputs.model as [string, number])[0]].class_type).toBe('LoraLoader');
+  expect(withCharacter[(faceSampler.inputs.positive as [string, number])[0]].inputs.text).toBe('mika face');
   expect(Math.max(classic.passes[0].crop.working.width, classic.passes[0].crop.working.height)).toBeLessThanOrEqual(
     1024,
   );

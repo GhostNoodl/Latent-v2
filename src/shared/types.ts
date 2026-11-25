@@ -102,6 +102,12 @@ export interface ModelAsset {
   provenance?: ModelProvenance;
   status: 'ready' | 'missing';
 }
+/** One character's words and LoRA files, for a face pass on that character. */
+export interface FaceCharacter {
+  prompt: string;
+  negativePrompt: string;
+  loras: Array<{ filename: string; weight: number; clipWeight: number }>;
+}
 export interface LoraSelection {
   modelId: string;
   weight: number;
@@ -121,6 +127,7 @@ export interface GenerationDraft {
     scheduler?: string;
   };
   autoFaceParentRecordId?: string;
+  faceCharacters?: Array<FaceCharacter | null>;
   enhance?: { parentRecordId: string; standard?: boolean; method?: 'image' };
   faceDetailer?: { request: FaceRefinementRequest; frozen?: FaceRefinementPlan };
   ipAdapter?: { settings: IPAdapterSettings; frozen?: IPAdapterPlan };

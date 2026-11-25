@@ -34,6 +34,30 @@ export const draftSchema = z
       .string()
       .regex(/^[a-f0-9]{32}$/)
       .optional(),
+    /** Face fix on a picture with characters: each face pass uses its own character's words and LoRAs. */
+    faceCharacters: z
+      .array(
+        z
+          .object({
+            prompt: z.string().max(8000),
+            negativePrompt: z.string().max(8000),
+            loras: z
+              .array(
+                z
+                  .object({
+                    filename: z.string().min(1).max(1000),
+                    weight: z.number().finite(),
+                    clipWeight: z.number().finite(),
+                  })
+                  .strict(),
+              )
+              .max(4),
+          })
+          .strict()
+          .nullable(),
+      )
+      .max(4)
+      .optional(),
     enhance: z
       .object({
         standard: z.boolean().optional(),
