@@ -73,10 +73,16 @@ import type { QwenEditAssetsService } from './qwen-edit-assets';
 import { RegionalMaskService } from './regional-masks';
 import {
   activeRegionalPromptRegions,
+  regionLoraIds,
   regionalPromptPlanSchema,
   type RegionalPromptPlan,
+  type RegionalPromptSettings,
 } from '../shared/regional-prompt-types';
-import { augmentRegionalPromptWorkflow } from '../shared/regional-prompt-workflow';
+import {
+  augmentRegionalPromptWorkflow,
+  augmentRegionalTouchUp,
+  type RegionLoraAsset,
+} from '../shared/regional-prompt-workflow';
 import { ipAdapterPlanSchema } from '../shared/ipadapter-types';
 import { augmentIPAdapterWorkflow, validateIPAdapterCapabilities } from '../shared/ipadapter-workflow';
 import type { IPAdapterService } from './ipadapter';
@@ -90,7 +96,7 @@ import {
   validateFrozenFaceRefinementWorkflow,
   type FaceRefinementOutput,
 } from '../shared/face-detailer-workflow';
-import { isVideoJob } from '../shared/types';
+import { isLoraFamilyCompatible, isVideoJob } from '../shared/types';
 import type { VideoDraft } from '../shared/video-types';
 import { videoDraftSchema } from '../shared/video-plan';
 import { videoOutputCandidates } from '../shared/video-output';
@@ -528,13 +534,17 @@ export class JobService {
       return this.enqueueQwenEdit(draft.qwenEdit);
     }
     if (draft.imageModel) return this.enqueueImageModel(draft);
+    if (draft.faceCharacters && !draft.faceDetailer)
+      throw new Error('Character face settings only apply to a face fix.');
     if (draft.regionalPrompts?.frozen && !draft.regionalPrompts.settings.enabled)
       throw new Error('Turn off regional prompting with a new layout, or restore the frozen regional recipe.');
     if (
       draft.regionalPrompts?.settings.enabled &&
-      (draft.imageInput || draft.controlNet || draft.hiresFix || draft.upscale || draft.batchSize !== 1)
+      (draft.imageInput || draft.controlNet || draft.upscale || draft.split || draft.ipAdapter)
     )
-      throw new Error('Regional prompts require one baseline text-to-image pass without other image workflows.');
+      throw new Error(
+        'Characters work on pictures made from text. Turn off ControlNet, image inputs and Before/after.',
+      );
     if (draft.regionalPrompts?.settings.enabled && !activeRegionalPromptRegions(draft.regionalPrompts.settings).length)
       throw new Error('Write a prompt in at least one region with positive strength, or turn regional prompting off.');
     if (draft.imageInput?.cropPlan && !draft.imageInput.crop)
@@ -625,7 +635,14 @@ export class JobService {
       }
       await this.models.refresh();
       const { checkpoint, loras } = validateAssets(draft, this.models.assets);
-      await this.models.verifyExternalModels?.([checkpoint.id, ...loras.map(asset => asset.id)]);
+      const characterLoras = draft.regionalPrompts?.settings.enabled
+        ? this.regionLoraAssets(draft.regionalPrompts.settings, draft)
+        : [];
+      await this.models.verifyExternalModels?.([
+        checkpoint.id,
+        ...loras.map(asset => asset.id),
+        ...characterLoras.map(asset => asset.id),
+      ]);
       draft.triggerWords = Object.fromEntries(
         loras.map(asset => [
           asset.id,
@@ -633,7 +650,7 @@ export class JobService {
         ]),
       );
       draft.assetHashes = Object.fromEntries(
-        [checkpoint, ...loras].filter(asset => asset.sha256).map(asset => [asset.id, asset.sha256!]),
+        [checkpoint, ...loras, ...characterLoras].filter(asset => asset.sha256).map(asset => [asset.id, asset.sha256!]),
       );
       context.checkpoint = checkpoint;
       context.loras = loras.map((asset, index) => ({
@@ -722,6 +739,7 @@ export class JobService {
           authoring.settings,
           masks,
           authoring.frozen,
+          characterLoras,
         );
         authoring.frozen = structuredClone(result.plan);
         context.regionalPrompts = result.plan;
@@ -853,6 +871,13 @@ export class JobService {
       context.workflow = context.advancedImage.workflow;
       context.workflowVersion = context.advancedImage.workflowVersion;
     }
+    if (context.regionalPrompts?.settings.touchUp)
+      context.workflow = augmentRegionalTouchUp(
+        context.workflow,
+        draft,
+        context.regionalPrompts,
+        draft.hiresFix ? { width: draft.hiresFix.width, height: draft.hiresFix.height } : draft,
+      );
     const now = new Date().toISOString();
     const job: GenerationJob = {
       id,
@@ -1432,9 +1457,40 @@ export class JobService {
       const resolvedDraft = { ...job.draft, prompt: prepared.prompt, negativePrompt: prepared.negativePrompt };
       const assets = [...(context.checkpoint ? [context.checkpoint] : []), ...context.loras];
       const baseline = buildWorkflow(resolvedDraft, assets, job.actualSeed, job.id);
-      const result = await augmentRegionalPromptWorkflow(baseline, resolvedDraft, frozen.settings, masks, frozen);
+      const characterLoras = this.regionLoraAssets(frozen.settings, job.draft);
       if (
-        JSON.stringify(result.workflow) !== JSON.stringify(context.workflow) ||
+        JSON.stringify(characterLoras.map(asset => [asset.id, asset.filename, asset.sha256])) !==
+        JSON.stringify((frozen.loraFiles ?? []).map(file => [file.modelId, file.filename, file.sha256]))
+      )
+        throw new Error("A character's LoRA file changed after this picture was queued. Restore it and retry.");
+      const result = await augmentRegionalPromptWorkflow(
+        baseline,
+        resolvedDraft,
+        frozen.settings,
+        masks,
+        frozen,
+        characterLoras,
+      );
+      let expected = result.workflow;
+      const hires = context.advancedImage?.hires;
+      if (hires && job.draft.hiresFix)
+        expected = augmentHiresWorkflow(
+          expected,
+          job.draft,
+          job.draft.hiresFix,
+          String(hires.seed),
+          job.draft.hiresFix.method === 'latent'
+            ? (context.advancedImage!.workflowVersion as Parameters<typeof augmentHiresWorkflow>[4])
+            : undefined,
+        ).workflow;
+      expected = augmentRegionalTouchUp(
+        expected,
+        job.draft,
+        frozen,
+        hires ? { width: hires.width, height: hires.height } : job.draft,
+      );
+      if (
+        JSON.stringify(expected) !== JSON.stringify(context.workflow) ||
         resolvePrompt(resolvedDraft, assets) !== context.resolvedPrompt
       )
         throw new Error(
@@ -2273,6 +2329,20 @@ export class JobService {
     validateFrozenFaceRefinementWorkflow(context.workflow, baseline, resolved, { plan, sourceFilename, maskFilenames });
     return saved;
   }
+  /** The installed LoRA files the characters use, checked like the shared LoRA list. */
+  private regionLoraAssets(settings: RegionalPromptSettings, draft: GenerationDraft): RegionLoraAsset[] {
+    return regionLoraIds(settings).map(id => {
+      const asset = this.models.assets.find(
+        model => model.id === id && model.kind === 'lora' && model.status === 'ready',
+      );
+      if (!asset) throw new Error("A character's LoRA is missing. Add it again or remove it from that character.");
+      if (!isLoraFamilyCompatible(asset.family, draft.family))
+        throw new Error(`The LoRA ${asset.name} doesn't fit this model.`);
+      if (draft.assetHashes?.[asset.id] && asset.sha256 && draft.assetHashes[asset.id] !== asset.sha256)
+        throw new Error(`${asset.name} has different file contents than when this picture was made.`);
+      return { id: asset.id, filename: asset.filename, ...(asset.sha256 ? { sha256: asset.sha256 } : {}) };
+    });
+  }
   private outputs(
     job: Pick<GenerationJob, 'id' | 'draft'> & Partial<Pick<GenerationJob, 'actualSeed'>>,
     context: ExecutionContext,
@@ -2288,14 +2358,15 @@ export class JobService {
         JSON.stringify(plan.settings) !== JSON.stringify(job.draft.regionalPrompts.settings) ||
         plan.canvas.width !== job.draft.width ||
         plan.canvas.height !== job.draft.height ||
-        job.draft.batchSize !== 1 ||
-        context.workflowVersion !== plan.version ||
+        context.workflowVersion !==
+          (context.advancedImage?.hires ? context.advancedImage.workflowVersion : plan.version) ||
         context.imageInput ||
-        context.advancedImage ||
+        (context.advancedImage && !context.advancedImage.hires) ||
         context.controlNet ||
         context.qwenEdit ||
         context.workflow['7']?.class_type !== 'SaveImage' ||
-        context.workflow['7'].inputs.filename_prefix !== `Latent_${job.id}`
+        context.workflow['7'].inputs.filename_prefix !==
+          (context.advancedImage?.hires ? `Latent_${job.id}_base_%batch_num%` : `Latent_${job.id}`)
       )
         throw new Error('The saved regional recipe is missing or inconsistent. Restore the original recipe.');
     }

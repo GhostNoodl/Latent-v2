@@ -9,6 +9,52 @@ import {
 } from '../shared/types';
 import type { FaceDetectionReceipt, FaceDetectionRequest } from '../shared/face-detailer-types';
 import type { SourceImageAsset } from '../shared/source-types';
+import type { FaceBox } from '../shared/face-detailer-types';
+import {
+  activeRegionLoras,
+  activeRegionalPromptRegions,
+  characterNegative,
+  characterPrompt,
+} from '../shared/regional-prompt-types';
+
+/**
+ * For a picture made with characters, find whose face each one is (by where its
+ * centre falls) so the face fix uses that character's words and LoRAs.
+ */
+export function faceCharacters(record: GenerationRecord, faces: Array<{ box: FaceBox }>, withLoras: boolean) {
+  const plan = record.regionalPrompts;
+  if (!plan?.applied || plan.version !== 'sdxl-regional-conditioning@2') return undefined;
+  const regions = activeRegionalPromptRegions(plan.settings);
+  const sx = plan.canvas.width / record.width;
+  const sy = plan.canvas.height / record.height;
+  const scene = record.resolvedPrompt;
+  const sceneNegative = record.dynamicPromptRecipe?.negative.resolved ?? record.draft.negativePrompt;
+  const result = faces.map(face => {
+    const cx = (face.box.x + face.box.width / 2) * sx;
+    const cy = (face.box.y + face.box.height / 2) * sy;
+    let best = -1;
+    let bestDistance = Infinity;
+    plan.regions.forEach((entry, index) => {
+      const b = entry.pixelBounds;
+      if (cx < b.x || cy < b.y || cx > b.x + b.width || cy > b.y + b.height) return;
+      const distance = Math.hypot(cx - (b.x + b.width / 2), cy - (b.y + b.height / 2));
+      if (distance < bestDistance) [best, bestDistance] = [index, distance];
+    });
+    const region = regions[best];
+    if (!region) return null;
+    return {
+      prompt: characterPrompt(region, scene),
+      negativePrompt: characterNegative(region, sceneNegative),
+      loras: withLoras
+        ? activeRegionLoras(region).flatMap(lora => {
+            const file = plan.loraFiles?.find(entry => entry.modelId === lora.modelId);
+            return file ? [{ filename: file.filename, weight: lora.weight, clipWeight: lora.clipWeight }] : [];
+          })
+        : [],
+    };
+  });
+  return result.some(Boolean) ? result : undefined;
+}
 
 type Dependencies = {
   jobs(): StudioJob[];
@@ -58,6 +104,7 @@ export function automaticFaceDraft(record: GenerationRecord, detection: FaceDete
     seed: record.actualSeed,
     autoFaceParentRecordId: record.id,
     variationOfRecordId: record.id,
+    faceCharacters: faceCharacters(record, detection.faces, settings.applyLoras !== false),
     faceDetailer: {
       request: {
         ...(settings.classic ? { classic: true } : {}),

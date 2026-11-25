@@ -16,7 +16,7 @@ const labels: Record<string, string> = {
   upscale: 'the upscale settings',
   controlNet: 'the ControlNet settings',
   ipAdapter: 'the image reference settings',
-  regionalPrompts: 'the regional prompts',
+  regionalPrompts: 'the characters',
   dynamicPrompts: 'the prompt variations',
 };
 
