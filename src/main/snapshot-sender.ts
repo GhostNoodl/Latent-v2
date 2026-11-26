@@ -17,6 +17,8 @@ export interface SnapshotSources {
     takeChangedJobIds(): Set<string>;
   };
 }
+/** Wildcard lists can be megabytes; their store returns one object per saved version. */
+const STABLE_FIELDS = new Set(['wildcards']);
 /** Every few seconds all jobs are compared, in case one changed without saying so. */
 const JOB_RECHECK_MS = 5000;
 
@@ -27,6 +29,8 @@ const JOB_RECHECK_MS = 5000;
  */
 export class SnapshotSender {
   private fields = new Map<string, string>();
+  /** Fields that hand back the same object until they change: skip re-reading them when unchanged. */
+  private stable = new Map<string, unknown>();
   private historyRevision = '';
   private presetsRevision = -1;
   private jobOrder = '';
@@ -48,7 +52,11 @@ export class SnapshotSender {
   remember(value: AppSnapshot): AppSnapshot {
     const { history: _history, jobs, presets: _presets, ...light } = value;
     this.fields.clear();
-    for (const [key, field] of Object.entries(light)) this.fields.set(key, JSON.stringify(field));
+    this.stable.clear();
+    for (const [key, field] of Object.entries(light)) {
+      this.fields.set(key, JSON.stringify(field));
+      if (STABLE_FIELDS.has(key)) this.stable.set(key, field);
+    }
     this.historyRevision = this.sources.historyRevision();
     this.presetsRevision = this.sources.presetsRevision();
     this.rememberJobs(jobs);
@@ -60,6 +68,10 @@ export class SnapshotSender {
     const patch: SnapshotChanges = {};
     let changed = false;
     for (const [key, field] of Object.entries(sources.light())) {
+      if (STABLE_FIELDS.has(key)) {
+        if (this.stable.get(key) === field) continue;
+        this.stable.set(key, field);
+      }
       const serialized = JSON.stringify(field);
       if (this.fields.get(key) === serialized) continue;
       this.fields.set(key, serialized);

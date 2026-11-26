@@ -1,21 +1,25 @@
-import { useRef, useState } from 'react';
-import { WILDCARD_PACKS } from '../shared/wildcard-packs';
+import { useState } from 'react';
+import { WILDCARD_PACKS, type WildcardPackGroup } from '../shared/wildcard-packs';
+
+const GROUPS: { id: WildcardPackGroup; title: string; hint: string }[] = [
+  { id: 'tags', title: 'Tags', hint: 'Short tags, best for SDXL and Illustrious models.' },
+  { id: 'mix', title: 'Mix and match', hint: 'Each pick combines other lists, like a full outfit in random colors.' },
+  { id: 'plain', title: 'Plain English', hint: 'Whole sentences, best for the newer models.' },
+];
+
+/** Every starter pack already works as __name__ in a prompt; Add makes your own editable copy. */
 export function WildcardPacks({ disabled, onAdd }: { disabled: boolean; onAdd(id: string): void }) {
-  const catalog = useRef<HTMLDetailsElement>(null);
   const [search, setSearch] = useState('');
   const query = search.trim().toLowerCase().replace(/_/g, ' ');
   const visible = WILDCARD_PACKS.filter(pack =>
-    [pack.name, pack.description, ...pack.entries].some(text => text.toLowerCase().includes(query)),
+    [pack.id, pack.name, pack.description, ...pack.entries].some(text =>
+      text.toLowerCase().replace(/_/g, ' ').includes(query),
+    ),
   );
   return (
-    <details ref={catalog} className="wildcard-starter-packs">
-      <summary>
-        Starter packs · {WILDCARD_PACKS.length} categories ·{' '}
-        {WILDCARD_PACKS.reduce((count, pack) => count + pack.entries.length, 0)} choices
-      </summary>
+    <section className="wildcard-starter-packs" aria-label="Starter packs">
       <p className="muted small">
-        Add an editable copy, then save your lists below. Existing lists stay intact. Use one wildcard per category;
-        choices are independent.
+        These work right away: type <code>__species__</code> and so on. Add one to make your own copy to edit.
       </p>
       <label className="field">
         <span>Find a pack or choice</span>
@@ -23,33 +27,35 @@ export function WildcardPacks({ disabled, onAdd }: { disabled: boolean; onAdd(id
           type="search"
           value={search}
           disabled={disabled}
-          placeholder="Species, clothing, red panda…"
-          onChange={e => setSearch(e.target.value)}
+          placeholder="Species, hairstyles, red panda…"
+          onChange={event => setSearch(event.target.value)}
         />
       </label>
-      {!visible.length && <p className="muted small">No matching packs. Try another word.</p>}
-      {visible.map(pack => (
-        <details key={pack.id}>
-          <summary>
-            {pack.name} · {pack.entries.length} choices
-          </summary>
-          <p className="small">{pack.description}</p>
-          <p className="small pack-entries">{pack.entries.join(' · ')}</p>
-          <p className="muted small">
-            Source: {pack.source.label} · reviewed {pack.reviewed}
-          </p>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => {
-              onAdd(pack.id);
-              if (catalog.current) catalog.current.open = false;
-            }}
-          >
-            Add {pack.name.toLowerCase()}
-          </button>
-        </details>
-      ))}
-    </details>
+      {!visible.length && <p className="muted small">No packs match. Try another word.</p>}
+      {GROUPS.map(group => {
+        const packs = visible.filter(pack => pack.group === group.id);
+        if (!packs.length) return null;
+        return (
+          <div className="wildcard-pack-group" key={group.id}>
+            <h4>
+              {group.title} · <span>{group.hint}</span>
+            </h4>
+            {packs.map(pack => (
+              <details key={pack.id}>
+                <summary>
+                  <code>__{pack.id}__</code> {pack.name} · {pack.entries.length} choices
+                </summary>
+                <p className="small">{pack.description}</p>
+                <p className="small pack-entries">{pack.entries.join(' · ')}</p>
+                <p className="muted small">{pack.source.label}</p>
+                <button type="button" disabled={disabled} onClick={() => onAdd(pack.id)}>
+                  Add {pack.name.toLowerCase()}
+                </button>
+              </details>
+            ))}
+          </div>
+        );
+      })}
+    </section>
   );
 }

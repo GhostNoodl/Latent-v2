@@ -1874,6 +1874,30 @@
     {
       "from": "tests/regional-characters.test.ts",
       "to": "tests/regional-characters.test.ts"
+    },
+    {
+      "from": "src/main/wildcard-files.ts",
+      "to": "src/main/wildcard-files.ts"
+    },
+    {
+      "from": "src/renderer/WildcardListsEditor.tsx",
+      "to": "src/renderer/WildcardListsEditor.tsx"
+    },
+    {
+      "from": "src/shared/wildcard-import.ts",
+      "to": "src/shared/wildcard-import.ts"
+    },
+    {
+      "from": "tests/dynamic-prompts-v2.test.ts",
+      "to": "tests/dynamic-prompts-v2.test.ts"
+    },
+    {
+      "from": "tests/fixtures/dynamic-recipe-v1.json",
+      "to": "tests/fixtures/dynamic-recipe-v1.json"
+    },
+    {
+      "from": "tests/wildcard-import.test.ts",
+      "to": "tests/wildcard-import.test.ts"
     }
   ]
 }

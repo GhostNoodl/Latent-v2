@@ -5,12 +5,18 @@ import { createWildcardSnapshot, prepareDynamicPromptDraft } from '../src/shared
 it('bundles valid, unique, literal choices with source references', async () => {
   const entries = Object.fromEntries(WILDCARD_PACKS.map(p => ['starter_' + p.id, [...p.entries]]));
   const snapshot = await createWildcardSnapshot(entries);
-  expect(Object.keys(snapshot.entries)).toHaveLength(13);
+  expect(Object.keys(snapshot.entries)).toHaveLength(WILDCARD_PACKS.length);
+  expect(WILDCARD_PACKS.length).toBeGreaterThanOrEqual(30);
   expect(Object.values(entries).flat()).toHaveLength(WILDCARD_PACKS.reduce((n, p) => n + p.entries.length, 0));
   for (const pack of WILDCARD_PACKS) {
-    expect(pack.source.url).toMatch(/^https:\/\//);
+    expect(pack.source.label).toBeTruthy();
+    if (pack.source.url) expect(pack.source.url).toMatch(/^https:\/\//);
     expect(pack.entries.length).toBe(new Set(pack.entries).size);
-    expect(pack.entries.every(s => !/[{}|\\]/.test(s))).toBe(true);
+    if (pack.group !== 'mix')
+      expect(
+        pack.entries.every(s => !/[{}|\\]|__/.test(s)),
+        pack.id,
+      ).toBe(true);
   }
   const result = await prepareDynamicPromptDraft(
     {
@@ -59,9 +65,9 @@ it('keeps the full expanded catalog within the dictionary budget and rejects ove
   let entries: Record<string, string[]> = {};
   for (const pack of WILDCARD_PACKS) entries = stageWildcardPack(entries, pack.id).entries;
   expect(Object.values(entries).flat()).toHaveLength(WILDCARD_PACKS.reduce((n, p) => n + p.entries.length, 0));
-  const crowded = { personal: Array.from({ length: 1000 }, (_, i) => 'choice ' + i) },
+  const crowded = { personal: Array.from({ length: 99_900 }, (_, i) => 'choice ' + i) },
     before = JSON.stringify(crowded);
-  expect(() => stageWildcardPack(crowded, 'species')).toThrow('1024-choice limit');
+  expect(() => stageWildcardPack(crowded, 'species')).toThrow('100,000-choice limit');
   expect(JSON.stringify(crowded)).toBe(before);
 });
 it('keeps an older starter copy intact when adding its expanded replacement', () => {
@@ -112,7 +118,9 @@ it('expands built-in names and legacy aliases without lists or enablement, inclu
   expect(a.prompt).toBe(b.prompt);
   expect(a.prompt).not.toContain('__');
   expect(a.negativePrompt).not.toContain('__');
-  expect(a.recipe!.wildcards.entries.species).toContain('wolf');
+  // Big lists ride along with an image as just their size and the line it picked.
+  expect(a.recipe!.wildcards.sparse!.species.count).toBe(WILDCARD_PACKS.find(p => p.id === 'species')!.entries.length);
+  expect(a.recipe!.wildcards.entries.lighting).toContain('backlighting');
   const inline = await prepareDynamicPromptDraft({ prompt: '{wolf|tiger}', negativePrompt: '' }, '42');
   expect(['wolf', 'tiger']).toContain(inline.prompt);
 });

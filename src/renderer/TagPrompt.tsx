@@ -2,6 +2,7 @@ import { Check } from 'lucide-react';
 import { Modal } from './ui';
 import { wildcardCatalog } from '../shared/dynamic-prompt-recipe';
 import { activeWildcardNames, mixWildcardPrompt } from '../shared/wildcard-mixer';
+import { isWildcardNote, matchWildcardNames } from '../shared/dynamic-prompts';
 import {
   useEffect,
   useId,
@@ -40,6 +41,8 @@ function setSource(value: TagSource) {
 }
 
 /** Where tag suggestions come from. One setting, shared by every prompt box. */
+/** Bigger lists are edited in the Wildcards lists window instead of ticked one by one. */
+const TICK_LIMIT = 1000;
 export function TagSourcePicker() {
   const selectedSource = useSyncExternalStore(subscribe, () => source);
   return (
@@ -112,12 +115,14 @@ export function TagPrompt({
   try {
     activeWildcards = [...activeWildcardNames(value)];
   } catch {}
-  const wildcardValues = (name: string) =>
-    wildcardSelections?.[name] ??
-    wildcardSelections?.[name.replace(/^starter_/, '')] ??
-    catalog[name] ??
-    catalog[name.replace(/^starter_/, '')] ??
-    [];
+  const wildcardValues = (name: string): string[] =>
+    name.includes('*')
+      ? matchWildcardNames(name, Object.keys(catalog)).flatMap(match => catalog[match])
+      : (wildcardSelections?.[name] ??
+        wildcardSelections?.[name.replace(/^starter_/, '')] ??
+        catalog[name] ??
+        catalog[name.replace(/^starter_/, '')] ??
+        []);
   function acceptWildcard(name: string) {
     if (!wildcardMatch) return;
     const start = selection.start - wildcardMatch[0].length;
@@ -300,13 +305,23 @@ export function TagPrompt({
             <span key={name}>
               <button
                 type="button"
+                disabled={name.includes('*') || wildcardValues(name).length > TICK_LIMIT}
+                title={
+                  name.includes('*') || wildcardValues(name).length > TICK_LIMIT
+                    ? 'Too many to tick through here. Edit the list in Wildcards.'
+                    : 'Pick which choices this prompt can use'
+                }
                 onClick={() => {
                   setEditing(name);
                   setChosen([...wildcardValues(name)]);
                   setChoiceQuery('');
                 }}
               >
-                {name.replace(/^starter_/, '')} · {wildcardValues(name).length} choices
+                {name.replace(/^starter_/, '')} ·{' '}
+                {wildcardValues(name)
+                  .filter(line => !isWildcardNote(line))
+                  .length.toLocaleString('en-US')}{' '}
+                choices
               </button>
               <button
                 type="button"

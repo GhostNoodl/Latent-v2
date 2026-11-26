@@ -51,7 +51,7 @@ Ground rules
 - You can't change settings like size, steps, seed, sampler or model. If one of them really matters, mention it briefly in message.`;
 
 const SYNTAX = `Prompt syntax, always follow it
-- Copy every item in keepExactly into the prompt unchanged: LoRA trigger words, __wildcard__ names and {a|b} choice groups. Never reword, split, translate or expand them.
+- Copy every item in keepExactly into the prompt unchanged: LoRA trigger words, __wildcard__ names (including __folder/*__), {a|b} choice groups, {2$$a|b} pick groups and \${name=...} or \${name} variables. Never reword, split, translate or expand them.
 - (words:1.2) is a weight. Keep weights unless asked to change emphasis, and keep the (text:number) format.
 - Keep BREAK and embedding:name tokens.
 - loras lists the LoRA files in use. Never put their file names in the prompt.`;
@@ -185,7 +185,7 @@ export function systemPrompt(request: AssistantRequest): string {
   return `${BASE}\n\n${imageModelGuide(request)}\n\n${SYNTAX}`;
 }
 
-const WILDCARD = /__[A-Za-z0-9_\-/. ]+?__/g;
+const WILDCARD = /__[A-Za-z0-9_\-/.* ]+?__/g;
 
 /** Pulls out top-level {a|b} groups, allowing nested braces inside them. */
 export function choiceGroups(text: string): string[] {
@@ -197,7 +197,9 @@ export function choiceGroups(text: string): string[] {
       if (depth++ === 0) start = index;
     } else if (text[index] === '}' && depth > 0 && --depth === 0) {
       const group = text.slice(start, index + 1);
-      if (group.includes('|')) groups.push(group);
+      // ${name=...} variables keep their $, and {2$$__list__} picks count even without a |.
+      if (text[start - 1] === '$') groups.push('$' + group);
+      else if (group.includes('|') || group.includes('$$')) groups.push(group);
     }
   }
   return groups;
