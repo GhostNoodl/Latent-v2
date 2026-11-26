@@ -1241,6 +1241,19 @@ export default function App() {
       setSweepView(drafts[0].sweep);
     });
   };
+  /** Wildcards "Make 8" and "All combinations": one job per setup, each with its own picks. */
+  const queueWildcardRuns = (setups: NonNullable<GenerationDraft['dynamicPrompts']>[]) => {
+    const base = copyDraft(draftRef.current);
+    const requestedPreview = previewSelectionRevision.current;
+    void run('generate', async () => {
+      await flushDraft();
+      for (const dynamicPrompts of setups) await window.latent.queueGeneration({ ...base, dynamicPrompts });
+      if (previewSelectionRevision.current === requestedPreview) {
+        setViewLivePreview(true);
+        setZoom(0);
+      }
+    });
+  };
   const queuePaused = (paused: GenerationDraft) => {
     const requestedPreview = previewSelectionRevision.current;
     void run('generate', async () => {
@@ -1742,6 +1755,9 @@ export default function App() {
                           });
                         }}
                         onSaveWildcards={entries => window.latent.saveWildcards(entries)}
+                        newerModel={!!newerModel}
+                        queueDisabledReason={cannotGenerate || undefined}
+                        onQueue={queueWildcardRuns}
                       />
                     </details>
                     <button

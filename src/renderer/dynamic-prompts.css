@@ -49,88 +49,6 @@
   margin-top: 5px;
   color: var(--accent);
 }
-.dynamic-loading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.dynamic-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-.dynamic-preview h4 {
-  margin: 0 0 6px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--muted);
-}
-.dynamic-preview pre {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font: inherit;
-  font-size: 12px;
-  line-height: 1.7;
-  padding: 10px;
-  border-radius: 6px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  max-height: 170px;
-  overflow: auto;
-}
-.dynamic-preview details {
-  max-height: 320px;
-  overflow: auto;
-}
-.dynamic-preview ol {
-  margin: 8px 0 14px;
-  padding-left: 24px;
-  font-size: 11px;
-}
-.dynamic-preview li {
-  margin-bottom: 9px;
-  line-height: 1.6;
-}
-.dynamic-preview li code {
-  display: block;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  color: var(--text);
-}
-.dynamic-preview li small {
-  color: var(--muted);
-}
-.dynamic-preview > .small {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.wildcard-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-.wildcard-add {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: end;
-  gap: 10px;
-}
-.wildcard-add > button {
-  min-height: 40px;
-}
-.wildcard-editor > .text-button {
-  align-self: flex-start;
-}
-.wildcard-editor textarea {
-  font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 12px;
-}
-
 .wildcard-starter-packs > details {
   margin-top: 10px;
   padding: 10px;
@@ -234,5 +152,302 @@
   }
   .wildcard-mixer-layout nav {
     max-height: 180px;
+  }
+}
+
+.dynamic-examples {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.dynamic-examples-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  font-size: 12px;
+}
+.dynamic-examples-heading .icon-button {
+  margin-left: auto;
+}
+.dynamic-examples ol {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dynamic-examples li {
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.dynamic-examples li:first-child {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+.dynamic-locks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.dynamic-locks > .small {
+  margin-right: 2px;
+}
+.dynamic-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 2px 8px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.dynamic-lock:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.dynamic-lock.on {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--soft);
+  color: var(--text);
+}
+.dynamic-lock.on button {
+  display: inline-flex;
+  padding: 0;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.dynamic-make {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.dynamic-make > button {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.dynamic-make-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.dynamic-help summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+.dynamic-help dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 8px 0 0;
+  font-size: 11px;
+  align-items: baseline;
+}
+.dynamic-help dd {
+  margin: 0;
+  color: var(--muted);
+}
+
+.modal:has(.wildcard-lists) {
+  width: min(980px, 100%);
+}
+.wildcard-lists {
+  position: relative;
+  display: grid;
+  gap: 12px;
+}
+.wildcard-lists-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.wildcard-lists-tools button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  font-size: 12px;
+}
+.wildcard-lists-tools button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--soft);
+}
+.wildcard-lists-tools > span {
+  margin-left: auto;
+}
+.wildcard-lists-body {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 14px;
+  height: min(480px, calc(100vh - 300px));
+  min-height: 260px;
+}
+.wildcard-lists-nav {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 0;
+}
+.wildcard-lists-search {
+  position: relative;
+  display: block;
+  color: var(--muted);
+}
+.wildcard-lists-search svg {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.wildcard-lists .wildcard-lists-search input {
+  width: 100%;
+  padding-left: 28px;
+}
+.wildcard-lists-names {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.wildcard-lists-names button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  font-size: 12px;
+}
+.wildcard-lists-names button code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wildcard-lists-names button small {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.wildcard-lists-names button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--soft);
+}
+.wildcard-lists-new {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+.wildcard-lists-new button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.wildcard-lists-main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+}
+.wildcard-lists-main:has(> .wildcard-starter-packs),
+.wildcard-lists-main:has(> .wildcard-lists-empty) {
+  display: block;
+  overflow-y: auto;
+}
+.wildcard-lists-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wildcard-lists-heading .text-button {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.wildcard-lists-main textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  resize: none;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.wildcard-lists-main p {
+  margin: 0;
+}
+.wildcard-lists-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  border: 1px dashed var(--border);
+  border-radius: 9px;
+  color: var(--muted);
+  text-align: center;
+  padding: 20px;
+}
+.wildcard-lists-drop {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--accent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--text);
+  pointer-events: none;
+  font-size: 14px;
+}
+.wildcard-lists-note {
+  margin: 0;
+  color: var(--muted);
+}
+.wildcard-lists-footer {
+  justify-content: flex-end;
+}
+.wildcard-pack-group > h4 {
+  margin: 12px 0 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .wildcard-lists-body {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .wildcard-lists-names {
+    max-height: 160px;
+  }
+  .wildcard-lists-main textarea {
+    min-height: 220px;
   }
 }

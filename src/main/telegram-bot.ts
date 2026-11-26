@@ -226,7 +226,8 @@ const HELP = [
   '',
   'One-off changes work inside a prompt too:',
   'a fox in the snow --size landscape --steps 35 --seed 7',
-  'Wildcards work as well: a __animal__ in {spring|winter}',
+  'Wildcards work as well: a __species__ in {spring|winter}',
+  'Pick a few: {2$$__colors__} · weigh one: {3::cat|dog}',
   '',
   '/status - is the engine running? · /id - your Telegram user ID',
 ].join('\n');

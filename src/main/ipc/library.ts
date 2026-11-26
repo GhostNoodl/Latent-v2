@@ -1,5 +1,6 @@
 import { dialog, shell } from 'electron';
 import { z } from 'zod';
+import { exportWildcardFolder, readWildcardPaths } from '../wildcard-files';
 import { modelTransferNeedsAttention } from '../model-transfer-notifications';
 import type { HandlerContext, StudioMethods } from '../main';
 
@@ -55,6 +56,25 @@ export function libraryHandlers(ctx: HandlerContext) {
     addCollectionMembers: async (collectionId, memberIds) => ctx.collections.addMembers(collectionId, memberIds),
     removeCollectionMembers: async (collectionId, memberIds) => ctx.collections.removeMembers(collectionId, memberIds),
     saveWildcards: entries => ctx.wildcards.save(entries),
+    importWildcards: async input => {
+      const folder = z.boolean().parse(input);
+      const result = await dialog.showOpenDialog(ctx.window!, {
+        title: folder ? 'Pick a folder of wildcard files' : 'Pick wildcard files',
+        properties: folder ? ['openDirectory'] : ['openFile', 'multiSelections'],
+        ...(folder ? {} : { filters: [{ name: 'Wildcard lists', extensions: ['txt', 'yaml', 'yml', 'json'] }] }),
+      });
+      if (result.canceled || !result.filePaths.length) return null;
+      return readWildcardPaths(result.filePaths, folder);
+    },
+    exportWildcards: async input => {
+      const entries = z.record(z.string().max(128), z.array(z.string().max(16_000)).max(100_000)).parse(input);
+      const result = await dialog.showOpenDialog(ctx.window!, {
+        title: 'Pick a folder to save your wildcard lists in',
+        properties: ['openDirectory', 'createDirectory'],
+      });
+      if (result.canceled || !result.filePaths[0]) return null;
+      return exportWildcardFolder(result.filePaths[0], entries);
+    },
     fetchModelCivitaiMetadata: async modelId => {
       await ctx.civitai.fetchLocalMetadata(z.string().max(1000).parse(modelId));
       return ctx.snapshot();

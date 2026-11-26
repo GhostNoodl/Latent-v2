@@ -1,43 +1,51 @@
-# Starter wildcard packs
+# Wildcards
 
-Open Create > Wildcards > Starter packs. Preview a category and choose Add, edit its copied list, then Save wildcard lists. Enable Prompt variations and use names such as:
+Wildcards make each image pick something different. Put `__species__` or `{sunny|misty}` in a prompt and every image rolls its own pick. Open Create > Wildcards to see example rolls, keep a pick, make several images at once, or edit your lists.
 
-```
-__starter_species__, __starter_locations__, __starter_outfits__, __starter_poses__
-```
+## Writing them
 
-Each wildcard chooses independently. Add anthro/feral, character details and composition yourself. Model training affects how tags are understood; these lists do not guarantee a coherent outfit or pose. Background styles are separate from physical locations.
+| Write | What it does |
+| --- | --- |
+| `{red\|blue}` | pick one |
+| `{3::red\|blue}` | red comes up 3 times as often (weights can be decimals; 0 means never) |
+| `{2$$red\|blue\|green}` | pick 2 different ones, joined with ", " |
+| `{1-3$$ and $$__colors__}` | pick 1 to 3 lines from a list, joined with " and " |
+| `__clothes/*__` | any line from any list in the clothes folder |
+| `${hair=!__hair_colors__}` then `${hair}` | pick once and reuse the same pick (`=!` picks right away; `=` re-rolls each time it's used) |
+| `${hair:black hair}` | use the variable, or "black hair" if it isn't set |
+| `\{` `\}` `\$` | a real brace or dollar sign |
 
-## Bundled vocabulary, version 2
+In a list, one choice per line. Blank lines and lines starting with `#` are notes. A line can use choices and other lists.
 
-817 choices across 13 independently selectable packs, expanded from 106 choices in five packs. Search by category or an individual choice (for example, red panda). Long previews scroll within their cards.
+## Making several
 
-| List | Choices | Reference |
-| --- | ---: | --- |
-| starter_species | 121 | [e621 species tags](https://e621.net/tags?search%5Bcategory%5D=5&search%5Border%5D=count) |
-| starter_locations | 113 | [Danbooru locations](https://danbooru.donmai.us/wiki_pages/tag_group:locations) |
-| starter_backgrounds | 65 | [Danbooru backgrounds](https://danbooru.donmai.us/wiki_pages/tag_group:backgrounds) |
-| starter_outfits | 97 | [Danbooru attire](https://danbooru.donmai.us/wiki_pages/tag_group:attire) |
-| starter_poses | 58 | [Danbooru posture](https://danbooru.donmai.us/wiki_pages/tag_group:posture) |
-| starter_lighting | 46 | [Danbooru lighting](https://danbooru.donmai.us/wiki_pages/tag_group:lighting) |
-| starter_time_sky | 16 | [Danbooru lighting](https://danbooru.donmai.us/wiki_pages/tag_group:lighting) |
-| starter_expressions | 66 | [Danbooru face tags](https://danbooru.donmai.us/wiki_pages/tag_group:face_tags) |
-| starter_gestures | 71 | [Danbooru gestures](https://danbooru.donmai.us/wiki_pages/tag_group:gestures) |
-| starter_hair_colors | 24 | [Danbooru hair color](https://danbooru.donmai.us/wiki_pages/tag_group:hair_color) |
-| starter_headwear | 50 | [Danbooru headwear](https://danbooru.donmai.us/wiki_pages/tag_group:headwear) |
-| starter_accessories | 59 | [Danbooru accessories](https://danbooru.donmai.us/wiki_pages/tag_group:accessories) |
-| starter_framing | 31 | [Danbooru image composition](https://danbooru.donmai.us/wiki_pages/tag_group:image_composition) |
+- **Make 4 / 8 / 16** queues that many images, each with new picks. With a fixed image seed only the picks change.
+- **All N combinations** walks every combination of the main prompt in order (up to 100 per press). Weights don't apply here, and pick-several groups still roll.
+- **Keep** locks a list to the pick shown in the first example. Every other pick lands where it would have.
 
-Reviewed against public JSON endpoints on 2026-09-14. These are manually selected vocabulary lists, not complete site exports or periodically synchronized catalogs. Only short tag names are included; no images, post metadata, wiki prose or account data are distributed. Descriptions and grouping are authored for Latent.
+## Your lists
 
-Bundled names are trimmed, lowercased and converted from underscores to spaces for prompt text. The previously verified e621 [bunny to rabbit alias](https://e621.net/tag_aliases.json?search%5Bantecedent_name%5D=bunny&search%5Bstatus%5D=active&limit=5) is represented by the canonical rabbit entry. No other official alias mapping is claimed. Expanded entries were selected from the fetched reference lists; proposed names absent from those references were omitted.
+Wildcards > Lists holds your own lists, with no practical cap (100,000 lines in total, 4 million characters). You can:
 
-## Preserving user edits
+- **Import files**: `.txt` (one choice per line, the file name is the list name), Dynamic Prompts style `.yaml` packs (nested keys become `folder/list` names) and `.json`.
+- **Import folder**: every wildcard file inside, with subfolders kept as `folder/list` names.
+- Drop files or folders straight onto the Lists window.
+- **Export** writes every list as a `.txt` file, keeping folders.
 
-Adding a pack stages an ordinary editable list; saving is explicit. An occupied name receives a numeric suffix. Re-adding an unchanged copy selects that copy, while edited copies and user-authored lists remain untouched. In particular, duplicate user entries are preserved because they may be intentional weighting. Existing saved generation recipes retain their frozen wildcard snapshots. Installing the update does not automatically insert lists or change prompts.
+Imports land in the window first; nothing is kept until you press Save. A list with the same name is replaced.
 
-The packs work offline and require no site account, API key, images or model download.
+## Starter packs
 
-All packs together use 817 of the existing 1,024-choice dictionary budget. Your own lists and older copies also count toward that limit. An addition that would exceed it is refused with an actionable message and no changed entries. The limit and generation resolver are unchanged.
+33 packs, 1,445 choices. They work right away by name (`__species__`, `__plain_scenes__` and so on). Add one in Lists only if you want your own copy to edit.
 
-Expanded packs do not silently replace older copies: adding an updated pack alongside an older list creates a suffixed list, which can be reviewed before switching prompt references or removing the old one. Saved generation recipes remain frozen.
+- **Tags** (for SDXL and Illustrious): species, locations, backgrounds, outfits, poses, lighting, time and sky, expressions, gestures, hair colors, headwear, accessories, framing, eye colors, hairstyles, colors, weather, seasons, looking, art styles, color moods, materials. New tag packs were checked against the bundled Danbooru and e621 tag lists; colors are plain color words.
+- **Mix and match**: `__full_outfit__`, `__full_look__`, `__full_scene__`, `__full_shot__`. Each line combines other packs, so one pick gives a whole outfit in random colors, or a place with time, weather and light.
+- **Plain English** (for the newer models): `__plain_scenes__`, `__plain_lighting__`, `__plain_styles__`, `__plain_moods__`, `__plain_shots__`, `__plain_people__`, `__plain_outfits__`.
+
+The original thirteen tag packs were reviewed against public Danbooru and e621 tag groups on 2026-09-14. Only short tag names are included; no images, post data or wiki text.
+
+## Saved images
+
+Every image keeps exactly what it picked. Small lists are saved with the image in full; lists over 256 lines keep only their size and the lines that image used, so big imports don't bloat your history. Reusing an image's settings replays its exact picks.
+
+Images made before this update keep their old meaning: in those, `{2::a|b}` was a choice between "2::a" and "b", and they still replay that way.

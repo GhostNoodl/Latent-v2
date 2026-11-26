@@ -1,17 +1,16 @@
-import { WildcardPacks } from './WildcardPacks';
-import { stageWildcardPack, cleanSpeciesPreset } from '../shared/wildcard-packs';
 import { useEffect, useRef, useState } from 'react';
-import { BookOpen, Check, Dices, Eye, LockKeyhole, Plus, Save, Trash2 } from 'lucide-react';
+import { BookOpen, Dices, Layers, Lock, LockKeyhole, Shuffle, X } from 'lucide-react';
+import { WildcardListsEditor } from './WildcardListsEditor';
 import {
   usesDynamicPrompts,
-  createWildcardSnapshot,
+  countPromptCombinations,
   prepareDynamicPromptDraft,
   type DynamicPromptAuthoring,
   type DynamicPromptDraft,
-  type PreparedDynamicPrompt,
   type WildcardSnapshot,
 } from '../shared/dynamic-prompt-recipe';
-import { Busy, Field, Modal, Notice } from './ui';
+import type { DynamicPromptChoice } from '../shared/dynamic-prompts';
+import { Busy, Notice } from './ui';
 import './dynamic-prompts.css';
 
 export interface DynamicPromptsProps {
@@ -19,442 +18,319 @@ export interface DynamicPromptsProps {
   wildcards: WildcardSnapshot;
   /** A concrete seed already allocated by the composer, when Random is in use. */
   previewSeed?: string;
+  /** A newer model is picked: point people at the plain-English packs. */
+  newerModel?: boolean;
   onApplyPrompt?(prompt: string): void;
   onChange(value: DynamicPromptAuthoring): void;
   /** Clear the freeze and allocate a new seed to request a new variation. */
   onReroll(): void;
   onSaveWildcards(entries: Record<string, string[]>): Promise<WildcardSnapshot>;
+  /** Queue one image per setup, in order. Leave out to hide the make-several buttons. */
+  onQueue?(setups: DynamicPromptAuthoring[]): void;
+  queueDisabledReason?: string;
 }
+/** Most images one press of "Make all" queues. */
+export const MAKE_ALL_LIMIT = 100;
+const SEVERAL = [4, 8, 16];
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const randomSeed = () => String(crypto.getRandomValues(new Uint32Array(1))[0]);
+interface Example {
+  prompt: string;
+  negativePrompt: string;
+  choices: DynamicPromptChoice[];
+}
 
-export function DynamicPrompts({ draft, wildcards, previewSeed, onReroll, onSaveWildcards }: DynamicPromptsProps) {
+export function DynamicPrompts({
+  draft,
+  wildcards,
+  previewSeed,
+  newerModel,
+  onChange,
+  onReroll,
+  onSaveWildcards,
+  onQueue,
+  queueDisabledReason,
+}: DynamicPromptsProps) {
   const enabled = usesDynamicPrompts(draft);
-  const frozen = draft.dynamicPrompts?.frozen;
-  const concreteSeed = previewSeed ?? (draft.seed !== 'random' ? draft.seed : undefined);
-  const [showPreview, setShowPreview] = useState(false);
-  const [preview, setPreview] = useState<PreparedDynamicPrompt>();
-  const [previewError, setPreviewError] = useState('');
-  const [previewBusy, setPreviewBusy] = useState(false);
+  const authoring = draft.dynamicPrompts;
+  const frozen = authoring?.frozen;
+  const pins = authoring?.pins ?? {};
+  const fixedSeed = previewSeed ?? (draft.seed && draft.seed !== 'random' ? draft.seed : undefined);
+  const [shuffle, setShuffle] = useState(randomSeed);
+  const [examples, setExamples] = useState<Example[]>([]);
+  const [problem, setProblem] = useState('');
+  const [working, setWorking] = useState(false);
+  const [combos, setCombos] = useState<{ count: number; capped: boolean }>();
   const [editorOpen, setEditorOpen] = useState(false);
-  const [entries, setEntries] = useState<Record<string, string[]>>({});
-  const [selectedTag, setSelectedTag] = useState('');
-  const [newTag, setNewTag] = useState('');
-  const [entryText, setEntryText] = useState('');
-  const [editorError, setEditorError] = useState('');
-  const [saving, setSaving] = useState(false);
   const serial = useRef(0);
-  const alive = useRef(true);
-  const savingRef = useRef(false);
-  const closingRef = useRef(false);
-  const [closing, setClosing] = useState(false);
-  const [closeWarning, setCloseWarning] = useState(false);
-  const baseline = useRef('');
-  const dirty = useRef(false);
-  const pendingSave = useRef<Promise<boolean> | undefined>(undefined);
-  dirty.current = editorOpen && (JSON.stringify(currentEntries()) !== baseline.current || Boolean(newTag));
-  useEffect(() => {
-    alive.current = true;
-    const before = window.latent?.onBeforeClose?.(async () => {
-      closingRef.current = true;
-      setClosing(true);
-      await pendingSave.current;
-      if (dirty.current) {
-        closingRef.current = false;
-        setClosing(false);
-        setCloseWarning(true);
-        throw new Error(
-          'The wildcard editor has unsaved changes. Save or discard its lists before closing the studio.',
-        );
-      }
-    });
-    const cancelled = window.latent?.onCloseCancelled?.(() => {
-      closingRef.current = false;
-      setClosing(false);
-    });
-    return () => {
-      alive.current = false;
-      before?.();
-      cancelled?.();
-    };
-  }, []);
-  const cannotEdit = () => !alive.current || savingRef.current || closingRef.current;
+  const pinKey = JSON.stringify(pins);
+
   useEffect(() => {
     const current = ++serial.current;
-    setPreview(undefined);
-    setPreviewError('');
-    setPreviewBusy(false);
-    if (!enabled || !showPreview || (!frozen && !concreteSeed)) return;
+    setProblem('');
+    if (!enabled) {
+      setExamples([]);
+      setCombos(undefined);
+      return;
+    }
     const timer = setTimeout(() => {
-      setPreviewBusy(true);
-      void prepareDynamicPromptDraft(draft, concreteSeed ?? frozen!.resolutionSeed, wildcards)
-        .then(result => {
-          if (current === serial.current) setPreview(result);
+      setWorking(true);
+      // With a fixed seed the first example is exactly the next image; the others are later rolls.
+      const seeds = frozen
+        ? [frozen.resolutionSeed]
+        : fixedSeed
+          ? [0, 1, 2].map(() => fixedSeed)
+          : [0, 1, 2].map(index => String((Number(shuffle) + index * 7919) % 4294967296));
+      const runs = seeds.map((seed, index) => {
+        const roll = fixedSeed && !frozen ? (authoring?.roll ?? 0) + index : authoring?.roll;
+        return prepareDynamicPromptDraft(
+          {
+            ...draft,
+            dynamicPrompts: { ...(authoring ?? { enabled: true }), ...(roll ? { roll } : { roll: undefined }) },
+          },
+          seed,
+          wildcards,
+        );
+      });
+      void Promise.all(runs)
+        .then(results => {
+          if (current !== serial.current) return;
+          setExamples(
+            results.map(result => ({
+              prompt: result.prompt,
+              negativePrompt: result.negativePrompt,
+              choices: result.recipe?.positive.choices ?? [],
+            })),
+          );
+          try {
+            setCombos(frozen ? undefined : countPromptCombinations(draft, wildcards));
+          } catch {
+            setCombos(undefined);
+          }
         })
         .catch(error => {
-          if (current === serial.current) setPreviewError(errorText(error));
+          if (current !== serial.current) return;
+          setExamples([]);
+          setCombos(undefined);
+          setProblem(errorText(error));
         })
         .finally(() => {
-          if (current === serial.current) setPreviewBusy(false);
+          if (current === serial.current) setWorking(false);
         });
-    }, 180);
+    }, 200);
     return () => {
       clearTimeout(timer);
       serial.current++;
     };
-  }, [enabled, frozen, draft.prompt, draft.negativePrompt, concreteSeed, wildcards.revision, showPreview]);
-  function openEditor() {
-    if (cannotEdit()) return;
-    const copy = cleanSpeciesPreset(wildcards.entries);
-    const first = Object.keys(copy).sort()[0] ?? '';
-    baseline.current = JSON.stringify(copy);
-    setCloseWarning(false);
-    setEntries(copy);
-    setSelectedTag(first);
-    setEntryText(first ? copy[first].join('\n') : '');
-    setNewTag('');
-    setEditorError('');
-    setEditorOpen(true);
-  }
-  function currentEntries() {
-    return selectedTag
-      ? { ...entries, [selectedTag]: entryText.split(/\r?\n/).filter(line => line.length > 0) }
-      : { ...entries };
-  }
-  function selectTag(tag: string) {
-    if (cannotEdit()) return;
-    const next = currentEntries();
-    setEntries(next);
-    setSelectedTag(tag);
-    setEntryText(next[tag]?.join('\n') ?? '');
-    setEditorError('');
-  }
-  function addTag() {
-    if (cannotEdit()) return;
-    const tag = newTag.trim();
-    if (!/^[A-Za-z0-9][A-Za-z0-9_./-]{0,127}$/.test(tag)) {
-      setEditorError(
-        'Use 1–128 letters, digits, underscores, dots, slashes or hyphens, starting with a letter or digit.',
-      );
-      return;
-    }
-    const next = currentEntries();
-    if (Object.hasOwn(next, tag)) {
-      setEditorError('That wildcard name already exists. Select it to edit its entries.');
-      return;
-    }
-    next[tag] = [];
-    setEntries(next);
-    setSelectedTag(tag);
-    setEntryText('');
-    setNewTag('');
-    setEditorError('');
-  }
-  function addPack(id: string) {
-    if (cannotEdit()) return;
-    try {
-      const next = stageWildcardPack(currentEntries(), id);
-      setEntries(next.entries);
-      setSelectedTag(next.name);
-      setEntryText(next.entries[next.name].join('\n'));
-      setEditorError('');
-      setCloseWarning(false);
-    } catch (error) {
-      setEditorError(errorText(error));
-    }
-  }
-  function deleteTag() {
-    if (cannotEdit()) return;
-    const next = currentEntries();
-    delete next[selectedTag];
-    const first = Object.keys(next).sort()[0] ?? '';
-    setEntries(next);
-    setSelectedTag(first);
-    setEntryText(next[first]?.join('\n') ?? '');
-    setEditorError('');
-  }
-  function requestClose() {
-    if (cannotEdit()) return;
-    if (dirty.current) setCloseWarning(true);
-    else setEditorOpen(false);
-  }
-  function discard() {
-    if (cannotEdit()) return;
-    dirty.current = false;
-    setCloseWarning(false);
-    setEditorOpen(false);
-  }
-  async function save() {
-    if (cannotEdit()) return;
-    if (newTag.trim()) {
-      setEditorError('Add the new wildcard name before saving, or clear its name field.');
-      return;
-    }
-    savingRef.current = true;
-    setSaving(true);
-    setEditorError('');
-    const next = currentEntries();
-    const work = (async () => {
-      try {
-        await createWildcardSnapshot(next);
-        if (!alive.current) return false;
-        await onSaveWildcards(next);
-        if (alive.current) {
-          dirty.current = false;
-          baseline.current = JSON.stringify(next);
-          setCloseWarning(false);
-          setEditorOpen(false);
-        }
-        return true;
-      } catch (error) {
-        if (alive.current) setEditorError(errorText(error));
-        return false;
-      } finally {
-        savingRef.current = false;
-        if (alive.current) setSaving(false);
-      }
-    })();
-    pendingSave.current = work;
-    try {
-      await work;
-    } finally {
-      if (pendingSave.current === work) pendingSave.current = undefined;
-    }
-  }
+  }, [
+    enabled,
+    frozen,
+    draft.prompt,
+    draft.negativePrompt,
+    fixedSeed,
+    shuffle,
+    wildcards.revision,
+    pinKey,
+    authoring?.roll,
+  ]);
+
+  const setPins = (next: Record<string, string>) => {
+    const { frozen: _frozen, ...rest } = authoring ?? { enabled: true };
+    onChange({ ...rest, enabled: true, pins: Object.keys(next).length ? next : undefined });
+  };
+  const lockable = (examples[0]?.choices ?? []).filter(
+    (choice, index, all) =>
+      choice.kind === 'wildcard' &&
+      choice.tag &&
+      choice.source === 'authored' &&
+      !choice.selectedIndices &&
+      all.findIndex(other => other.tag === choice.tag && other.source === 'authored') === index,
+  );
+  const base = (): DynamicPromptAuthoring => ({
+    enabled: true,
+    ...(authoring?.selections ? { selections: authoring.selections } : {}),
+    ...(authoring?.pins ? { pins: authoring.pins } : {}),
+  });
+  const makeSeveral = (count: number) =>
+    onQueue?.(Array.from({ length: count }, (_, index) => ({ ...base(), ...(index ? { roll: index } : {}) })));
+  const makeAll = () =>
+    combos && onQueue?.(Array.from({ length: combos.count }, (_, combination) => ({ ...base(), combination })));
+  const listCount = Object.keys(wildcards.entries).length;
 
   return (
-    <section className={`dynamic-prompts ${enabled ? 'enabled' : ''}`} aria-label="Prompt variations">
+    <section className={`dynamic-prompts ${enabled ? 'enabled' : ''}`} aria-label="Wildcards">
       <div className="dynamic-heading">
-        <span>
-          Wildcards expand automatically · type <code>__</code> in a prompt
+        <span className="muted small">
+          Type <code>__</code> in the prompt to add a list
         </span>
-        <button type="button" className="text-button" disabled={saving || closing} onClick={openEditor}>
+        <button type="button" className="text-button" onClick={() => setEditorOpen(true)}>
           <BookOpen size={13} />
-          Saved lists <span className="badge">{Object.keys(wildcards.entries).length}</span>
+          Lists <span className="badge">{listCount}</span>
         </button>
       </div>
-      {enabled ? (
+      {!enabled ? (
+        <p className="muted small">
+          Add <code>__species__</code> or <code>{'{sunny|misty}'}</code> to your prompt and each image picks something
+          different.{' '}
+          {newerModel && (
+            <>
+              Newer models like plain sentences: try <code>__plain_scenes__</code>.
+            </>
+          )}
+        </p>
+      ) : (
         <>
-          <p className="muted small">
-            Use <code>{'{sunny|misty}'}</code> for a choice or <code>__weather__</code> for a named wildcard. Escape
-            literal braces with <code>\{'{'}</code> and <code>\{'}'}</code>.
-          </p>
           {frozen && (
             <Notice>
               <div className="dynamic-frozen">
                 <LockKeyhole size={15} />
                 <div>
-                  <strong>Saved variations are frozen</strong>
-                  <p>
-                    These exact words will be reused, even if the image seed or your wildcard list changes. Editing
-                    either prompt clears the freeze.
-                  </p>
-                  <button
-                    type="button"
-                    className="text-button"
-                    disabled={closing}
-                    onClick={() => {
-                      if (!closingRef.current) onReroll();
-                    }}
-                  >
+                  <strong>Using this image’s picks</strong>
+                  <p>Changing the prompt or rolling again makes new picks.</p>
+                  <button type="button" className="text-button" onClick={onReroll}>
                     <Dices size={13} />
-                    Regenerate variations
+                    Roll again
                   </button>
                 </div>
               </div>
             </Notice>
           )}
-          <div className="dynamic-actions">
-            <button
-              type="button"
-              className="text-button"
-              aria-expanded={showPreview}
-              onClick={() => setShowPreview(!showPreview)}
-            >
-              <Eye size={14} />
-              {showPreview ? 'Hide expanded prompts' : 'Preview expanded prompts'}
-            </button>
-            {frozen && <span className="muted small">Saved choice seed {frozen.resolutionSeed}</span>}
-          </div>
-          {showPreview && !concreteSeed && !frozen && (
-            <p className="muted small">
-              Random resolves choices once when the job is queued. Choose a fixed image seed to preview its exact
-              expanded text.
-            </p>
-          )}
-          {showPreview && previewBusy && (
-            <p className="dynamic-loading">
-              <Busy active />
-              Resolving variations…
-            </p>
-          )}
-          {showPreview && previewError && <Notice error>{previewError}</Notice>}
-          {showPreview && preview && (
-            <div className="dynamic-preview">
-              <div>
-                <h4>Expanded positive prompt</h4>
-                <pre>{preview.prompt || '(empty)'}</pre>
-              </div>
-              <div>
-                <h4>Expanded negative prompt</h4>
-                <pre>{preview.negativePrompt || '(empty)'}</pre>
-              </div>
-              <details>
-                <summary>
-                  Choice trace · {preview.recipe!.positive.choices.length + preview.recipe!.negative.choices.length}{' '}
-                  selections
-                </summary>
-                {(['positive', 'negative'] as const).map(side => (
-                  <div key={side}>
-                    <h4>{side === 'positive' ? 'Positive' : 'Negative'}</h4>
-                    {preview.recipe![side].choices.length ? (
-                      <ol>
-                        {preview.recipe![side].choices.map((choice, index) => (
-                          <li key={index}>
-                            <strong>{choice.kind === 'wildcard' ? `__${choice.tag}__` : 'Inline choice'}</strong> ·
-                            option {choice.selectedIndex + 1}
-                            <code>{choice.resolvedValue || '(empty)'}</code>
-                            <small>
-                              {choice.source}:{choice.start}–{choice.end}
-                            </small>
-                          </li>
-                        ))}
-                      </ol>
-                    ) : (
-                      <p className="muted small">No choices in this prompt.</p>
-                    )}
-                  </div>
+          <div className="dynamic-examples" aria-label="Examples" aria-busy={working}>
+            <div className="dynamic-examples-heading">
+              <strong>{frozen ? 'This image' : fixedSeed ? 'Next image, then later rolls' : 'Examples'}</strong>
+              {working && <Busy active />}
+              {!frozen && !fixedSeed && (
+                <button
+                  type="button"
+                  className="icon-button"
+                  aria-label="Show other examples"
+                  title="Show other examples"
+                  onClick={() => setShuffle(randomSeed())}
+                >
+                  <Shuffle size={14} />
+                </button>
+              )}
+            </div>
+            {problem ? (
+              <Notice error>{problem}</Notice>
+            ) : (
+              <ol>
+                {examples.map((example, index) => (
+                  <li key={index}>{example.prompt || '(empty)'}</li>
                 ))}
-              </details>
-              <p className="muted small">
-                <Check size={12} />
-                {preview.reusedFrozen ? 'Exact saved expansion.' : `Uses image seed ${concreteSeed}.`} Choices and the
-                wildcard snapshot are saved with generated images.
-              </p>
+              </ol>
+            )}
+          </div>
+          {!frozen && (lockable.length > 0 || Object.keys(pins).length > 0) && (
+            <div className="dynamic-locks" aria-label="Lock a pick">
+              <span className="muted small">Keep</span>
+              {Object.entries(pins).map(([tag, value]) => (
+                <span key={tag} className="dynamic-lock on">
+                  <Lock size={11} />
+                  <code>{tag}</code> {value}
+                  <button
+                    type="button"
+                    aria-label={`Unlock ${tag}`}
+                    onClick={() => {
+                      const next = { ...pins };
+                      delete next[tag];
+                      setPins(next);
+                    }}
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+              {lockable
+                .filter(choice => !Object.hasOwn(pins, choice.tag!))
+                .map(choice => (
+                  <button
+                    type="button"
+                    key={choice.tag}
+                    className="dynamic-lock"
+                    title="Keep this pick for every image"
+                    onClick={() => setPins({ ...pins, [choice.tag!]: choice.resolvedValue })}
+                  >
+                    <Lock size={11} />
+                    <code>{choice.tag}</code> {choice.resolvedValue || '(empty)'}
+                  </button>
+                ))}
+            </div>
+          )}
+          {!frozen && onQueue && (
+            <div className="dynamic-make">
+              <span className="small">Make</span>
+              {SEVERAL.map(count => (
+                <button
+                  type="button"
+                  key={count}
+                  disabled={!!queueDisabledReason || !!problem}
+                  title={queueDisabledReason ?? `Queue ${count} images, each with new picks`}
+                  onClick={() => makeSeveral(count)}
+                >
+                  {count}
+                </button>
+              ))}
+              {combos && combos.count > 1 && (
+                <button
+                  type="button"
+                  className="dynamic-make-all"
+                  disabled={!!queueDisabledReason || combos.capped || combos.count > MAKE_ALL_LIMIT}
+                  title={
+                    queueDisabledReason ??
+                    (combos.capped || combos.count > MAKE_ALL_LIMIT
+                      ? `Too many to make at once (${MAKE_ALL_LIMIT} max). Use fewer choices.`
+                      : 'One image for every combination of the main prompt, in order')
+                  }
+                  onClick={makeAll}
+                >
+                  <Layers size={13} />
+                  {combos.capped || combos.count > MAKE_ALL_LIMIT
+                    ? `${combos.capped ? `${combos.count.toLocaleString('en-US')}+` : combos.count.toLocaleString('en-US')} combinations`
+                    : `All ${combos.count} combinations`}
+                </button>
+              )}
             </div>
           )}
         </>
-      ) : (
-        <p className="muted small">
-          Type __ to pick a wildcard. Click its chip below the prompt to choose what it can include.
-        </p>
       )}
-      <div className="wildcard-catalog" aria-label="Available wildcards">
-        {Object.keys(wildcards.entries).length ? (
-          Object.keys(wildcards.entries)
-            .sort()
-            .map(name => (
-              <button
-                type="button"
-                key={name}
-                title={wildcards.entries[name].slice(0, 4).join(', ')}
-                onClick={() => {
-                  if (!closingRef.current) {
-                    openEditor();
-                  }
-                }}
-              >
-                <code>__{name}__</code>
-                <small> {wildcards.entries[name].length} entries</small>
-              </button>
-            ))
-        ) : (
-          <p className="muted small">
-            No wildcards saved yet. Open Wildcards to create reusable lists such as __weather__.
-          </p>
-        )}
-      </div>
+      <details className="dynamic-help">
+        <summary>How to write them</summary>
+        <dl>
+          <dt>
+            <code>{'{red|blue}'}</code>
+          </dt>
+          <dd>pick one</dd>
+          <dt>
+            <code>{'{3::red|blue}'}</code>
+          </dt>
+          <dd>red comes up 3 times as often</dd>
+          <dt>
+            <code>{'{2$$red|blue|green}'}</code>
+          </dt>
+          <dd>pick 2 different ones</dd>
+          <dt>
+            <code>{'{1-3$$ and $$__colors__}'}</code>
+          </dt>
+          <dd>1 to 3 from a list, joined with “and”</dd>
+          <dt>
+            <code>__clothes/*__</code>
+          </dt>
+          <dd>any list in the clothes folder</dd>
+          <dt>
+            <code>{'${hair=!__hair_colors__}'}</code>
+          </dt>
+          <dd>
+            pick once, then reuse it with <code>{'${hair}'}</code>
+          </dd>
+          <dt>
+            <code>\{'{'}</code>
+          </dt>
+          <dd>a real brace</dd>
+        </dl>
+      </details>
       {editorOpen && (
-        <Modal title="Named wildcards" onClose={requestClose}>
-          <div className="wildcard-editor">
-            <p className="muted small">
-              Keep reusable lists here, then reference them as <code>__name__</code>. Saved image recipes retain the
-              list they originally used.
-            </p>
-            <WildcardPacks disabled={saving || closing} onAdd={addPack} />
-            <div className="wildcard-add">
-              <Field label="New wildcard name">
-                <input
-                  value={newTag}
-                  maxLength={128}
-                  onChange={event => {
-                    if (!cannotEdit()) setNewTag(event.target.value);
-                  }}
-                  placeholder="weather"
-                  disabled={saving || closing}
-                />
-              </Field>
-              <button type="button" onClick={addTag} disabled={saving || closing || !newTag.trim()}>
-                <Plus size={15} />
-                Add
-              </button>
-            </div>
-            {Object.keys(entries).length > 0 ? (
-              <>
-                <Field label="Wildcard">
-                  <select
-                    value={selectedTag}
-                    disabled={saving || closing}
-                    onChange={event => selectTag(event.target.value)}
-                  >
-                    {Object.keys(entries)
-                      .sort()
-                      .map(tag => (
-                        <option value={tag} key={tag}>{`__${tag}__`}</option>
-                      ))}
-                  </select>
-                </Field>
-                <Field
-                  label="Entries · one per line"
-                  hint="Entries may use choices or another wildcard. Empty lines are ignored; use {|} for an empty option."
-                >
-                  <textarea
-                    rows={9}
-                    maxLength={262144}
-                    value={entryText}
-                    onChange={event => {
-                      if (!cannotEdit()) setEntryText(event.target.value);
-                    }}
-                    disabled={saving || closing}
-                    placeholder={'sunny afternoon\n{misty|rainy} morning\nmoonlit night'}
-                  />
-                </Field>
-                <button className="text-button" type="button" onClick={deleteTag} disabled={saving || closing}>
-                  <Trash2 size={13} />
-                  Remove this wildcard
-                </button>
-              </>
-            ) : (
-              <p className="muted small">No named wildcards yet. Add a name and a few entries to begin.</p>
-            )}
-            {editorError && <Notice error>{editorError}</Notice>}
-            {closeWarning && (
-              <Notice>
-                <strong>Unsaved wildcard changes</strong>
-                <p>Save your lists, keep editing, or discard these edits.</p>
-                <div className="button-row">
-                  <button type="button" disabled={saving || closing} onClick={() => setCloseWarning(false)}>
-                    Keep editing
-                  </button>
-                  <button type="button" disabled={saving || closing} onClick={discard}>
-                    Discard changes
-                  </button>
-                </div>
-              </Notice>
-            )}
-            <p className="muted small">
-              Wildcard lists only save when you press Save. They stay saved even if prompt memory is off.
-            </p>
-            <div className="button-row">
-              <button type="button" className="primary" disabled={saving || closing} onClick={() => void save()}>
-                <Busy active={saving} />
-                {!saving && <Save size={15} />}Save wildcard lists
-              </button>
-              <button type="button" disabled={saving || closing} onClick={requestClose}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </Modal>
+        <WildcardListsEditor wildcards={wildcards} onSave={onSaveWildcards} onClose={() => setEditorOpen(false)} />
       )}
     </section>
   );

@@ -487,6 +487,10 @@ export interface LatentAPI {
   setupControlNet(repair?: boolean): Promise<void>;
   cancelControlNet(): Promise<void>;
   saveWildcards(entries: Record<string, string[]>): Promise<WildcardSnapshot>;
+  /** Opens a picker; null when cancelled. */
+  importWildcards(folder: boolean): Promise<{ lists: Record<string, string[]>; skipped: string[] } | null>;
+  /** Saves each list as a .txt file in a folder the person picks; null when cancelled. */
+  exportWildcards(entries: Record<string, string[]>): Promise<{ folder: string; files: number } | null>;
   setupUpscaler(repair?: boolean): Promise<void>;
   cancelUpscaler(): Promise<void>;
   fetchModelCivitaiMetadata(modelId: string): Promise<AppSnapshot>;
